@@ -1,0 +1,15 @@
+<svg width="200" height="48" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon -->
+  <rect x="2" y="8" width="32" height="32" rx="8" fill="url(#logoGradient)"/>
+  <path d="M12 20l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 28l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+  <!-- Text -->
+  <text x="42" y="32" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="800" fill="white">NXTED</text>
+  <text x="130" y="32" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="800" fill="url(#logoGradient)">AI</text>
+</svg>

@@ -1,0 +1,47 @@
+# NXTED AI
+
+> NXTED AI is an AI-powered career operating system by OFORO AI. It provides free AI resume building, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching.
+
+## Product Overview
+
+NXTED AI takes users through a complete career pipeline: Skill Assessment → Personalized Career Plan → Adaptive Learning → Resume & Portfolio Building → Verified Credentials → AI Job Matching → Automated Applications.
+
+## Key Features
+
+- **AI Resume Builder**: Free ATS-optimized resume builder with AI keyword optimization, job-specific tailoring, and PDF export.
+- **AI Career Coach (Career Twin)**: Persistent AI model that learns user goals, tracks progress, and predicts hire probability.
+- **AI Skill Assessment**: Adaptive testing with MCQ, scenarios, and hands-on tasks. Instant skill scoring and gap analysis.
+- **AI Career Plan Generator**: Personalized career roadmaps with milestones, proof-of-work projects, and timeline estimates.
+- **Adaptive AI Learning Paths**: Personalized learning recommendations that evolve with user progress.
+- **AI Job Matching**: Skills-based job matching with fit scores, improvement suggestions, and explainable matching.
+- **Automated Job Applications**: AI-powered auto-apply with compliance controls, audit trails, and smart targeting (Ultra plan).
+- **Proof-of-Skill Engine**: AI-scored projects that become verifiable evidence of abilities.
+- **Market Readiness Score**: Real-time AI employability scoring against market demand.
+- **Hire Probability Forecasting**: Know chances before applying with AI probability estimates.
+- **Role Simulator**: Explore alternate career paths with probability and timeline for each.
+- **Verified Credentials Framework**: Ready for blockchain verification of skills and achievements.
+
+## Pricing
+
+- **Basic (Free)**: 2 assessments, 50 AI credits/month, 1 resume, basic career plan
+- **Pro ($19/month)**: Unlimited assessments, 500 AI credits/month, all templates, job matching, interview prep
+- **Ultra ($49/month)**: Unlimited everything, automation agent, auto-apply, advanced analytics, priority AI
+
+Student discount: 30% off Pro and Ultra with .edu email.
+
+## Technology
+
+Built with Next.js 14, TypeScript, Tailwind CSS, PostgreSQL, Prisma ORM, NextAuth.js, OpenRouter AI, Stripe billing, BullMQ queues, and Redis caching.
+
+## Company
+
+NXTED AI is a product of OFORO AI (https://oforo.ai).
+
+## Links
+
+- Website: https://nxtedai.com
+- Pricing: https://nxtedai.com/pricing
+- About: https://nxtedai.com/about
+- Security: https://nxtedai.com/security
+- Login: https://nxtedai.com/login
+- Sign Up: https://nxtedai.com/signup

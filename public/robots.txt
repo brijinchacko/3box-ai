@@ -1,0 +1,32 @@
+# NXTED AI — AI Career Operating System
+# https://nxtedai.com
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/settings
+Disallow: /_next/
+
+# AI Crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Disallow: /
+
+Sitemap: https://nxtedai.com/sitemap.xml

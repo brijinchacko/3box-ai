@@ -1,0 +1,18 @@
+{
+  "name": "NXTED AI — AI Career Operating System",
+  "short_name": "NXTED AI",
+  "description": "Free AI resume builder, career coaching, skill assessment, and job matching platform. From skill assessment to dream job — powered by AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "orientation": "portrait-primary",
+  "categories": ["business", "education", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/brand/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
