@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, Chrome } from 'lucide-react';
+import Image from 'next/image';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Chrome } from 'lucide-react';
 
 export default function LoginPageClient() {
   const [email, setEmail] = useState('');
@@ -44,11 +45,8 @@ export default function LoginPageClient() {
         className="relative w-full max-w-md mx-4"
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-2xl font-bold">NXTED AI</span>
+        <Link href="/" className="flex items-center justify-center mb-8">
+          <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={160} height={46} className="h-10 w-auto" />
         </Link>
 
         <div className="glass p-8">

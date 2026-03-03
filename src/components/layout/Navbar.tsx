@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sparkles, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
+import { Menu, X, ChevronRight } from 'lucide-react';
 
 const navLinks = [
   { href: '/#features', label: 'Features' },
@@ -27,12 +28,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">
-              NXTED<span className="gradient-text ml-1">AI</span>
-            </span>
+            <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={140} height={40} className="h-8 w-auto" priority />
           </Link>
 
           {/* Desktop Nav */}

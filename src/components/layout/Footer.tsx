@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import Image from 'next/image';
 
 const footerLinks = {
   Product: [
@@ -39,10 +39,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-bold">NXTED AI</span>
+              <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={120} height={34} className="h-7 w-auto" />
             </Link>
             <p className="text-sm text-white/40 mb-4">
               Your AI-powered career operating system. An OFORO AI product.

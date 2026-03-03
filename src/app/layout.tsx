@@ -59,9 +59,13 @@ export const metadata: Metadata = {
     images: [`${SITE_URL}/og-image.png`],
   },
   icons: {
-    icon: '/assets/brand/favicon.svg',
-    shortcut: '/assets/brand/favicon.svg',
-    apple: '/assets/brand/favicon.svg',
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-icon.png',
   },
   manifest: '/manifest.json',
 };

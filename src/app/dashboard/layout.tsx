@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import {
-  Sparkles, LayoutDashboard, Brain, Target, BookOpen, FileText,
+  LayoutDashboard, Brain, Target, BookOpen, FileText,
   Briefcase, FolderOpen, Settings, LogOut, Menu, X, ChevronLeft,
   Crown, Zap, Bell, Search, User
 } from 'lucide-react';
@@ -52,10 +53,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            {sidebarOpen && <span className="text-lg font-bold">NXTED AI</span>}
+            {sidebarOpen ? (
+              <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={130} height={37} className="h-8 w-auto" />
+            ) : (
+              <Image src="/assets/brand/icon.png" alt="NXTED AI" width={32} height={32} className="w-8 h-8 flex-shrink-0" />
+            )}
           </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
             <ChevronLeft className={`w-4 h-4 transition-transform ${!sidebarOpen ? 'rotate-180' : ''}`} />
@@ -112,10 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Menu className="w-5 h-5" />
         </button>
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="text-base font-bold">NXTED AI</span>
+          <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={110} height={31} className="h-7 w-auto" />
         </Link>
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold">AJ</div>
       </div>
@@ -135,7 +134,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-50 border-r border-white/5"
             >
               <div className="h-14 flex items-center justify-between px-4 border-b border-white/5">
-                <span className="text-lg font-bold">NXTED AI</span>
+                <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={130} height={37} className="h-8 w-auto" />
                 <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-white/5"><X className="w-5 h-5" /></button>
               </div>
               <nav className="py-4 px-3 space-y-1">
