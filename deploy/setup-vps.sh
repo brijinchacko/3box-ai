@@ -41,8 +41,8 @@ if [ ! -f .env ]; then
   echo "   Required variables:"
   echo "   - DATABASE_URL (PostgreSQL connection string)"
   echo "   - NEXTAUTH_SECRET (generate with: openssl rand -base64 32)"
-  echo "   - NEXTAUTH_URL=https://nxtedai.com"
-  echo "   - NEXT_PUBLIC_APP_URL=https://nxtedai.com"
+  echo "   - NEXTAUTH_URL=https://nxted.ai"
+  echo "   - NEXT_PUBLIC_APP_URL=https://nxted.ai"
   echo "   - OPENROUTER_API_KEY"
   echo "   - STRIPE_SECRET_KEY"
   echo "   - STRIPE_WEBHOOK_SECRET"
@@ -63,8 +63,8 @@ echo "   Run 'npx tsx prisma/seed.ts' to load demo data (optional)"
 # ─── Step 7: Setup Nginx ─────────────────────
 echo ""
 echo "🌐 Step 7: Setting up Nginx..."
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/nxtedai.com
-sudo ln -sf /etc/nginx/sites-available/nxtedai.com /etc/nginx/sites-enabled/
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/nxted.ai
+sudo ln -sf /etc/nginx/sites-available/nxted.ai /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 echo "   ✅ Nginx configured (existing sites untouched)"
 
@@ -72,10 +72,10 @@ echo "   ✅ Nginx configured (existing sites untouched)"
 echo ""
 echo "🔒 Step 8: Setting up SSL..."
 echo "   Run the following command to get SSL certificate:"
-echo "   sudo certbot --nginx -d nxtedai.com -d www.nxtedai.com"
+echo "   sudo certbot --nginx -d nxted.ai -d www.nxted.ai"
 echo ""
 echo "   Or if using Certbot standalone:"
-echo "   sudo certbot certonly --webroot -w /var/www/certbot -d nxtedai.com -d www.nxtedai.com"
+echo "   sudo certbot certonly --webroot -w /var/www/certbot -d nxted.ai -d www.nxted.ai"
 
 # ─── Step 9: Start with PM2 ──────────────────
 echo ""
@@ -97,10 +97,10 @@ echo "✅ NXTED AI deployment complete!"
 echo ""
 echo "📋 Checklist:"
 echo "   [ ] Edit .env with production values"
-echo "   [ ] Setup SSL: sudo certbot --nginx -d nxtedai.com"
-echo "   [ ] Point DNS: nxtedai.com → 72.62.230.223"
-echo "   [ ] Configure Stripe webhook: https://nxtedai.com/api/stripe/webhook"
-echo "   [ ] Test: curl https://nxtedai.com"
+echo "   [ ] Setup SSL: sudo certbot --nginx -d nxted.ai"
+echo "   [ ] Point DNS: nxted.ai → 72.62.230.223"
+echo "   [ ] Configure Stripe webhook: https://nxted.ai/api/stripe/webhook"
+echo "   [ ] Test: curl https://nxted.ai"
 echo ""
 echo "📊 Useful commands:"
 echo "   pm2 status          — Check app status"

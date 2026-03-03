@@ -23,8 +23,8 @@ export default function PricingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxtedai.com' },
-            { name: 'Pricing', url: 'https://nxtedai.com/pricing' },
+            { name: 'Home', url: 'https://nxted.ai' },
+            { name: 'Pricing', url: 'https://nxted.ai/pricing' },
           ])),
         }}
       />

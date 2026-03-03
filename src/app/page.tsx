@@ -23,7 +23,7 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxtedai.com' },
+            { name: 'Home', url: 'https://nxted.ai' },
           ])),
         }}
       />

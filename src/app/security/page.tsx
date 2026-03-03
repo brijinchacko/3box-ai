@@ -12,8 +12,8 @@ export default function SecurityPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxtedai.com' },
-            { name: 'Security & Privacy', url: 'https://nxtedai.com/security' },
+            { name: 'Home', url: 'https://nxted.ai' },
+            { name: 'Security & Privacy', url: 'https://nxted.ai/security' },
           ])),
         }}
       />

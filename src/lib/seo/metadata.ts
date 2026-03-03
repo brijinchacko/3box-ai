@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxtedai.com';
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxted.ai';
 const SITE_NAME = 'NXTED AI';
 
 interface PageSEO {

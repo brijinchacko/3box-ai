@@ -12,8 +12,8 @@ export default function AboutPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxtedai.com' },
-            { name: 'About', url: 'https://nxtedai.com/about' },
+            { name: 'Home', url: 'https://nxted.ai' },
+            { name: 'About', url: 'https://nxted.ai/about' },
           ])),
         }}
       />

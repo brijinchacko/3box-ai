@@ -39,9 +39,9 @@ NXTED AI is a product of OFORO AI (https://oforo.ai).
 
 ## Links
 
-- Website: https://nxtedai.com
-- Pricing: https://nxtedai.com/pricing
-- About: https://nxtedai.com/about
-- Security: https://nxtedai.com/security
-- Login: https://nxtedai.com/login
-- Sign Up: https://nxtedai.com/signup
+- Website: https://nxted.ai
+- Pricing: https://nxted.ai/pricing
+- About: https://nxted.ai/about
+- Security: https://nxted.ai/security
+- Login: https://nxted.ai/login
+- Sign Up: https://nxted.ai/signup

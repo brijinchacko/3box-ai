@@ -55,8 +55,8 @@ B2C subscriptions (Basic/Pro/Ultra), B2B employer dashboard, university licensin
 
 ## Links
 
-- Website: https://nxtedai.com
-- Pricing: https://nxtedai.com/pricing
-- About: https://nxtedai.com/about
-- Security: https://nxtedai.com/security
+- Website: https://nxted.ai
+- Pricing: https://nxted.ai/pricing
+- About: https://nxted.ai/about
+- Security: https://nxted.ai/security
 - GitHub: https://github.com/brijinchacko

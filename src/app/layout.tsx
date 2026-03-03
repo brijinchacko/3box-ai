@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import './globals.css';
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxtedai.com';
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxted.ai';
 
 export const viewport: Viewport = {
   themeColor: '#0a0a0f',
