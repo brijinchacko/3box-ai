@@ -8,7 +8,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard, Brain, Target, BookOpen, FileText,
   Briefcase, FolderOpen, Settings, LogOut, Menu, X, ChevronLeft,
-  Crown, Zap, Bell, Search, User
+  Crown, Zap, Star, Bell, Search, User
 } from 'lucide-react';
 import FloatingCoach from '@/components/ai-coach/FloatingCoach';
 
@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const planBadge = {
-    BASIC: { label: 'Basic', color: 'text-white/40 bg-white/5', icon: Sparkles },
+    BASIC: { label: 'Basic', color: 'text-white/40 bg-white/5', icon: Star },
     PRO: { label: 'Pro', color: 'text-neon-blue bg-neon-blue/10', icon: Zap },
     ULTRA: { label: 'Ultra', color: 'text-neon-purple bg-neon-purple/10', icon: Crown },
   }[demoUser.plan];
