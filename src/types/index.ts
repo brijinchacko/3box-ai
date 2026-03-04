@@ -1,11 +1,77 @@
 // ─── Plan types ────────────────────────────────
-export type PlanTier = 'BASIC' | 'PRO' | 'ULTRA';
+export type PlanTier = 'BASIC' | 'STARTER' | 'PRO' | 'ULTRA';
 
 export interface PlanFeatures {
   aiCredits: number;
   assessments: number;
   resumes: number;
   exports: number;
+}
+
+// ─── Subscription types ───────────────────────
+export interface SubscriptionData {
+  id: string;
+  plan: PlanTier;
+  status: string;
+  interval: 'monthly' | 'yearly';
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+}
+
+// ─── Referral types ───────────────────────────
+export interface ReferralData {
+  referralCode: string;
+  totalReferrals: number;
+  rewardedReferrals: number;
+  referralLink: string;
+}
+
+// ─── Credit Pack types ────────────────────────
+export interface CreditPack {
+  id: string;
+  credits: number;
+  price: number;
+}
+
+// ─── Blog types ───────────────────────────────
+export interface BlogPostData {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverImage: string;
+  author: string;
+  category: string;
+  tags: string[];
+  readTime: number;
+  publishedAt: string;
+}
+
+// ─── ATS types ────────────────────────────────
+export interface ATSResult {
+  score: number;
+  issues: { type: string; message: string }[];
+  keywords: { found: string[]; missing: string[]; suggested: string[] };
+  formatting: { score: number; issues: string[] };
+  sections: { present: string[]; missing: string[] };
+}
+
+// ─── Salary types ─────────────────────────────
+export interface SalaryEstimate {
+  low: number;
+  median: number;
+  high: number;
+  currency: string;
+  factors: string[];
+  marketTrend: string;
+  demandLevel: string;
+}
+
+// ─── Onboarding types ─────────────────────────
+export interface OnboardingData {
+  targetRole: string;
+  interests: string[];
 }
 
 // ─── User types ────────────────────────────────
@@ -18,6 +84,10 @@ export interface UserProfile {
   isOforoInternal: boolean;
   aiCreditsUsed: number;
   aiCreditsLimit: number;
+  onboardingDone: boolean;
+  referralCode: string;
+  stripeCustomerId?: string;
+  stripePriceId?: string;
 }
 
 // ─── Assessment types ──────────────────────────

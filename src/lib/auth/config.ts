@@ -62,6 +62,11 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           token.plan = dbUser.plan;
           token.isOforoInternal = dbUser.isOforoInternal;
+          token.onboardingDone = dbUser.onboardingDone;
+          token.referralCode = dbUser.referralCode;
+          token.stripeCustomerId = dbUser.stripeCustomerId;
+          token.aiCreditsUsed = dbUser.aiCreditsUsed;
+          token.aiCreditsLimit = dbUser.aiCreditsLimit;
         }
       }
       return token;
@@ -71,6 +76,11 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).plan = token.plan;
         (session.user as any).isOforoInternal = token.isOforoInternal;
+        (session.user as any).onboardingDone = token.onboardingDone;
+        (session.user as any).referralCode = token.referralCode;
+        (session.user as any).stripeCustomerId = token.stripeCustomerId;
+        (session.user as any).aiCreditsUsed = token.aiCreditsUsed;
+        (session.user as any).aiCreditsLimit = token.aiCreditsLimit;
       }
       return session;
     },
@@ -79,7 +89,7 @@ export const authOptions: NextAuthOptions = {
         const prisma = getPrisma();
         await prisma.user.update({
           where: { email: user.email },
-          data: { isOforoInternal: true, plan: 'ULTRA' },
+          data: { isOforoInternal: true, plan: 'ULTRA', aiCreditsLimit: -1 },
         }).catch(() => {}); // user might not exist yet
       }
       return true;

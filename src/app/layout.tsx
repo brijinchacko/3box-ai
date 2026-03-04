@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { SCHEMA_ORG } from '@/lib/seo/keywords';
+import Providers from '@/components/providers/Providers';
 import './globals.css';
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxted.ai';
@@ -84,7 +85,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SCHEMA_ORG.softwareApplication) }} />
       </head>
       <body className="min-h-screen bg-surface text-white antialiased overflow-x-hidden">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

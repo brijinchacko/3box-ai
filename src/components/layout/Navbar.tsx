@@ -3,18 +3,22 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import { Menu, X, ChevronRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import Logo from '@/components/brand/Logo';
 
 const navLinks = [
   { href: '/#features', label: 'Features' },
+  { href: '/tools', label: 'Tools' },
   { href: '/pricing', label: 'Pricing' },
+  { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/security', label: 'Security' },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: session } = useSession();
 
   return (
     <motion.nav
@@ -28,7 +32,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={140} height={40} className="h-8 w-auto" priority />
+            <Logo size="md" />
           </Link>
 
           {/* Desktop Nav */}
@@ -46,12 +50,20 @@ export default function Navbar() {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="btn-ghost text-sm">
-              Sign In
-            </Link>
-            <Link href="/signup" className="btn-primary text-sm flex items-center gap-1">
-              Get Started <ChevronRight className="w-4 h-4" />
-            </Link>
+            {session ? (
+              <Link href="/dashboard" className="btn-primary text-sm flex items-center gap-1">
+                Dashboard <ChevronRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="btn-ghost text-sm">
+                  Sign In
+                </Link>
+                <Link href="/signup" className="btn-primary text-sm flex items-center gap-1">
+                  Get Started <ChevronRight className="w-4 h-4" />
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Toggle */}
@@ -85,12 +97,24 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="pt-2 space-y-2">
-                <Link href="/login" className="block w-full text-center btn-secondary text-sm">
-                  Sign In
-                </Link>
-                <Link href="/signup" className="block w-full text-center btn-primary text-sm">
-                  Get Started Free
-                </Link>
+                {session ? (
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMobileOpen(false)}
+                    className="block w-full text-center btn-primary text-sm"
+                  >
+                    Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/login" className="block w-full text-center btn-secondary text-sm">
+                      Sign In
+                    </Link>
+                    <Link href="/signup" className="block w-full text-center btn-primary text-sm">
+                      Get Started Free
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
+import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Brain, Target, BookOpen, FileText,
-  Briefcase, FolderOpen, Settings, LogOut, Menu, X, ChevronLeft,
-  Crown, Zap, Star, Bell, Search, User
+  Briefcase, FolderOpen, Settings, Menu, X, ChevronLeft,
+  Crown, Zap, Star, Gift, AlertTriangle
 } from 'lucide-react';
 import FloatingCoach from '@/components/ai-coach/FloatingCoach';
+import Logo from '@/components/brand/Logo';
+import { getInitials, getCreditUsagePercent } from '@/lib/utils';
 
 const sidebarLinks = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -21,26 +23,79 @@ const sidebarLinks = [
   { href: '/dashboard/portfolio', icon: FolderOpen, label: 'Portfolio' },
   { href: '/dashboard/jobs', icon: Briefcase, label: 'Job Matching' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+  { href: '/dashboard/settings?tab=referral', icon: Gift, label: 'Refer & Earn' },
 ];
 
-// Demo user for UI display
-const demoUser = {
-  name: 'Alex Johnson',
-  email: 'alex@example.com',
-  plan: 'PRO' as const,
-  image: null,
+const planBadges: Record<string, { label: string; color: string; icon: typeof Star }> = {
+  BASIC: { label: 'Basic', color: 'text-white/40 bg-white/5', icon: Star },
+  STARTER: { label: 'Starter', color: 'text-neon-green bg-neon-green/10', icon: Star },
+  PRO: { label: 'Pro', color: 'text-neon-blue bg-neon-blue/10', icon: Zap },
+  ULTRA: { label: 'Ultra', color: 'text-neon-purple bg-neon-purple/10', icon: Crown },
 };
+
+interface UserData {
+  name: string | null;
+  email: string | null;
+  plan: string;
+  aiCreditsUsed: number;
+  aiCreditsLimit: number;
+  onboardingDone: boolean;
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [showUpgradeNudge, setShowUpgradeNudge] = useState(true);
 
-  const planBadge = {
-    BASIC: { label: 'Basic', color: 'text-white/40 bg-white/5', icon: Star },
-    PRO: { label: 'Pro', color: 'text-neon-blue bg-neon-blue/10', icon: Zap },
-    ULTRA: { label: 'Ultra', color: 'text-neon-purple bg-neon-purple/10', icon: Crown },
-  }[demoUser.plan];
+  // Fetch user data
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetch('/api/user/profile')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            setUserData(data);
+            // Redirect to onboarding if not completed
+            if (!data.onboardingDone && pathname !== '/dashboard/onboarding') {
+              router.push('/dashboard/onboarding');
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [status, pathname, router]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  const userPlan = userData?.plan || (session?.user as any)?.plan || 'BASIC';
+  const userName = userData?.name || session?.user?.name || 'User';
+  const userEmail = userData?.email || session?.user?.email || '';
+  const creditsUsed = userData?.aiCreditsUsed || 0;
+  const creditsLimit = userData?.aiCreditsLimit || 10;
+  const creditPercent = getCreditUsagePercent(creditsUsed, creditsLimit);
+  const initials = getInitials(userName);
+
+  const badge = planBadges[userPlan] || planBadges.BASIC;
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <Logo size="lg" />
+          <div className="text-white/40 text-sm">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface flex">
@@ -54,9 +109,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
           <Link href="/dashboard" className="flex items-center gap-2">
             {sidebarOpen ? (
-              <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={130} height={37} className="h-8 w-auto" />
+              <Logo size="sm" />
             ) : (
-              <Image src="/assets/brand/icon.png" alt="NXTED AI" width={32} height={32} className="w-8 h-8 flex-shrink-0" />
+              <Logo size="sm" showText={false} />
             )}
           </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
@@ -67,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Nav Links */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {sidebarLinks.map((link) => {
-            const active = pathname === link.href;
+            const active = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href.split('?')[0]) && link.href !== '/dashboard/settings?tab=referral');
             return (
               <Link
                 key={link.href}
@@ -85,23 +140,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* User + Plan */}
+        {/* Credit Usage + User */}
         <div className="p-3 border-t border-white/5">
+          {/* Credit Usage */}
+          {sidebarOpen && creditsLimit !== -1 && (
+            <div className="mb-3 px-3">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-white/40">AI Credits</span>
+                <span className={creditPercent > 80 ? 'text-red-400' : 'text-white/60'}>
+                  {creditsUsed}/{creditsLimit}
+                </span>
+              </div>
+              <div className="skill-bar h-1.5">
+                <div
+                  className={`skill-bar-fill ${creditPercent > 80 ? 'bg-red-400' : creditPercent > 50 ? 'bg-yellow-400' : 'bg-neon-green'}`}
+                  style={{ width: `${creditPercent}%` }}
+                />
+              </div>
+              {creditPercent > 80 && (
+                <Link href="/pricing#credits" className="text-[10px] text-red-400 hover:text-red-300 mt-1 block">
+                  Buy more credits
+                </Link>
+              )}
+            </div>
+          )}
+
           {sidebarOpen && (
             <div className="mb-3 px-3">
-              <span className={`badge text-xs ${planBadge.color}`}>
-                <planBadge.icon className="w-3 h-3 mr-1" /> {planBadge.label} Plan
+              <span className={`badge text-xs ${badge.color}`}>
+                <badge.icon className="w-3 h-3 mr-1" /> {badge.label} Plan
               </span>
             </div>
           )}
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold flex-shrink-0">
-              AJ
+              {initials}
             </div>
             {sidebarOpen && (
               <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{demoUser.name}</div>
-                <div className="text-xs text-white/30 truncate">{demoUser.email}</div>
+                <div className="text-sm font-medium truncate">{userName}</div>
+                <div className="text-xs text-white/30 truncate">{userEmail}</div>
               </div>
             )}
           </div>
@@ -113,10 +191,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-white/5">
           <Menu className="w-5 h-5" />
         </button>
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={110} height={31} className="h-7 w-auto" />
+        <Link href="/dashboard">
+          <Logo size="sm" />
         </Link>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold">AJ</div>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold">
+          {initials}
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -134,7 +214,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-50 border-r border-white/5"
             >
               <div className="h-14 flex items-center justify-between px-4 border-b border-white/5">
-                <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={130} height={37} className="h-8 w-auto" />
+                <Logo size="sm" />
                 <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-white/5"><X className="w-5 h-5" /></button>
               </div>
               <nav className="py-4 px-3 space-y-1">
@@ -156,6 +236,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'} pt-14 lg:pt-0`}>
+        {/* Upgrade nudge for Basic users */}
+        {userPlan === 'BASIC' && showUpgradeNudge && (
+          <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 rounded-xl bg-gradient-to-r from-neon-blue/10 to-neon-purple/10 border border-neon-blue/20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-neon-blue flex-shrink-0" />
+              <p className="text-sm text-white/70">
+                You&apos;re on the free plan with limited features.{' '}
+                <Link href="/pricing" className="text-neon-blue hover:underline font-medium">Upgrade now</Link>
+                {' '}to unlock your full career potential.
+              </p>
+            </div>
+            <button onClick={() => setShowUpgradeNudge(false)} className="text-white/30 hover:text-white/60 flex-shrink-0 ml-2">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>

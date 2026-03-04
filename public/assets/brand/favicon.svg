@@ -5,7 +5,10 @@
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#favGrad)"/>
-  <path d="M10 14l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M12 22l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+  <!-- Top-right block -->
+  <rect x="11" y="1" width="20" height="14" rx="3" fill="url(#favGrad)"/>
+  <!-- Left-middle block -->
+  <rect x="1" y="10" width="14" height="12" rx="3" fill="url(#favGrad)"/>
+  <!-- Bottom-center block -->
+  <rect x="11" y="18" width="12" height="13" rx="3" fill="url(#favGrad)"/>
 </svg>
