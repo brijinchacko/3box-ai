@@ -1,18 +1,29 @@
 import { NextResponse } from 'next/server';
-import { generateAssessmentQuestions, analyzeAssessment } from '@/lib/ai/openrouter';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/config';
+import { generateAssessmentQuestions, analyzeAssessment, type PlanTier } from '@/lib/ai/openrouter';
+
+const { prisma } = require('@/lib/db/prisma');
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    let userPlan: PlanTier = 'BASIC';
+    if (session?.user?.id) {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { plan: true } });
+      if (user) userPlan = user.plan;
+    }
+
     const body = await req.json();
     const { action, targetRole, answers, existingSkills } = body;
 
     if (action === 'generate') {
-      const questions = await generateAssessmentQuestions(targetRole, existingSkills);
+      const questions = await generateAssessmentQuestions(targetRole, existingSkills, userPlan);
       return NextResponse.json({ questions: JSON.parse(questions) });
     }
 
     if (action === 'analyze') {
-      const analysis = await analyzeAssessment(targetRole, answers);
+      const analysis = await analyzeAssessment(targetRole, answers, userPlan);
       return NextResponse.json({ analysis: JSON.parse(analysis) });
     }
 

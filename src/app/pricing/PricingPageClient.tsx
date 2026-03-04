@@ -24,6 +24,7 @@ import {
   BarChart3,
   Headphones,
   Briefcase,
+  Users,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/layout/Navbar';
@@ -117,7 +118,9 @@ const plans: Plan[] = [
       { label: 'Adaptive learning path', included: true },
       { label: 'Portfolio builder', included: true },
       { label: 'Job matching + fit reports', included: true },
-      { label: 'Interview prep + mock interviews', included: true },
+      { label: 'AI + Human mock interviews', included: true },
+      { label: 'Human resume review (1/mo)', included: true },
+      { label: 'Industry expert mentoring', included: true },
       { label: 'Automation agent', included: false },
       { label: 'Priority processing', included: false },
     ],
@@ -134,6 +137,10 @@ const plans: Plan[] = [
     popular: false,
     features: [
       { label: 'Everything in Pro', included: true },
+      { label: 'Human resume verification by experts', included: true },
+      { label: 'Unlimited human mock interviews', included: true },
+      { label: 'Dedicated career mentor', included: true },
+      { label: '1-on-1 expert coaching sessions', included: true },
       { label: 'Unlimited AI credits', included: true },
       { label: 'Automation agent', included: true },
       { label: 'Auto-apply to jobs', included: true },
@@ -192,6 +199,9 @@ const comparisonRows: ComparisonRow[] = [
   { feature: 'Interview Prep', icon: Mic, basic: '--', starter: '--', pro: 'check', ultra: 'check' },
   { feature: 'Auto-Apply', icon: Zap, basic: '--', starter: '--', pro: '--', ultra: 'check' },
   { feature: 'Priority AI', icon: BarChart3, basic: '--', starter: '--', pro: '--', ultra: 'check' },
+  { feature: 'Human Mock Interviews', icon: Users, basic: '--', starter: '--', pro: '1 / mo', ultra: 'Unlimited' },
+  { feature: 'Human Resume Review', icon: Users, basic: '--', starter: '--', pro: '1 / mo', ultra: 'Unlimited' },
+  { feature: 'Career Mentor', icon: Users, basic: '--', starter: '--', pro: '--', ultra: 'Dedicated' },
   { feature: 'Support', icon: Headphones, basic: 'Community', starter: 'Email', pro: 'Priority', ultra: 'Premium' },
 ];
 
@@ -237,9 +247,16 @@ export default function PricingPageClient() {
   const { data: session } = useSession();
 
   // ---- Stripe checkout for plans ----
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   const handlePlanCheckout = async (plan: Plan) => {
-    if (plan.key === 'basic') return; // basic links to /signup
+    if (plan.key === 'basic') return;
+    if (!session) {
+      window.location.href = '/login?redirect=/pricing';
+      return;
+    }
     setLoadingPlan(plan.key);
+    setCheckoutError(null);
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -253,9 +270,16 @@ export default function PricingPageClient() {
       const data = await res.json();
       if (data?.url) {
         window.location.href = data.url;
+      } else if (data?.error) {
+        setCheckoutError(data.error === 'Price configuration not found for the selected plan and interval'
+          ? 'Payment system is being configured. Please try again shortly or contact support.'
+          : data.error === 'Authentication required'
+          ? 'Please log in first to upgrade your plan.'
+          : data.error);
       }
     } catch (err) {
       console.error('Checkout error', err);
+      setCheckoutError('Unable to connect to payment service. Please try again.');
     } finally {
       setLoadingPlan(null);
     }
@@ -263,7 +287,12 @@ export default function PricingPageClient() {
 
   // ---- Stripe checkout for credit packs ----
   const handleCreditCheckout = async (pack: CreditPack) => {
+    if (!session) {
+      window.location.href = '/login?redirect=/pricing';
+      return;
+    }
     setLoadingPack(pack.id);
+    setCheckoutError(null);
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -276,9 +305,12 @@ export default function PricingPageClient() {
       const data = await res.json();
       if (data?.url) {
         window.location.href = data.url;
+      } else if (data?.error) {
+        setCheckoutError(data.error);
       }
     } catch (err) {
       console.error('Credit checkout error', err);
+      setCheckoutError('Unable to connect to payment service. Please try again.');
     } finally {
       setLoadingPack(null);
     }
@@ -313,6 +345,18 @@ export default function PricingPageClient() {
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-radial from-neon-blue/5 via-transparent to-transparent rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Checkout Error Banner */}
+          {checkoutError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-2xl mx-auto mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400 text-center"
+            >
+              {checkoutError}
+              <button onClick={() => setCheckoutError(null)} className="ml-3 text-red-400/60 hover:text-red-400 underline text-xs">Dismiss</button>
+            </motion.div>
+          )}
+
           {/* ============================================================ */}
           {/* HEADER                                                       */}
           {/* ============================================================ */}
@@ -462,6 +506,55 @@ export default function PricingPageClient() {
               </motion.div>
             ))}
           </div>
+
+          {/* ============================================================ */}
+          {/* HUMAN + AI SECTION                                           */}
+          {/* ============================================================ */}
+          {/* Human + AI Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-20 max-w-4xl mx-auto"
+          >
+            <div className="glass p-8 bg-gradient-to-br from-neon-purple/5 to-neon-blue/5 border-neon-purple/20">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 badge-purple mb-4">
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Not just AI — Real humans too</span>
+                </div>
+                <h2 className="text-3xl font-bold mb-3">
+                  AI-powered, <span className="gradient-text">human-verified</span>
+                </h2>
+                <p className="text-white/40 max-w-lg mx-auto">
+                  Our Pro and Ultra plans combine the speed of AI with the expertise of real industry professionals.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-blue/5 flex items-center justify-center mx-auto mb-3">
+                    <Mic className="w-7 h-7 text-neon-blue" />
+                  </div>
+                  <h3 className="font-semibold mb-1">Mock Interviews</h3>
+                  <p className="text-sm text-white/40">Practice with real industry experts who give personalized feedback</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-green/20 to-neon-green/5 flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-7 h-7 text-neon-green" />
+                  </div>
+                  <h3 className="font-semibold mb-1">Resume Verification</h3>
+                  <p className="text-sm text-white/40">Human recruiters review and verify your resume for accuracy</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-purple/20 to-neon-purple/5 flex items-center justify-center mx-auto mb-3">
+                    <Headphones className="w-7 h-7 text-neon-purple" />
+                  </div>
+                  <h3 className="font-semibold mb-1">Expert Mentoring</h3>
+                  <p className="text-sm text-white/40">1-on-1 sessions with career coaches from top companies</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
           {/* ============================================================ */}
           {/* COMPARISON TABLE                                             */}

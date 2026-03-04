@@ -79,7 +79,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // AI Coach
   coachConfig: {
-    name: 'Nova',
+    name: 'Horace',
     personality: 'friendly',
     enabled: true,
   },

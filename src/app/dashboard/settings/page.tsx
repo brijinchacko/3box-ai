@@ -90,7 +90,7 @@ export default function SettingsPage() {
   const [linkCopied, setLinkCopied] = useState(false);
 
   // ----- Coach state -----
-  const [coachName, setCoachName] = useState('Nova');
+  const [coachName, setCoachName] = useState('Horace');
   const [coachPersonality, setCoachPersonality] = useState('friendly');
 
   // ----- Billing state -----

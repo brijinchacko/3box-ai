@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FileSearch, DollarSign, ArrowRight, Sparkles } from 'lucide-react';
+import { FileSearch, DollarSign, FileText, ArrowRight, Sparkles } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
@@ -19,15 +19,26 @@ const tools = [
     borderHover: 'hover:border-neon-blue/30',
   },
   {
+    title: 'Free Resume Builder',
+    description:
+      'Build a clean, professional resume with live preview and PDF download. No signup required.',
+    icon: FileText,
+    href: '/tools/resume-builder',
+    cta: 'Build My Resume',
+    gradient: 'from-neon-green/20 to-neon-blue/20',
+    iconColor: 'text-neon-green',
+    borderHover: 'hover:border-neon-green/30',
+  },
+  {
     title: 'Salary Estimator',
     description:
       'Get AI-powered salary estimates based on role, location, and experience',
     icon: DollarSign,
     href: '/tools/salary-estimator',
     cta: 'Estimate Salary',
-    gradient: 'from-neon-green/20 to-neon-blue/20',
-    iconColor: 'text-neon-green',
-    borderHover: 'hover:border-neon-green/30',
+    gradient: 'from-neon-orange/20 to-neon-pink/20',
+    iconColor: 'text-neon-orange',
+    borderHover: 'hover:border-neon-orange/30',
   },
 ];
 
@@ -61,8 +72,8 @@ export default function ToolsPageClient() {
       </section>
 
       {/* Tool Cards */}
-      <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <div className="grid md:grid-cols-2 gap-6">
+      <section className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tools.map((tool, i) => (
             <motion.div
               key={tool.title}

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Brain, Target, BookOpen, FileText,
-  Briefcase, FolderOpen, Settings, Menu, X, ChevronLeft,
+  Briefcase, Mic, FolderOpen, Settings, Menu, X, ChevronLeft,
   Crown, Zap, Star, Gift, AlertTriangle
 } from 'lucide-react';
 import FloatingCoach from '@/components/ai-coach/FloatingCoach';
@@ -20,8 +20,9 @@ const sidebarLinks = [
   { href: '/dashboard/career-plan', icon: Target, label: 'Career Plan' },
   { href: '/dashboard/learning', icon: BookOpen, label: 'Learning Path' },
   { href: '/dashboard/resume', icon: FileText, label: 'Resume Builder' },
+  { href: '/dashboard/jobs', icon: Briefcase, label: 'Jobs' },
+  { href: '/dashboard/interview', icon: Mic, label: 'Interview Prep' },
   { href: '/dashboard/portfolio', icon: FolderOpen, label: 'Portfolio' },
-  { href: '/dashboard/jobs', icon: Briefcase, label: 'Job Matching' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
   { href: '/dashboard/settings?tab=referral', icon: Gift, label: 'Refer & Earn' },
 ];
@@ -51,17 +52,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(true);
 
-  // Fetch user data
+  // Fetch user data and auto-save onboarding from localStorage if available
   useEffect(() => {
     if (status === 'authenticated') {
       fetch('/api/user/profile')
         .then(res => res.ok ? res.json() : null)
-        .then(data => {
+        .then(async (data) => {
           if (data) {
             setUserData(data);
-            // Redirect to onboarding if not completed
-            if (!data.onboardingDone && pathname !== '/dashboard/onboarding') {
-              router.push('/dashboard/onboarding');
+
+            // If onboarding not done but localStorage has data, auto-save it
+            if (!data.onboardingDone) {
+              const profileStr = localStorage.getItem('nxted_onboarding_profile');
+              if (profileStr) {
+                try {
+                  const profile = JSON.parse(profileStr);
+                  if (profile.targetRole) {
+                    await fetch('/api/user/onboarding', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        targetRole: profile.targetRole,
+                        interests: profile.skills?.slice(0, 5) || [],
+                        profile: {
+                          fullName: profile.fullName || data.name || '',
+                          phone: profile.phone || '',
+                          location: profile.location || '',
+                          linkedin: profile.linkedin || '',
+                          experienceLevel: profile.experienceLevel || '',
+                          currentStatus: profile.currentStatus || '',
+                          experiences: profile.experiences || [],
+                          educationLevel: profile.educationLevel || '',
+                          fieldOfStudy: profile.fieldOfStudy || '',
+                          institution: profile.institution || '',
+                          graduationYear: profile.graduationYear || '',
+                          skills: profile.skills || [],
+                          bio: profile.bio || '',
+                        },
+                      }),
+                    });
+                    // Refresh to show updated data
+                    window.location.reload();
+                    return;
+                  }
+                } catch {}
+              }
+              // No localStorage data — redirect to onboarding
+              if (pathname !== '/dashboard/onboarding') {
+                router.push('/dashboard/onboarding');
+              }
             }
           }
         })

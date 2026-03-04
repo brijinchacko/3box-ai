@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Plus, Edit3, Download, Copy, Trash2, Eye, Wand2,
   Briefcase, GraduationCap, Code, Award, User, Mail, Phone,
   MapPin, Linkedin, Globe, ArrowRight, CheckCircle2, Sparkles,
-  Crown, Lock,
+  Crown, Lock, X, Loader2, Users,
 } from 'lucide-react';
 
 // Demo resume data
@@ -66,6 +66,40 @@ const templates = [
   { id: 'creative', name: 'Creative', desc: 'Standout design' },
 ];
 
+const AI_FREE_LIMIT = 3;
+const AI_USES_KEY = 'nxted_ai_uses';
+
+function getAIUses(): number {
+  if (typeof window === 'undefined') return 0;
+  return parseInt(localStorage.getItem(AI_USES_KEY) || '0', 10);
+}
+
+function incrementAIUses(): number {
+  const current = getAIUses() + 1;
+  localStorage.setItem(AI_USES_KEY, String(current));
+  return current;
+}
+
+// Toast notification component
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-2xl flex items-center gap-2 ${
+        type === 'success'
+          ? 'bg-green-500/20 border border-green-500/30 text-green-300'
+          : 'bg-red-500/20 border border-red-500/30 text-red-300'
+      }`}
+    >
+      {type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
+      {message}
+      <button onClick={onClose} className="ml-2 opacity-60 hover:opacity-100"><X className="w-3 h-3" /></button>
+    </motion.div>
+  );
+}
+
 export default function ResumePage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
@@ -74,15 +108,268 @@ export default function ResumePage() {
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // AI state
+  const [aiLoading, setAiLoading] = useState<string | null>(null); // tracks which AI operation is running
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Tailor state
+  const [tailorJobDesc, setTailorJobDesc] = useState('');
+  const [tailoring, setTailoring] = useState(false);
+
+  // Cover letter state
+  const [coverLetterModal, setCoverLetterModal] = useState(false);
+  const [coverLetterJobDesc, setCoverLetterJobDesc] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
+  const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+
   const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
   const isBasic = userPlan === 'BASIC';
   const isStarter = userPlan === 'STARTER';
 
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  const checkAILimit = useCallback((): boolean => {
+    if (!isBasic) return true;
+    const uses = getAIUses();
+    if (uses >= AI_FREE_LIMIT) {
+      showToast(`Free AI limit reached (${AI_FREE_LIMIT}/${AI_FREE_LIMIT}). Upgrade to continue.`, 'error');
+      return false;
+    }
+    return true;
+  }, [isBasic, showToast]);
+
+  // ── AI Enhance (full resume) ───────────────────
   const handleAIEnhance = async () => {
+    if (!checkAILimit()) return;
     setGenerating(true);
-    // Simulate AI enhancement
-    await new Promise(r => setTimeout(r, 2000));
-    setGenerating(false);
+    setAiLoading('enhance');
+
+    try {
+      // Enhance summary
+      const summaryRes = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: 'summary',
+          content: resume.summary,
+        }),
+      });
+
+      if (!summaryRes.ok) {
+        const errData = await summaryRes.json().catch(() => null);
+        if (errData?.code === 'PLAN_LIMIT_REACHED') {
+          showToast('Free AI limit reached. Upgrade to continue.', 'error');
+          return;
+        }
+        throw new Error('Failed to enhance summary');
+      }
+      const summaryData = await summaryRes.json();
+
+      // Enhance experience bullets for each role
+      const enhancedExperience = [...resume.experience];
+      for (let i = 0; i < enhancedExperience.length; i++) {
+        const expRes = await fetch('/api/ai/resume/enhance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            section: 'experience',
+            content: enhancedExperience[i].bullets.join('\n'),
+          }),
+        });
+
+        if (expRes.ok) {
+          const expData = await expRes.json();
+          // The enhanced text might be a list of bullets; try to parse as lines
+          const enhanced = expData.enhanced || '';
+          const lines = enhanced.split('\n').map((l: string) => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+          if (lines.length > 0) {
+            enhancedExperience[i] = { ...enhancedExperience[i], bullets: lines };
+          }
+        }
+      }
+
+      setResume((prev) => ({
+        ...prev,
+        summary: summaryData.enhanced || prev.summary,
+        experience: enhancedExperience,
+      }));
+
+      if (isBasic) incrementAIUses();
+      showToast('Resume enhanced by AI successfully!', 'success');
+    } catch (error) {
+      console.error('AI Enhance error:', error);
+      showToast('AI enhancement failed. Please try again.', 'error');
+    } finally {
+      setGenerating(false);
+      setAiLoading(null);
+    }
+  };
+
+  // ── AI Write Summary ───────────────────────────
+  const handleAIWriteSummary = async () => {
+    if (!checkAILimit()) return;
+    setAiLoading('summary');
+
+    try {
+      const res = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: 'summary',
+          content: resume.summary || `${resume.experience.map(e => `${e.role} at ${e.company}`).join('. ')}. Skills: ${resume.skills.join(', ')}.`,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.code === 'PLAN_LIMIT_REACHED') {
+          showToast('Free AI limit reached. Upgrade to continue.', 'error');
+          return;
+        }
+        throw new Error('Failed to generate summary');
+      }
+      const data = await res.json();
+
+      setResume((prev) => ({ ...prev, summary: data.enhanced || prev.summary }));
+      if (isBasic) incrementAIUses();
+      showToast('AI-generated summary applied!', 'success');
+    } catch (error) {
+      console.error('AI Write Summary error:', error);
+      showToast('Failed to generate summary. Try again.', 'error');
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  // ── Tailor to Job Description ──────────────────
+  const handleTailorToJob = async () => {
+    if (!tailorJobDesc.trim()) {
+      showToast('Please paste a job description first.', 'error');
+      return;
+    }
+    if (!checkAILimit()) return;
+    setTailoring(true);
+    setAiLoading('tailor');
+
+    try {
+      // Build a text representation of the full resume for the API
+      const fullContent = [
+        `Summary: ${resume.summary}`,
+        ...resume.experience.map((e) => `Experience - ${e.role} at ${e.company}:\n${e.bullets.join('\n')}`),
+        `Skills: ${resume.skills.join(', ')}`,
+      ].join('\n\n');
+
+      const res = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: 'full',
+          content: fullContent,
+          targetJob: tailorJobDesc,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.code === 'PLAN_LIMIT_REACHED') {
+          showToast('Free AI limit reached. Upgrade to continue.', 'error');
+          return;
+        }
+        throw new Error('Failed to tailor resume');
+      }
+      const data = await res.json();
+
+      // The API returns { enhanced, suggestions }
+      // Enhanced might be JSON or plain text
+      const enhanced = data.enhanced || '';
+      try {
+        const parsed = JSON.parse(enhanced);
+
+        setResume((prev) => {
+          const updated = { ...prev };
+
+          if (parsed.summary) {
+            updated.summary = parsed.summary;
+          }
+
+          if (Array.isArray(parsed.experience)) {
+            updated.experience = prev.experience.map((exp) => {
+              const match = parsed.experience.find((e: any) => e.id === exp.id);
+              if (match && Array.isArray(match.bullets)) {
+                return { ...exp, bullets: match.bullets };
+              }
+              return exp;
+            });
+          }
+
+          if (Array.isArray(parsed.skills)) {
+            updated.skills = parsed.skills;
+          }
+
+          return updated;
+        });
+      } catch {
+        // Fallback: treat the enhanced response as a new summary if it's plain text
+        if (enhanced.length > 20) {
+          setResume((prev) => ({ ...prev, summary: enhanced }));
+        }
+      }
+
+      if (isBasic) incrementAIUses();
+      showToast('Resume tailored to job description!', 'success');
+    } catch (error) {
+      console.error('Tailor error:', error);
+      showToast('Tailoring failed. Please try again.', 'error');
+    } finally {
+      setTailoring(false);
+      setAiLoading(null);
+    }
+  };
+
+  // ── Generate Cover Letter ──────────────────────
+  const handleGenerateCoverLetter = async () => {
+    if (!coverLetterJobDesc.trim()) {
+      showToast('Please paste a job description first.', 'error');
+      return;
+    }
+    if (!checkAILimit()) return;
+    setCoverLetterLoading(true);
+
+    try {
+      const res = await fetch('/api/ai/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resume: {
+            contact: resume.contact,
+            summary: resume.summary,
+            experience: resume.experience,
+            skills: resume.skills,
+            education: resume.education,
+          },
+          jobDescription: coverLetterJobDesc,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to generate cover letter');
+      const data = await res.json();
+      setCoverLetter(data.coverLetter || '');
+      if (isBasic) incrementAIUses();
+      showToast('Cover letter generated!', 'success');
+    } catch (error) {
+      console.error('Cover letter error:', error);
+      showToast('Failed to generate cover letter. Try again.', 'error');
+    } finally {
+      setCoverLetterLoading(false);
+    }
+  };
+
+  const handleCopyCoverLetter = () => {
+    navigator.clipboard.writeText(coverLetter);
+    showToast('Cover letter copied to clipboard!', 'success');
   };
 
   const handleExportPDF = async () => {
@@ -124,7 +411,7 @@ export default function ResumePage() {
       window.open(url, '_blank');
     } catch (error) {
       console.error('Export error:', error);
-      alert('Failed to export resume. Please try again.');
+      showToast('Failed to export resume. Please try again.', 'error');
     } finally {
       setExporting(false);
     }
@@ -132,6 +419,96 @@ export default function ResumePage() {
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </AnimatePresence>
+
+      {/* Cover Letter Modal */}
+      <AnimatePresence>
+        {coverLetterModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setCoverLetterModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl max-h-[80vh] overflow-y-auto glass border border-white/10 rounded-2xl p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-neon-blue" />
+                  Generate Cover Letter
+                </h3>
+                <button onClick={() => setCoverLetterModal(false)} className="p-1.5 rounded-lg hover:bg-white/5">
+                  <X className="w-4 h-4 text-white/40" />
+                </button>
+              </div>
+
+              {!coverLetter ? (
+                <>
+                  <p className="text-sm text-white/40 mb-4">
+                    Paste the job description below and AI will generate a tailored cover letter based on your resume.
+                  </p>
+                  <textarea
+                    value={coverLetterJobDesc}
+                    onChange={(e) => setCoverLetterJobDesc(e.target.value)}
+                    className="input-field h-40 resize-none mb-4"
+                    placeholder="Paste the job description here..."
+                  />
+                  <button
+                    onClick={handleGenerateCoverLetter}
+                    disabled={coverLetterLoading}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    {coverLetterLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        AI is writing your cover letter...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4" />
+                        Generate Cover Letter
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 whitespace-pre-wrap text-sm text-white/80 leading-relaxed">
+                    {coverLetter}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleCopyCoverLetter} className="btn-secondary text-sm flex items-center gap-2">
+                      <Copy className="w-4 h-4" /> Copy to Clipboard
+                    </button>
+                    <button
+                      onClick={() => { setCoverLetter(''); setCoverLetterJobDesc(''); }}
+                      className="btn-secondary text-sm flex items-center gap-2"
+                    >
+                      <Wand2 className="w-4 h-4" /> Generate Another
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {isBasic && (
+                <p className="text-xs text-white/30 mt-4">
+                  Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} AI uses remaining
+                </p>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Paywall Banner (BASIC plan) ─────────────────────── */}
       {isBasic && (
         <motion.div
@@ -168,6 +545,20 @@ export default function ResumePage() {
         </motion.div>
       )}
 
+      {/* ── Human Expert Resume Review Banner ─────────────── */}
+      <div className="card bg-gradient-to-r from-neon-green/10 to-neon-blue/10 border-neon-green/20 mb-4 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-neon-green/20 flex items-center justify-center flex-shrink-0">
+          <Users className="w-6 h-6 text-neon-green" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-sm">Get Your Resume Verified by Human Experts</h3>
+          <p className="text-xs text-white/40">Pro & Ultra plans include professional resume review by real recruiters</p>
+        </div>
+        <Link href="/pricing" className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">
+          Upgrade
+        </Link>
+      </div>
+
       {/* ── Header ─────────────────────────────────────────── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -177,10 +568,32 @@ export default function ResumePage() {
             </h1>
             <p className="text-white/40">ATS-optimized resumes powered by AI</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleAIEnhance} className="btn-secondary text-sm flex items-center gap-2" disabled={generating}>
-              <Wand2 className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-              {generating ? 'Enhancing...' : 'AI Enhance'}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleAIEnhance}
+              className="btn-secondary text-sm flex items-center gap-2"
+              disabled={generating || aiLoading !== null}
+            >
+              {aiLoading === 'enhance' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  AI is enhancing...
+                </>
+              ) : (
+                <>
+                  <Wand2 className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
+                  AI Enhance
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => { setCoverLetter(''); setCoverLetterJobDesc(''); setCoverLetterModal(true); }}
+              className="btn-secondary text-sm flex items-center gap-2"
+              disabled={aiLoading !== null}
+            >
+              <FileText className="w-4 h-4" />
+              Cover Letter
             </button>
 
             {/* Export PDF button -- plan-aware */}
@@ -257,6 +670,16 @@ export default function ResumePage() {
                     <section.icon className="w-4 h-4" /> {section.label}
                   </button>
                 ))}
+
+                {/* AI uses counter for BASIC plan */}
+                {isBasic && (
+                  <div className="mt-4 pt-3 border-t border-white/5">
+                    <p className="text-xs text-white/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      AI uses: {getAIUses()}/{AI_FREE_LIMIT} free
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -298,7 +721,22 @@ export default function ResumePage() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-semibold">Professional Summary</h3>
-                    <button className="badge-neon text-xs flex items-center gap-1"><Wand2 className="w-3 h-3" /> AI Write</button>
+                    <button
+                      onClick={handleAIWriteSummary}
+                      disabled={aiLoading !== null}
+                      className="badge-neon text-xs flex items-center gap-1"
+                    >
+                      {aiLoading === 'summary' ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          AI is writing...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-3 h-3" /> AI Write
+                        </>
+                      )}
+                    </button>
                   </div>
                   <textarea
                     value={resume.summary}
@@ -319,6 +757,54 @@ export default function ResumePage() {
                           <p className="text-xs text-white/30">{exp.startDate} — {exp.endDate}</p>
                         </div>
                         <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              if (!checkAILimit()) return;
+                              setAiLoading(`exp-${exp.id}`);
+                              try {
+                                const res = await fetch('/api/ai/resume/enhance', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ section: 'experience', content: exp.bullets.join('\n') }),
+                                });
+                                if (!res.ok) {
+                                  const errData = await res.json().catch(() => null);
+                                  if (errData?.code === 'PLAN_LIMIT_REACHED') {
+                                    showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                                    return;
+                                  }
+                                  throw new Error('Enhance failed');
+                                }
+                                const data = await res.json();
+                                const enhanced = data.enhanced || '';
+                                const lines = enhanced.split('\n').map((l: string) => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+                                if (lines.length > 0) {
+                                  setResume((prev) => ({
+                                    ...prev,
+                                    experience: prev.experience.map((e) =>
+                                      e.id === exp.id ? { ...e, bullets: lines } : e
+                                    ),
+                                  }));
+                                  if (isBasic) incrementAIUses();
+                                  showToast(`Enhanced ${exp.role} bullets!`, 'success');
+                                }
+                              } catch (error) {
+                                console.error('Enhance exp error:', error);
+                                showToast('Failed to enhance. Try again.', 'error');
+                              } finally {
+                                setAiLoading(null);
+                              }
+                            }}
+                            disabled={aiLoading !== null}
+                            className="p-1.5 rounded-lg hover:bg-white/5 text-neon-blue/60 hover:text-neon-blue transition-colors"
+                            title="AI Enhance bullets"
+                          >
+                            {aiLoading === `exp-${exp.id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Wand2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
                           <button className="p-1.5 rounded-lg hover:bg-white/5"><Edit3 className="w-3.5 h-3.5 text-white/40" /></button>
                           <button className="p-1.5 rounded-lg hover:bg-white/5"><Trash2 className="w-3.5 h-3.5 text-red-400/60" /></button>
                         </div>
@@ -346,7 +832,7 @@ export default function ResumePage() {
                     {resume.skills.map((skill) => (
                       <span key={skill} className="badge bg-white/5 text-white/60 text-xs">
                         {skill}
-                        <button className="ml-1 text-white/30 hover:text-red-400">×</button>
+                        <button className="ml-1 text-white/30 hover:text-red-400">x</button>
                       </span>
                     ))}
                   </div>
@@ -381,10 +867,33 @@ export default function ResumePage() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
                   <h3 className="font-semibold mb-2">Tailor to Job Description</h3>
                   <p className="text-sm text-white/40 mb-4">Paste a job description and AI will optimize your resume for it.</p>
-                  <textarea className="input-field h-40 resize-none mb-4" placeholder="Paste the job description here..." />
-                  <button className="btn-primary flex items-center gap-2">
-                    <Wand2 className="w-4 h-4" /> Optimize Resume
+                  <textarea
+                    value={tailorJobDesc}
+                    onChange={(e) => setTailorJobDesc(e.target.value)}
+                    className="input-field h-40 resize-none mb-4"
+                    placeholder="Paste the job description here..."
+                  />
+                  <button
+                    onClick={handleTailorToJob}
+                    disabled={tailoring || aiLoading !== null}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    {tailoring ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        AI is tailoring your resume...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4" /> Optimize Resume
+                      </>
+                    )}
                   </button>
+                  {isBasic && (
+                    <p className="text-xs text-white/30 mt-3">
+                      Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} AI uses remaining
+                    </p>
+                  )}
                 </motion.div>
               )}
 
@@ -393,8 +902,59 @@ export default function ResumePage() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
                   <h3 className="font-semibold mb-4 capitalize">{activeSection}</h3>
                   <p className="text-sm text-white/40">Edit your {activeSection} section here. AI can help generate content.</p>
-                  <button className="btn-secondary text-sm mt-4 flex items-center gap-2">
-                    <Wand2 className="w-4 h-4" /> AI Generate {activeSection}
+                  <button
+                    onClick={async () => {
+                      if (!checkAILimit()) return;
+                      setAiLoading(activeSection);
+                      try {
+                        // Build content string from the section data
+                        let sectionContent = '';
+                        if (activeSection === 'certifications') {
+                          sectionContent = resume.certifications.map(c => `${c.name} - ${c.issuer} (${c.date})`).join('\n');
+                        } else if (activeSection === 'projects') {
+                          sectionContent = resume.projects.map(p => `${p.name}: ${p.description}`).join('\n');
+                        } else if (activeSection === 'education') {
+                          sectionContent = resume.education.map(e => `${e.degree} ${e.field} at ${e.institution}`).join('\n');
+                        }
+                        const res = await fetch('/api/ai/resume/enhance', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            section: 'experience', // Use a valid section type
+                            content: sectionContent || `Generate ${activeSection} content for an AI Engineer with skills: ${resume.skills.join(', ')}`,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const errData = await res.json().catch(() => null);
+                          if (errData?.code === 'PLAN_LIMIT_REACHED') {
+                            showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                            return;
+                          }
+                          throw new Error('Generation failed');
+                        }
+                        const data = await res.json();
+                        if (isBasic) incrementAIUses();
+                        showToast(`AI generated ${activeSection} content!`, 'success');
+                      } catch (error) {
+                        console.error('AI Generate error:', error);
+                        showToast('AI generation failed. Try again.', 'error');
+                      } finally {
+                        setAiLoading(null);
+                      }
+                    }}
+                    disabled={aiLoading !== null}
+                    className="btn-secondary text-sm mt-4 flex items-center gap-2"
+                  >
+                    {aiLoading === activeSection ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        AI is generating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4" /> AI Generate {activeSection}
+                      </>
+                    )}
                   </button>
                 </motion.div>
               )}

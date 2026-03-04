@@ -25,6 +25,25 @@ export default function SignupPageClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hasOnboardingData, setHasOnboardingData] = useState(false);
+  const [targetRole, setTargetRole] = useState('');
+
+  // Pre-fill from localStorage onboarding data
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const profileStr = localStorage.getItem('nxted_onboarding_profile');
+        if (profileStr) {
+          const profile = JSON.parse(profileStr);
+          if (profile.fullName) setName(profile.fullName);
+          if (profile.targetRole) {
+            setTargetRole(profile.targetRole);
+            setHasOnboardingData(true);
+          }
+        }
+      } catch {}
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +86,8 @@ export default function SignupPageClient() {
       if (result?.error) {
         setError('Account created but sign-in failed. Please try logging in.');
       } else {
+        // Auto-save onboarding data from localStorage if available
+        await saveOnboardingFromLocalStorage();
         window.location.href = '/dashboard';
       }
     } catch {
@@ -74,6 +95,40 @@ export default function SignupPageClient() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Auto-save onboarding profile from localStorage after signup
+  const saveOnboardingFromLocalStorage = async () => {
+    try {
+      const profileStr = localStorage.getItem('nxted_onboarding_profile');
+      if (!profileStr) return;
+      const profile = JSON.parse(profileStr);
+      if (!profile.targetRole) return;
+
+      await fetch('/api/user/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetRole: profile.targetRole,
+          interests: profile.skills?.slice(0, 5) || [],
+          profile: {
+            fullName: profile.fullName || name,
+            phone: profile.phone || '',
+            location: profile.location || '',
+            linkedin: profile.linkedin || '',
+            experienceLevel: profile.experienceLevel || '',
+            currentStatus: profile.currentStatus || '',
+            experiences: profile.experiences || [],
+            educationLevel: profile.educationLevel || '',
+            fieldOfStudy: profile.fieldOfStudy || '',
+            institution: profile.institution || '',
+            graduationYear: profile.graduationYear || '',
+            skills: profile.skills || [],
+            bio: profile.bio || '',
+          },
+        }),
+      });
+    } catch {}
   };
 
   const handleGoogleSignUp = () => {
@@ -90,13 +145,22 @@ export default function SignupPageClient() {
         <div className="relative p-12 max-w-lg">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
             <h2 className="text-4xl font-bold mb-4">
-              Start your career<br /><span className="gradient-text">transformation</span>
+              {hasOnboardingData ? (
+                <>Your career profile is<br /><span className="gradient-text">ready to go</span></>
+              ) : (
+                <>Start your career<br /><span className="gradient-text">transformation</span></>
+              )}
             </h2>
             <p className="text-white/40 mb-8">
-              Join NXTED AI and get access to AI-powered career tools that help you land your dream job faster.
+              {hasOnboardingData
+                ? `Create your free account to unlock your personalized ${targetRole} career plan, AI resume, and job matching.`
+                : 'Join NXTED AI and get access to AI-powered career tools that help you land your dream job faster.'}
             </p>
             <div className="space-y-4">
-              {benefits.map((b, i) => (
+              {(hasOnboardingData
+                ? [`AI career plan for ${targetRole}`, 'Resume draft ready to download', 'Personalized skill gap analysis', 'Job matching activated']
+                : benefits
+              ).map((b, i) => (
                 <motion.div
                   key={b}
                   initial={{ opacity: 0, x: -10 }}

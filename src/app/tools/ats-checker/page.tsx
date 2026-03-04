@@ -14,6 +14,9 @@ import {
   Sparkles,
   ArrowRight,
   ArrowLeft,
+  ShieldCheck,
+  ShieldAlert,
+  ListOrdered,
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -24,6 +27,8 @@ interface ATSResults {
   keywords: { found: string[]; missing: string[]; suggested: string[] };
   formatting: { score: number; issues: string[] };
   sections: { present: string[]; missing: string[] };
+  atsParseability?: { canParse: boolean; risks: string[] };
+  improvementPlan?: string[];
 }
 
 function ScoreCircle({ score }: { score: number }) {
@@ -82,6 +87,7 @@ function ScoreCircle({ score }: { score: number }) {
 export default function ATSCheckerPage() {
   const [resumeText, setResumeText] = useState('');
   const [targetJob, setTargetJob] = useState('');
+  const [inputMode, setInputMode] = useState<'title' | 'description'>('title');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ATSResults | null>(null);
   const [error, setError] = useState('');
@@ -178,15 +184,53 @@ export default function ATSCheckerPage() {
 
               <div>
                 <label className="block text-sm font-medium text-white/60 mb-2">
-                  Target job title <span className="text-white/20">(optional)</span>
+                  Target job {inputMode === 'title' ? 'title' : 'description'}{' '}
+                  <span className="text-white/20">(optional)</span>
                 </label>
-                <input
-                  type="text"
-                  value={targetJob}
-                  onChange={(e) => setTargetJob(e.target.value)}
-                  placeholder="e.g., Senior Frontend Developer"
-                  className="input-field"
-                />
+
+                {/* Toggle between title and description */}
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('title')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      inputMode === 'title'
+                        ? 'bg-neon-blue/20 text-neon-blue border border-neon-blue/30'
+                        : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    Job Title
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('description')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      inputMode === 'description'
+                        ? 'bg-neon-blue/20 text-neon-blue border border-neon-blue/30'
+                        : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    Full Job Description
+                  </button>
+                </div>
+
+                {inputMode === 'title' ? (
+                  <input
+                    type="text"
+                    value={targetJob}
+                    onChange={(e) => setTargetJob(e.target.value)}
+                    placeholder="e.g., Senior Frontend Developer"
+                    className="input-field"
+                  />
+                ) : (
+                  <textarea
+                    value={targetJob}
+                    onChange={(e) => setTargetJob(e.target.value)}
+                    placeholder="Paste the full job description here for detailed keyword matching..."
+                    rows={6}
+                    className="input-field resize-y text-sm"
+                  />
+                )}
               </div>
 
               <button
@@ -238,6 +282,64 @@ export default function ATSCheckerPage() {
                 </p>
               </div>
 
+              {/* ATS Parseability */}
+              {results.atsParseability && (
+                <div className="card">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    {results.atsParseability.canParse ? (
+                      <ShieldCheck className="w-5 h-5 text-neon-green" />
+                    ) : (
+                      <ShieldAlert className="w-5 h-5 text-red-400" />
+                    )}
+                    ATS Parseability
+                  </h2>
+
+                  <div
+                    className={`flex items-center gap-3 p-4 rounded-xl mb-4 ${
+                      results.atsParseability.canParse
+                        ? 'bg-neon-green/5 border border-neon-green/10'
+                        : 'bg-red-400/5 border border-red-400/10'
+                    }`}
+                  >
+                    {results.atsParseability.canParse ? (
+                      <>
+                        <CheckCircle className="w-6 h-6 text-neon-green flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-neon-green">ATS Compatible</p>
+                          <p className="text-xs text-white/40 mt-0.5">
+                            Your resume format should be parseable by most ATS systems.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-6 h-6 text-red-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-red-400">ATS Parsing Risks Detected</p>
+                          <p className="text-xs text-white/40 mt-0.5">
+                            Your resume has formatting issues that may cause ATS systems to reject or misread it.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {results.atsParseability.risks.length > 0 && (
+                    <ul className="space-y-2">
+                      {results.atsParseability.risks.map((risk, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2 text-sm text-white/60"
+                        >
+                          <AlertTriangle className="w-4 h-4 text-neon-orange flex-shrink-0 mt-0.5" />
+                          {risk}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               {/* Issues */}
               {results.issues.length > 0 && (
                 <div className="card">
@@ -271,6 +373,29 @@ export default function ATSCheckerPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Improvement Plan */}
+              {results.improvementPlan && results.improvementPlan.length > 0 && (
+                <div className="card">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <ListOrdered className="w-5 h-5 text-neon-purple" />
+                    Improvement Plan
+                  </h2>
+                  <ol className="space-y-3">
+                    {results.improvementPlan.map((step, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-3 p-3 rounded-xl bg-neon-purple/5 border border-neon-purple/10"
+                      >
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-neon-purple/20 text-neon-purple text-sm font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm text-white/70 pt-1">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
 
@@ -370,6 +495,50 @@ export default function ATSCheckerPage() {
                 </div>
               </div>
 
+              {/* Formatting Score */}
+              {results.formatting && (
+                <div className="card">
+                  <h2 className="text-lg font-semibold mb-4">Formatting Score</h2>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="flex-1 skill-bar">
+                      <div
+                        className="skill-bar-fill"
+                        style={{
+                          width: `${results.formatting.score}%`,
+                          background:
+                            results.formatting.score >= 80
+                              ? '#00ff88'
+                              : results.formatting.score >= 60
+                              ? '#00d4ff'
+                              : results.formatting.score >= 40
+                              ? '#ff6b00'
+                              : '#f87171',
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-white/70">
+                      {results.formatting.score}/100
+                    </span>
+                  </div>
+                  {results.formatting.issues.length > 0 && (
+                    <ul className="space-y-2 mt-3">
+                      {results.formatting.issues.map((issue, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2 text-sm text-white/50"
+                        >
+                          <AlertTriangle className="w-4 h-4 text-neon-orange flex-shrink-0 mt-0.5" />
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {results.formatting.issues.length === 0 && (
+                    <p className="text-sm text-white/40">No formatting issues detected.</p>
+                  )}
+                </div>
+              )}
+
               {/* CTA */}
               <div className="card text-center bg-gradient-to-br from-neon-blue/5 to-neon-purple/5">
                 <Sparkles className="w-8 h-8 text-neon-blue mx-auto mb-4" />
@@ -377,9 +546,14 @@ export default function ATSCheckerPage() {
                 <p className="text-white/40 text-sm mb-6 max-w-md mx-auto">
                   Our AI resume builder creates ATS-optimized resumes tailored to your target role.
                 </p>
-                <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-                  Get Started Free <ArrowRight className="w-4 h-4" />
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link href="/tools/resume-builder" className="btn-secondary inline-flex items-center gap-2">
+                    Try Free Resume Builder <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
+                    Get AI-Powered Resume <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
             </motion.div>
           )}

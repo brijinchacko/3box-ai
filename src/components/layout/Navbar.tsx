@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -19,24 +20,38 @@ const navLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isHomePage) { setScrolled(true); return; }
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isHomePage]);
 
   return (
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50 border-b border-white/5"
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled ? 'border-b border-white/5' : 'border-b border-transparent'
+      }`}
     >
-      <div className="absolute inset-0 bg-surface/80 backdrop-blur-xl" />
+      <div className={`absolute inset-0 backdrop-blur-xl transition-all duration-300 ${
+        scrolled ? 'bg-surface/80' : 'bg-transparent'
+      }`} />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo — always visible */}
           <Link href="/" className="flex items-center gap-2 group">
             <Logo size="md" />
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* Desktop Nav — visible on scroll */}
+          <div className={`hidden md:flex items-center gap-1 transition-all duration-300 ${
+            scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`}>
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -48,8 +63,10 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* CTA Buttons — visible on scroll */}
+          <div className={`hidden md:flex items-center gap-3 transition-all duration-300 ${
+            scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`}>
             {session ? (
               <Link href="/dashboard" className="btn-primary text-sm flex items-center gap-1">
                 Dashboard <ChevronRight className="w-4 h-4" />
@@ -59,17 +76,25 @@ export default function Navbar() {
                 <Link href="/login" className="btn-ghost text-sm">
                   Sign In
                 </Link>
-                <Link href="/signup" className="btn-primary text-sm flex items-center gap-1">
-                  Get Started <ChevronRight className="w-4 h-4" />
-                </Link>
+                {isHomePage ? (
+                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="btn-primary text-sm flex items-center gap-1">
+                    Get Started <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <Link href="/" className="btn-primary text-sm flex items-center gap-1">
+                    Get Started <ChevronRight className="w-4 h-4" />
+                  </Link>
+                )}
               </>
             )}
           </div>
 
-          {/* Mobile Toggle */}
+          {/* Mobile Toggle — visible on scroll */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-white/5"
+            className={`md:hidden p-2 rounded-lg hover:bg-white/5 transition-all duration-300 ${
+              scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -110,9 +135,15 @@ export default function Navbar() {
                     <Link href="/login" className="block w-full text-center btn-secondary text-sm">
                       Sign In
                     </Link>
-                    <Link href="/signup" className="block w-full text-center btn-primary text-sm">
-                      Get Started Free
-                    </Link>
+                    {isHomePage ? (
+                      <button onClick={() => { setMobileOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="block w-full text-center btn-primary text-sm">
+                        Get Started Free
+                      </button>
+                    ) : (
+                      <Link href="/" className="block w-full text-center btn-primary text-sm">
+                        Get Started Free
+                      </Link>
+                    )}
                   </>
                 )}
               </div>
@@ -120,6 +151,6 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.nav>
+    </nav>
   );
 }
