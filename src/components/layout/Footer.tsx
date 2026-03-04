@@ -31,6 +31,7 @@ const footerLinks = {
   ],
   Support: [
     { label: 'Help Center', href: '/help' },
+    { label: 'System Status', href: '/status' },
     { label: 'Contact', href: '/about#contact' },
   ],
 };
