@@ -8,6 +8,7 @@ import { stripe, getPlanFromPriceId, CREDIT_PACKS } from '@/lib/stripe';
 import { prisma } from '@/lib/db/prisma';
 import {
   sendSubscriptionConfirmEmail,
+  sendSubscriptionCanceledEmail,
   sendPaymentFailedEmail,
 } from '@/lib/email';
 
@@ -273,7 +274,7 @@ async function handleSubscriptionDeleted(
   });
 
   // Reset User to BASIC plan
-  await prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: existingSub.userId },
     data: {
       plan: 'BASIC',
@@ -283,6 +284,16 @@ async function handleSubscriptionDeleted(
       aiCreditsUsed: 0,
     },
   });
+
+  // Send cancellation email
+  if (user.email) {
+    const endDate = new Date(existingSub.currentPeriodEnd).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+    sendSubscriptionCanceledEmail(user.email, user.name || 'there', endDate).catch((err) => {
+      console.error('[Webhook] Failed to send cancellation email:', err);
+    });
+  }
 
   console.log(`[Webhook] Subscription canceled: sub=${subscriptionId} user=${existingSub.userId}`);
 }

@@ -75,9 +75,16 @@ export async function POST(req: Request) {
       },
     }).catch(() => {}); // Ignore if already subscribed
 
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail(email, name).catch((err: any) => {
+    // Send welcome email (non-blocking) and log it
+    sendWelcomeEmail(email, name).then(() => {
+      prisma.emailLog.create({
+        data: { userId: user.id, type: 'WELCOME', subject: 'Welcome to NXTED AI', to: email, status: 'sent' },
+      }).catch(() => {});
+    }).catch((err: any) => {
       console.error('[Register] Failed to send welcome email:', err);
+      prisma.emailLog.create({
+        data: { userId: user.id, type: 'WELCOME', subject: 'Welcome to NXTED AI', to: email, status: 'failed' },
+      }).catch(() => {});
     });
 
     return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });

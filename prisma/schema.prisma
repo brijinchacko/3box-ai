@@ -43,6 +43,20 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model OtpToken {
+  id         String   @id @default(cuid())
+  email      String
+  code       String
+  type       String   @default("login") // login | signup | reset
+  attempts   Int      @default(0)
+  used       Boolean  @default(false)
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([email, type])
+  @@index([expires])
+}
+
 // ─── Users ─────────────────────────────────────
 
 enum PlanTier {
@@ -163,6 +177,9 @@ model Referral {
 
 enum EmailType {
   WELCOME
+  OTP_LOGIN
+  OTP_SIGNUP
+  EMAIL_VERIFIED
   ONBOARDING_DAY2
   ONBOARDING_DAY5
   ONBOARDING_DAY7
@@ -174,6 +191,7 @@ enum EmailType {
   SUBSCRIPTION_CONFIRM
   SUBSCRIPTION_CANCELED
   PAYMENT_FAILED
+  ACCOUNT_ACTIVITY
 }
 
 model EmailLog {

@@ -1,6 +1,6 @@
 /**
  * NextAuth configuration
- * Supports Email/Password + Google OAuth with OFORO internal detection
+ * Supports Email/Password + OTP + Google OAuth with OFORO internal detection
  */
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
@@ -26,6 +26,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
     CredentialsProvider({
+      id: 'credentials',
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -39,7 +40,36 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
-        if (!user || !user.hashedPassword) return null;
+        if (!user) return null;
+
+        // Check if this is an OTP-verified login (password starts with "otp:")
+        if (credentials.password.startsWith('otp:')) {
+          const otpCode = credentials.password.slice(4);
+          // Verify there's a recently used OTP for this email
+          const recentOtp = await prisma.otpToken.findFirst({
+            where: {
+              email: credentials.email,
+              type: 'login',
+              code: otpCode,
+              used: true,
+              createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) }, // within last 5 min
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (recentOtp) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+            };
+          }
+          return null;
+        }
+
+        // Standard password login
+        if (!user.hashedPassword) return null;
 
         const isValid = await bcrypt.compare(credentials.password, user.hashedPassword);
         if (!isValid) return null;

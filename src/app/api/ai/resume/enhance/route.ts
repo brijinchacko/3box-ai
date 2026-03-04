@@ -100,6 +100,10 @@ export async function POST(req: Request) {
       data: { aiCreditsUsed: { increment: 1 } },
     });
 
+    // Check for low credit alert (non-blocking)
+    const { checkAndAlertLowCredits } = require('@/lib/credits');
+    checkAndAlertLowCredits(session.user.id).catch(() => {});
+
     return NextResponse.json({
       enhanced: result.enhanced,
       suggestions: result.suggestions || [],

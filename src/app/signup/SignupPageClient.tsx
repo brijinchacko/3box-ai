@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { signIn } from 'next-auth/react';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Chrome, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Chrome, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
+
+type SignupStep = 'form' | 'verify';
 
 const benefits = [
   'Free skill assessment',
@@ -19,6 +21,7 @@ export default function SignupPageClient() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
 
+  const [step, setStep] = useState<SignupStep>('form');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +30,11 @@ export default function SignupPageClient() {
   const [error, setError] = useState('');
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const [targetRole, setTargetRole] = useState('');
+
+  // OTP state
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Pre-fill from localStorage onboarding data
   useState(() => {
@@ -45,6 +53,13 @@ export default function SignupPageClient() {
     }
   });
 
+  // Timer for resend
+  useEffect(() => {
+    if (otpTimer <= 0) return;
+    const interval = setInterval(() => setOtpTimer((t) => t - 1), 1000);
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -57,26 +72,86 @@ export default function SignupPageClient() {
     }
 
     try {
-      const body: Record<string, string> = { name, email, password };
+      // Send OTP for email verification
+      const res = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, type: 'signup' }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to send verification code');
+        return;
+      }
+
+      setStep('verify');
+      setOtpTimer(60);
+      setOtpCode(['', '', '', '', '', '']);
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newCode = [...otpCode];
+    newCode[index] = value.slice(-1);
+    setOtpCode(newCode);
+
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all digits entered
+    if (newCode.every((d) => d !== '') && newCode.join('').length === 6) {
+      verifyAndCreateAccount(newCode.join(''));
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      const digits = pasted.split('');
+      setOtpCode(digits);
+      otpRefs.current[5]?.focus();
+      verifyAndCreateAccount(pasted);
+    }
+  };
+
+  const verifyAndCreateAccount = async (code: string) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const body: Record<string, string> = { email, code, type: 'signup', name, password };
       if (ref) body.ref = ref;
 
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        if (res.status === 409) {
-          setError('An account with this email already exists. Please sign in instead.');
-        } else {
-          setError(data.error || 'Something went wrong. Please try again.');
-        }
-        setLoading(false);
+        setError(data.error || 'Verification failed');
+        setOtpCode(['', '', '', '', '', '']);
+        otpRefs.current[0]?.focus();
         return;
       }
 
+      // Sign in
       const result = await signIn('credentials', {
         email,
         password,
@@ -86,7 +161,6 @@ export default function SignupPageClient() {
       if (result?.error) {
         setError('Account created but sign-in failed. Please try logging in.');
       } else {
-        // Auto-save onboarding data from localStorage if available
         await saveOnboardingFromLocalStorage();
         window.location.href = '/dashboard';
       }
@@ -97,7 +171,30 @@ export default function SignupPageClient() {
     }
   };
 
-  // Auto-save onboarding profile from localStorage after signup
+  const handleResendOtp = async () => {
+    if (otpTimer > 0) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, type: 'signup' }),
+      });
+      if (res.ok) {
+        setOtpTimer(60);
+        setOtpCode(['', '', '', '', '', '']);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to resend');
+      }
+    } catch {
+      setError('Failed to resend');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveOnboardingFromLocalStorage = async () => {
     try {
       const profileStr = localStorage.getItem('nxted_onboarding_profile');
@@ -191,81 +288,157 @@ export default function SignupPageClient() {
           </Link>
 
           <div className="glass p-8">
-            <h1 className="text-2xl font-bold text-center mb-2">Create your account</h1>
-            <p className="text-sm text-white/40 text-center mb-8">Free forever. No credit card required.</p>
+            <AnimatePresence mode="wait">
+              {step === 'form' ? (
+                <motion.div
+                  key="form"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <h1 className="text-2xl font-bold text-center mb-2">Create your account</h1>
+                  <p className="text-sm text-white/40 text-center mb-8">Free forever. No credit card required.</p>
 
-            {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-                {error}
-              </div>
-            )}
+                  {error && (
+                    <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                      {error}
+                    </div>
+                  )}
 
-            <button
-              onClick={handleGoogleSignUp}
-              className="btn-secondary w-full flex items-center justify-center gap-2 mb-6"
-            >
-              <Chrome className="w-4 h-4" /> Sign up with Google
-            </button>
-
-            <div className="my-6 flex items-center gap-3">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-xs text-white/30">or</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm text-white/60 mb-1.5">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-field pl-10" placeholder="John Doe" required />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/60 mb-1.5">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field pl-10" placeholder="you@example.com" required />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/60 mb-1.5">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input-field pl-10 pr-10"
-                    placeholder="Min 8 characters"
-                    required
-                    minLength={8}
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button
+                    onClick={handleGoogleSignUp}
+                    className="btn-secondary w-full flex items-center justify-center gap-2 mb-6"
+                  >
+                    <Chrome className="w-4 h-4" /> Sign up with Google
                   </button>
-                </div>
-              </div>
 
-              <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>Create Account <ArrowRight className="w-4 h-4" /></>
-                )}
-              </button>
-            </form>
+                  <div className="my-6 flex items-center gap-3">
+                    <div className="flex-1 h-px bg-white/10" />
+                    <span className="text-xs text-white/30">or</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
 
-            <p className="text-xs text-white/30 text-center mt-4">
-              By signing up, you agree to our <Link href="/security#terms" className="underline">Terms</Link> and <Link href="/security#privacy" className="underline">Privacy Policy</Link>.
-            </p>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-white/60 mb-1.5">Full Name</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-field pl-10" placeholder="John Doe" required />
+                      </div>
+                    </div>
 
-            <p className="text-sm text-white/40 text-center mt-6">
-              Already have an account?{' '}
-              <Link href="/login" className="text-neon-blue hover:underline">Sign in</Link>
-            </p>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-1.5">Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field pl-10" placeholder="you@example.com" required />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-white/60 mb-1.5">Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="input-field pl-10 pr-10"
+                          placeholder="Min 8 characters"
+                          required
+                          minLength={8}
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
+                      {loading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>Continue <ArrowRight className="w-4 h-4" /></>
+                      )}
+                    </button>
+                  </form>
+
+                  <p className="text-xs text-white/30 text-center mt-4">
+                    By signing up, you agree to our <Link href="/security#terms" className="underline">Terms</Link> and <Link href="/security#privacy" className="underline">Privacy Policy</Link>.
+                  </p>
+
+                  <p className="text-sm text-white/40 text-center mt-6">
+                    Already have an account?{' '}
+                    <Link href="/login" className="text-neon-blue hover:underline">Sign in</Link>
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="verify"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-6"
+                >
+                  <div className="text-center">
+                    <ShieldCheck className="w-12 h-12 text-neon-blue mx-auto mb-3" />
+                    <h1 className="text-2xl font-bold mb-2">Verify your email</h1>
+                    <p className="text-sm text-white/40">
+                      We sent a 6-digit code to<br />
+                      <strong className="text-white">{email}</strong>
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+                    {otpCode.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        className="w-12 h-14 text-center text-xl font-bold bg-white/5 border border-white/10 rounded-xl focus:border-neon-blue focus:ring-1 focus:ring-neon-blue/50 outline-none transition-all"
+                      />
+                    ))}
+                  </div>
+
+                  {loading && (
+                    <div className="flex justify-center">
+                      <div className="flex items-center gap-2 text-sm text-white/40">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-neon-blue rounded-full animate-spin" />
+                        Creating your account...
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-center space-y-3">
+                    <button
+                      onClick={handleResendOtp}
+                      disabled={otpTimer > 0 || loading}
+                      className="text-sm text-neon-blue hover:underline disabled:text-white/20 disabled:no-underline"
+                    >
+                      {otpTimer > 0 ? `Resend code in ${otpTimer}s` : 'Resend code'}
+                    </button>
+                    <br />
+                    <button
+                      onClick={() => { setStep('form'); setError(''); }}
+                      className="text-sm text-white/40 hover:text-white/60"
+                    >
+                      Change email address
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       </div>
