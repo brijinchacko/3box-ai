@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import Providers from '@/components/providers/Providers';
+import PageTracker from '@/components/analytics/PageTracker';
 import './globals.css';
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxted.ai';
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-surface text-white antialiased overflow-x-hidden">
         <Providers>
+          <PageTracker />
           {children}
         </Providers>
       </body>

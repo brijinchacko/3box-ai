@@ -407,3 +407,26 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
 }
+
+// ─── Analytics / Page Views ────────────────────
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  userAgent String?
+  country   String?
+  city      String?
+  device    String?  // desktop | mobile | tablet
+  browser   String?
+  os        String?
+  sessionId String?
+  userId    String?
+  duration  Int?     // seconds spent on page
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@index([country])
+  @@index([sessionId])
+}
