@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
+import { signIn } from 'next-auth/react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Chrome } from 'lucide-react';
+import Logo from '@/components/brand/Logo';
 
 export default function LoginPageClient() {
   const [email, setEmail] = useState('');
@@ -19,10 +20,17 @@ export default function LoginPageClient() {
     setError('');
 
     try {
-      // In production: signIn('credentials', { email, password, redirect: false })
-      // Demo: simulate login
-      await new Promise((r) => setTimeout(r, 1000));
-      window.location.href = '/dashboard';
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Invalid email or password');
+      } else {
+        window.location.href = '/dashboard';
+      }
     } catch {
       setError('Invalid email or password');
     } finally {
@@ -31,8 +39,7 @@ export default function LoginPageClient() {
   };
 
   const handleGoogleSignIn = () => {
-    // In production: signIn('google', { callbackUrl: '/dashboard' })
-    window.location.href = '/dashboard';
+    signIn('google', { callbackUrl: '/dashboard' });
   };
 
   return (
@@ -46,7 +53,7 @@ export default function LoginPageClient() {
       >
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-8">
-          <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={160} height={46} className="h-10 w-auto" />
+          <Logo size="sm" />
         </Link>
 
         <div className="glass p-8">

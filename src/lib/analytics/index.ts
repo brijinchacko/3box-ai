@@ -122,3 +122,34 @@ export function reset(): void {
     (window as any).posthog.reset();
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  React hook wrapper                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Convenience hook that returns pre-bound tracking helpers for common
+ * application events. Each method calls `track()` with the appropriate
+ * event constant and properties.
+ *
+ * Usage:
+ * ```ts
+ * const { trackSignup, trackResumeExport } = useTrack();
+ * trackSignup('google');
+ * trackResumeExport('modern');
+ * ```
+ */
+export function useTrack() {
+  return {
+    trackSignup: (method: string) => track(EVENTS.SIGNUP, { method }),
+    trackLogin: (method: string) => track(EVENTS.LOGIN, { method }),
+    trackAssessmentStart: () => track(EVENTS.ASSESSMENT_START),
+    trackAssessmentComplete: (score: number) => track(EVENTS.ASSESSMENT_COMPLETE, { score }),
+    trackResumeExport: (template: string) => track(EVENTS.RESUME_EXPORT, { template }),
+    trackPlanUpgrade: (plan: string, interval: string) => track(EVENTS.PLAN_UPGRADE, { plan, interval }),
+    trackCreditPurchase: (pack: string) => track(EVENTS.CREDIT_PURCHASE, { pack }),
+    trackReferralSend: () => track(EVENTS.REFERRAL_SEND),
+    trackToolUse: (tool: string) => track(tool === 'ats' ? EVENTS.TOOL_ATS_CHECK : EVENTS.TOOL_SALARY_ESTIMATE),
+    trackBlogView: (slug: string) => track(EVENTS.BLOG_VIEW, { slug }),
+  };
+}

@@ -1,0 +1,14 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="favGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <!-- Top-right block -->
+  <rect x="11" y="1" width="20" height="14" rx="3" fill="url(#favGrad)"/>
+  <!-- Left-middle block -->
+  <rect x="1" y="10" width="14" height="12" rx="3" fill="url(#favGrad)"/>
+  <!-- Bottom-center block -->
+  <rect x="11" y="18" width="12" height="13" rx="3" fill="url(#favGrad)"/>
+</svg>

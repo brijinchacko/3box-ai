@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
+import { signIn } from 'next-auth/react';
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Chrome, CheckCircle2 } from 'lucide-react';
+import Logo from '@/components/brand/Logo';
 
 const benefits = [
   'Free skill assessment',
@@ -14,6 +16,9 @@ const benefits = [
 ];
 
 export default function SignupPageClient() {
+  const searchParams = useSearchParams();
+  const ref = searchParams.get('ref');
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,14 +38,46 @@ export default function SignupPageClient() {
     }
 
     try {
-      // In production: POST /api/auth/register then signIn
-      await new Promise((r) => setTimeout(r, 1000));
-      window.location.href = '/dashboard';
+      const body: Record<string, string> = { name, email, password };
+      if (ref) body.ref = ref;
+
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          setError('An account with this email already exists. Please sign in instead.');
+        } else {
+          setError(data.error || 'Something went wrong. Please try again.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Account created but sign-in failed. Please try logging in.');
+      } else {
+        window.location.href = '/dashboard';
+      }
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSignUp = () => {
+    signIn('google', { callbackUrl: '/dashboard' });
   };
 
   return (
@@ -86,7 +123,7 @@ export default function SignupPageClient() {
           className="relative w-full max-w-md"
         >
           <Link href="/" className="flex items-center justify-center mb-8 lg:hidden">
-            <Image src="/assets/brand/logo-white.png" alt="NXTED AI" width={160} height={46} className="h-10 w-auto" />
+            <Logo size="sm" />
           </Link>
 
           <div className="glass p-8">
@@ -100,7 +137,7 @@ export default function SignupPageClient() {
             )}
 
             <button
-              onClick={() => { window.location.href = '/dashboard'; }}
+              onClick={handleGoogleSignUp}
               className="btn-secondary w-full flex items-center justify-center gap-2 mb-6"
             >
               <Chrome className="w-4 h-4" /> Sign up with Google

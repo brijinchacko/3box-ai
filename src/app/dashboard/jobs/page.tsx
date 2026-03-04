@@ -1,76 +1,195 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Briefcase, Search, MapPin, DollarSign, TrendingUp, ExternalLink,
-  Filter, CheckCircle2, Clock, XCircle, Send, Zap, Crown,
-  ArrowRight, BarChart3, AlertCircle, Eye, Settings, Pause, Play
+  Briefcase,
+  Search,
+  MapPin,
+  Clock,
+  ExternalLink,
+  Bookmark,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  Send,
+  Zap,
+  Crown,
+  Settings,
+  Play,
+  Pause,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  BarChart3,
+  Wifi,
 } from 'lucide-react';
 
-const demoJobs = [
-  {
-    id: '1', title: 'Senior AI Engineer', company: 'Scale AI', location: 'San Francisco, CA',
-    salary: '$180K - $250K', matchScore: 92, postedDate: '2 days ago',
-    matchReasons: ['Strong ML/DL background', 'PyTorch expertise matches', 'System design experience'],
-    improvementSteps: ['Get MLOps certification', 'Practice large-scale system design'],
-  },
-  {
-    id: '2', title: 'ML Engineer', company: 'Stripe', location: 'Remote',
-    salary: '$160K - $220K', matchScore: 87, postedDate: '1 day ago',
-    matchReasons: ['Python proficiency', 'Production ML experience', 'Data pipeline skills'],
-    improvementSteps: ['Strengthen fraud detection knowledge', 'Study financial ML use cases'],
-  },
-  {
-    id: '3', title: 'AI Research Engineer', company: 'Anthropic', location: 'San Francisco, CA',
-    salary: '$200K - $350K', matchScore: 78, postedDate: '3 days ago',
-    matchReasons: ['Deep learning expertise', 'NLP experience', 'Open source contributions'],
-    improvementSteps: ['Publish research paper', 'Deepen transformer architecture knowledge', 'Contribute to alignment research'],
-  },
-  {
-    id: '4', title: 'Machine Learning Engineer', company: 'Netflix', location: 'Los Gatos, CA',
-    salary: '$170K - $280K', matchScore: 85, postedDate: '5 days ago',
-    matchReasons: ['Recommendation systems experience', 'Strong Python skills', 'Real-time ML experience'],
-    improvementSteps: ['Study content-based filtering at scale'],
-  },
-];
+// ── Types ──────────────────────────────────────────────
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  companyLogo: string | null;
+  location: string;
+  description: string;
+  salary: string | null;
+  url: string;
+  postedAt: string;
+  type: string;
+  remote: boolean;
+}
 
-const applications = [
-  { id: '1', jobTitle: 'ML Engineer', company: 'OpenAI', status: 'interview' as const, appliedAt: '2 weeks ago', matchScore: 90 },
-  { id: '2', jobTitle: 'AI Engineer', company: 'Google DeepMind', status: 'applied' as const, appliedAt: '1 week ago', matchScore: 82 },
-  { id: '3', jobTitle: 'Senior ML Engineer', company: 'Meta', status: 'viewed' as const, appliedAt: '4 days ago', matchScore: 88 },
-  { id: '4', jobTitle: 'Research Engineer', company: 'Cohere', status: 'queued' as const, appliedAt: null, matchScore: 79 },
-];
+interface JobsResponse {
+  jobs: Job[];
+  total: number;
+  page: number;
+  isDemo: boolean;
+  error?: string;
+}
 
-const statusConfig = {
-  queued: { color: 'text-white/40', bg: 'bg-white/5', icon: Clock, label: 'Queued' },
-  applied: { color: 'text-neon-blue', bg: 'bg-neon-blue/10', icon: Send, label: 'Applied' },
-  viewed: { color: 'text-yellow-400', bg: 'bg-yellow-400/10', icon: Eye, label: 'Viewed' },
-  interview: { color: 'text-neon-green', bg: 'bg-neon-green/10', icon: CheckCircle2, label: 'Interview' },
-  offer: { color: 'text-neon-purple', bg: 'bg-neon-purple/10', icon: Crown, label: 'Offer!' },
-  rejected: { color: 'text-red-400', bg: 'bg-red-400/10', icon: XCircle, label: 'Rejected' },
-  withdrawn: { color: 'text-white/30', bg: 'bg-white/5', icon: XCircle, label: 'Withdrawn' },
-};
+// ── Skeleton Loader ────────────────────────────────────
+function JobCardSkeleton() {
+  return (
+    <div className="card animate-pulse">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-48 bg-white/10 rounded" />
+            <div className="h-5 w-20 bg-white/5 rounded-full" />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-4 w-28 bg-white/5 rounded" />
+            <div className="h-4 w-32 bg-white/5 rounded" />
+            <div className="h-4 w-36 bg-white/5 rounded" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 w-full bg-white/5 rounded" />
+            <div className="h-3 w-3/4 bg-white/5 rounded" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 flex-shrink-0">
+          <div className="h-9 w-24 bg-white/10 rounded-lg" />
+          <div className="h-9 w-24 bg-white/5 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
+// ── Relative Time Helper ───────────────────────────────
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return '1 week ago';
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} month(s) ago`;
+}
+
+// ── Main Page ──────────────────────────────────────────
 export default function JobsPage() {
-  const [tab, setTab] = useState<'discover' | 'applications' | 'automation'>('discover');
-  const [expandedJob, setExpandedJob] = useState<string | null>(null);
+  const [tab, setTab] = useState<'discover' | 'saved' | 'applications'>('discover');
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [page, setPage] = useState(1);
+
+  // Data state
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isDemo, setIsDemo] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Fetch Jobs ─────────────────────────────────────
+  const fetchJobs = useCallback(async (q: string, loc: string, remote: boolean, pg: number) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set('q', q.trim());
+      if (loc.trim()) params.set('location', loc.trim());
+      if (remote) params.set('remote_only', 'true');
+      params.set('page', String(pg));
+
+      const res = await fetch(`/api/jobs/search?${params.toString()}`);
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError('Please sign in to search for jobs.');
+          return;
+        }
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || 'Failed to fetch jobs. Please try again.');
+        return;
+      }
+
+      const data: JobsResponse = await res.json();
+
+      if (data.error) {
+        // Soft error (e.g., rate limit) -- still show jobs if available
+        setError(data.error);
+      }
+
+      setJobs(data.jobs || []);
+      setTotal(data.total || 0);
+      setIsDemo(data.isDemo || false);
+    } catch {
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchJobs(searchQuery, locationQuery, remoteOnly, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Handle Search Submit ───────────────────────────
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    fetchJobs(searchQuery, locationQuery, remoteOnly, 1);
+  };
+
+  // ── Pagination ─────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(total / 10));
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchJobs(searchQuery, locationQuery, remoteOnly, newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
           <Briefcase className="w-7 h-7 text-neon-orange" /> Job Matching
         </h1>
-        <p className="text-white/40">AI-powered job matching with explainable fit scoring.</p>
+        <p className="text-white/40">Find and track job opportunities powered by real-time data.</p>
       </motion.div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
         {[
           { id: 'discover' as const, label: 'Discover Jobs', icon: Search },
+          { id: 'saved' as const, label: 'Saved Jobs', icon: Bookmark },
           { id: 'applications' as const, label: 'Applications', icon: Send },
-          { id: 'automation' as const, label: 'Auto-Apply', icon: Zap, badge: 'Ultra' },
         ].map((t) => (
           <button
             key={t.id}
@@ -81,184 +200,298 @@ export default function JobsPage() {
           >
             <t.icon className="w-4 h-4" />
             {t.label}
-            {t.badge && <span className="badge-purple text-[8px]">{t.badge}</span>}
           </button>
         ))}
       </div>
 
+      {/* ── Discover Jobs Tab ─────────────────────────── */}
       {tab === 'discover' && (
         <>
-          {/* Search Bar */}
-          <div className="card mb-6">
-            <div className="flex gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input className="input-field pl-10" placeholder="Search roles, companies..." />
+          {/* Demo Data Banner */}
+          <AnimatePresence>
+            {isDemo && !loading && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 p-3 rounded-xl bg-neon-blue/5 border border-neon-blue/10 text-sm text-neon-blue/80 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>Showing demo data. Add a <code className="px-1 py-0.5 bg-white/5 rounded text-xs">RAPIDAPI_KEY</code> to your environment for live job listings from JSearch.</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Search Form */}
+          <form onSubmit={handleSearch} className="card mb-6">
+            <div className="flex gap-3 flex-wrap items-end">
+              <div className="relative flex-1 min-w-[180px]">
+                <label className="block text-xs text-white/40 mb-1.5">Role / Keywords</label>
+                <Search className="absolute left-3 bottom-2.5 w-4 h-4 text-white/30" />
+                <input
+                  className="input-field pl-10"
+                  placeholder="Software engineer, React, ML..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <div className="relative flex-1 min-w-[200px]">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input className="input-field pl-10" placeholder="Location..." />
+              <div className="relative flex-1 min-w-[180px]">
+                <label className="block text-xs text-white/40 mb-1.5">Location</label>
+                <MapPin className="absolute left-3 bottom-2.5 w-4 h-4 text-white/30" />
+                <input
+                  className="input-field pl-10"
+                  placeholder="City, state, or country..."
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                />
               </div>
-              <button className="btn-primary text-sm">Search</button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRemoteOnly(!remoteOnly)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all border ${
+                    remoteOnly
+                      ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
+                      : 'bg-white/5 border-white/10 text-white/40 hover:text-white/60'
+                  }`}
+                >
+                  <Wifi className="w-4 h-4" />
+                  Remote
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                  Search
+                </button>
+              </div>
             </div>
-          </div>
+          </form>
+
+          {/* Error State */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="mb-4 p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-sm text-red-400 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Loading Skeletons */}
+          {loading && (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <JobCardSkeleton key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && jobs.length === 0 && !error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="card text-center py-12"
+            >
+              <Search className="w-12 h-12 text-white/20 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-1">No jobs found</h3>
+              <p className="text-sm text-white/40">Try adjusting your search keywords or filters.</p>
+            </motion.div>
+          )}
 
           {/* Job Listings */}
-          <div className="space-y-4">
-            {demoJobs.map((job, i) => (
-              <motion.div
-                key={job.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="card cursor-pointer"
-                onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold">{job.title}</h3>
-                      <div className={`badge text-xs ${
-                        job.matchScore >= 90 ? 'bg-neon-green/10 text-neon-green' :
-                        job.matchScore >= 80 ? 'bg-neon-blue/10 text-neon-blue' :
-                        'bg-yellow-400/10 text-yellow-400'
-                      }`}>
-                        <TrendingUp className="w-3 h-3 mr-0.5" /> {job.matchScore}% match
+          {!loading && jobs.length > 0 && (
+            <div className="space-y-4">
+              {jobs.map((job, i) => (
+                <motion.div
+                  key={job.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="card hover:border-white/10 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Title row */}
+                      <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                        <h3 className="font-semibold text-white truncate">{job.title}</h3>
+                        {job.remote && (
+                          <span className="badge text-xs bg-neon-green/10 text-neon-green flex-shrink-0">
+                            <Wifi className="w-3 h-3 mr-0.5" /> Remote
+                          </span>
+                        )}
+                        <span className="badge text-xs bg-white/5 text-white/50 flex-shrink-0">
+                          {job.type}
+                        </span>
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="flex items-center gap-4 text-sm text-white/40 flex-wrap mb-2">
+                        <span className="font-medium text-white/60">{job.company}</span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> {job.location}
+                        </span>
+                        {job.salary && (
+                          <span className="text-neon-green/80 font-medium">{job.salary}</span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
+                        </span>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-sm text-white/30 line-clamp-2 leading-relaxed">
+                        {job.description}
+                      </p>
+
+                      {/* AI Match Score placeholder */}
+                      <div className="mt-3 flex items-center gap-2 text-xs text-white/20">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Match Score -- Coming soon</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-white/40">
-                      <span>{job.company}</span>
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {job.location}</span>
-                      <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" /> {job.salary}</span>
-                    </div>
-                    <div className="text-xs text-white/30 mt-1">{job.postedDate}</div>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); }}
-                    className="btn-primary text-xs px-4 py-2"
-                  >
-                    Apply
-                  </button>
-                </div>
 
-                {/* Expanded Match Details */}
-                {expandedJob === job.id && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-4 pt-4 border-t border-white/5 grid sm:grid-cols-2 gap-4"
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <a
+                        href={job.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View Job <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Placeholder for save functionality
+                        }}
+                        className="btn-secondary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap"
+                      >
+                        <Bookmark className="w-3 h-3" /> Save
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && jobs.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className={`p-2 rounded-lg transition-all ${
+                  page <= 1
+                    ? 'text-white/20 cursor-not-allowed'
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (page <= 3) {
+                  pageNum = i + 1;
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = page - 2 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
+                      page === pageNum
+                        ? 'bg-neon-orange/20 text-neon-orange border border-neon-orange/30'
+                        : 'text-white/40 hover:text-white hover:bg-white/10'
+                    }`}
                   >
-                    <div>
-                      <h4 className="text-xs font-semibold text-neon-green mb-2 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Why You Match
-                      </h4>
-                      {job.matchReasons.map((r, j) => (
-                        <div key={j} className="text-sm text-white/50 mb-1 flex items-start gap-2">
-                          <span className="text-neon-green mt-0.5">✓</span> {r}
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-yellow-400 mb-2 flex items-center gap-1">
-                        <ArrowRight className="w-3 h-3" /> To Improve Your Chances
-                      </h4>
-                      {job.improvementSteps.map((s, j) => (
-                        <div key={j} className="text-sm text-white/50 mb-1 flex items-start gap-2">
-                          <span className="text-yellow-400 mt-0.5">→</span> {s}
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            ))}
-          </div>
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className={`p-2 rounded-lg transition-all ${
+                  page >= totalPages
+                    ? 'text-white/20 cursor-not-allowed'
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {/* Result count */}
+          {!loading && jobs.length > 0 && (
+            <p className="text-center text-xs text-white/20 mt-3">
+              Showing {jobs.length} of {total} results {isDemo && '(demo data)'}
+            </p>
+          )}
         </>
       )}
 
-      {tab === 'applications' && (
-        <div className="space-y-3">
-          {applications.map((app, i) => {
-            const config = statusConfig[app.status];
-            return (
-              <motion.div
-                key={app.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="card flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center`}>
-                    <config.icon className={`w-5 h-5 ${config.color}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{app.jobTitle}</h3>
-                    <p className="text-xs text-white/40">{app.company} {app.appliedAt && `• Applied ${app.appliedAt}`}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`badge text-xs ${config.bg} ${config.color}`}>{config.label}</span>
-                  <span className="text-xs text-white/30">{app.matchScore}% match</span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+      {/* ── Saved Jobs Tab ────────────────────────────── */}
+      {tab === 'saved' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="card text-center py-16"
+        >
+          <Bookmark className="w-12 h-12 text-white/20 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-1">No saved jobs yet</h3>
+          <p className="text-sm text-white/40 mb-4">Save jobs to see them here for quick access later.</p>
+          <button
+            onClick={() => setTab('discover')}
+            className="btn-primary text-sm px-5 py-2 inline-flex items-center gap-2"
+          >
+            <Search className="w-4 h-4" /> Discover Jobs
+          </button>
+        </motion.div>
       )}
 
-      {tab === 'automation' && (
-        <div className="max-w-2xl mx-auto">
-          <div className="card text-center mb-6">
-            <Crown className="w-12 h-12 text-neon-purple mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Ultra Auto-Apply Agent</h2>
-            <p className="text-sm text-white/40 mb-6">Automatically apply to jobs matching your criteria with full audit trail and compliance controls.</p>
-
-            <div className="space-y-4 text-left">
-              <div>
-                <label className="block text-sm text-white/60 mb-1.5">Target Roles</label>
-                <input className="input-field" placeholder="AI Engineer, ML Engineer..." />
-              </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-1.5">Location</label>
-                  <input className="input-field" placeholder="San Francisco, Remote..." />
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-1.5">Min Salary</label>
-                  <input className="input-field" placeholder="$150,000" />
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-1.5">Daily Cap</label>
-                  <select className="input-field">
-                    <option>5 applications / day</option>
-                    <option>10 applications / day</option>
-                    <option>20 applications / day</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-1.5">Exclusions</label>
-                  <input className="input-field" placeholder="Companies to exclude..." />
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-yellow-400/5 border border-yellow-400/10 text-sm text-yellow-400/80 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>All automated actions are logged in a full audit trail. You can pause or stop at any time.</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <Play className="w-4 h-4" /> Start Auto-Apply
-              </button>
-              <button className="btn-secondary flex-1 flex items-center justify-center gap-2">
-                <Settings className="w-4 h-4" /> Configure
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── Applications Tab ──────────────────────────── */}
+      {tab === 'applications' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="card text-center py-16"
+        >
+          <BarChart3 className="w-12 h-12 text-white/20 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-1">Track your applications here</h3>
+          <p className="text-sm text-white/40 mb-4">
+            When you apply to jobs, they will appear here so you can track your progress.
+          </p>
+          <button
+            onClick={() => setTab('discover')}
+            className="btn-primary text-sm px-5 py-2 inline-flex items-center gap-2"
+          >
+            <Briefcase className="w-4 h-4" /> Browse Jobs
+          </button>
+        </motion.div>
       )}
     </div>
   );

@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   FileText, Plus, Edit3, Download, Copy, Trash2, Eye, Wand2,
   Briefcase, GraduationCap, Code, Award, User, Mail, Phone,
-  MapPin, Linkedin, Globe, ArrowRight, CheckCircle2, Sparkles
+  MapPin, Linkedin, Globe, ArrowRight, CheckCircle2, Sparkles,
+  Crown, Lock,
 } from 'lucide-react';
 
 // Demo resume data
@@ -64,10 +67,16 @@ const templates = [
 ];
 
 export default function ResumePage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [resume, setResume] = useState(demoResume);
   const [activeSection, setActiveSection] = useState('contact');
   const [generating, setGenerating] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
+  const isBasic = userPlan === 'BASIC';
+  const isStarter = userPlan === 'STARTER';
 
   const handleAIEnhance = async () => {
     setGenerating(true);
@@ -76,8 +85,90 @@ export default function ResumePage() {
     setGenerating(false);
   };
 
+  const handleExportPDF = async () => {
+    if (isBasic) {
+      window.location.href = '/pricing';
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const res = await fetch('/api/resume/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeData: {
+            contact: resume.contact,
+            summary: resume.summary,
+            experience: resume.experience,
+            education: resume.education,
+            skills: resume.skills,
+            certifications: resume.certifications,
+          },
+          template: resume.template,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        if (err?.error === 'upgrade_required') {
+          window.location.href = '/pricing';
+          return;
+        }
+        throw new Error(err?.message ?? 'Export failed');
+      }
+
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export resume. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
+      {/* ── Paywall Banner (BASIC plan) ─────────────────────── */}
+      {isBasic && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 rounded-2xl border border-neon-blue/30 overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(168,85,247,0.12) 100%)',
+          }}
+        >
+          <div className="px-5 py-5 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 flex items-center justify-center flex-shrink-0">
+                <Crown className="w-5 h-5 text-neon-purple" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">
+                  Upgrade to export your resume as PDF
+                </h3>
+                <p className="text-sm text-white/50 mt-0.5">
+                  Free users can edit and preview. Upgrade to Starter ($12/mo) to export PDF.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/pricing"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white text-sm font-semibold hover:shadow-lg hover:shadow-neon-blue/25 transition-all"
+            >
+              <Crown className="w-4 h-4" />
+              Upgrade Now
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Header ─────────────────────────────────────────── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -91,9 +182,32 @@ export default function ResumePage() {
               <Wand2 className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
               {generating ? 'Enhancing...' : 'AI Enhance'}
             </button>
-            <button className="btn-primary text-sm flex items-center gap-2">
-              <Download className="w-4 h-4" /> Export PDF
-            </button>
+
+            {/* Export PDF button -- plan-aware */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                className={`text-sm flex items-center gap-2 ${
+                  isBasic
+                    ? 'btn-secondary opacity-80 cursor-not-allowed'
+                    : 'btn-primary'
+                }`}
+              >
+                {isBasic ? (
+                  <Lock className="w-4 h-4" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {exporting ? 'Exporting...' : 'Export PDF'}
+              </button>
+
+              {isStarter && (
+                <span className="text-xs text-white/40 hidden sm:inline">
+                  Exported with nxtED AI watermark
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
