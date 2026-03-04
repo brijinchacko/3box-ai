@@ -5,16 +5,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
-  LayoutDashboard, Users, BarChart3, FileText,
-  Settings, ChevronLeft, Shield, ArrowLeft,
+  LayoutDashboard, Users, BarChart3,
+  Shield, ArrowLeft,
 } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 
 const adminLinks = [
   { href: '/admin', icon: LayoutDashboard, label: 'Overview' },
+  { href: '/admin/monitoring', icon: BarChart3, label: 'Monitoring' },
   { href: '/admin/users', icon: Users, label: 'Users' },
-  { href: '/admin/revenue', icon: BarChart3, label: 'Revenue' },
-  { href: '/admin/content', icon: FileText, label: 'Content' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
