@@ -24,15 +24,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Get targetRole from CareerTwin's targetRoles array
+    const targetRoles = user.careerTwin?.targetRoles as any;
+    const targetRole = Array.isArray(targetRoles) && targetRoles.length > 0
+      ? (typeof targetRoles[0] === 'string' ? targetRoles[0] : targetRoles[0]?.title || '')
+      : '';
+
+    // Get location from CareerTwin's skillSnapshot._profile
+    const skillSnapshot = user.careerTwin?.skillSnapshot as any;
+    const location = skillSnapshot?._profile?.location || '';
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
       email: user.email,
       image: user.image,
-      targetRole: user.targetRole,
-      location: user.location,
+      targetRole,
+      location,
       plan: user.plan,
-      credits: user.credits,
+      aiCreditsUsed: user.aiCreditsUsed,
+      aiCreditsLimit: user.aiCreditsLimit,
       referralCode: user.referralCode,
       onboardingDone: user.onboardingDone,
       careerTwin: user.careerTwin,
@@ -60,27 +71,60 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { name, targetRole, location } = body;
 
+    // Update user name
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
-    if (targetRole !== undefined) updateData.targetRole = targetRole;
-    if (location !== undefined) updateData.location = location;
 
-    const updatedUser = await prisma.user.update({
+    if (Object.keys(updateData).length > 0) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: updateData,
+      });
+    }
+
+    // Update targetRole/location in CareerTwin
+    if (targetRole !== undefined || location !== undefined) {
+      const existing = await prisma.careerTwin.findUnique({
+        where: { userId: session.user.id },
+      });
+      if (existing) {
+        const careerUpdate: Record<string, unknown> = {};
+        if (targetRole !== undefined) {
+          careerUpdate.targetRoles = [{ title: targetRole, probability: 0 }];
+        }
+        if (location !== undefined) {
+          const snap = (existing.skillSnapshot as any) || {};
+          careerUpdate.skillSnapshot = {
+            ...snap,
+            _profile: { ...(snap._profile || {}), location },
+          };
+        }
+        await prisma.careerTwin.update({
+          where: { userId: session.user.id },
+          data: careerUpdate,
+        });
+      }
+    }
+
+    const updatedUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        targetRole: true,
-        location: true,
-        updatedAt: true,
-      },
+      include: { careerTwin: true },
     });
+
+    const targetRolesArr = updatedUser?.careerTwin?.targetRoles as any;
+    const resolvedRole = Array.isArray(targetRolesArr) && targetRolesArr.length > 0
+      ? (typeof targetRolesArr[0] === 'string' ? targetRolesArr[0] : targetRolesArr[0]?.title || '')
+      : '';
 
     return NextResponse.json({
       success: true,
-      user: updatedUser,
+      user: {
+        id: updatedUser?.id,
+        name: updatedUser?.name,
+        email: updatedUser?.email,
+        targetRole: resolvedRole,
+        updatedAt: updatedUser?.updatedAt,
+      },
     });
   } catch (error) {
     console.error('Error updating user profile:', error);

@@ -32,8 +32,8 @@ export interface AIModelConfig {
 
 export const AI_MODELS: Record<ModelTier, AIModelConfig> = {
   free: {
-    id: 'meta-llama/llama-3.1-8b-instruct:free',
-    name: 'Llama 3.1 8B (Free)',
+    id: 'meta-llama/llama-3.3-8b-instruct:free',
+    name: 'Llama 3.3 8B (Free)',
     tier: 'free',
     maxTokens: 4096,
     supportsJsonMode: false,
