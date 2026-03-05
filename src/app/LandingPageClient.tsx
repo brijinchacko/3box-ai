@@ -13,6 +13,7 @@ import {
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import HoraceAvatar, { type HoraceExpression } from '@/components/brand/HoraceAvatar';
+import { useRegion } from '@/lib/geo';
 
 // ─── Data Constants ──────────────────────────
 
@@ -137,10 +138,23 @@ const educationLevels = [
 ];
 
 // Demo AI responses — short, encouraging, and clear
+const regionSalaryKey: Record<string, keyof SalaryData> = {
+  'IN': 'in', 'US': 'us', 'GB': 'uk', 'AU': 'au',
+  'DE': 'eu', 'FR': 'eu', 'NL': 'eu', 'ES': 'eu', 'IT': 'eu',
+  'CA': 'us', 'IE': 'eu', 'SE': 'eu', 'NO': 'eu',
+};
+
+const regionSalaryLabel: Record<string, string> = {
+  'in': 'India', 'us': 'the US', 'uk': 'the UK', 'eu': 'Europe', 'au': 'Australia', 'global': 'your region',
+};
+
 const demoResponses: Record<string, (ctx: any) => string> = {
   role: (ctx) => {
     const salary = roleSalaryMap[ctx.targetRole];
-    return salary ? `Great pick! Top ${ctx.targetRole}s earn up to ${salary.us} in the US.` : `${ctx.targetRole} — exciting choice! Let's map your path.`;
+    if (!salary) return `${ctx.targetRole} — exciting choice! Let's map your path.`;
+    const rKey = regionSalaryKey[ctx.countryCode] || 'global';
+    const label = regionSalaryLabel[rKey] || 'your region';
+    return `Great pick! Top ${ctx.targetRole}s earn up to ${salary[rKey]} in ${label}.`;
   },
   experience: (ctx) => {
     if (ctx.experience === 'fresher') return `Perfect starting point — I'll build a plan to get you hired fast.`;
@@ -181,12 +195,12 @@ const howItWorks = [
 ];
 
 const topSalaryRoles = [
-  { role: 'Data Scientist', icon: Brain, us: 'Up to $200K', eu: 'Up to €130K', growth: '+31%' },
-  { role: 'Product Manager', icon: Target, us: 'Up to $190K', eu: 'Up to €130K', growth: '+24%' },
-  { role: 'Software Engineer', icon: Cpu, us: 'Up to $180K', eu: 'Up to €120K', growth: '+25%' },
-  { role: 'Legal Advisor', icon: FileText, us: 'Up to $180K', eu: 'Up to €110K', growth: '+15%' },
-  { role: 'Financial Analyst', icon: BarChart3, us: 'Up to $150K', eu: 'Up to €95K', growth: '+18%' },
-  { role: 'Marketing Manager', icon: Zap, us: 'Up to $145K', eu: 'Up to €95K', growth: '+19%' },
+  { role: 'Data Scientist', icon: Brain, us: 'Up to $200K', eu: 'Up to €130K', in: 'Up to ₹40L', uk: 'Up to £120K', growth: '+31%' },
+  { role: 'Product Manager', icon: Target, us: 'Up to $190K', eu: 'Up to €130K', in: 'Up to ₹35L', uk: 'Up to £115K', growth: '+24%' },
+  { role: 'Software Engineer', icon: Cpu, us: 'Up to $180K', eu: 'Up to €120K', in: 'Up to ₹35L', uk: 'Up to £110K', growth: '+25%' },
+  { role: 'Legal Advisor', icon: FileText, us: 'Up to $180K', eu: 'Up to €110K', in: 'Up to ₹25L', uk: 'Up to £100K', growth: '+15%' },
+  { role: 'Financial Analyst', icon: BarChart3, us: 'Up to $150K', eu: 'Up to €95K', in: 'Up to ₹18L', uk: 'Up to £85K', growth: '+18%' },
+  { role: 'Marketing Manager', icon: Zap, us: 'Up to $145K', eu: 'Up to €95K', in: 'Up to ₹20L', uk: 'Up to £80K', growth: '+19%' },
 ];
 
 // ─── Conversational Steps ────────────────────
@@ -205,6 +219,7 @@ interface Message {
 
 export default function LandingPageClient() {
   const router = useRouter();
+  const { countryCode, isLoading: geoLoading } = useRegion();
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -333,7 +348,7 @@ export default function LandingPageClient() {
     setShowSuggestions(false);
     triggerExpression('heart');
 
-    const aiMsg = await getAIResponse('role', role, { targetRole: role });
+    const aiMsg = await getAIResponse('role', role, { targetRole: role, countryCode });
     addHoraceMessage(aiMsg);
     proceedToStep('experience');
   };
@@ -919,30 +934,37 @@ export default function LandingPageClient() {
             <p className="text-white/40">See what top roles pay. NXTED AI helps you get there.</p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topSalaryRoles.map((role, i) => (
-              <motion.div key={role.role} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
-                className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-neon-green/20 transition-all group">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-green/20 to-emerald-500/10 flex items-center justify-center">
-                    <role.icon className="w-4 h-4 text-neon-green" />
+            {topSalaryRoles.map((role, i) => {
+              // Show regional salary pair based on detected country
+              const isIndia = countryCode === 'IN';
+              const isUK = countryCode === 'GB';
+              const primary = isIndia ? { label: 'India', value: role.in } : isUK ? { label: 'UK', value: role.uk } : { label: 'US', value: role.us };
+              const secondary = isIndia ? { label: 'US', value: role.us } : isUK ? { label: 'EU', value: role.eu } : { label: 'EU', value: role.eu };
+              return (
+                <motion.div key={role.role} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+                  className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-neon-green/20 transition-all group">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-green/20 to-emerald-500/10 flex items-center justify-center">
+                      <role.icon className="w-4 h-4 text-neon-green" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold">{role.role}</h3>
+                      <span className="text-[10px] text-neon-green font-medium">{role.growth} growth</span>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold">{role.role}</h3>
-                    <span className="text-[10px] text-neon-green font-medium">{role.growth} growth</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-lg bg-white/[0.03] text-center">
+                      <div className="text-[9px] text-white/30 mb-0.5">{primary.label}</div>
+                      <div className="text-xs font-bold text-white/80">{primary.value}</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] text-center">
+                      <div className="text-[9px] text-white/30 mb-0.5">{secondary.label}</div>
+                      <div className="text-xs font-bold text-white/80">{secondary.value}</div>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-2 rounded-lg bg-white/[0.03] text-center">
-                    <div className="text-[9px] text-white/30 mb-0.5">US</div>
-                    <div className="text-xs font-bold text-white/80">{role.us}</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-white/[0.03] text-center">
-                    <div className="text-[9px] text-white/30 mb-0.5">EU</div>
-                    <div className="text-xs font-bold text-white/80">{role.eu}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
           <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mt-10">
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
