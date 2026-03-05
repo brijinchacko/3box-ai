@@ -190,7 +190,9 @@ export async function GET(request: NextRequest) {
       });
       if (careerTwin) {
         const targets = careerTwin.targetRoles as any;
-        const targetRole = Array.isArray(targets) ? targets[0] : (typeof targets === 'string' ? targets : query);
+        const targetRole = Array.isArray(targets) && targets.length > 0
+          ? (typeof targets[0] === 'string' ? targets[0] : targets[0]?.title || query)
+          : (typeof targets === 'string' ? targets : query);
         const skills = careerTwin.skillSnapshot as any;
         const skillList = Array.isArray(skills)
           ? skills.map((s: any) => typeof s === 'string' ? s : s.skill || s.name || '')
