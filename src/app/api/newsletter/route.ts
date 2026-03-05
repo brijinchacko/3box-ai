@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
     await prisma.newsletterSubscriber.upsert({
       where: { email },
       update: {
-        source: source || undefined,
-        updatedAt: new Date(),
+        active: true,
+        ...(source ? { source } : {}),
       },
       create: {
         email,

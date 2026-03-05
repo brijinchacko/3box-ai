@@ -369,11 +369,13 @@ export default function LandingPageClient() {
   };
 
   const handleSkillsDone = async () => {
-    if (selectedSkills.length < 2) return;
-    addUserMessage(selectedSkills.join(', '));
+    if (!selectedSkills.includes('None') && selectedSkills.length < 2) return;
+    const displaySkills = selectedSkills.includes('None') ? ['None (will be assessed)'] : selectedSkills;
+    addUserMessage(displaySkills.join(', '));
     triggerExpression('star');
 
-    const aiMsg = await getAIResponse('skills', selectedSkills.join(', '), { targetRole, experience, status, education, skills: selectedSkills });
+    const skillsForAI = selectedSkills.includes('None') ? ['General Skills'] : selectedSkills;
+    const aiMsg = await getAIResponse('skills', skillsForAI.join(', '), { targetRole, experience, status, education, skills: skillsForAI });
     addHoraceMessage(aiMsg);
     proceedToStep('personal');
   };
@@ -384,28 +386,29 @@ export default function LandingPageClient() {
     triggerExpression('heart');
 
     // Save to localStorage
+    const actualSkills = selectedSkills.includes('None') ? [] : selectedSkills;
     const profile = {
       fullName, location, phone: '', linkedin: '', bio: '',
       targetRole, experienceLevel: experience, currentStatus: status,
       educationLevel: education, fieldOfStudy: '', institution: '', graduationYear: '',
-      skills: selectedSkills, experiences: [],
+      skills: actualSkills, experiences: [],
     };
     localStorage.setItem('nxted_onboarding_profile', JSON.stringify(profile));
     localStorage.setItem('nxted_target_role', targetRole);
-    localStorage.setItem('nxted_interests', JSON.stringify(selectedSkills.slice(0, 5)));
+    localStorage.setItem('nxted_interests', JSON.stringify(actualSkills.slice(0, 5)));
     localStorage.setItem('nxted_user_location', location);
     localStorage.setItem('nxted_skill_scores', JSON.stringify(
-      selectedSkills.reduce((acc, skill) => {
+      actualSkills.reduce((acc, skill) => {
         acc[skill] = experience === 'fresher' ? 30 : experience === '0-1' ? 40 : experience === '1-3' ? 55 : experience === '3-5' ? 65 : experience === '5-10' ? 75 : 85;
         return acc;
       }, {} as Record<string, number>)
     ));
     const resumeData = {
       personalInfo: { fullName, email: '', phone: '', location, linkedin: '' },
-      summary: `${experience === 'fresher' ? 'Aspiring' : 'Experienced'} ${targetRole} passionate about ${selectedSkills.slice(0, 3).join(', ')}.`,
+      summary: `${experience === 'fresher' ? 'Aspiring' : 'Experienced'} ${targetRole}${actualSkills.length > 0 ? ` passionate about ${actualSkills.slice(0, 3).join(', ')}` : ' ready to learn and grow'}.`,
       experience: [],
       education: { level: education, field: '', institution: '', year: '' },
-      skills: selectedSkills,
+      skills: actualSkills,
       targetRole,
     };
     localStorage.setItem('nxted_resume_draft', JSON.stringify(resumeData));
@@ -534,7 +537,7 @@ export default function LandingPageClient() {
                   ) : step === 'education' ? (
                     <>What&apos;s your <span className="gradient-text">education</span> level?</>
                   ) : step === 'skills' ? (
-                    <>Select your <span className="gradient-text">skills</span> <span className="text-white/30 text-lg font-normal">(2+)</span></>
+                    <>Select your <span className="gradient-text">skills</span> <span className="text-white/30 text-lg font-normal">(or choose None)</span></>
                   ) : step === 'personal' ? (
                     <>Almost <span className="gradient-text">done!</span></>
                   ) : step === 'complete' ? (
@@ -652,27 +655,46 @@ export default function LandingPageClient() {
                   {step === 'skills' && !isTyping && (
                     <motion.div key="skills-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                       <div className="flex flex-wrap gap-1.5 mb-3">
+                        {/* None / Not Sure option */}
+                        <button
+                          onClick={() => setSelectedSkills((prev) => prev.includes('None') ? prev.filter((s) => s !== 'None') : ['None'])}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            selectedSkills.includes('None')
+                              ? 'bg-neon-blue/15 border border-neon-blue/40 text-neon-blue'
+                              : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60 hover:border-white/20'
+                          }`}
+                        >
+                          {selectedSkills.includes('None') && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
+                          None / Not Sure
+                        </button>
                         {suggestedSkills.map((skill) => {
                           const sel = selectedSkills.includes(skill);
                           return (
                             <button
                               key={skill}
-                              onClick={() => setSelectedSkills((prev) => sel ? prev.filter((s) => s !== skill) : [...prev, skill])}
+                              onClick={() => setSelectedSkills((prev) => {
+                                // If "None" was selected, clear it when selecting a real skill
+                                const filtered = prev.filter((s) => s !== 'None');
+                                return sel ? filtered.filter((s) => s !== skill) : [...filtered, skill];
+                              })}
                               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                sel
+                                sel && !selectedSkills.includes('None')
                                   ? 'bg-neon-green/15 border border-neon-green/40 text-neon-green'
                                   : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60 hover:border-white/20'
                               }`}
                             >
-                              {sel && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
+                              {sel && !selectedSkills.includes('None') && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
                               {skill}
                             </button>
                           );
                         })}
                       </div>
-                      {selectedSkills.length >= 2 && (
+                      {(selectedSkills.includes('None') || selectedSkills.length >= 2) && (
                         <button onClick={handleSkillsDone} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
-                          Continue with {selectedSkills.length} skills <ArrowRight className="w-4 h-4" />
+                          {selectedSkills.includes('None')
+                            ? <>Continue without skills <ArrowRight className="w-4 h-4" /></>
+                            : <>Continue with {selectedSkills.length} skills <ArrowRight className="w-4 h-4" /></>
+                          }
                         </button>
                       )}
                     </motion.div>
@@ -787,7 +809,7 @@ export default function LandingPageClient() {
       </section>
 
       {/* ─── How It Works ─────────────────────────── */}
-      <section className="py-20" aria-label="How AI Career Platform Works">
+      <section id="features" className="py-20 scroll-mt-20" aria-label="How AI Career Platform Works">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">How It Works</h2>

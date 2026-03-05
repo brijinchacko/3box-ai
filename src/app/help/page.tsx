@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, BookOpen, MessageCircle, FileText, Zap, Shield,
   ChevronDown, ChevronRight, ExternalLink, Users, HelpCircle,
-  Cpu, BarChart3, Target, Award, ArrowRight, Mail
+  Cpu, BarChart3, Target, Award, ArrowRight, Mail, MessageSquare
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -306,12 +306,20 @@ export default function HelpCenterPage() {
           <p className="text-sm text-white/40 mb-6">
             Can&apos;t find what you&apos;re looking for? Our team is here to help.
           </p>
-          <Link
-            href="/about#contact"
-            className="btn-secondary text-sm inline-flex items-center gap-2"
-          >
-            <Mail className="w-4 h-4" /> Contact Support
-          </Link>
+          <div className="flex items-center justify-center gap-3">
+            <a
+              href="/contact"
+              className="btn-secondary text-sm inline-flex items-center gap-2"
+            >
+              <Mail className="w-4 h-4" /> Contact Support
+            </a>
+            <Link
+              href="/help/tickets"
+              className="btn-primary text-sm inline-flex items-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4" /> My Tickets
+            </Link>
+          </div>
         </div>
       </section>
 

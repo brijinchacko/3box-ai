@@ -1,6 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
+import { searchAdzuna } from '@/lib/jobs/adzuna';
+import { rankJobs } from '@/lib/jobs/matcher';
 
 // ── Types ──────────────────────────────────────────────
 interface JSearchJob {
@@ -34,6 +36,8 @@ interface TransformedJob {
   postedAt: string;
   type: string;
   remote: boolean;
+  source?: string;
+  matchScore?: number;
 }
 
 // ── Demo Data (used when RAPIDAPI_KEY is not set) ──────
@@ -159,6 +163,8 @@ function transformJob(job: JSearchJob): TransformedJob {
   };
 }
 
+const { prisma } = require('@/lib/db/prisma');
+
 // ── Route Handler ──────────────────────────────────────
 export async function GET(request: NextRequest) {
   try {
@@ -175,15 +181,87 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const remoteOnly = searchParams.get('remote_only') === 'true';
 
-    const apiKey = process.env.RAPIDAPI_KEY;
+    // Get user profile for match scoring
+    let userProfile = { targetRole: query, skills: [] as string[], location };
+    try {
+      const careerTwin = await prisma.careerTwin.findUnique({
+        where: { userId: session.user.id },
+        select: { targetRoles: true, skillSnapshot: true },
+      });
+      if (careerTwin) {
+        const targets = careerTwin.targetRoles as any;
+        const targetRole = Array.isArray(targets) ? targets[0] : (typeof targets === 'string' ? targets : query);
+        const skills = careerTwin.skillSnapshot as any;
+        const skillList = Array.isArray(skills)
+          ? skills.map((s: any) => typeof s === 'string' ? s : s.skill || s.name || '')
+          : (typeof skills === 'object' && skills !== null ? Object.keys(skills) : []);
+        userProfile = { targetRole: targetRole || query, skills: skillList, location };
+      }
+    } catch {}
 
-    // ── Fallback to demo data when no API key ──
-    if (!apiKey) {
-      console.log('[Jobs API] No RAPIDAPI_KEY set, returning demo data');
+    let jobs: TransformedJob[] = [];
+    let total = 0;
+    let isDemo = false;
+    let source = '';
 
-      let filtered = [...DEMO_JOBS];
+    // ── Strategy: JSearch → Adzuna → Demo ──
 
-      // Basic filtering on demo data
+    // 1. Try JSearch (primary)
+    const rapidApiKey = process.env.RAPIDAPI_KEY;
+    if (rapidApiKey) {
+      try {
+        const searchQuery = remoteOnly
+          ? `${query} remote${location ? ` in ${location}` : ''}`
+          : `${query}${location ? ` in ${location}` : ''}`;
+
+        const apiUrl = new URL('https://jsearch.p.rapidapi.com/search');
+        apiUrl.searchParams.set('query', searchQuery);
+        apiUrl.searchParams.set('page', String(page));
+        apiUrl.searchParams.set('num_pages', '1');
+        apiUrl.searchParams.set('date_posted', 'month');
+
+        const response = await fetch(apiUrl.toString(), {
+          method: 'GET',
+          headers: {
+            'X-RapidAPI-Key': rapidApiKey,
+            'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
+          },
+          next: { revalidate: 300 },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          jobs = (data.data || []).map((job: JSearchJob) => ({ ...transformJob(job), source: 'JSearch' }));
+          total = data.total || jobs.length;
+          source = 'JSearch';
+        } else {
+          console.warn('[Jobs API] JSearch failed with status:', response.status);
+        }
+      } catch (e) {
+        console.warn('[Jobs API] JSearch error:', e);
+      }
+    }
+
+    // 2. Try Adzuna (secondary) if JSearch returned nothing
+    if (jobs.length === 0 && process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY) {
+      try {
+        const adzunaResult = await searchAdzuna(query, location, page);
+        jobs = adzunaResult.jobs as TransformedJob[];
+        total = adzunaResult.total;
+        source = 'Adzuna';
+        if (remoteOnly) {
+          jobs = jobs.filter(j => j.remote);
+        }
+      } catch (e) {
+        console.warn('[Jobs API] Adzuna error:', e);
+      }
+    }
+
+    // 3. Fall back to demo data
+    if (jobs.length === 0) {
+      console.log('[Jobs API] Using demo data');
+      let filtered = [...DEMO_JOBS].map(j => ({ ...j, source: 'Demo' }));
+
       if (query) {
         const q = query.toLowerCase();
         filtered = filtered.filter(
@@ -201,60 +279,22 @@ export async function GET(request: NextRequest) {
         filtered = filtered.filter((j) => j.remote);
       }
 
-      return NextResponse.json({
-        jobs: filtered,
-        total: filtered.length,
-        page: 1,
-        isDemo: true,
-      });
+      // If no filtered results, return all demo data
+      jobs = filtered.length > 0 ? filtered : DEMO_JOBS.map(j => ({ ...j, source: 'Demo' }));
+      total = jobs.length;
+      isDemo = true;
+      source = 'Demo';
     }
 
-    // ── Call JSearch API ──
-    const searchQuery = remoteOnly
-      ? `${query} remote${location ? ` in ${location}` : ''}`
-      : `${query}${location ? ` in ${location}` : ''}`;
-
-    const apiUrl = new URL('https://jsearch.p.rapidapi.com/search');
-    apiUrl.searchParams.set('query', searchQuery);
-    apiUrl.searchParams.set('page', String(page));
-    apiUrl.searchParams.set('num_pages', '1');
-    apiUrl.searchParams.set('date_posted', 'month');
-
-    const response = await fetch(apiUrl.toString(), {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': apiKey,
-        'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
-      },
-      next: { revalidate: 300 }, // Cache for 5 minutes
-    });
-
-    if (!response.ok) {
-      console.error('[Jobs API] JSearch responded with status:', response.status);
-
-      // If the API fails, fall back to demo data
-      if (response.status === 429) {
-        return NextResponse.json(
-          { error: 'API rate limit reached. Please try again later.', jobs: DEMO_JOBS, total: DEMO_JOBS.length, page: 1, isDemo: true },
-          { status: 200 }
-        );
-      }
-
-      return NextResponse.json(
-        { error: 'Failed to fetch jobs from external API' },
-        { status: 502 }
-      );
-    }
-
-    const data = await response.json();
-    const jobs: TransformedJob[] = (data.data || []).map((job: JSearchJob) => transformJob(job));
-    const total = data.total || jobs.length;
+    // ── Apply match scoring ──
+    const scoredJobs = rankJobs(jobs, userProfile);
 
     return NextResponse.json({
-      jobs,
+      jobs: scoredJobs,
       total,
       page,
-      isDemo: false,
+      isDemo,
+      source,
     });
   } catch (error) {
     console.error('[Jobs API] Error:', error);

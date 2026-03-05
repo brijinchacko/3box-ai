@@ -9,6 +9,10 @@
     --radius: 0.75rem;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-white/10;
   }

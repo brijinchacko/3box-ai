@@ -89,6 +89,7 @@ export default function InterviewPrepPage() {
   // Results state
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [currentEvaluation, setCurrentEvaluation] = useState<Evaluation | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -148,10 +149,11 @@ export default function InterviewPrepPage() {
           setTimeout(() => textareaRef.current?.focus(), 100);
         }
       } else {
-        console.error('Failed to generate questions');
+        setGenError('Failed to generate questions. Please try again.');
       }
     } catch (err) {
       console.error('Error generating questions:', err);
+      setGenError('Network error. Please check your connection and try again.');
     } finally {
       setGenerating(false);
     }
@@ -359,9 +361,17 @@ export default function InterviewPrepPage() {
                   </div>
                 </div>
 
+                {/* Error Message */}
+                {genError && (
+                  <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-sm text-red-400 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{genError}</span>
+                  </div>
+                )}
+
                 {/* Generate Button */}
                 <button
-                  onClick={handleGenerate}
+                  onClick={() => { setGenError(null); handleGenerate(); }}
                   disabled={!targetRole.trim() || generating}
                   className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

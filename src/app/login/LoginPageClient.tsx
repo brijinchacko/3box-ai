@@ -17,12 +17,18 @@ export default function LoginPageClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [googleEnabled, setGoogleEnabled] = useState(true);
 
   // OTP state
   const [otpStep, setOtpStep] = useState<OtpStep>('email');
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [otpTimer, setOtpTimer] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Check if Google auth is available
+  useEffect(() => {
+    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleEnabled(!!d.google)).catch(() => setGoogleEnabled(false));
+  }, []);
 
   // Timer for resend
   useEffect(() => {
@@ -390,9 +396,12 @@ export default function LoginPageClient() {
 
           <button
             onClick={handleGoogleSignIn}
-            className="btn-secondary w-full flex items-center justify-center gap-2"
+            disabled={!googleEnabled}
+            className={`btn-secondary w-full flex items-center justify-center gap-2 ${!googleEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+            title={!googleEnabled ? 'Google sign-in is not configured yet' : undefined}
           >
             <Chrome className="w-4 h-4" /> Google
+            {!googleEnabled && <span className="text-[10px] text-white/30 ml-1">(Coming soon)</span>}
           </button>
 
           <p className="text-sm text-white/40 text-center mt-6">

@@ -13,7 +13,8 @@ function getResend() {
 }
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'NXTED AI <hello@nxted.ai>';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxted.ai';
+// Use NEXTAUTH_URL (runtime) — NEXT_PUBLIC_APP_URL is inlined at build time by Next.js
+const APP_URL = process.env.NEXTAUTH_URL || 'https://nxted.ai';
 
 // ─── Core send function ──────────────────────────
 

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, User, CreditCard, Bot, Bell, Shield, Gift,
   Save, Zap, Camera, LogOut, Trash2, Copy, Check, Send,
-  ExternalLink, Users, Award, Mail
+  ExternalLink, Users, Award, Mail, Loader2
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -81,6 +81,12 @@ export default function SettingsPage() {
   const [profileForm, setProfileForm] = useState({ name: '', targetRole: '', location: '' });
   const [profileSaved, setProfileSaved] = useState(false);
 
+  // ----- Avatar upload state -----
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+
   // ----- Referral state -----
   const [referral, setReferral] = useState<ReferralData | null>(null);
   const [referralLoading, setReferralLoading] = useState(false);
@@ -92,6 +98,22 @@ export default function SettingsPage() {
   // ----- Coach state -----
   const [coachName, setCoachName] = useState('Horace');
   const [coachPersonality, setCoachPersonality] = useState('friendly');
+  const [coachSaved, setCoachSaved] = useState(false);
+
+  // ----- Notifications state -----
+  const [notifications, setNotifications] = useState<Record<string, boolean>>({});
+
+  // ----- Privacy state -----
+  const [comingSoonMsg, setComingSoonMsg] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // ----- Billing state -----
   const [portalLoading, setPortalLoading] = useState(false);
@@ -113,10 +135,42 @@ export default function SettingsPage() {
             targetRole: data.targetRole || '',
             location: data.location || '',
           });
+          if (data.image) setAvatarUrl(data.image);
         }
       })
       .catch(() => {})
       .finally(() => setProfileLoading(false));
+  }, []);
+
+  // Load coach settings from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('nxted_coach_settings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.name) setCoachName(parsed.name);
+        if (parsed.personality) setCoachPersonality(parsed.personality);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Load notification preferences from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('nxted_notification_prefs');
+      if (stored) {
+        setNotifications(JSON.parse(stored));
+      } else {
+        // Default: all enabled
+        setNotifications({
+          'New job matches': true,
+          'Learning reminders': true,
+          'Application updates': true,
+          'Weekly progress digest': true,
+          'Coach tips': true,
+        });
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // Fetch referral data when tab switches to referral
@@ -146,7 +200,7 @@ export default function SettingsPage() {
     setProfileSaved(false);
     try {
       const res = await fetch('/api/user/profile', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileForm),
       });
@@ -160,6 +214,53 @@ export default function SettingsPage() {
       // Silently fail
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset file input so the same file can be re-selected
+    e.target.value = '';
+
+    // Validate client-side
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please select an image file.');
+      setTimeout(() => setAvatarError(''), 4000);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError('Image must be under 5 MB.');
+      setTimeout(() => setAvatarError(''), 4000);
+      return;
+    }
+
+    setAvatarUploading(true);
+    setAvatarError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      const { url } = await res.json();
+      setAvatarUrl(url);
+      setProfile((prev) => (prev ? { ...prev, image: url } : prev));
+    } catch (err: any) {
+      setAvatarError(err.message || 'Failed to upload avatar.');
+      setTimeout(() => setAvatarError(''), 4000);
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -224,6 +325,23 @@ export default function SettingsPage() {
     }
   };
 
+  const saveCoachSettings = () => {
+    localStorage.setItem('nxted_coach_settings', JSON.stringify({ name: coachName, personality: coachPersonality }));
+    setCoachSaved(true);
+    setTimeout(() => setCoachSaved(false), 2000);
+  };
+
+  const toggleNotification = (label: string) => {
+    const updated = { ...notifications, [label]: !notifications[label] };
+    setNotifications(updated);
+    localStorage.setItem('nxted_notification_prefs', JSON.stringify(updated));
+  };
+
+  const showComingSoon = (feature: string) => {
+    setComingSoonMsg(`${feature} — coming soon!`);
+    setTimeout(() => setComingSoonMsg(''), 2000);
+  };
+
   /* ---------------------------------------------------------------- */
   /*  Derived values                                                   */
   /* ---------------------------------------------------------------- */
@@ -248,6 +366,20 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Coming Soon Toast */}
+      <AnimatePresence>
+        {comingSoonMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 right-6 z-50 px-4 py-2 rounded-xl bg-surface border border-white/10 text-sm text-white/70 shadow-lg"
+          >
+            {comingSoonMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
           <Settings className="w-7 h-7 text-white/60" /> Settings
@@ -300,10 +432,55 @@ export default function SettingsPage() {
                 ) : (
                   <>
                     <div className="flex items-center gap-6 mb-6">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-2xl font-bold relative">
-                        {getInitials(userName)}
-                        <button className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-surface border border-white/10 flex items-center justify-center">
-                          <Camera className="w-3.5 h-3.5 text-white/60" />
+                      {/* Hidden file input for avatar upload */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+
+                      <div
+                        className="w-20 h-20 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-2xl font-bold relative cursor-pointer group"
+                        onClick={() => !avatarUploading && fileInputRef.current?.click()}
+                      >
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={userName}
+                            className="w-20 h-20 rounded-full object-cover"
+                          />
+                        ) : (
+                          getInitials(userName)
+                        )}
+
+                        {/* Upload overlay on hover */}
+                        {!avatarUploading && (
+                          <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Camera className="w-5 h-5 text-white/80" />
+                          </div>
+                        )}
+
+                        {/* Loading spinner overlay */}
+                        {avatarUploading && (
+                          <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          </div>
+                        )}
+
+                        <button
+                          className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-surface border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!avatarUploading) fileInputRef.current?.click();
+                          }}
+                        >
+                          {avatarUploading ? (
+                            <Loader2 className="w-3.5 h-3.5 text-white/60 animate-spin" />
+                          ) : (
+                            <Camera className="w-3.5 h-3.5 text-white/60" />
+                          )}
                         </button>
                       </div>
                       <div>
@@ -312,6 +489,9 @@ export default function SettingsPage() {
                         <div className="mt-1 badge bg-neon-blue/10 text-neon-blue text-xs">
                           <Zap className="w-3 h-3 mr-1" /> {planLabel[userPlan] || userPlan} Plan
                         </div>
+                        {avatarError && (
+                          <div className="mt-1 text-xs text-red-400">{avatarError}</div>
+                        )}
                       </div>
                     </div>
 
@@ -593,8 +773,12 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   </div>
-                  <button className="btn-primary text-sm flex items-center gap-2">
-                    <Save className="w-4 h-4" /> Save Coach Settings
+                  <button onClick={saveCoachSettings} className="btn-primary text-sm flex items-center gap-2">
+                    {coachSaved ? (
+                      <><Check className="w-4 h-4" /> Saved!</>
+                    ) : (
+                      <><Save className="w-4 h-4" /> Save Coach Settings</>
+                    )}
                   </button>
                 </div>
               </div>
@@ -619,9 +803,12 @@ export default function SettingsPage() {
                         <div className="text-sm font-medium">{n.label}</div>
                         <div className="text-xs text-white/40">{n.desc}</div>
                       </div>
-                      <div className="w-10 h-6 rounded-full bg-neon-blue/30 relative cursor-pointer">
-                        <div className="w-4 h-4 rounded-full bg-neon-blue absolute top-1 right-1" />
-                      </div>
+                      <button
+                        onClick={() => toggleNotification(n.label)}
+                        className={`w-10 h-6 rounded-full relative transition-colors ${notifications[n.label] ? 'bg-neon-blue/30' : 'bg-white/10'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full absolute top-1 transition-all ${notifications[n.label] ? 'right-1 bg-neon-blue' : 'left-1 bg-white/40'}`} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -631,23 +818,183 @@ export default function SettingsPage() {
 
           {/* =============== PRIVACY TAB =============== */}
           {activeTab === 'privacy' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              {/* Change Password */}
               <div className="card">
-                <h3 className="font-semibold mb-6">Privacy & Security</h3>
-                <div className="space-y-4">
-                  <button className="btn-secondary text-sm w-full text-left">Change Password</button>
-                  <button className="btn-secondary text-sm w-full text-left">Enable Two-Factor Authentication</button>
-                  <button className="btn-secondary text-sm w-full text-left">Download My Data</button>
-                  <div className="pt-4 border-t border-white/5 space-y-3">
-                    <button
-                      onClick={() => signOut({ callbackUrl: '/' })}
-                      className="text-sm text-white/60 hover:text-white flex items-center gap-2"
-                    >
-                      <LogOut className="w-4 h-4" /> Sign Out
-                    </button>
-                    <button className="text-sm text-red-400 hover:text-red-300 flex items-center gap-2">
-                      <Trash2 className="w-4 h-4" /> Delete Account
-                    </button>
+                <h3 className="font-semibold mb-4">Change Password</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (newPassword !== confirmPassword) {
+                    setPasswordMsg({ type: 'error', text: 'New passwords do not match' });
+                    return;
+                  }
+                  setPasswordLoading(true);
+                  setPasswordMsg(null);
+                  try {
+                    const res = await fetch('/api/user/change-password', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ currentPassword, newPassword }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setPasswordMsg({ type: 'success', text: 'Password changed successfully' });
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                    } else {
+                      setPasswordMsg({ type: 'error', text: data.error || 'Failed to change password' });
+                    }
+                  } catch {
+                    setPasswordMsg({ type: 'error', text: 'Something went wrong' });
+                  } finally {
+                    setPasswordLoading(false);
+                  }
+                }} className="space-y-3">
+                  <input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="input-field w-full"
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="New password (min 8 characters)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="input-field w-full"
+                    minLength={8}
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="input-field w-full"
+                    required
+                  />
+                  {passwordMsg && (
+                    <p className={`text-sm ${passwordMsg.type === 'success' ? 'text-neon-green' : 'text-red-400'}`}>
+                      {passwordMsg.text}
+                    </p>
+                  )}
+                  <button type="submit" disabled={passwordLoading} className="btn-primary text-sm">
+                    {passwordLoading ? 'Changing...' : 'Change Password'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Data Export */}
+              <div className="card">
+                <h3 className="font-semibold mb-2">Download My Data</h3>
+                <p className="text-sm text-white/40 mb-4">
+                  Export all your data including profile, assessments, career plans, resumes, and more as a JSON file.
+                </p>
+                <button
+                  onClick={async () => {
+                    setExportLoading(true);
+                    try {
+                      const res = await fetch('/api/user/export-data');
+                      if (res.ok) {
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `nxted-data-export-${new Date().toISOString().split('T')[0]}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }
+                    } catch {} finally {
+                      setExportLoading(false);
+                    }
+                  }}
+                  disabled={exportLoading}
+                  className="btn-secondary text-sm"
+                >
+                  {exportLoading ? 'Preparing download...' : 'Download My Data'}
+                </button>
+              </div>
+
+              {/* Two-Factor Authentication */}
+              <div className="card">
+                <h3 className="font-semibold mb-2">Two-Factor Authentication</h3>
+                <p className="text-sm text-white/40 mb-3">
+                  Add an extra layer of security to your account with two-factor authentication.
+                </p>
+                <button className="btn-secondary text-sm opacity-50 cursor-not-allowed" disabled>
+                  Enable 2FA (Coming Soon)
+                </button>
+              </div>
+
+              {/* Sign Out & Delete */}
+              <div className="card">
+                <h3 className="font-semibold mb-4">Account Actions</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="text-sm text-white/60 hover:text-white flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+
+                  <div className="pt-3 border-t border-white/5">
+                    <p className="text-xs text-white/30 mb-2">
+                      Permanently delete your account and all associated data. This action cannot be undone.
+                    </p>
+                    {!showDeleteModal ? (
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="text-sm text-red-400 hover:text-red-300 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete Account
+                      </button>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 space-y-3">
+                        <p className="text-sm text-red-400 font-medium">
+                          Are you sure? Type DELETE to confirm:
+                        </p>
+                        <input
+                          type="text"
+                          value={deleteConfirm}
+                          onChange={(e) => setDeleteConfirm(e.target.value)}
+                          placeholder="Type DELETE"
+                          className="input-field w-full border-red-500/20"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              if (deleteConfirm !== 'DELETE') return;
+                              setDeleteLoading(true);
+                              try {
+                                const res = await fetch('/api/user/delete-account', {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ confirmation: 'DELETE' }),
+                                });
+                                if (res.ok) {
+                                  signOut({ callbackUrl: '/' });
+                                }
+                              } catch {} finally {
+                                setDeleteLoading(false);
+                              }
+                            }}
+                            disabled={deleteConfirm !== 'DELETE' || deleteLoading}
+                            className="px-4 py-2 text-sm rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
+                          </button>
+                          <button
+                            onClick={() => { setShowDeleteModal(false); setDeleteConfirm(''); }}
+                            className="px-4 py-2 text-sm rounded-lg bg-white/5 text-white/60 hover:bg-white/10"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

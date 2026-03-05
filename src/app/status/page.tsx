@@ -348,9 +348,9 @@ export default function StatusPage() {
             Help Center
           </Link>{' '}
           or{' '}
-          <Link href="/about#contact" className="text-neon-blue hover:underline">
+          <a href="/contact" className="text-neon-blue hover:underline">
             contact support
-          </Link>
+          </a>
           .
         </div>
       </div>

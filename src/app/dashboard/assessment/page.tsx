@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, Search, ArrowRight, ArrowLeft, Clock, CheckCircle2,
-  BarChart3, Target, Lightbulb, Zap, Star, TrendingUp
+  BarChart3, Target, Lightbulb, Zap, Star, TrendingUp, Loader2
 } from 'lucide-react';
 
-type Step = 'role-select' | 'profile' | 'assessment' | 'results';
+type Step = 'role-select' | 'profile' | 'assessment' | 'evaluating' | 'results';
 
 const popularRoles = [
   'AI Engineer', 'Data Scientist', 'Full Stack Developer', 'ML Engineer',
@@ -48,7 +48,32 @@ const demoQuestions = [
   },
 ];
 
-const demoResults = {
+interface SkillScore {
+  skill: string;
+  score: number;
+  level: string;
+  color: string;
+}
+
+interface Gap {
+  skill: string;
+  current: number;
+  required: number;
+  priority: 'high' | 'medium' | 'low';
+}
+
+interface AssessmentResults {
+  targetRole: string;
+  overallScore: number;
+  skillScores: SkillScore[];
+  gaps: Gap[];
+  recommendations: string[];
+  timelineEstimate: string;
+  marketReadiness: number;
+  hireProbability: number;
+}
+
+const defaultResults: AssessmentResults = {
   targetRole: 'AI Engineer',
   overallScore: 68,
   skillScores: [
@@ -60,9 +85,9 @@ const demoResults = {
     { skill: 'Data Engineering', score: 70, level: 'Intermediate', color: 'bg-cyan-400' },
   ],
   gaps: [
-    { skill: 'MLOps', current: 45, required: 75, priority: 'high' as const },
-    { skill: 'System Design', current: 55, required: 80, priority: 'high' as const },
-    { skill: 'Deep Learning', current: 62, required: 80, priority: 'medium' as const },
+    { skill: 'MLOps', current: 45, required: 75, priority: 'high' },
+    { skill: 'System Design', current: 55, required: 80, priority: 'high' },
+    { skill: 'Deep Learning', current: 62, required: 80, priority: 'medium' },
   ],
   recommendations: [
     'Focus on MLOps tools (MLflow, Kubeflow, Docker) — this is your biggest gap',
@@ -75,6 +100,11 @@ const demoResults = {
   hireProbability: 68,
 };
 
+const skillColors = [
+  'bg-neon-green', 'bg-neon-blue', 'bg-neon-purple',
+  'bg-neon-orange', 'bg-neon-pink', 'bg-cyan-400',
+];
+
 export default function AssessmentPage() {
   const [step, setStep] = useState<Step>('role-select');
   const [targetRole, setTargetRole] = useState('');
@@ -83,18 +113,124 @@ export default function AssessmentPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [textAnswer, setTextAnswer] = useState('');
 
+  // Profile state
+  const [experience, setExperience] = useState('');
+  const [education, setEducation] = useState('');
+  const [existingSkills, setExistingSkills] = useState('');
+
+  // Results state
+  const [results, setResults] = useState<AssessmentResults>(defaultResults);
+
   const filteredRoles = popularRoles.filter((r) =>
     r.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const selectRole = (role: string) => {
+    setTargetRole(role);
+    // Save target role to localStorage for other pages
+    localStorage.setItem('nxted_target_role', role);
+    setStep('profile');
+  };
+
   const handleAnswer = (answer: string) => {
-    setAnswers({ ...answers, [demoQuestions[currentQ].id]: answer });
+    const updatedAnswers = { ...answers, [demoQuestions[currentQ].id]: answer };
+    setAnswers(updatedAnswers);
     if (currentQ < demoQuestions.length - 1) {
       setCurrentQ(currentQ + 1);
       setTextAnswer('');
     } else {
-      setStep('results');
+      // Assessment complete — evaluate with AI
+      evaluateAssessment(updatedAnswers);
     }
+  };
+
+  const evaluateAssessment = async (allAnswers: Record<string, string>) => {
+    setStep('evaluating');
+
+    try {
+      const questionsWithAnswers = demoQuestions.map(q => ({
+        skill: q.skill,
+        difficulty: q.difficulty,
+        question: q.question,
+        answer: allAnswers[q.id] || 'No answer provided',
+        ...(q.type === 'mcq' ? { correctAnswer: q.options ? q.options[q.id === '1' ? 1 : q.id === '2' ? 1 : q.id === '3' ? 2 : q.id === '5' ? 1 : 0] : undefined } : {}),
+      }));
+
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `You are a career assessment evaluator. Evaluate this candidate for the role of "${targetRole}".
+
+Profile: ${experience ? `${experience} years experience` : 'Not specified'}, ${education || 'Not specified'} education, Skills: ${existingSkills || 'Not specified'}.
+
+Assessment answers:
+${questionsWithAnswers.map((qa, i) => `Q${i + 1} (${qa.skill}, ${qa.difficulty}): ${qa.question}\nAnswer: ${qa.answer}`).join('\n\n')}
+
+Generate a JSON assessment result with this exact structure:
+{
+  "overallScore": <number 0-100>,
+  "skillScores": [{"skill": "<name>", "score": <0-100>, "level": "Beginner|Intermediate|Advanced"}],
+  "gaps": [{"skill": "<name>", "current": <0-100>, "required": <0-100>, "priority": "high|medium|low"}],
+  "recommendations": ["<string>", ...],
+  "timelineEstimate": "<string>",
+  "marketReadiness": <0-100>,
+  "hireProbability": <0-100>
+}
+
+Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-5 recommendations. Be realistic based on the answers given. Return ONLY the JSON object.`,
+          context: { targetRole },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const responseText = data.response || '';
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const aiResults: AssessmentResults = {
+            targetRole,
+            overallScore: parsed.overallScore || 65,
+            skillScores: (parsed.skillScores || []).map((s: any, i: number) => ({
+              skill: s.skill,
+              score: s.score,
+              level: s.level || 'Intermediate',
+              color: skillColors[i % skillColors.length],
+            })),
+            gaps: (parsed.gaps || []).map((g: any) => ({
+              skill: g.skill,
+              current: g.current,
+              required: g.required,
+              priority: g.priority || 'medium',
+            })),
+            recommendations: parsed.recommendations || defaultResults.recommendations,
+            timelineEstimate: parsed.timelineEstimate || '3-6 months',
+            marketReadiness: parsed.marketReadiness || 60,
+            hireProbability: parsed.hireProbability || 55,
+          };
+
+          // Save skill scores to localStorage for other pages
+          const scoreMap: Record<string, number> = {};
+          aiResults.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
+          localStorage.setItem('nxted_skill_scores', JSON.stringify(scoreMap));
+
+          setResults(aiResults);
+          setStep('results');
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Assessment evaluation failed:', err);
+    }
+
+    // Fallback to default results with the correct role
+    const fallback = { ...defaultResults, targetRole };
+    const scoreMap: Record<string, number> = {};
+    fallback.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
+    localStorage.setItem('nxted_skill_scores', JSON.stringify(scoreMap));
+    setResults(fallback);
+    setStep('results');
   };
 
   return (
@@ -102,20 +238,21 @@ export default function AssessmentPage() {
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-3">
-          {['role-select', 'profile', 'assessment', 'results'].map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === s ? 'bg-neon-blue text-white' :
-                ['role-select', 'profile', 'assessment', 'results'].indexOf(step) > i
-                  ? 'bg-neon-green/20 text-neon-green' : 'bg-white/5 text-white/30'
-              }`}>
-                {['role-select', 'profile', 'assessment', 'results'].indexOf(step) > i ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : i + 1}
+          {(['role-select', 'profile', 'assessment', 'results'] as const).map((s, i) => {
+            const steps: Step[] = ['role-select', 'profile', 'assessment', 'results'];
+            const currentIdx = steps.indexOf(step === 'evaluating' ? 'results' : step);
+            return (
+              <div key={s} className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                  step === s || (step === 'evaluating' && s === 'results') ? 'bg-neon-blue text-white' :
+                  currentIdx > i ? 'bg-neon-green/20 text-neon-green' : 'bg-white/5 text-white/30'
+                }`}>
+                  {currentIdx > i ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
+                </div>
+                {i < 3 && <div className={`w-8 sm:w-16 h-px ${currentIdx > i ? 'bg-neon-green/30' : 'bg-white/5'}`} />}
               </div>
-              {i < 3 && <div className={`w-8 sm:w-16 h-px ${['role-select', 'profile', 'assessment', 'results'].indexOf(step) > i ? 'bg-neon-green/30' : 'bg-white/5'}`} />}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -146,7 +283,7 @@ export default function AssessmentPage() {
               {filteredRoles.map((role) => (
                 <button
                   key={role}
-                  onClick={() => { setTargetRole(role); setStep('profile'); }}
+                  onClick={() => selectRole(role)}
                   className={`card-interactive text-center py-4 ${targetRole === role ? 'border-neon-blue/50 bg-neon-blue/5' : ''}`}
                 >
                   <span className="text-sm font-medium">{role}</span>
@@ -157,7 +294,7 @@ export default function AssessmentPage() {
             {searchQuery && !filteredRoles.length && (
               <div className="text-center mt-6">
                 <button
-                  onClick={() => { setTargetRole(searchQuery); setStep('profile'); }}
+                  onClick={() => selectRole(searchQuery)}
                   className="btn-primary"
                 >
                   Continue as &ldquo;{searchQuery}&rdquo; <ArrowRight className="w-4 h-4 inline ml-1" />
@@ -179,28 +316,41 @@ export default function AssessmentPage() {
             <div className="card max-w-lg mx-auto space-y-6">
               <div>
                 <label className="block text-sm text-white/60 mb-1.5">Years of experience</label>
-                <select className="input-field">
+                <select
+                  className="input-field"
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                >
                   <option value="">Select...</option>
                   <option value="0">0 — Career changer</option>
-                  <option value="1">1-2 years</option>
-                  <option value="3">3-5 years</option>
-                  <option value="5">5+ years</option>
+                  <option value="1-2">1-2 years</option>
+                  <option value="3-5">3-5 years</option>
+                  <option value="5+">5+ years</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-white/60 mb-1.5">Highest education</label>
-                <select className="input-field">
+                <select
+                  className="input-field"
+                  value={education}
+                  onChange={(e) => setEducation(e.target.value)}
+                >
                   <option value="">Select...</option>
-                  <option value="hs">High School</option>
-                  <option value="bs">Bachelor&apos;s</option>
-                  <option value="ms">Master&apos;s</option>
-                  <option value="phd">PhD</option>
-                  <option value="self">Self-taught</option>
+                  <option value="High School">High School</option>
+                  <option value="Bachelor's">Bachelor&apos;s</option>
+                  <option value="Master's">Master&apos;s</option>
+                  <option value="PhD">PhD</option>
+                  <option value="Self-taught">Self-taught</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-white/60 mb-1.5">Skills you already have</label>
-                <input className="input-field" placeholder="e.g. Python, SQL, TensorFlow" />
+                <input
+                  className="input-field"
+                  placeholder="e.g. Python, SQL, TensorFlow"
+                  value={existingSkills}
+                  onChange={(e) => setExistingSkills(e.target.value)}
+                />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep('role-select')} className="btn-secondary flex-1 flex items-center justify-center gap-1">
@@ -272,6 +422,15 @@ export default function AssessmentPage() {
           </motion.div>
         )}
 
+        {/* Step 3.5: Evaluating */}
+        {step === 'evaluating' && (
+          <motion.div key="evaluating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+            <Loader2 className="w-12 h-12 text-neon-blue mx-auto mb-6 animate-spin" />
+            <h2 className="text-2xl font-bold mb-2">Analyzing Your Responses</h2>
+            <p className="text-white/40">Our AI is evaluating your skills and generating personalized insights...</p>
+          </motion.div>
+        )}
+
         {/* Step 4: Results */}
         {step === 'results' && (
           <motion.div key="results" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -280,21 +439,21 @@ export default function AssessmentPage() {
                 <CheckCircle2 className="w-8 h-8 text-neon-green" />
               </div>
               <h1 className="text-3xl font-bold mb-2">Assessment Complete!</h1>
-              <p className="text-white/40">Here&apos;s your skill analysis for <span className="text-neon-blue">{demoResults.targetRole}</span></p>
+              <p className="text-white/40">Here&apos;s your skill analysis for <span className="text-neon-blue">{results.targetRole}</span></p>
             </div>
 
             {/* Score Cards */}
             <div className="grid sm:grid-cols-3 gap-4 mb-8">
               <div className="card text-center">
-                <div className="text-3xl font-bold gradient-text mb-1">{demoResults.overallScore}%</div>
+                <div className="text-3xl font-bold gradient-text mb-1">{results.overallScore}%</div>
                 <div className="text-xs text-white/40">Overall Score</div>
               </div>
               <div className="card text-center">
-                <div className="text-3xl font-bold text-neon-green mb-1">{demoResults.marketReadiness}%</div>
+                <div className="text-3xl font-bold text-neon-green mb-1">{results.marketReadiness}%</div>
                 <div className="text-xs text-white/40">Market Readiness</div>
               </div>
               <div className="card text-center">
-                <div className="text-3xl font-bold text-neon-purple mb-1">{demoResults.hireProbability}%</div>
+                <div className="text-3xl font-bold text-neon-purple mb-1">{results.hireProbability}%</div>
                 <div className="text-xs text-white/40">Hire Probability</div>
               </div>
             </div>
@@ -303,7 +462,7 @@ export default function AssessmentPage() {
             <div className="card mb-6">
               <h3 className="text-sm font-semibold text-white/60 mb-6">Skill Breakdown</h3>
               <div className="space-y-4">
-                {demoResults.skillScores.map((s) => (
+                {results.skillScores.map((s) => (
                   <div key={s.skill}>
                     <div className="flex justify-between mb-1.5">
                       <span className="text-sm font-medium">{s.skill}</span>
@@ -326,7 +485,7 @@ export default function AssessmentPage() {
             <div className="card mb-6">
               <h3 className="text-sm font-semibold text-white/60 mb-4">Key Gaps to Address</h3>
               <div className="space-y-3">
-                {demoResults.gaps.map((g) => (
+                {results.gaps.map((g) => (
                   <div key={g.skill} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03]">
                     <div>
                       <span className="text-sm font-medium">{g.skill}</span>
@@ -346,7 +505,7 @@ export default function AssessmentPage() {
                 <Lightbulb className="w-4 h-4 text-yellow-400" /> AI Recommendations
               </h3>
               <div className="space-y-3">
-                {demoResults.recommendations.map((r, i) => (
+                {results.recommendations.map((r, i) => (
                   <div key={i} className="flex items-start gap-3 text-sm text-white/60">
                     <Zap className="w-4 h-4 text-neon-blue flex-shrink-0 mt-0.5" />
                     <span>{r}</span>
@@ -356,7 +515,7 @@ export default function AssessmentPage() {
               <div className="mt-4 p-3 rounded-xl bg-neon-blue/5 border border-neon-blue/10">
                 <div className="flex items-center gap-2 text-sm">
                   <TrendingUp className="w-4 h-4 text-neon-blue" />
-                  <span className="text-neon-blue font-medium">Estimated timeline: {demoResults.timelineEstimate}</span>
+                  <span className="text-neon-blue font-medium">Estimated timeline: {results.timelineEstimate}</span>
                 </div>
               </div>
             </div>
@@ -366,7 +525,7 @@ export default function AssessmentPage() {
               <Link href="/dashboard/career-plan" className="btn-primary flex-1 text-center flex items-center justify-center gap-2">
                 Generate Career Plan <ArrowRight className="w-4 h-4" />
               </Link>
-              <button onClick={() => { setStep('role-select'); setCurrentQ(0); setAnswers({}); }} className="btn-secondary flex-1">
+              <button onClick={() => { setStep('role-select'); setCurrentQ(0); setAnswers({}); setTextAnswer(''); }} className="btn-secondary flex-1">
                 Retake Assessment
               </button>
             </div>

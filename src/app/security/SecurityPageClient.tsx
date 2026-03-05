@@ -55,7 +55,7 @@ export default function SecurityPageClient() {
           </div>
 
           {/* Privacy Policy */}
-          <div id="privacy" className="card mb-8">
+          <div id="privacy" className="card mb-8 scroll-mt-24">
             <h2 className="text-2xl font-bold mb-6">Privacy Policy</h2>
             <div className="space-y-4 text-sm text-white/50 leading-relaxed">
               <h3 className="text-white font-semibold">Data We Collect</h3>
@@ -76,7 +76,7 @@ export default function SecurityPageClient() {
           </div>
 
           {/* Terms of Service */}
-          <div id="terms" className="card mb-8">
+          <div id="terms" className="card mb-8 scroll-mt-24">
             <h2 className="text-2xl font-bold mb-6">Terms of Service</h2>
             <div className="space-y-4 text-sm text-white/50 leading-relaxed">
               <h3 className="text-white font-semibold">Service Description</h3>
@@ -97,7 +97,7 @@ export default function SecurityPageClient() {
           </div>
 
           {/* GDPR */}
-          <div id="gdpr" className="card">
+          <div id="gdpr" className="card scroll-mt-24">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
               <Globe className="w-6 h-6 text-neon-blue" /> GDPR Compliance
             </h2>

@@ -6,7 +6,9 @@ const { prisma } = require('@/lib/db/prisma');
 import { sendReferralInviteEmail } from '@/lib/email';
 import { generateReferralCode } from '@/lib/utils';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+// Use NEXTAUTH_URL (runtime) — do NOT use NEXT_PUBLIC_APP_URL here as Next.js
+// inlines it at build time, which bakes in localhost when building locally.
+const APP_URL = process.env.NEXTAUTH_URL || 'https://nxted.ai';
 
 export async function GET(request: NextRequest) {
   try {

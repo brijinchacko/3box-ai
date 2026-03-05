@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-import { generateAssessmentQuestions, analyzeAssessment, type PlanTier } from '@/lib/ai/openrouter';
+import { generateAssessmentQuestions, analyzeAssessment, extractJSON, type PlanTier } from '@/lib/ai/openrouter';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -19,12 +19,12 @@ export async function POST(req: Request) {
 
     if (action === 'generate') {
       const questions = await generateAssessmentQuestions(targetRole, existingSkills, userPlan);
-      return NextResponse.json({ questions: JSON.parse(questions) });
+      return NextResponse.json({ questions: JSON.parse(extractJSON(questions)) });
     }
 
     if (action === 'analyze') {
       const analysis = await analyzeAssessment(targetRole, answers, userPlan);
-      return NextResponse.json({ analysis: JSON.parse(analysis) });
+      return NextResponse.json({ analysis: JSON.parse(extractJSON(analysis)) });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

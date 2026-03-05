@@ -1,0 +1,234 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { ExternalLink, Github, Code, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  skills: string[];
+  image: string | null;
+  github: string;
+  live: string;
+  status: string;
+  score: number | null;
+}
+
+interface PortfolioData {
+  id: string;
+  title: string;
+  bio: string | null;
+  projects: Project[];
+  skills: string[];
+  theme: string;
+  slug: string;
+}
+
+interface UserData {
+  name: string | null;
+  email: string | null;
+  image: string | null;
+}
+
+interface PortfolioPublicClientProps {
+  portfolio: PortfolioData;
+  user: UserData;
+}
+
+// Helper: ensure URLs have protocol prefix
+function ensureUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `https://${url}`;
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: 'easeOut' },
+  },
+};
+
+export default function PortfolioPublicClient({ portfolio, user }: PortfolioPublicClientProps) {
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      {/* Background gradient effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#a855f7]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#00d4ff]/5 rounded-full blur-[120px]" />
+      </div>
+
+      <motion.div
+        className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Header / User Info */}
+        <motion.div variants={itemVariants} className="text-center mb-16">
+          {/* Avatar */}
+          {user.image && (
+            <motion.div
+              className="mx-auto mb-6 relative"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            >
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-white/10 mx-auto ring-4 ring-[#a855f7]/20">
+                <Image
+                  src={user.image}
+                  alt={user.name || 'User avatar'}
+                  width={128}
+                  height={128}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#00ff88] rounded-full flex items-center justify-center border-4 border-[#0a0a0f]" style={{ left: '50%', transform: 'translateX(40px)' }}>
+                <Sparkles className="w-3.5 h-3.5 text-[#0a0a0f]" />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Name */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-[#00d4ff] via-[#a855f7] to-[#00ff88] bg-clip-text text-transparent">
+            {user.name || 'Portfolio'}
+          </h1>
+
+          {/* Title */}
+          <p className="text-lg sm:text-xl text-white/60 mb-4">{portfolio.title}</p>
+
+          {/* Bio */}
+          {portfolio.bio && (
+            <p className="text-white/40 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+              {portfolio.bio}
+            </p>
+          )}
+        </motion.div>
+
+        {/* Skills Section */}
+        {portfolio.skills && portfolio.skills.length > 0 && (
+          <motion.div variants={itemVariants} className="mb-16">
+            <div className="flex items-center gap-2 mb-6">
+              <Code className="w-5 h-5 text-[#00d4ff]" />
+              <h2 className="text-lg font-semibold text-white/80">Skills</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {portfolio.skills.map((skill, i) => (
+                <motion.span
+                  key={skill}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + i * 0.03, duration: 0.3 }}
+                  className="px-3 py-1.5 rounded-full text-sm bg-white/[0.04] border border-white/[0.08] text-white/60 hover:border-[#00d4ff]/30 hover:text-[#00d4ff] transition-colors"
+                >
+                  {skill}
+                </motion.span>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Projects Section */}
+        {portfolio.projects && portfolio.projects.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <div className="flex items-center gap-2 mb-6">
+              <Sparkles className="w-5 h-5 text-[#a855f7]" />
+              <h2 className="text-lg font-semibold text-white/80">Projects</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {portfolio.projects.map((project, i) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + i * 0.1, duration: 0.5 }}
+                  className="group rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6 hover:border-[#a855f7]/20 hover:bg-white/[0.05] transition-all duration-300 backdrop-blur-sm"
+                >
+                  {/* Project Title */}
+                  <h3 className="font-semibold text-base sm:text-lg mb-2 group-hover:text-[#00d4ff] transition-colors">
+                    {project.title}
+                  </h3>
+
+                  {/* Project Description */}
+                  <p className="text-sm text-white/40 mb-4 leading-relaxed line-clamp-3">
+                    {project.description}
+                  </p>
+
+                  {/* Tech Stack Tags */}
+                  {project.skills && project.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {project.skills.map((tech) => (
+                        <span
+                          key={tech}
+                          className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#a855f7]/10 text-[#a855f7]/70 border border-[#a855f7]/10"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Links */}
+                  <div className="flex items-center gap-3">
+                    {project.github && (
+                      <a
+                        href={ensureUrl(project.github)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-white/40 hover:text-white flex items-center gap-1.5 transition-colors"
+                      >
+                        <Github className="w-3.5 h-3.5" /> GitHub
+                      </a>
+                    )}
+                    {project.live && (
+                      <a
+                        href={ensureUrl(project.live)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-[#00d4ff] hover:underline flex items-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> Live Demo
+                      </a>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Footer */}
+        <motion.footer
+          variants={itemVariants}
+          className="mt-20 pt-8 border-t border-white/[0.06] text-center"
+        >
+          <p className="text-xs text-white/20">
+            Built with{' '}
+            <Link
+              href="/"
+              className="text-[#00d4ff]/50 hover:text-[#00d4ff] transition-colors"
+            >
+              NXTED AI
+            </Link>
+          </p>
+        </motion.footer>
+      </motion.div>
+    </div>
+  );
+}

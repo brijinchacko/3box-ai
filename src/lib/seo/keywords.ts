@@ -162,6 +162,42 @@ export const PAGE_SEO = {
     canonical: '/dashboard/settings',
     h1: 'Account Settings',
   },
+  careers: {
+    title: 'Careers at NXTED AI — Join the AI Career Revolution | OFORO AI',
+    description: 'Join the NXTED AI team at OFORO AI. Explore open positions in AI, engineering, design, and more. Help build the future of career development.',
+    keywords: 'NXTED AI careers, OFORO AI jobs, AI career platform jobs, tech startup hiring',
+    canonical: '/careers',
+  },
+  press: {
+    title: 'Press & Media — NXTED AI by OFORO AI | Brand Assets & News',
+    description: 'NXTED AI press resources, brand assets, and media contact information. Get the latest news about our AI-powered career development platform.',
+    keywords: 'NXTED AI press, OFORO AI news, AI career platform media, brand assets',
+    canonical: '/press',
+  },
+  contact: {
+    title: 'Contact NXTED AI — Get in Touch | Support & Partnerships',
+    description: 'Contact the NXTED AI team for support, partnerships, or general inquiries. We are here to help with your AI career development journey.',
+    keywords: 'contact NXTED AI, NXTED AI support, OFORO AI contact, career platform help',
+    canonical: '/contact',
+  },
+  privacy: {
+    title: 'Privacy Policy — NXTED AI | How We Protect Your Data',
+    description: 'NXTED AI privacy policy. Learn how we collect, use, and protect your personal and career data. GDPR compliant with full transparency.',
+    keywords: 'NXTED AI privacy policy, career data privacy, GDPR privacy, data protection',
+    canonical: '/privacy',
+  },
+  terms: {
+    title: 'Terms of Service — NXTED AI | User Agreement',
+    description: 'NXTED AI terms of service. Read our user agreement covering service usage, billing, intellectual property, and platform rules.',
+    keywords: 'NXTED AI terms of service, user agreement, platform rules, subscription terms',
+    canonical: '/terms',
+  },
+  gdpr: {
+    title: 'GDPR Compliance — NXTED AI | Your Data Rights',
+    description: 'NXTED AI GDPR compliance. Understand your data rights including access, rectification, erasure, portability, and objection under GDPR.',
+    keywords: 'NXTED AI GDPR, data rights, GDPR compliance, data protection officer, right to erasure',
+    canonical: '/gdpr',
+  },
 } as const;
 
 // ─── Schema.org Structured Data Templates ──────────────

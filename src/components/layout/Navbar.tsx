@@ -52,15 +52,25 @@ export default function Navbar() {
           <div className={`hidden md:flex items-center gap-1 transition-all duration-300 ${
             scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
           }`}>
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="btn-ghost text-sm"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) =>
+              link.href.includes('#') ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="btn-ghost text-sm"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="btn-ghost text-sm"
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
           </div>
 
           {/* CTA Buttons — visible on scroll */}
@@ -111,16 +121,27 @@ export default function Navbar() {
             className="md:hidden border-t border-white/5 bg-surface/95 backdrop-blur-xl"
           >
             <div className="px-4 py-4 space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) =>
+                link.href.includes('#') ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                )
+              )}
               <div className="pt-2 space-y-2">
                 {session ? (
                   <Link

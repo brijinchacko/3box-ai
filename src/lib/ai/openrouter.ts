@@ -152,6 +152,40 @@ export function redactPII(text: string): string {
   return redacted;
 }
 
+// ─── JSON Extraction Helper ──────────────────
+
+/**
+ * Extract valid JSON from AI responses that may include markdown code blocks or extra text.
+ */
+export function extractJSON(text: string): string {
+  // Try raw parse first
+  try {
+    JSON.parse(text);
+    return text;
+  } catch {}
+
+  // Strip markdown code blocks: ```json ... ``` or ``` ... ```
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (codeBlockMatch) {
+    try {
+      JSON.parse(codeBlockMatch[1].trim());
+      return codeBlockMatch[1].trim();
+    } catch {}
+  }
+
+  // Try to find JSON object or array in the text
+  const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) {
+    try {
+      JSON.parse(jsonMatch[1]);
+      return jsonMatch[1];
+    } catch {}
+  }
+
+  // Return original text — caller will handle parse failure
+  return text;
+}
+
 // ─── Core AI Chat Function ────────────────────
 
 export interface ChatCompletionRequest {
@@ -190,7 +224,7 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://nxted.ai',
       'X-Title': 'NXTED AI',
     },
     body: JSON.stringify(body),

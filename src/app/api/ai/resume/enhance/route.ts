@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-import { aiChat, getModelForFeature } from '@/lib/ai/openrouter';
+import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -65,33 +65,80 @@ export async function POST(req: Request) {
       );
     }
 
-    const systemPrompt = SECTION_PROMPTS[section](targetJob);
-
-    const model = getModelForFeature('resume', user.plan);
-    const aiResponse = await aiChat({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: `Here is the ${section} content to enhance:\n\n${content}`,
-        },
-      ],
-      model: model.id,
-      temperature: 0.5,
-      jsonMode: model.supportsJsonMode,
-    });
-
     let result: { enhanced: string; suggestions: string[] };
     try {
-      result = JSON.parse(aiResponse);
-    } catch {
-      // Fallback: treat the full response as the enhanced text
-      result = {
-        enhanced: aiResponse,
-        suggestions: [
-          'AI response was returned as plain text. Consider reviewing the formatting.',
+      const systemPrompt = SECTION_PROMPTS[section](targetJob);
+      const model = getModelForFeature('resume', user.plan);
+      const aiResponse = await aiChat({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: `Here is the ${section} content to enhance:\n\n${content}`,
+          },
         ],
+        model: model.id,
+        temperature: 0.5,
+        jsonMode: model.supportsJsonMode,
+      });
+
+      try {
+        result = JSON.parse(extractJSON(aiResponse));
+      } catch {
+        // Fallback: treat the full response as the enhanced text
+        result = {
+          enhanced: aiResponse,
+          suggestions: [
+            'AI response was returned as plain text. Consider reviewing the formatting.',
+          ],
+        };
+      }
+    } catch (aiError) {
+      console.warn('[Resume Enhance] AI generation failed, using demo enhancement:', aiError);
+      // Demo fallback when AI is unavailable
+      const enhancementMap: Record<string, (text: string) => { enhanced: string; suggestions: string[] }> = {
+        summary: (text) => ({
+          enhanced: `Results-driven professional with demonstrated expertise in ${targetJob || 'the field'}. ${text.split('.').slice(0, 2).join('. ').trim()}. Proven track record of delivering impactful results and driving team success.`,
+          suggestions: [
+            'Add quantifiable achievements (e.g., "increased efficiency by 30%")',
+            'Include industry-specific keywords for ATS optimization',
+            'Keep summary to 3-4 impactful sentences',
+          ],
+        }),
+        experience: (text) => ({
+          enhanced: text.split('\n').map(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return '';
+            if (/^(led|built|managed|developed|created|implemented)/i.test(trimmed)) return trimmed;
+            return `Spearheaded ${trimmed.charAt(0).toLowerCase()}${trimmed.slice(1)}`;
+          }).filter(Boolean).join('\n'),
+          suggestions: [
+            'Start each bullet with a strong action verb (Led, Built, Managed, Developed)',
+            'Add metrics and numbers wherever possible',
+            'Focus on outcomes and impact, not just responsibilities',
+          ],
+        }),
+        skills: (text) => ({
+          enhanced: text,
+          suggestions: [
+            'Group skills by category (Technical, Soft Skills, Tools)',
+            'Prioritize skills mentioned in job descriptions you\'re targeting',
+            'Remove outdated or irrelevant skills',
+            `Add trending skills for ${targetJob || 'your target role'}`,
+          ],
+        }),
+        full: (text) => ({
+          enhanced: text,
+          suggestions: [
+            'Tailor your resume for each application',
+            'Use consistent formatting throughout',
+            'Ensure contact information is current and professional',
+            'Add a compelling professional summary at the top',
+          ],
+        }),
       };
+      result = (enhancementMap[section] || enhancementMap.full)(content);
+      result.suggestions.unshift('[Demo Mode] AI enhancement is running with sample suggestions. Configure OpenRouter API key for full AI-powered optimization.');
     }
 
     // Increment AI credits used

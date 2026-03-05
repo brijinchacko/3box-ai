@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FolderOpen, Plus, ExternalLink, Eye, Edit3, Code, Star,
   Globe, Github, CheckCircle2, Sparkles, Share2, Copy,
-  Loader2, Wand2, Lightbulb, X, Save, Trash2
+  Loader2, Wand2, Lightbulb, X, Save, Trash2, Upload
 } from 'lucide-react';
 
 interface Project {
@@ -20,36 +20,16 @@ interface Project {
   score: number | null;
 }
 
-const defaultProjects: Project[] = [
-  {
-    id: '1', title: 'Real-time Recommendation Engine',
-    description: 'Built a collaborative filtering + content-based hybrid recommendation system serving 2M+ users daily with sub-100ms latency.',
-    skills: ['Python', 'PyTorch', 'Redis', 'FastAPI'], image: null, github: 'github.com/alex/rec-engine', live: 'demo.alexj.dev/rec',
-    status: 'verified', score: 92,
-  },
-  {
-    id: '2', title: 'NLP Content Moderator',
-    description: 'Transformer-based content moderation system achieving 96% accuracy on toxic content detection with multi-language support.',
-    skills: ['PyTorch', 'Transformers', 'BERT', 'Docker'], image: null, github: 'github.com/alex/nlp-mod', live: '',
-    status: 'verified', score: 88,
-  },
-  {
-    id: '3', title: 'MLOps Pipeline Framework',
-    description: 'End-to-end ML pipeline with automated training, evaluation, deployment, and monitoring using MLflow and Kubernetes.',
-    skills: ['MLflow', 'Kubernetes', 'Docker', 'CI/CD'], image: null, github: 'github.com/alex/mlops-pipe', live: '',
-    status: 'in-progress', score: null,
-  },
-  {
-    id: '4', title: 'Open Source LLM Toolkit',
-    description: 'Contributed to an open-source toolkit for LLM fine-tuning with LoRA/QLoRA techniques. 2K+ GitHub stars.',
-    skills: ['Python', 'HuggingFace', 'LoRA', 'LLMs'], image: null, github: 'github.com/alex/llm-toolkit', live: '',
-    status: 'verified', score: 95,
-  },
-];
+// Helper: ensure URLs have protocol prefix
+function ensureUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `https://${url}`;
+}
 
 export default function PortfolioPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [shareUrl] = useState('https://nxted.ai/p/alex-johnson');
+  const [userName, setUserName] = useState('');
   const [copied, setCopied] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState<string | null>(null);
   const [suggestingProjects, setSuggestingProjects] = useState(false);
@@ -59,27 +39,170 @@ export default function PortfolioPage() {
   const [editForm, setEditForm] = useState<Partial<Project>>({});
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProject, setNewProject] = useState<Partial<Project>>({ title: '', description: '', skills: [], github: '', live: '', status: 'draft' });
+  const [comingSoonMsg, setComingSoonMsg] = useState('');
 
-  // Load projects from localStorage on mount
+  // API integration state
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [portfolioSlug, setPortfolioSlug] = useState<string | null>(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+  const [portfolioTitle, setPortfolioTitle] = useState('My Portfolio');
+  const [portfolioBio, setPortfolioBio] = useState('');
+  const [portfolioSkills, setPortfolioSkills] = useState<string[]>([]);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load portfolio from API on mount
   useEffect(() => {
-    const stored = localStorage.getItem('nxted_portfolio_projects');
-    if (stored) {
+    const loadPortfolio = async () => {
       try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setProjects(parsed);
-          return;
+        const res = await fetch('/api/portfolio');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.portfolio) {
+            const p = data.portfolio;
+            setPortfolioTitle(p.title || 'My Portfolio');
+            setPortfolioBio(p.bio || '');
+            setPortfolioSkills(Array.isArray(p.skills) ? p.skills : []);
+            setPortfolioSlug(p.slug || null);
+            setIsPublished(p.isPublic || false);
+            if (Array.isArray(p.projects) && p.projects.length > 0) {
+              setProjects(p.projects);
+            }
+            if (p.user?.name) {
+              setUserName(p.user.name);
+            }
+          }
         }
-      } catch { /* ignore */ }
-    }
-    setProjects(defaultProjects);
+      } catch (err) {
+        console.error('Failed to load portfolio:', err);
+        // Fallback: try localStorage for migration
+        const stored = localStorage.getItem('nxted_portfolio_projects');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProjects(parsed);
+            }
+          } catch { /* ignore */ }
+        }
+      } finally {
+        setLoadingPortfolio(false);
+      }
+    };
+    loadPortfolio();
   }, []);
 
-  // Save projects to localStorage whenever they change
+  // Fetch user profile for share URL (fallback if not loaded from portfolio)
+  useEffect(() => {
+    if (!userName) {
+      fetch('/api/user/profile')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.name) setUserName(data.name);
+        })
+        .catch(() => {});
+    }
+  }, [userName]);
+
+  const publicUrl = portfolioSlug
+    ? `${window.location.origin}/p/${portfolioSlug}`
+    : '';
+
+  const shareUrl = publicUrl || (userName
+    ? `https://nxted.ai/p/${userName.toLowerCase().replace(/\s+/g, '-')}`
+    : '');
+
+  const showComingSoon = (feature: string) => {
+    setComingSoonMsg(`${feature} coming soon!`);
+    setTimeout(() => setComingSoonMsg(''), 2000);
+  };
+
+  // Save portfolio to API
+  const savePortfolioToAPI = useCallback(async (updatedProjects: Project[]) => {
+    setSaving(true);
+    try {
+      const allSkills = [...new Set(updatedProjects.flatMap(p => p.skills))];
+      const res = await fetch('/api/portfolio', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: portfolioTitle,
+          bio: portfolioBio,
+          projects: updatedProjects,
+          skills: allSkills,
+          theme: 'dark',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.portfolio?.slug) {
+          setPortfolioSlug(data.portfolio.slug);
+        }
+        if (data.portfolio?.isPublic) {
+          setIsPublished(true);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save portfolio:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, [portfolioTitle, portfolioBio]);
+
+  // Save projects: update state and debounce API save
   const saveProjects = useCallback((updatedProjects: Project[]) => {
     setProjects(updatedProjects);
-    localStorage.setItem('nxted_portfolio_projects', JSON.stringify(updatedProjects));
-  }, []);
+    // Also update aggregated skills
+    setPortfolioSkills([...new Set(updatedProjects.flatMap(p => p.skills))]);
+    // Debounce API save to avoid rapid fire
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      savePortfolioToAPI(updatedProjects);
+    }, 1000);
+  }, [savePortfolioToAPI]);
+
+  // Publish portfolio
+  const publishPortfolio = async () => {
+    // First ensure portfolio is saved
+    setPublishing(true);
+    try {
+      // Save current state first
+      const allSkills = [...new Set(projects.flatMap(p => p.skills))];
+      await fetch('/api/portfolio', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: portfolioTitle,
+          bio: portfolioBio,
+          projects,
+          skills: allSkills,
+          theme: 'dark',
+        }),
+      });
+
+      // Then publish
+      const res = await fetch('/api/portfolio/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPortfolioSlug(data.slug);
+        setIsPublished(true);
+      } else {
+        const data = await res.json();
+        setComingSoonMsg(data.error || 'Failed to publish');
+        setTimeout(() => setComingSoonMsg(''), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to publish portfolio:', err);
+      setComingSoonMsg('Failed to publish portfolio');
+      setTimeout(() => setComingSoonMsg(''), 3000);
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // AI Generate Project Description
   const generateDescription = async (projectId: string) => {
@@ -209,7 +332,8 @@ export default function PortfolioPage() {
 
   // Copy share URL
   const copyUrl = () => {
-    navigator.clipboard.writeText(shareUrl);
+    const urlToCopy = publicUrl || shareUrl;
+    navigator.clipboard.writeText(urlToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -240,30 +364,100 @@ export default function PortfolioPage() {
               {suggestingProjects ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
               AI Suggest Projects
             </button>
-            <button className="btn-secondary text-sm flex items-center gap-2">
-              <Eye className="w-4 h-4" /> Preview
+            {portfolioSlug && isPublished && (
+              <a
+                href={`/p/${portfolioSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary text-sm flex items-center gap-2"
+              >
+                <Eye className="w-4 h-4" /> Preview
+              </a>
+            )}
+            <button
+              onClick={publishPortfolio}
+              disabled={publishing || projects.length === 0}
+              className="btn-primary text-sm flex items-center gap-2"
+            >
+              {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+              {isPublished ? 'Published' : 'Publish'}
             </button>
-            <button className="btn-primary text-sm flex items-center gap-2">
-              <Globe className="w-4 h-4" /> Publish
-            </button>
+            {saving && (
+              <span className="text-xs text-white/30 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+              </span>
+            )}
           </div>
         </div>
       </motion.div>
 
-      {/* Share URL */}
-      <div className="card mb-8 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Share2 className="w-5 h-5 text-neon-blue" />
-          <div>
-            <div className="text-sm font-medium">Portfolio URL</div>
-            <div className="text-xs text-neon-blue">{shareUrl}</div>
+      {/* Coming Soon Toast */}
+      <AnimatePresence>
+        {comingSoonMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 right-6 z-50 px-4 py-2 rounded-xl bg-surface border border-white/10 text-sm text-white/70 shadow-lg"
+          >
+            {comingSoonMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Published URL */}
+      {isPublished && portfolioSlug && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card mb-8 border border-neon-green/20 bg-gradient-to-r from-neon-green/5 to-transparent"
+        >
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-neon-green" />
+              <div>
+                <div className="text-sm font-medium text-neon-green">Portfolio is Live!</div>
+                <div className="text-xs text-white/50">{publicUrl}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={`/p/${portfolioSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost text-sm flex items-center gap-1"
+              >
+                <ExternalLink className="w-3 h-3" /> View
+              </a>
+              <button onClick={copyUrl} className="btn-ghost text-sm flex items-center gap-1">
+                {copied ? <CheckCircle2 className="w-3 h-3 text-neon-green" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* Share URL (when not yet published) */}
+      {!isPublished && shareUrl && (
+        <div className="card mb-8 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <Share2 className="w-5 h-5 text-neon-blue" />
+            <div>
+              <div className="text-sm font-medium">Portfolio URL</div>
+              <div className="text-xs text-white/40">Publish your portfolio to get a shareable link</div>
+            </div>
+          </div>
+          <button
+            onClick={publishPortfolio}
+            disabled={publishing || projects.length === 0}
+            className="btn-primary text-xs flex items-center gap-1"
+          >
+            {publishing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+            Publish Now
+          </button>
         </div>
-        <button onClick={copyUrl} className="btn-ghost text-sm flex items-center gap-1">
-          {copied ? <CheckCircle2 className="w-3 h-3 text-neon-green" /> : <Copy className="w-3 h-3" />}
-          {copied ? 'Copied!' : 'Copy Link'}
-        </button>
-      </div>
+      )}
 
       {/* AI Suggested Projects */}
       <AnimatePresence>
@@ -450,12 +644,12 @@ export default function PortfolioPage() {
                 {/* Links */}
                 <div className="flex items-center gap-3">
                   {project.github && (
-                    <a href="#" className="text-xs text-white/40 hover:text-white flex items-center gap-1">
+                    <a href={ensureUrl(project.github)} target="_blank" rel="noopener noreferrer" className="text-xs text-white/40 hover:text-white flex items-center gap-1">
                       <Github className="w-3 h-3" /> GitHub
                     </a>
                   )}
                   {project.live && (
-                    <a href="#" className="text-xs text-neon-blue hover:underline flex items-center gap-1">
+                    <a href={ensureUrl(project.live)} target="_blank" rel="noopener noreferrer" className="text-xs text-neon-blue hover:underline flex items-center gap-1">
                       <ExternalLink className="w-3 h-3" /> Live Demo
                     </a>
                   )}
@@ -502,6 +696,12 @@ export default function PortfolioPage() {
                   onChange={e => setNewProject({ ...newProject, github: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neon-blue"
                   placeholder="GitHub URL"
+                />
+                <input
+                  value={newProject.live}
+                  onChange={e => setNewProject({ ...newProject, live: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neon-blue"
+                  placeholder="Live Demo URL"
                 />
                 <div className="flex items-center gap-2">
                   <button onClick={addNewProject} className="btn-primary text-xs flex items-center gap-1">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,58 +10,34 @@ import {
   MapPin, Linkedin, Globe, ArrowRight, CheckCircle2, Sparkles,
   Crown, Lock, X, Loader2, Users,
 } from 'lucide-react';
+import TemplatePreview from '@/components/resume/TemplatePreview';
 
-// Demo resume data
-const demoResume = {
+const RESUME_STORAGE_KEY = 'nxted_resume_data';
+
+// Empty resume template
+const emptyResume = {
   id: '1',
-  title: 'AI Engineer Resume',
+  title: 'My Resume',
   template: 'modern',
   contact: {
-    name: 'Alex Johnson',
-    email: 'alex.johnson@email.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    linkedin: 'linkedin.com/in/alexjohnson',
-    portfolio: 'alexjohnson.dev',
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    linkedin: '',
+    portfolio: '',
   },
-  summary: 'Results-driven AI Engineer with 3+ years of experience in designing, developing, and deploying machine learning systems at scale. Expertise in deep learning, NLP, and MLOps. Passionate about building AI products that create real-world impact.',
-  experience: [
-    {
-      id: '1', company: 'TechCorp AI', role: 'ML Engineer', location: 'San Francisco, CA',
-      startDate: '2022-06', endDate: 'Present', current: true,
-      bullets: [
-        'Designed and deployed a real-time recommendation engine serving 2M+ daily active users, improving click-through rate by 23%',
-        'Built an end-to-end ML pipeline using PyTorch, MLflow, and Kubernetes, reducing model deployment time from 2 weeks to 4 hours',
-        'Led the implementation of a transformer-based NLP system for automated content moderation, achieving 96% accuracy',
-      ],
-    },
-    {
-      id: '2', company: 'DataStart Inc.', role: 'Data Scientist', location: 'Remote',
-      startDate: '2020-08', endDate: '2022-05', current: false,
-      bullets: [
-        'Developed predictive models for customer churn that saved $2.1M annually through targeted retention campaigns',
-        'Created automated data pipelines processing 50GB+ daily using Apache Spark and Python',
-        'Collaborated with product teams to integrate ML models into production applications',
-      ],
-    },
-  ],
-  education: [
-    { id: '1', institution: 'Stanford University', degree: 'M.S.', field: 'Computer Science (AI Track)', startDate: '2018', endDate: '2020', gpa: '3.9' },
-    { id: '1b', institution: 'UC Berkeley', degree: 'B.S.', field: 'Computer Science', startDate: '2014', endDate: '2018', gpa: '3.7' },
-  ],
-  skills: ['Python', 'PyTorch', 'TensorFlow', 'Scikit-learn', 'Docker', 'Kubernetes', 'MLflow', 'SQL', 'AWS', 'GCP', 'Transformers', 'LLMs', 'Computer Vision', 'NLP'],
-  certifications: [
-    { id: '1', name: 'AWS Machine Learning Specialty', issuer: 'Amazon Web Services', date: '2023', verified: true },
-    { id: '2', name: 'Deep Learning Specialization', issuer: 'DeepLearning.AI', date: '2022', verified: true },
-  ],
-  projects: [
-    { id: '1', name: 'Open Source LLM Toolkit', description: 'Contributed to an open-source toolkit for LLM fine-tuning with 2K+ GitHub stars', url: 'github.com/alexj/llm-toolkit', technologies: ['Python', 'PyTorch', 'HuggingFace'] },
-  ],
+  summary: '',
+  experience: [] as { id: string; company: string; role: string; location: string; startDate: string; endDate: string; current: boolean; bullets: string[] }[],
+  education: [] as { id: string; institution: string; degree: string; field: string; startDate: string; endDate: string; gpa: string }[],
+  skills: [] as string[],
+  certifications: [] as { id: string; name: string; issuer: string; date: string; verified: boolean }[],
+  projects: [] as { id: string; name: string; description: string; url: string; technologies: string[] }[],
 };
 
 const templates = [
   { id: 'modern', name: 'Modern', desc: 'Clean, ATS-optimized' },
-  { id: 'executive', name: 'Executive', desc: 'Professional & bold' },
+  { id: 'classic', name: 'Classic', desc: 'Traditional & polished' },
   { id: 'minimal', name: 'Minimal', desc: 'Simple & elegant' },
   { id: 'creative', name: 'Creative', desc: 'Standout design' },
 ];
@@ -103,8 +79,9 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 export default function ResumePage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
-  const [resume, setResume] = useState(demoResume);
+  const [resume, setResume] = useState(emptyResume);
   const [activeSection, setActiveSection] = useState('contact');
+  const [resumeLoaded, setResumeLoaded] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -121,6 +98,45 @@ export default function ResumePage() {
   const [coverLetterJobDesc, setCoverLetterJobDesc] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+
+  // Load resume from localStorage on mount, then fill user profile if empty
+  useEffect(() => {
+    const stored = localStorage.getItem(RESUME_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setResume(parsed);
+        setResumeLoaded(true);
+        return;
+      } catch { /* ignore */ }
+    }
+    // No stored resume — fetch user profile to pre-fill contact
+    fetch('/api/user/profile')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          setResume(prev => ({
+            ...prev,
+            title: data.targetRole ? `${data.targetRole} Resume` : 'My Resume',
+            contact: {
+              ...prev.contact,
+              name: data.name || '',
+              email: data.email || '',
+              location: data.location || '',
+            },
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setResumeLoaded(true));
+  }, []);
+
+  // Save resume to localStorage whenever it changes (after initial load)
+  useEffect(() => {
+    if (resumeLoaded) {
+      localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));
+    }
+  }, [resume, resumeLoaded]);
 
   const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
   const isBasic = userPlan === 'BASIC';
@@ -843,21 +859,14 @@ export default function ResumePage() {
               {activeSection === 'template' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
                   <h3 className="font-semibold mb-4">Choose Template</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 justify-items-center">
                     {templates.map((t) => (
-                      <button
+                      <TemplatePreview
                         key={t.id}
+                        template={t.id as 'modern' | 'classic' | 'minimal' | 'creative'}
+                        selected={resume.template === t.id}
                         onClick={() => setResume({...resume, template: t.id})}
-                        className={`p-4 rounded-xl border text-center transition-all ${
-                          resume.template === t.id ? 'border-neon-blue/50 bg-neon-blue/5' : 'border-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="w-full h-24 rounded-lg bg-white/5 mb-3 flex items-center justify-center text-2xl">
-                          {t.id === 'modern' ? '📄' : t.id === 'executive' ? '📊' : t.id === 'minimal' ? '📝' : '🎨'}
-                        </div>
-                        <div className="text-sm font-medium">{t.name}</div>
-                        <div className="text-xs text-white/40">{t.desc}</div>
-                      </button>
+                      />
                     ))}
                   </div>
                 </motion.div>

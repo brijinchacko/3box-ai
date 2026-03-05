@@ -619,10 +619,11 @@ export default function PricingPageClient() {
           {/* BUY AI CREDITS                                               */}
           {/* ============================================================ */}
           <motion.div
+            id="credits"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-28 max-w-4xl mx-auto"
+            className="mt-28 max-w-4xl mx-auto scroll-mt-24"
           >
             <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 badge-purple mb-4">

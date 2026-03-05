@@ -41,7 +41,7 @@ export default function AboutPageClient() {
           </motion.div>
 
           {/* Values */}
-          <div className="grid sm:grid-cols-2 gap-6 mb-24">
+          <div id="features" className="grid sm:grid-cols-2 gap-6 mb-24 scroll-mt-24">
             {values.map((v, i) => (
               <motion.div
                 key={v.title}
@@ -85,7 +85,7 @@ export default function AboutPageClient() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             id="contact"
-            className="text-center"
+            className="text-center scroll-mt-24"
           >
             <h2 className="text-2xl font-bold mb-4">Get in Touch</h2>
             <p className="text-white/40 mb-6">We&apos;d love to hear from you — whether you&apos;re a user, partner, or investor.</p>
@@ -93,9 +93,9 @@ export default function AboutPageClient() {
               <a href="mailto:hello@oforo.ai" className="btn-secondary text-sm flex items-center gap-2">
                 <Mail className="w-4 h-4" /> hello@oforo.ai
               </a>
-              <a href="#" className="btn-ghost text-sm"><Twitter className="w-4 h-4" /></a>
-              <a href="#" className="btn-ghost text-sm"><Linkedin className="w-4 h-4" /></a>
-              <a href="#" className="btn-ghost text-sm"><Github className="w-4 h-4" /></a>
+              <a href="https://x.com/oforoai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Twitter className="w-4 h-4" /></a>
+              <a href="https://linkedin.com/company/oforo-ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Linkedin className="w-4 h-4" /></a>
+              <a href="https://github.com/oforo-ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Github className="w-4 h-4" /></a>
             </div>
           </motion.div>
         </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-import { aiChat, getModelForFeature } from '@/lib/ai/openrouter';
+import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -168,7 +168,7 @@ Generate 3-5 relevant insights. Prioritize actionable items. Be encouraging but 
 
     let insightsData;
     try {
-      insightsData = JSON.parse(aiResponse);
+      insightsData = JSON.parse(extractJSON(aiResponse));
     } catch {
       // Fallback if AI response is not valid JSON
       console.error(

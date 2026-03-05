@@ -5,7 +5,7 @@ import Logo from '@/components/brand/Logo';
 
 const footerLinks = {
   Product: [
-    { label: 'Features', href: '/about#features' },
+    { label: 'Features', href: '/#features' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'Assessment', href: '/signup' },
     { label: 'Resume Builder', href: '/tools/resume-builder' },
@@ -20,19 +20,19 @@ const footerLinks = {
   Company: [
     { label: 'About', href: '/about' },
     { label: 'Blog', href: '/blog' },
-    { label: 'Careers', href: '/about#contact' },
-    { label: 'Press', href: '/about#contact' },
+    { label: 'Careers', href: '/careers' },
+    { label: 'Press', href: '/press' },
   ],
   Legal: [
-    { label: 'Privacy Policy', href: '/security#privacy' },
-    { label: 'Terms of Service', href: '/security#terms' },
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
     { label: 'Security', href: '/security' },
-    { label: 'GDPR', href: '/security#gdpr' },
+    { label: 'GDPR', href: '/gdpr' },
   ],
   Support: [
     { label: 'Help Center', href: '/help' },
     { label: 'System Status', href: '/status' },
-    { label: 'Contact', href: '/about#contact' },
+    { label: 'Contact', href: '/contact' },
   ],
 };
 
@@ -61,12 +61,21 @@ export default function Footer() {
               <ul className="space-y-2">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-white/30 hover:text-white/70 transition-colors"
-                    >
-                      {link.label}
-                    </Link>
+                    {link.href.includes('#') ? (
+                      <a
+                        href={link.href}
+                        className="text-sm text-white/30 hover:text-white/70 transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-white/30 hover:text-white/70 transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

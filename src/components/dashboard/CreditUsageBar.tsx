@@ -59,13 +59,13 @@ export default function CreditUsageBar({ used, limit, showBuyButton = true }: Cr
       )}
 
       {!isUnlimited && percentage > 80 && showBuyButton && (
-        <Link
+        <a
           href="/pricing#credits"
           className="inline-flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors"
         >
           <Zap className="w-2.5 h-2.5" />
           Buy More Credits
-        </Link>
+        </a>
       )}
     </div>
   );

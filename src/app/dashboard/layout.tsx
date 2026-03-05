@@ -197,9 +197,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 />
               </div>
               {creditPercent > 80 && (
-                <Link href="/pricing#credits" className="text-[10px] text-red-400 hover:text-red-300 mt-1 block">
+                <a href="/pricing#credits" className="text-[10px] text-red-400 hover:text-red-300 mt-1 block">
                   Buy more credits
-                </Link>
+                </a>
               )}
             </div>
           )}

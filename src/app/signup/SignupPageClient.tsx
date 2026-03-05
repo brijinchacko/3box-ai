@@ -30,6 +30,7 @@ export default function SignupPageClient() {
   const [error, setError] = useState('');
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const [targetRole, setTargetRole] = useState('');
+  const [googleEnabled, setGoogleEnabled] = useState(true);
 
   // OTP state
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
@@ -52,6 +53,11 @@ export default function SignupPageClient() {
       } catch {}
     }
   });
+
+  // Check if Google auth is available
+  useEffect(() => {
+    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleEnabled(!!d.google)).catch(() => setGoogleEnabled(false));
+  }, []);
 
   // Timer for resend
   useEffect(() => {
@@ -307,9 +313,12 @@ export default function SignupPageClient() {
 
                   <button
                     onClick={handleGoogleSignUp}
-                    className="btn-secondary w-full flex items-center justify-center gap-2 mb-6"
+                    disabled={!googleEnabled}
+                    className={`btn-secondary w-full flex items-center justify-center gap-2 mb-6 ${!googleEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    title={!googleEnabled ? 'Google sign-up is not configured yet' : undefined}
                   >
                     <Chrome className="w-4 h-4" /> Sign up with Google
+                    {!googleEnabled && <span className="text-[10px] text-white/30 ml-1">(Coming soon)</span>}
                   </button>
 
                   <div className="my-6 flex items-center gap-3">
@@ -364,7 +373,7 @@ export default function SignupPageClient() {
                   </form>
 
                   <p className="text-xs text-white/30 text-center mt-4">
-                    By signing up, you agree to our <Link href="/security#terms" className="underline">Terms</Link> and <Link href="/security#privacy" className="underline">Privacy Policy</Link>.
+                    By signing up, you agree to our <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>.
                   </p>
 
                   <p className="text-sm text-white/40 text-center mt-6">

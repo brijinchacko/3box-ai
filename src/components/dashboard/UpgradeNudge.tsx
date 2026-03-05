@@ -59,13 +59,13 @@ export default function UpgradeNudge({ plan, feature, creditsUsed, creditsLimit 
               />
             </div>
             <div className="flex items-center gap-2">
-              <Link
+              <a
                 href="/pricing#credits"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 text-xs font-medium hover:bg-yellow-500/20 transition-colors"
               >
                 <Zap className="w-3 h-3" />
                 Buy Credits
-              </Link>
+              </a>
               <Link
                 href="/pricing"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-white/60 text-xs font-medium hover:bg-white/10 transition-colors"

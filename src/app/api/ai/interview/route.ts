@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-import { aiChat, getModelForFeature } from '@/lib/ai/openrouter';
+import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -58,19 +58,9 @@ Return a valid JSON array with format:
 
       let questions;
       try {
-        questions = JSON.parse(aiResponse);
+        questions = JSON.parse(extractJSON(aiResponse));
       } catch {
-        const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          try {
-            questions = JSON.parse(jsonMatch[0]);
-          } catch {
-            // Return fallback questions in demo mode
-            questions = generateFallbackQuestions(targetRole, count);
-          }
-        } else {
-          questions = generateFallbackQuestions(targetRole, count);
-        }
+        questions = generateFallbackQuestions(targetRole, count);
       }
 
       // Ensure all questions have the required fields
@@ -121,18 +111,9 @@ Return valid JSON:
 
       let evaluation;
       try {
-        evaluation = JSON.parse(aiResponse);
+        evaluation = JSON.parse(extractJSON(aiResponse));
       } catch {
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            evaluation = JSON.parse(jsonMatch[0]);
-          } catch {
-            evaluation = generateFallbackEvaluation();
-          }
-        } else {
-          evaluation = generateFallbackEvaluation();
-        }
+        evaluation = generateFallbackEvaluation();
       }
 
       return NextResponse.json({

@@ -6,13 +6,16 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Users, BarChart3,
-  Shield, ArrowLeft,
+  Shield, ArrowLeft, FileText, MessageSquare, Mail,
 } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 
 const adminLinks = [
   { href: '/admin', icon: LayoutDashboard, label: 'Overview' },
   { href: '/admin/monitoring', icon: BarChart3, label: 'Monitoring' },
+  { href: '/admin/content', icon: FileText, label: 'Content' },
+  { href: '/admin/support', icon: MessageSquare, label: 'Support' },
+  { href: '/admin/email', icon: Mail, label: 'Email' },
   { href: '/admin/users', icon: Users, label: 'Users' },
 ];
 
@@ -69,7 +72,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <nav className="flex-1 py-4 px-3 space-y-1">
           {adminLinks.map((link) => {
-            const active = pathname === link.href;
+            const active = link.href === '/admin'
+              ? pathname === '/admin'
+              : pathname === link.href || pathname.startsWith(link.href + '/');
             return (
               <Link
                 key={link.href}
