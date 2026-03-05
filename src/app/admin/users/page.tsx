@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Trash2, X, AlertTriangle, Shield } from 'lucide-react';
 
 interface UserData {
   id: string;
@@ -36,6 +36,12 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('');
 
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState<UserData | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   const fetchUsers = async () => {
     setLoading(true);
     const params = new URLSearchParams({
@@ -62,6 +68,45 @@ export default function AdminUsersPage() {
     e.preventDefault();
     setPage(1);
     fetchUsers();
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteModal || deleteConfirm !== 'DELETE') return;
+    setDeleting(true);
+    setDeleteError('');
+
+    try {
+      const res = await fetch(`/api/admin/users/${deleteModal.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setDeleteError(data.error || 'Failed to delete user');
+        return;
+      }
+
+      // Success — close modal and refresh
+      setDeleteModal(null);
+      setDeleteConfirm('');
+      fetchUsers();
+    } catch {
+      setDeleteError('Network error. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteModal = (user: UserData) => {
+    setDeleteModal(user);
+    setDeleteConfirm('');
+    setDeleteError('');
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal(null);
+    setDeleteConfirm('');
+    setDeleteError('');
   };
 
   const planColors: Record<string, string> = {
@@ -121,20 +166,21 @@ export default function AdminUsersPage() {
                 <th className="text-center py-3 px-3">Plans</th>
                 <th className="text-center py-3 px-3">Jobs</th>
                 <th className="text-left py-3 px-3">Referral</th>
+                <th className="text-center py-3 px-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-white/5">
-                    <td className="py-3 px-4" colSpan={10}>
+                    <td className="py-3 px-4" colSpan={11}>
                       <div className="h-4 bg-white/5 rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : users.length === 0 ? (
                 <tr>
-                  <td className="py-8 px-4 text-center text-white/30" colSpan={10}>
+                  <td className="py-8 px-4 text-center text-white/30" colSpan={11}>
                     No users found
                   </td>
                 </tr>
@@ -145,8 +191,8 @@ export default function AdminUsersPage() {
                       <div className="font-medium">{u.name || 'No name'}</div>
                       <div className="text-xs text-white/30">{u.email}</div>
                       {u.isOforoInternal && (
-                        <span className="text-[10px] text-neon-purple bg-neon-purple/10 px-1.5 py-0.5 rounded-full">
-                          Internal
+                        <span className="text-[10px] text-neon-purple bg-neon-purple/10 px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 mt-0.5">
+                          <Shield className="w-2.5 h-2.5" /> Admin
                         </span>
                       )}
                     </td>
@@ -164,7 +210,7 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="py-3 px-3 text-center text-white/60">
-                      {u.aiCreditsUsed}/{u.aiCreditsLimit === -1 ? '∞' : u.aiCreditsLimit}
+                      {u.aiCreditsUsed}/{u.aiCreditsLimit === -1 ? '\u221E' : u.aiCreditsLimit}
                     </td>
                     <td className="py-3 px-3 text-center text-white/60">{u._count.assessments}</td>
                     <td className="py-3 px-3 text-center text-white/60">{u._count.resumes}</td>
@@ -172,6 +218,19 @@ export default function AdminUsersPage() {
                     <td className="py-3 px-3 text-center text-white/60">{u._count.jobApplications}</td>
                     <td className="py-3 px-3 text-white/40 text-xs">
                       {u.referralCode || '-'}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      {u.isOforoInternal ? (
+                        <span className="text-white/10 text-xs">Protected</span>
+                      ) : (
+                        <button
+                          onClick={() => openDeleteModal(u)}
+                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors"
+                          title={`Delete ${u.name || u.email}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -205,6 +264,97 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeDeleteModal}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-surface-50 border border-white/10 rounded-2xl w-full max-w-md mx-4 p-6 shadow-2xl">
+            {/* Close button */}
+            <button
+              onClick={closeDeleteModal}
+              className="absolute top-4 right-4 text-white/30 hover:text-white/60"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Warning icon */}
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-400" />
+            </div>
+
+            <h2 className="text-lg font-bold mb-1">Delete User Account</h2>
+            <p className="text-sm text-white/50 mb-4">
+              This will permanently delete the user and all their data. This action cannot be undone.
+            </p>
+
+            {/* User info */}
+            <div className="bg-white/5 rounded-xl p-3 mb-4 space-y-1">
+              <div className="text-sm font-medium">{deleteModal.name || 'No name'}</div>
+              <div className="text-xs text-white/40">{deleteModal.email}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${planColors[deleteModal.plan] || ''}`}>
+                  {deleteModal.plan}
+                </span>
+                <span className="text-[10px] text-white/30">
+                  {deleteModal._count.assessments} assessments, {deleteModal._count.resumes} resumes, {deleteModal._count.jobApplications} applications
+                </span>
+              </div>
+            </div>
+
+            {/* Confirmation input */}
+            <div className="mb-4">
+              <label className="block text-sm text-white/60 mb-1.5">
+                Type <span className="font-mono text-red-400 font-bold">DELETE</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                className="input-field w-full font-mono"
+                placeholder="DELETE"
+                autoFocus
+              />
+            </div>
+
+            {/* Error */}
+            {deleteError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                {deleteError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={closeDeleteModal}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                disabled={deleteConfirm !== 'DELETE' || deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" /> Delete User
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

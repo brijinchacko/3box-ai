@@ -7,7 +7,7 @@ import {
   Brain, Target, BookOpen, FileText, Briefcase, TrendingUp,
   ArrowRight, BarChart3, Zap, Award, Clock, CheckCircle2,
   AlertCircle, Star, Sparkles, Lightbulb, Rocket, RefreshCw,
-  Mic
+  Mic, UserCheck, Send, MessageSquare, Trophy
 } from 'lucide-react';
 
 const fadeUp = {
@@ -34,6 +34,16 @@ interface AIInsightsData {
   trendingSkills?: string[];
 }
 
+interface JourneyProgress {
+  onboarding: boolean;
+  assessment: boolean;
+  careerPlan: boolean;
+  resume: boolean;
+  applied: boolean;
+  interview: boolean;
+  offer: boolean;
+}
+
 interface UserProfile {
   name: string;
   email: string;
@@ -41,6 +51,7 @@ interface UserProfile {
   plan: string;
   credits: number;
   onboardingDone: boolean;
+  journey?: JourneyProgress;
   careerTwin?: {
     marketReadiness?: number;
     hireProbability?: number;
@@ -106,6 +117,136 @@ function MetricSkeleton() {
       <div className="h-8 bg-white/5 rounded w-12 mx-auto mb-2" />
       <div className="h-3 bg-white/5 rounded w-16 mx-auto" />
     </div>
+  );
+}
+
+// --- Career Journey Steps ---
+const journeySteps = [
+  { key: 'onboarding', label: 'Onboarding', icon: UserCheck, href: '/dashboard/onboarding', color: 'from-blue-500 to-cyan-400' },
+  { key: 'assessment', label: 'Assessment', icon: Brain, href: '/dashboard/assessment', color: 'from-purple-500 to-pink-400' },
+  { key: 'careerPlan', label: 'Career Plan', icon: Target, href: '/dashboard/career-plan', color: 'from-indigo-500 to-blue-400' },
+  { key: 'resume', label: 'Resume', icon: FileText, href: '/dashboard/resume', color: 'from-green-500 to-emerald-400' },
+  { key: 'applied', label: 'Applied', icon: Send, href: '/dashboard/jobs', color: 'from-orange-500 to-yellow-400' },
+  { key: 'interview', label: 'Interview', icon: MessageSquare, href: '/dashboard/interview', color: 'from-rose-500 to-red-400' },
+  { key: 'offer', label: 'Job Landed', icon: Trophy, href: '/dashboard/jobs', color: 'from-yellow-400 to-amber-500' },
+];
+
+function CareerJourney({ journey, loading }: { journey?: JourneyProgress; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="card animate-pulse">
+        <div className="h-4 bg-white/5 rounded w-40 mb-4" />
+        <div className="flex items-center gap-2">
+          {[...Array(7)].map((_, i) => (
+            <div key={i} className="flex items-center gap-2 flex-1">
+              <div className="w-8 h-8 rounded-full bg-white/5 flex-shrink-0" />
+              {i < 6 && <div className="flex-1 h-0.5 bg-white/5" />}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const completedSteps = journey
+    ? journeySteps.filter((s) => journey[s.key as keyof JourneyProgress]).length
+    : 0;
+  const progressPercent = Math.round((completedSteps / journeySteps.length) * 100);
+
+  // Find the current (first incomplete) step
+  const currentStepIndex = journey
+    ? journeySteps.findIndex((s) => !journey[s.key as keyof JourneyProgress])
+    : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      className="card border border-white/5 overflow-hidden"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Rocket className="w-4 h-4 text-neon-blue" />
+          <h3 className="text-sm font-semibold text-white/60">Your Career Journey</h3>
+        </div>
+        <span className="text-xs text-white/30">
+          {completedSteps}/{journeySteps.length} steps &middot; {progressPercent}%
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="skill-bar h-1 mb-5">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progressPercent}%` }}
+          transition={{ duration: 1, delay: 0.3 }}
+          className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
+        />
+      </div>
+
+      {/* Steps */}
+      <div className="flex items-start">
+        {journeySteps.map((step, i) => {
+          const done = journey?.[step.key as keyof JourneyProgress] ?? false;
+          const isCurrent = i === currentStepIndex;
+          const Icon = step.icon;
+
+          return (
+            <div key={step.key} className="flex items-center flex-1 min-w-0">
+              {/* Step dot + label */}
+              <Link
+                href={step.href}
+                className={`flex flex-col items-center gap-1.5 group flex-shrink-0 ${
+                  done ? 'cursor-pointer' : isCurrent ? 'cursor-pointer' : 'cursor-default'
+                }`}
+              >
+                <div
+                  className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                    done
+                      ? `bg-gradient-to-br ${step.color} shadow-lg shadow-neon-blue/10`
+                      : isCurrent
+                        ? 'bg-white/10 border-2 border-neon-blue ring-2 ring-neon-blue/20'
+                        : 'bg-white/5 border border-white/10'
+                  }`}
+                >
+                  {done ? (
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                  ) : (
+                    <Icon className={`w-4 h-4 ${isCurrent ? 'text-neon-blue' : 'text-white/20'}`} />
+                  )}
+                  {isCurrent && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-neon-blue rounded-full animate-pulse" />
+                  )}
+                </div>
+                <span
+                  className={`text-[10px] font-medium text-center leading-tight ${
+                    done ? 'text-white/70' : isCurrent ? 'text-neon-blue' : 'text-white/20'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </Link>
+
+              {/* Connector line */}
+              {i < journeySteps.length - 1 && (
+                <div className="flex-1 mx-1 mt-[-12px]">
+                  <div
+                    className={`h-0.5 rounded-full ${
+                      done && journey?.[journeySteps[i + 1].key as keyof JourneyProgress]
+                        ? 'bg-gradient-to-r from-neon-blue to-neon-purple'
+                        : done
+                          ? 'bg-gradient-to-r from-neon-blue/40 to-white/10'
+                          : 'bg-white/5'
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }
 
@@ -185,6 +326,7 @@ export default function DashboardPage() {
 
   const userName = userProfile?.name || 'there';
   const targetRole = userProfile?.targetRole || 'your dream role';
+  const journey = userProfile?.journey;
   const careerTwin = userProfile?.careerTwin;
   const marketReadiness = careerTwin?.marketReadiness ?? aiInsights?.marketReadiness ?? 0;
   const hireProbability = careerTwin?.hireProbability ?? (marketReadiness * 0.9) / 100;
@@ -234,6 +376,9 @@ export default function DashboardPage() {
           — here&apos;s where you stand.
         </p>
       </motion.div>
+
+      {/* Career Journey Tracker */}
+      <CareerJourney journey={journey} loading={loading} />
 
       {/* Assessment CTA - Show if user hasn't completed assessment */}
       <AnimatePresence>

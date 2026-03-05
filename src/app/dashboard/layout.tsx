@@ -8,8 +8,9 @@ import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Brain, Target, BookOpen, FileText,
   Briefcase, Mic, FolderOpen, Settings, Menu, X, ChevronLeft,
-  Crown, Zap, Star, Gift, AlertTriangle
+  Crown, Zap, Star, Gift, AlertTriangle, MapPin, LogOut
 } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import FloatingCoach from '@/components/ai-coach/FloatingCoach';
 import Logo from '@/components/brand/Logo';
 import { getInitials, getCreditUsagePercent } from '@/lib/utils';
@@ -41,6 +42,9 @@ interface UserData {
   aiCreditsUsed: number;
   aiCreditsLimit: number;
   onboardingDone: boolean;
+  targetRole?: string;
+  location?: string;
+  image?: string | null;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -179,11 +183,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* Credit Usage + User */}
-        <div className="p-3 border-t border-white/5">
+        {/* User Details + Credits */}
+        <div className="p-3 border-t border-white/5 space-y-2">
           {/* Credit Usage */}
           {sidebarOpen && creditsLimit !== -1 && (
-            <div className="mb-3 px-3">
+            <div className="px-3">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-white/40">AI Credits</span>
                 <span className={creditPercent > 80 ? 'text-red-400' : 'text-white/60'}>
@@ -204,21 +208,63 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
-          {sidebarOpen && (
-            <div className="mb-3 px-3">
-              <span className={`badge text-xs ${badge.color}`}>
-                <badge.icon className="w-3 h-3 mr-1" /> {badge.label} Plan
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {initials}
+          {/* User card */}
+          <div className={`rounded-xl ${sidebarOpen ? 'bg-white/[0.03] p-3' : 'px-3 py-2'}`}>
+            <div className="flex items-center gap-3">
+              {userData?.image ? (
+                <img
+                  src={userData.image}
+                  alt={userName}
+                  className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-white/10"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold flex-shrink-0 ring-2 ring-white/10">
+                  {initials}
+                </div>
+              )}
+              {sidebarOpen && (
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold truncate">{userName}</div>
+                  <div className="text-[11px] text-white/30 truncate">{userEmail}</div>
+                </div>
+              )}
             </div>
             {sidebarOpen && (
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{userName}</div>
-                <div className="text-xs text-white/30 truncate">{userEmail}</div>
+              <div className="mt-2.5 space-y-1.5">
+                {/* Plan badge */}
+                <div className="flex items-center gap-2">
+                  <span className={`badge text-[10px] ${badge.color}`}>
+                    <badge.icon className="w-2.5 h-2.5 mr-0.5" /> {badge.label}
+                  </span>
+                  {userData?.targetRole && (
+                    <span className="text-[10px] text-white/30 truncate">
+                      {userData.targetRole}
+                    </span>
+                  )}
+                </div>
+                {/* Location */}
+                {userData?.location && (
+                  <div className="flex items-center gap-1 text-[10px] text-white/25">
+                    <MapPin className="w-2.5 h-2.5" />
+                    <span className="truncate">{userData.location}</span>
+                  </div>
+                )}
+                {/* Actions row */}
+                <div className="flex items-center gap-1 pt-1">
+                  <Link
+                    href="/dashboard/settings"
+                    className="text-[10px] text-white/30 hover:text-white/60 flex items-center gap-0.5 transition-colors"
+                  >
+                    <Settings className="w-2.5 h-2.5" /> Settings
+                  </Link>
+                  <span className="text-white/10">|</span>
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="text-[10px] text-white/30 hover:text-red-400 flex items-center gap-0.5 transition-colors"
+                  >
+                    <LogOut className="w-2.5 h-2.5" /> Sign out
+                  </button>
+                </div>
               </div>
             )}
           </div>

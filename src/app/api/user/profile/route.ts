@@ -12,13 +12,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        careerTwin: true,
-        coachSettings: true,
-      },
-    });
+    // Fetch user + journey progress in parallel
+    const [user, assessmentCount, careerPlanCount, resumeCount, jobAppCount, interviewCount, offerCount] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: {
+          careerTwin: true,
+          coachSettings: true,
+        },
+      }),
+      prisma.assessment.count({ where: { userId: session.user.id, status: 'COMPLETED' } }),
+      prisma.careerPlan.count({ where: { userId: session.user.id } }),
+      prisma.resume.count({ where: { userId: session.user.id } }),
+      prisma.jobApplication.count({ where: { userId: session.user.id } }),
+      prisma.jobApplication.count({ where: { userId: session.user.id, status: 'INTERVIEW' } }),
+      prisma.jobApplication.count({ where: { userId: session.user.id, status: 'OFFER' } }),
+    ]);
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -34,6 +43,17 @@ export async function GET(request: NextRequest) {
     const skillSnapshot = user.careerTwin?.skillSnapshot as any;
     const location = skillSnapshot?._profile?.location || '';
 
+    // Career journey steps
+    const journey = {
+      onboarding: user.onboardingDone,
+      assessment: assessmentCount > 0,
+      careerPlan: careerPlanCount > 0,
+      resume: resumeCount > 0,
+      applied: jobAppCount > 0,
+      interview: interviewCount > 0,
+      offer: offerCount > 0,
+    };
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
@@ -48,6 +68,7 @@ export async function GET(request: NextRequest) {
       onboardingDone: user.onboardingDone,
       careerTwin: user.careerTwin,
       coachSettings: user.coachSettings,
+      journey,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
