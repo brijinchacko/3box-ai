@@ -294,7 +294,22 @@ export async function generateAssessmentQuestions(
       messages: [
         {
           role: 'system',
-          content: injectContext(`You are an expert career assessment AI for NXTED AI platform. Generate adaptive skill assessment questions for someone targeting the role of "${targetRole}". Return a JSON array of 10 questions with format: { id, type: "mcq"|"scenario"|"task", question, options (for mcq), difficulty: "beginner"|"intermediate"|"advanced", skill, timeLimit (seconds) }. Mix question types. If existing skills provided, adapt difficulty accordingly. Adapt question difficulty based on the user's education and experience level. Return ONLY valid JSON.`, userContext),
+          content: injectContext(`You are an expert career assessment AI for NXTED AI platform. Generate a comprehensive skill assessment for someone targeting the role of "${targetRole}".
+
+Return a JSON array of exactly 30 questions with this format:
+{ "id": "q1", "type": "mcq"|"scenario", "question": "...", "options": ["A","B","C","D"] (for mcq only), "difficulty": "beginner"|"intermediate"|"advanced", "skill": "specific skill name", "timeLimit": 60-180 }
+
+Requirements:
+- 20 MCQ questions and 10 scenario/task questions
+- Progressive difficulty: 10 beginner, 12 intermediate, 8 advanced
+- Cover ALL core skills required for the "${targetRole}" role
+- Each question tests a DIFFERENT specific skill or sub-skill
+- MCQ options must include plausible distractors with exactly 4 options
+- Scenario questions should be realistic workplace situations
+- timeLimit: 60s for beginner MCQ, 90s for intermediate, 120s for advanced MCQ, 180s for scenarios
+- If existing skills provided, adapt questions to test depth in those areas
+
+Return ONLY a valid JSON array. No markdown, no explanation.`, userContext),
         },
         {
           role: 'user',
@@ -304,6 +319,7 @@ export async function generateAssessmentQuestions(
         },
       ],
       temperature: 0.6,
+      maxTokens: 8192,
       jsonMode: model.supportsJsonMode,
     },
     model.tier

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -69,11 +70,19 @@ function LoadingSkeleton() {
 }
 
 export default function InterviewPrepPage() {
+  const { data: session } = useSession();
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
+  const isPro = userPlan === 'PRO';
+  const isUltra = userPlan === 'ULTRA';
+  const hasExpertAccess = isPro || isUltra;
+
   // Setup state
   const [targetRole, setTargetRole] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [questionCount, setQuestionCount] = useState(5);
   const [showJdInput, setShowJdInput] = useState(false);
+  const [expertRequested, setExpertRequested] = useState(false);
+  const [expertLoading, setExpertLoading] = useState(false);
 
   // Practice state
   const [phase, setPhase] = useState<Phase>('setup');
@@ -95,6 +104,19 @@ export default function InterviewPrepPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const startTimeRef = useRef<number>(0);
 
+  // Auto-generate questions if targetRole is pre-filled
+  const autoGenTriggered = useRef(false);
+  useEffect(() => {
+    if (targetRole && !autoGenTriggered.current && phase === 'setup' && questions.length === 0) {
+      autoGenTriggered.current = true;
+      // Small delay so the UI renders first
+      setTimeout(() => {
+        handleGenerate();
+      }, 500);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetRole]);
+
   // Timer logic
   useEffect(() => {
     if (timerActive && timeLeft > 0) {
@@ -113,6 +135,40 @@ export default function InterviewPrepPage() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerActive, timeLeft]);
+
+  // Auto-fill targetRole from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedRole = localStorage.getItem('nxted_target_role');
+      if (savedRole) {
+        setTargetRole(savedRole);
+      }
+    } catch {}
+  }, []);
+
+  // Handle expert request
+  const handleRequestExpert = async () => {
+    setExpertLoading(true);
+    try {
+      const res = await fetch('/api/support/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'mock_interview',
+          targetRole,
+          message: `Request for mock interview session with a human expert for the role: ${targetRole || 'General'}`,
+        }),
+      });
+      if (res.ok) {
+        setExpertRequested(true);
+      }
+    } catch {
+      // Still show as requested for UX
+      setExpertRequested(true);
+    } finally {
+      setExpertLoading(false);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -278,11 +334,32 @@ export default function InterviewPrepPage() {
         </div>
         <div className="flex-1">
           <h3 className="font-semibold text-sm">Practice with Real Industry Experts</h3>
-          <p className="text-xs text-white/40">Pro & Ultra plans include mock interviews with human experts from top companies</p>
+          <p className="text-xs text-white/40">
+            {hasExpertAccess
+              ? 'Get personalized mock interview sessions with experts from top companies (limited sessions)'
+              : 'Pro & Ultra plans include mock interviews with human experts from top companies'}
+          </p>
         </div>
-        <Link href="/pricing" className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">
-          Upgrade
-        </Link>
+        {hasExpertAccess ? (
+          expertRequested ? (
+            <span className="text-xs text-neon-green flex items-center gap-1 flex-shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Request Sent
+            </span>
+          ) : (
+            <button
+              onClick={handleRequestExpert}
+              disabled={expertLoading}
+              className="btn-primary text-xs px-3 py-1.5 flex-shrink-0 flex items-center gap-1"
+            >
+              {expertLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Users className="w-3 h-3" />}
+              Request Expert
+            </button>
+          )
+        ) : (
+          <Link href="/pricing" className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">
+            Upgrade
+          </Link>
+        )}
       </div>
 
       {/* ============ SETUP PHASE ============ */}
@@ -313,14 +390,14 @@ export default function InterviewPrepPage() {
                   />
                 </div>
 
-                {/* Job Description (Optional) */}
+                {/* Job Description (Optional) - paste JD or paste JD link */}
                 <div>
                   <button
                     onClick={() => setShowJdInput(!showJdInput)}
                     className="text-sm text-neon-blue flex items-center gap-1 hover:underline"
                   >
                     {showJdInput ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                    {showJdInput ? 'Hide' : 'Add'} Job Description (optional)
+                    {showJdInput ? 'Hide' : 'Add'} Job Description or JD Link (optional)
                   </button>
                   <AnimatePresence>
                     {showJdInput && (
@@ -328,14 +405,17 @@ export default function InterviewPrepPage() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-2"
+                        className="mt-2 space-y-2"
                       >
                         <textarea
                           value={jobDescription}
                           onChange={e => setJobDescription(e.target.value)}
-                          placeholder="Paste the job description here for more targeted questions..."
+                          placeholder="Paste the job description here OR paste a job posting URL for more targeted questions..."
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-blue transition-colors h-32 resize-none"
                         />
+                        <p className="text-[11px] text-white/30">
+                          Tip: Paste the full job description for best results. You can also paste a job posting URL.
+                        </p>
                       </motion.div>
                     )}
                   </AnimatePresence>

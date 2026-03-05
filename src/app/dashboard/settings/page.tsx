@@ -117,6 +117,9 @@ export default function SettingsPage() {
 
   // ----- Billing state -----
   const [portalLoading, setPortalLoading] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   /* ---------------------------------------------------------------- */
   /*  Data fetching                                                    */
@@ -280,6 +283,32 @@ export default function SettingsPage() {
       // Silently fail
     } finally {
       setPortalLoading(false);
+    }
+  };
+
+  const redeemCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponMsg(null);
+    try {
+      const res = await fetch('/api/coupon/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCouponMsg({ type: 'success', text: data.message || `Upgraded to ${data.plan}!` });
+        setCouponCode('');
+        // Refresh profile to reflect new plan
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setCouponMsg({ type: 'error', text: data.error || 'Failed to redeem coupon' });
+      }
+    } catch {
+      setCouponMsg({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -607,6 +636,41 @@ export default function SettingsPage() {
                     <ExternalLink className="w-4 h-4" />
                     {portalLoading ? 'Opening...' : 'Manage Billing on Stripe'}
                   </button>
+                )}
+              </div>
+
+              {/* Coupon Redemption */}
+              <div className="card mt-6">
+                <h3 className="font-semibold mb-2">Have a Coupon Code?</h3>
+                <p className="text-sm text-white/40 mb-4">Enter your coupon code to upgrade your plan.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="input-field flex-1 font-mono"
+                    placeholder="Enter coupon code"
+                  />
+                  <button
+                    onClick={redeemCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="btn-primary text-sm flex items-center gap-2 whitespace-nowrap disabled:opacity-30"
+                  >
+                    {couponLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'Redeem'
+                    )}
+                  </button>
+                </div>
+                {couponMsg && (
+                  <div className={`mt-3 p-3 rounded-xl text-sm ${
+                    couponMsg.type === 'success'
+                      ? 'bg-neon-green/10 border border-neon-green/20 text-neon-green'
+                      : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                  }`}>
+                    {couponMsg.text}
+                  </div>
                 )}
               </div>
             </motion.div>

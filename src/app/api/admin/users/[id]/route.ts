@@ -123,3 +123,66 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
   }
 }
+
+/**
+ * PATCH /api/admin/users/[id] — Admin upgrades a user's plan
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const auth = await requireAdmin();
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  try {
+    const { id } = params;
+    const body = await request.json();
+    const { plan } = body;
+
+    const validPlans = ['BASIC', 'STARTER', 'PRO', 'ULTRA'];
+    if (!plan || !validPlans.includes(plan)) {
+      return NextResponse.json({ error: 'Invalid plan tier' }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, plan: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const creditLimits: Record<string, number> = { BASIC: 10, STARTER: 100, PRO: 500, ULTRA: -1 };
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        plan,
+        aiCreditsLimit: creditLimits[plan],
+        aiCreditsUsed: 0,
+      },
+      select: { id: true, email: true, plan: true, aiCreditsLimit: true },
+    });
+
+    // Log the plan change
+    await prisma.auditLog.create({
+      data: {
+        userId: auth.user!.id,
+        action: 'ADMIN_PLAN_CHANGE',
+        details: { targetUserId: id, targetEmail: user.email, oldPlan: user.plan, newPlan: plan },
+      },
+    });
+
+    console.log(
+      `[Admin Plan Change] Admin ${auth.user?.email} changed ${user.email} from ${user.plan} to ${plan}`
+    );
+
+    return NextResponse.json({ success: true, user: updated });
+  } catch (error) {
+    console.error('[Admin Update User Plan]', error);
+    return NextResponse.json({ error: 'Failed to update user plan' }, { status: 500 });
+  }
+}

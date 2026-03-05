@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Users, BarChart3, TrendingUp,
-  Shield, ArrowLeft, FileText, MessageSquare, Mail,
+  Shield, ArrowLeft, FileText, MessageSquare, Mail, Ticket,
 } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 
@@ -18,6 +18,7 @@ const adminLinks = [
   { href: '/admin/support', icon: MessageSquare, label: 'Support' },
   { href: '/admin/email', icon: Mail, label: 'Email' },
   { href: '/admin/users', icon: Users, label: 'Users' },
+  { href: '/admin/coupons', icon: Ticket, label: 'Coupons' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

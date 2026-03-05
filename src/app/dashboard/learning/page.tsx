@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   BookOpen, Play, CheckCircle2, Clock, ExternalLink, Filter,
   Code, FileText, Lightbulb, TrendingUp, Star, ArrowRight, Zap,
-  Sparkles, Brain, RefreshCw, Search, AlertCircle, Loader2, Target
+  Sparkles, Brain, RefreshCw, Search, AlertCircle, Loader2, Target, Trophy
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────
@@ -465,6 +465,7 @@ export default function LearningPathPage() {
     : 0;
   const completedCount = modules.filter(m => getModuleProgress(m) === 100).length;
   const adaptiveCount = modules.filter(m => m.isAdaptive).length;
+  const allCompleted = modules.length > 0 && modules.every(m => getModuleProgress(m) === 100);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -529,6 +530,37 @@ export default function LearningPathPage() {
           <div className="text-xs text-white/40">AI-Adaptive Modules</div>
         </div>
       </div>
+
+      {/* Completion Banner */}
+      {allCompleted && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-neon-green/10 via-neon-blue/10 to-neon-purple/10 border border-neon-green/20"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-green/20 to-neon-blue/20 flex items-center justify-center flex-shrink-0">
+              <Trophy className="w-7 h-7 text-neon-green" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-neon-green mb-1">🎉 Learning Path Complete!</h3>
+              <p className="text-sm text-white/50 mb-4">
+                Congratulations! You've completed all {modules.length} modules. Time to prove your skills with an assessment.
+                Score at least 85% to unlock job applications.
+              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Link
+                  href="/dashboard/assessment"
+                  className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2"
+                >
+                  <Brain className="w-4 h-4" /> Take Assessment
+                </Link>
+                <span className="text-xs text-white/30">Score 85%+ to unlock job applications</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center justify-between gap-2 mb-6 flex-wrap">

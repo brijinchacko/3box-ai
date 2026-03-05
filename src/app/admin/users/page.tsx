@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Trash2, X, AlertTriangle, Shield } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Trash2, X, AlertTriangle, Shield, Crown } from 'lucide-react';
 
 interface UserData {
   id: string;
@@ -41,6 +41,13 @@ export default function AdminUsersPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Upgrade modal state
+  const [upgradeModal, setUpgradeModal] = useState<UserData | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState('');
+  const [upgradeSuccess, setUpgradeSuccess] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -107,6 +114,53 @@ export default function AdminUsersPage() {
     setDeleteModal(null);
     setDeleteConfirm('');
     setDeleteError('');
+  };
+
+  const handleUpgradeUser = async () => {
+    if (!upgradeModal || !selectedPlan) return;
+    setUpgrading(true);
+    setUpgradeError('');
+    setUpgradeSuccess('');
+
+    try {
+      const res = await fetch(`/api/admin/users/${upgradeModal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setUpgradeError(data.error || 'Failed to upgrade user');
+        return;
+      }
+
+      setUpgradeSuccess(`Successfully upgraded to ${selectedPlan}`);
+      setTimeout(() => {
+        setUpgradeModal(null);
+        setSelectedPlan('');
+        setUpgradeSuccess('');
+        fetchUsers();
+      }, 1200);
+    } catch {
+      setUpgradeError('Network error. Please try again.');
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const openUpgradeModal = (user: UserData) => {
+    setUpgradeModal(user);
+    setSelectedPlan(user.plan);
+    setUpgradeError('');
+    setUpgradeSuccess('');
+  };
+
+  const closeUpgradeModal = () => {
+    setUpgradeModal(null);
+    setSelectedPlan('');
+    setUpgradeError('');
+    setUpgradeSuccess('');
   };
 
   const planColors: Record<string, string> = {
@@ -223,13 +277,22 @@ export default function AdminUsersPage() {
                       {u.isOforoInternal ? (
                         <span className="text-white/10 text-xs">Protected</span>
                       ) : (
-                        <button
-                          onClick={() => openDeleteModal(u)}
-                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors"
-                          title={`Delete ${u.name || u.email}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => openUpgradeModal(u)}
+                            className="p-1.5 rounded-lg hover:bg-neon-purple/10 text-white/20 hover:text-neon-purple transition-colors"
+                            title={`Change plan for ${u.name || u.email}`}
+                          >
+                            <Crown className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(u)}
+                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors"
+                            title={`Delete ${u.name || u.email}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -348,6 +411,102 @@ export default function AdminUsersPage() {
                 ) : (
                   <>
                     <Trash2 className="w-4 h-4" /> Delete User
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Plan Modal */}
+      {upgradeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeUpgradeModal}
+          />
+          <div className="relative bg-surface-50 border border-white/10 rounded-2xl w-full max-w-md mx-4 p-6 shadow-2xl">
+            <button
+              onClick={closeUpgradeModal}
+              className="absolute top-4 right-4 text-white/30 hover:text-white/60"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-neon-purple/10 mb-4">
+              <Crown className="w-6 h-6 text-neon-purple" />
+            </div>
+
+            <h2 className="text-lg font-bold mb-1">Change User Plan</h2>
+            <p className="text-sm text-white/50 mb-4">
+              Upgrade or downgrade user plan. Credits will be reset.
+            </p>
+
+            {/* User info */}
+            <div className="bg-white/5 rounded-xl p-3 mb-4 space-y-1">
+              <div className="text-sm font-medium">{upgradeModal.name || 'No name'}</div>
+              <div className="text-xs text-white/40">{upgradeModal.email}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] text-white/30">Current plan:</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${planColors[upgradeModal.plan] || ''}`}>
+                  {upgradeModal.plan}
+                </span>
+              </div>
+            </div>
+
+            {/* Plan selector */}
+            <div className="mb-4">
+              <label className="block text-sm text-white/60 mb-1.5">Select New Plan</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['BASIC', 'STARTER', 'PRO', 'ULTRA'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setSelectedPlan(p)}
+                    className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                      selectedPlan === p
+                        ? 'border-neon-purple/50 bg-neon-purple/10 text-neon-purple'
+                        : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/70'
+                    }`}
+                  >
+                    <div className="font-bold">{p}</div>
+                    <div className="text-[10px] mt-0.5 opacity-60">
+                      {p === 'BASIC' ? '10 credits' : p === 'STARTER' ? '100 credits' : p === 'PRO' ? '500 credits' : 'Unlimited'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Success */}
+            {upgradeSuccess && (
+              <div className="mb-4 p-3 rounded-xl bg-neon-green/10 border border-neon-green/20 text-sm text-neon-green">
+                {upgradeSuccess}
+              </div>
+            )}
+
+            {/* Error */}
+            {upgradeError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                {upgradeError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button onClick={closeUpgradeModal} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button
+                onClick={handleUpgradeUser}
+                disabled={!selectedPlan || selectedPlan === upgradeModal.plan || upgrading}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-neon-purple hover:bg-neon-purple/80 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                {upgrading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4" /> Change Plan
                   </>
                 )}
               </button>

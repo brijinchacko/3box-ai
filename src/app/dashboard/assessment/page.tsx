@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, Search, ArrowRight, ArrowLeft, Clock, CheckCircle2,
-  BarChart3, Target, Lightbulb, Zap, Star, TrendingUp, Loader2
+  BarChart3, Target, Lightbulb, Zap, Star, TrendingUp, Loader2, Lock
 } from 'lucide-react';
 
-type Step = 'role-select' | 'profile' | 'assessment' | 'evaluating' | 'results';
+type Step = 'role-select' | 'profile' | 'generating' | 'assessment' | 'evaluating' | 'results';
 
 const popularRoles = [
   'AI Engineer', 'Data Scientist', 'Full Stack Developer', 'ML Engineer',
@@ -16,37 +16,29 @@ const popularRoles = [
   'Cybersecurity Analyst', 'PLC Programmer', 'Mobile Developer', 'Blockchain Developer',
 ];
 
-const demoQuestions = [
-  {
-    id: '1', type: 'mcq' as const, skill: 'Programming Fundamentals',
-    question: 'Which data structure uses LIFO (Last In, First Out) ordering?',
-    options: ['Queue', 'Stack', 'Linked List', 'Hash Table'],
-    difficulty: 'beginner' as const, timeLimit: 60,
-  },
-  {
-    id: '2', type: 'mcq' as const, skill: 'Machine Learning',
-    question: 'What is the purpose of a validation set in machine learning?',
-    options: ['To train the model', 'To tune hyperparameters', 'To test final performance', 'To generate features'],
-    difficulty: 'intermediate' as const, timeLimit: 60,
-  },
-  {
-    id: '3', type: 'mcq' as const, skill: 'Deep Learning',
-    question: 'Which activation function helps mitigate the vanishing gradient problem?',
-    options: ['Sigmoid', 'Tanh', 'ReLU', 'Softmax'],
-    difficulty: 'intermediate' as const, timeLimit: 45,
-  },
-  {
-    id: '4', type: 'scenario' as const, skill: 'System Design',
-    question: 'You need to design a real-time recommendation engine for an e-commerce platform serving 1M+ users. Describe your high-level architecture approach, including data pipeline, model serving, and latency considerations.',
-    difficulty: 'advanced' as const, timeLimit: 180,
-  },
-  {
-    id: '5', type: 'mcq' as const, skill: 'MLOps',
-    question: 'Which tool is commonly used for ML experiment tracking?',
-    options: ['Jenkins', 'MLflow', 'Terraform', 'Ansible'],
-    difficulty: 'intermediate' as const, timeLimit: 45,
-  },
+// Fallback questions if AI generation fails
+const fallbackQuestions = [
+  { id: 'f1', type: 'mcq' as const, skill: 'Programming Fundamentals', question: 'Which data structure uses LIFO (Last In, First Out) ordering?', options: ['Queue', 'Stack', 'Linked List', 'Hash Table'], difficulty: 'beginner' as const, timeLimit: 60 },
+  { id: 'f2', type: 'mcq' as const, skill: 'Problem Solving', question: 'What is the time complexity of binary search?', options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1)'], difficulty: 'beginner' as const, timeLimit: 60 },
+  { id: 'f3', type: 'mcq' as const, skill: 'Version Control', question: 'Which Git command creates a new branch?', options: ['git new', 'git branch', 'git create', 'git init'], difficulty: 'beginner' as const, timeLimit: 45 },
+  { id: 'f4', type: 'mcq' as const, skill: 'Databases', question: 'Which SQL clause is used to filter records?', options: ['SELECT', 'WHERE', 'ORDER BY', 'GROUP BY'], difficulty: 'beginner' as const, timeLimit: 45 },
+  { id: 'f5', type: 'mcq' as const, skill: 'Software Design', question: 'What does the SOLID "S" principle stand for?', options: ['Single Responsibility', 'Secure Design', 'Service Oriented', 'Stateless Architecture'], difficulty: 'intermediate' as const, timeLimit: 60 },
+  { id: 'f6', type: 'mcq' as const, skill: 'APIs', question: 'Which HTTP method is used to update a resource?', options: ['GET', 'POST', 'PUT', 'DELETE'], difficulty: 'beginner' as const, timeLimit: 45 },
+  { id: 'f7', type: 'mcq' as const, skill: 'Testing', question: 'What is the purpose of unit testing?', options: ['Test UI appearance', 'Test individual functions in isolation', 'Test network latency', 'Test user experience'], difficulty: 'beginner' as const, timeLimit: 45 },
+  { id: 'f8', type: 'scenario' as const, skill: 'System Design', question: 'Describe how you would design a URL shortener service that handles millions of requests per day. Consider storage, scaling, and redirect latency.', difficulty: 'advanced' as const, timeLimit: 180 },
+  { id: 'f9', type: 'mcq' as const, skill: 'Security', question: 'What is SQL injection?', options: ['A database optimization', 'A code injection attack via SQL queries', 'A type of database index', 'A SQL performance tool'], difficulty: 'intermediate' as const, timeLimit: 60 },
+  { id: 'f10', type: 'scenario' as const, skill: 'Problem Solving', question: 'You discover a critical bug in production at 2 AM. The bug affects 10% of users. Walk through your approach to diagnose, fix, and prevent this in the future.', difficulty: 'advanced' as const, timeLimit: 180 },
 ];
+
+interface Question {
+  id: string;
+  type: 'mcq' | 'scenario' | 'task';
+  skill: string;
+  question: string;
+  options?: string[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  timeLimit: number;
+}
 
 interface SkillScore {
   skill: string;
@@ -74,35 +66,32 @@ interface AssessmentResults {
 }
 
 const defaultResults: AssessmentResults = {
-  targetRole: 'AI Engineer',
+  targetRole: 'General',
   overallScore: 68,
   skillScores: [
-    { skill: 'Python', score: 88, level: 'Advanced', color: 'bg-neon-green' },
-    { skill: 'Machine Learning', score: 75, level: 'Intermediate', color: 'bg-neon-blue' },
-    { skill: 'Deep Learning', score: 62, level: 'Intermediate', color: 'bg-neon-purple' },
-    { skill: 'MLOps', score: 45, level: 'Beginner', color: 'bg-neon-orange' },
-    { skill: 'System Design', score: 55, level: 'Beginner', color: 'bg-neon-pink' },
-    { skill: 'Data Engineering', score: 70, level: 'Intermediate', color: 'bg-cyan-400' },
+    { skill: 'Programming', score: 75, level: 'Intermediate', color: 'bg-neon-green' },
+    { skill: 'Problem Solving', score: 70, level: 'Intermediate', color: 'bg-neon-blue' },
+    { skill: 'System Design', score: 55, level: 'Beginner', color: 'bg-neon-purple' },
+    { skill: 'Databases', score: 65, level: 'Intermediate', color: 'bg-cyan-400' },
   ],
   gaps: [
-    { skill: 'MLOps', current: 45, required: 75, priority: 'high' },
     { skill: 'System Design', current: 55, required: 80, priority: 'high' },
-    { skill: 'Deep Learning', current: 62, required: 80, priority: 'medium' },
+    { skill: 'Advanced Concepts', current: 50, required: 75, priority: 'medium' },
   ],
   recommendations: [
-    'Focus on MLOps tools (MLflow, Kubeflow, Docker) — this is your biggest gap',
-    'Practice system design with real-world ML architecture problems',
-    'Deep dive into transformer architectures and attention mechanisms',
-    'Build 2-3 end-to-end ML projects to demonstrate full-stack ML skills',
+    'Focus on system design fundamentals and practice with real-world scenarios',
+    'Build end-to-end projects to solidify your skills',
+    'Study advanced topics specific to your target role',
   ],
-  timelineEstimate: '3-4 months to job-ready',
-  marketReadiness: 72,
-  hireProbability: 68,
+  timelineEstimate: '3-6 months to job-ready',
+  marketReadiness: 60,
+  hireProbability: 55,
 };
 
 const skillColors = [
   'bg-neon-green', 'bg-neon-blue', 'bg-neon-purple',
-  'bg-neon-orange', 'bg-neon-pink', 'bg-cyan-400',
+  'bg-cyan-400', 'bg-yellow-400', 'bg-pink-400',
+  'bg-orange-400', 'bg-emerald-400',
 ];
 
 export default function AssessmentPage() {
@@ -112,6 +101,10 @@ export default function AssessmentPage() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [textAnswer, setTextAnswer] = useState('');
+
+  // AI-generated questions
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [generatingProgress, setGeneratingProgress] = useState(0);
 
   // Profile state
   const [experience, setExperience] = useState('');
@@ -127,19 +120,85 @@ export default function AssessmentPage() {
 
   const selectRole = (role: string) => {
     setTargetRole(role);
-    // Save target role to localStorage for other pages
     localStorage.setItem('nxted_target_role', role);
     setStep('profile');
   };
 
+  // Generate AI questions
+  const startAssessment = async () => {
+    setStep('generating');
+    setGeneratingProgress(0);
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setGeneratingProgress((prev) => Math.min(prev + 2, 90));
+    }, 500);
+
+    try {
+      const res = await fetch('/api/ai/assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate',
+          targetRole,
+          existingSkills: existingSkills ? existingSkills.split(',').map(s => s.trim()) : [],
+        }),
+      });
+
+      clearInterval(progressInterval);
+
+      if (res.ok) {
+        const data = await res.json();
+        let aiQuestions: Question[] = [];
+
+        // Parse the AI response
+        try {
+          const text = data.response || data.questions || '';
+          const jsonStr = typeof text === 'string' ? text : JSON.stringify(text);
+          const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(parsed) && parsed.length >= 5) {
+              aiQuestions = parsed.map((q: any, i: number) => ({
+                id: q.id || `q${i + 1}`,
+                type: q.type || 'mcq',
+                skill: q.skill || 'General',
+                question: q.question || '',
+                options: q.options || undefined,
+                difficulty: q.difficulty || 'intermediate',
+                timeLimit: q.timeLimit || 60,
+              })).filter((q: Question) => q.question);
+            }
+          }
+        } catch (parseErr) {
+          console.error('Failed to parse AI questions:', parseErr);
+        }
+
+        if (aiQuestions.length >= 5) {
+          setQuestions(aiQuestions);
+          setGeneratingProgress(100);
+          setTimeout(() => setStep('assessment'), 500);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('AI question generation failed:', err);
+      clearInterval(progressInterval);
+    }
+
+    // Fallback to predefined questions
+    setQuestions(fallbackQuestions);
+    setGeneratingProgress(100);
+    setTimeout(() => setStep('assessment'), 500);
+  };
+
   const handleAnswer = (answer: string) => {
-    const updatedAnswers = { ...answers, [demoQuestions[currentQ].id]: answer };
+    const updatedAnswers = { ...answers, [questions[currentQ].id]: answer };
     setAnswers(updatedAnswers);
-    if (currentQ < demoQuestions.length - 1) {
+    if (currentQ < questions.length - 1) {
       setCurrentQ(currentQ + 1);
       setTextAnswer('');
     } else {
-      // Assessment complete — evaluate with AI
       evaluateAssessment(updatedAnswers);
     }
   };
@@ -148,12 +207,12 @@ export default function AssessmentPage() {
     setStep('evaluating');
 
     try {
-      const questionsWithAnswers = demoQuestions.map(q => ({
+      const questionsWithAnswers = questions.map(q => ({
         skill: q.skill,
         difficulty: q.difficulty,
         question: q.question,
+        type: q.type,
         answer: allAnswers[q.id] || 'No answer provided',
-        ...(q.type === 'mcq' ? { correctAnswer: q.options ? q.options[q.id === '1' ? 1 : q.id === '2' ? 1 : q.id === '3' ? 2 : q.id === '5' ? 1 : 0] : undefined } : {}),
       }));
 
       const res = await fetch('/api/ai/chat', {
@@ -164,8 +223,8 @@ export default function AssessmentPage() {
 
 Profile: ${experience ? `${experience} years experience` : 'Not specified'}, ${education || 'Not specified'} education, Skills: ${existingSkills || 'Not specified'}.
 
-Assessment answers:
-${questionsWithAnswers.map((qa, i) => `Q${i + 1} (${qa.skill}, ${qa.difficulty}): ${qa.question}\nAnswer: ${qa.answer}`).join('\n\n')}
+Assessment answers (${questions.length} questions):
+${questionsWithAnswers.map((qa, i) => `Q${i + 1} (${qa.skill}, ${qa.difficulty}, ${qa.type}): ${qa.question}\nAnswer: ${qa.answer}`).join('\n\n')}
 
 Generate a JSON assessment result with this exact structure:
 {
@@ -178,7 +237,7 @@ Generate a JSON assessment result with this exact structure:
   "hireProbability": <0-100>
 }
 
-Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-5 recommendations. Be realistic based on the answers given. Return ONLY the JSON object.`,
+Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-5 recommendations. Be realistic based on the answers given. Score fairly — wrong answers should reduce scores significantly. Return ONLY the JSON object.`,
           context: { targetRole },
         }),
       });
@@ -210,10 +269,34 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
             hireProbability: parsed.hireProbability || 55,
           };
 
-          // Save skill scores to localStorage for other pages
+          // Save to localStorage
           const scoreMap: Record<string, number> = {};
           aiResults.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
           localStorage.setItem('nxted_skill_scores', JSON.stringify(scoreMap));
+
+          // Save to database
+          try {
+            await fetch('/api/user/assessment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                targetRole,
+                questions,
+                answers: allAnswers,
+                skillScores: aiResults.skillScores,
+                overallScore: aiResults.overallScore,
+                marketReadiness: aiResults.marketReadiness,
+                hireProbability: aiResults.hireProbability,
+                aiAnalysis: {
+                  gaps: aiResults.gaps,
+                  recommendations: aiResults.recommendations,
+                  timelineEstimate: aiResults.timelineEstimate,
+                },
+              }),
+            });
+          } catch (saveErr) {
+            console.error('Failed to save assessment:', saveErr);
+          }
 
           setResults(aiResults);
           setStep('results');
@@ -224,7 +307,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
       console.error('Assessment evaluation failed:', err);
     }
 
-    // Fallback to default results with the correct role
+    // Fallback
     const fallback = { ...defaultResults, targetRole };
     const scoreMap: Record<string, number> = {};
     fallback.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
@@ -240,12 +323,15 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
         <div className="flex items-center gap-2 mb-3">
           {(['role-select', 'profile', 'assessment', 'results'] as const).map((s, i) => {
             const steps: Step[] = ['role-select', 'profile', 'assessment', 'results'];
-            const currentIdx = steps.indexOf(step === 'evaluating' ? 'results' : step);
+            const currentIdx = steps.indexOf(
+              step === 'evaluating' ? 'results' : step === 'generating' ? 'assessment' : step
+            );
             return (
               <div key={s} className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                  step === s || (step === 'evaluating' && s === 'results') ? 'bg-neon-blue text-white' :
-                  currentIdx > i ? 'bg-neon-green/20 text-neon-green' : 'bg-white/5 text-white/30'
+                  step === s || (step === 'evaluating' && s === 'results') || (step === 'generating' && s === 'assessment')
+                    ? 'bg-neon-blue text-white'
+                    : currentIdx > i ? 'bg-neon-green/20 text-neon-green' : 'bg-white/5 text-white/30'
                 }`}>
                   {currentIdx > i ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
                 </div>
@@ -293,10 +379,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
 
             {searchQuery && !filteredRoles.length && (
               <div className="text-center mt-6">
-                <button
-                  onClick={() => selectRole(searchQuery)}
-                  className="btn-primary"
-                >
+                <button onClick={() => selectRole(searchQuery)} className="btn-primary">
                   Continue as &ldquo;{searchQuery}&rdquo; <ArrowRight className="w-4 h-4 inline ml-1" />
                 </button>
               </div>
@@ -316,11 +399,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
             <div className="card max-w-lg mx-auto space-y-6">
               <div>
                 <label className="block text-sm text-white/60 mb-1.5">Years of experience</label>
-                <select
-                  className="input-field"
-                  value={experience}
-                  onChange={(e) => setExperience(e.target.value)}
-                >
+                <select className="input-field" value={experience} onChange={(e) => setExperience(e.target.value)}>
                   <option value="">Select...</option>
                   <option value="0">0 — Career changer</option>
                   <option value="1-2">1-2 years</option>
@@ -330,11 +409,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
               </div>
               <div>
                 <label className="block text-sm text-white/60 mb-1.5">Highest education</label>
-                <select
-                  className="input-field"
-                  value={education}
-                  onChange={(e) => setEducation(e.target.value)}
-                >
+                <select className="input-field" value={education} onChange={(e) => setEducation(e.target.value)}>
                   <option value="">Select...</option>
                   <option value="High School">High School</option>
                   <option value="Bachelor's">Bachelor&apos;s</option>
@@ -356,7 +431,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
                 <button onClick={() => setStep('role-select')} className="btn-secondary flex-1 flex items-center justify-center gap-1">
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
-                <button onClick={() => setStep('assessment')} className="btn-primary flex-1 flex items-center justify-center gap-1">
+                <button onClick={startAssessment} className="btn-primary flex-1 flex items-center justify-center gap-1">
                   Start Assessment <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -364,26 +439,47 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
           </motion.div>
         )}
 
+        {/* Step 2.5: Generating Questions */}
+        {step === 'generating' && (
+          <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+            <Brain className="w-16 h-16 text-neon-blue mx-auto mb-6 animate-pulse" />
+            <h2 className="text-2xl font-bold mb-2">Creating Your Assessment</h2>
+            <p className="text-white/40 mb-6">
+              AI is generating 30 personalized questions for <span className="text-neon-blue">{targetRole}</span>...
+            </p>
+            <div className="max-w-xs mx-auto">
+              <div className="skill-bar h-2 mb-2">
+                <motion.div
+                  className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
+                  animate={{ width: `${generatingProgress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              <span className="text-xs text-white/30">{generatingProgress}%</span>
+            </div>
+          </motion.div>
+        )}
+
         {/* Step 3: Assessment Questions */}
-        {step === 'assessment' && (
+        {step === 'assessment' && questions.length > 0 && (
           <motion.div key="assess" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <span className="badge-neon text-xs">{demoQuestions[currentQ].skill}</span>
-                <span className="badge-purple text-xs ml-2">{demoQuestions[currentQ].difficulty}</span>
+                <span className="badge-neon text-xs">{questions[currentQ].skill}</span>
+                <span className="badge-purple text-xs ml-2">{questions[currentQ].difficulty}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-white/40">
                 <Clock className="w-4 h-4" />
-                <span>Q {currentQ + 1} / {demoQuestions.length}</span>
+                <span>Q {currentQ + 1} / {questions.length}</span>
               </div>
             </div>
 
             <div className="card mb-6">
-              <h2 className="text-lg font-semibold mb-6">{demoQuestions[currentQ].question}</h2>
+              <h2 className="text-lg font-semibold mb-6">{questions[currentQ].question}</h2>
 
-              {demoQuestions[currentQ].type === 'mcq' && demoQuestions[currentQ].options ? (
+              {questions[currentQ].type === 'mcq' && questions[currentQ].options ? (
                 <div className="space-y-3">
-                  {demoQuestions[currentQ].options!.map((opt) => (
+                  {questions[currentQ].options!.map((opt) => (
                     <button
                       key={opt}
                       onClick={() => handleAnswer(opt)}
@@ -416,7 +512,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
             <div className="skill-bar h-2">
               <motion.div
                 className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
-                animate={{ width: `${((currentQ + 1) / demoQuestions.length) * 100}%` }}
+                animate={{ width: `${((currentQ + 1) / questions.length) * 100}%` }}
               />
             </div>
           </motion.div>
@@ -427,7 +523,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
           <motion.div key="evaluating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
             <Loader2 className="w-12 h-12 text-neon-blue mx-auto mb-6 animate-spin" />
             <h2 className="text-2xl font-bold mb-2">Analyzing Your Responses</h2>
-            <p className="text-white/40">Our AI is evaluating your skills and generating personalized insights...</p>
+            <p className="text-white/40">Our AI is evaluating your {questions.length} answers and generating personalized insights...</p>
           </motion.div>
         )}
 
@@ -441,6 +537,39 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
               <h1 className="text-3xl font-bold mb-2">Assessment Complete!</h1>
               <p className="text-white/40">Here&apos;s your skill analysis for <span className="text-neon-blue">{results.targetRole}</span></p>
             </div>
+
+            {/* Job Unlock Status */}
+            {results.overallScore >= 85 ? (
+              <div className="card border-neon-green/30 bg-neon-green/5 mb-6">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-8 h-8 text-neon-green flex-shrink-0" />
+                  <div>
+                    <h3 className="font-bold text-neon-green">Jobs Unlocked!</h3>
+                    <p className="text-sm text-white/50">
+                      Your score of {results.overallScore}% meets the 85% threshold. You can now access job applications.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/jobs" className="btn-primary mt-4 inline-flex items-center gap-2">
+                  Browse Jobs <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            ) : (
+              <div className="card border-yellow-500/30 bg-yellow-500/5 mb-6">
+                <div className="flex items-center gap-3">
+                  <Lock className="w-8 h-8 text-yellow-400 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-bold text-yellow-400">Score: {results.overallScore}% — Need 85% to unlock jobs</h3>
+                    <p className="text-sm text-white/50">
+                      Complete the learning path to improve your skills, then re-take the assessment.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/learning" className="btn-primary mt-4 inline-flex items-center gap-2">
+                  Start Learning Path <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
 
             {/* Score Cards */}
             <div className="grid sm:grid-cols-3 gap-4 mb-8">
@@ -525,7 +654,7 @@ Include 4-6 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
               <Link href="/dashboard/career-plan" className="btn-primary flex-1 text-center flex items-center justify-center gap-2">
                 Generate Career Plan <ArrowRight className="w-4 h-4" />
               </Link>
-              <button onClick={() => { setStep('role-select'); setCurrentQ(0); setAnswers({}); setTextAnswer(''); }} className="btn-secondary flex-1">
+              <button onClick={() => { setStep('role-select'); setCurrentQ(0); setAnswers({}); setTextAnswer(''); setQuestions([]); }} className="btn-secondary flex-1">
                 Retake Assessment
               </button>
             </div>

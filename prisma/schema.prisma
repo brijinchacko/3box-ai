@@ -99,6 +99,7 @@ model User {
   careerTwin      CareerTwin?
   subscriptions   Subscription[]
   creditPurchases CreditPurchase[]
+  couponsRedeemed CouponRedemption[]
   referralsGiven  Referral[]       @relation("ReferrerReferrals")
   referralsUsed   Referral[]       @relation("ReferredReferrals")
   emailLogs       EmailLog[]
@@ -148,6 +149,36 @@ model CreditPurchase {
   stripePaymentId  String?
   createdAt        DateTime @default(now())
 
+  @@index([userId])
+}
+
+// ─── Coupon System ──────────────────────────────
+
+model Coupon {
+  id           String             @id @default(cuid())
+  code         String             @unique
+  plan         PlanTier
+  maxUses      Int                @default(1)
+  usedCount    Int                @default(0)
+  durationDays Int?               // null = permanent upgrade
+  expiresAt    DateTime?
+  isActive     Boolean            @default(true)
+  createdBy    String             // admin userId
+  createdAt    DateTime           @default(now())
+  redemptions  CouponRedemption[]
+
+  @@index([code])
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([couponId, userId])
   @@index([userId])
 }
 

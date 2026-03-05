@@ -26,7 +26,11 @@ import {
   XCircle,
   BarChart3,
   Wifi,
+  Lock,
+  Brain,
+  BookOpen,
 } from 'lucide-react';
+import Link from 'next/link';
 
 // ── Types ──────────────────────────────────────────────
 interface Job {
@@ -103,6 +107,10 @@ const SAVED_JOBS_KEY = 'nxted_saved_jobs';
 export default function JobsPage() {
   const [tab, setTab] = useState<'discover' | 'saved' | 'applications'>('discover');
 
+  // Assessment gate state
+  const [scoreCheck, setScoreCheck] = useState<'loading' | 'no_assessment' | 'low_score' | 'unlocked'>('loading');
+  const [assessmentScore, setAssessmentScore] = useState<number | null>(null);
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
@@ -124,6 +132,34 @@ export default function JobsPage() {
       const stored = localStorage.getItem(SAVED_JOBS_KEY);
       if (stored) setSavedJobs(JSON.parse(stored));
     } catch {}
+  }, []);
+
+  // ── Assessment Score Gate ─────────────────────────
+  useEffect(() => {
+    async function checkAssessment() {
+      try {
+        const res = await fetch('/api/user/assessment');
+        if (!res.ok) {
+          setScoreCheck('no_assessment');
+          return;
+        }
+        const data = await res.json();
+        if (!data.hasAssessment) {
+          setScoreCheck('no_assessment');
+          return;
+        }
+        const score = data.overallScore ?? 0;
+        setAssessmentScore(score);
+        if (score >= 85) {
+          setScoreCheck('unlocked');
+        } else {
+          setScoreCheck('low_score');
+        }
+      } catch {
+        setScoreCheck('no_assessment');
+      }
+    }
+    checkAssessment();
   }, []);
 
   const toggleSaveJob = (job: Job) => {
@@ -207,6 +243,86 @@ export default function JobsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // ── Assessment Gate: Loading State ────────────────
+  if (scoreCheck === 'loading') {
+    return (
+      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="card text-center py-16 px-8 max-w-md w-full"
+        >
+          <Loader2 className="w-10 h-10 text-neon-orange animate-spin mx-auto mb-4" />
+          <p className="text-white/50 text-sm">Checking assessment score...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── Assessment Gate: No Assessment ──────────────
+  if (scoreCheck === 'no_assessment') {
+    return (
+      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="card text-center py-16 px-8 max-w-md w-full"
+        >
+          <Lock className="w-16 h-16 text-white/20 mx-auto mb-6" />
+          <h2 className="text-xl font-bold mb-3">Take Your Assessment First</h2>
+          <p className="text-white/40 text-sm mb-6">
+            Complete the skill assessment to unlock job matching. Score at least 85% to start applying.
+          </p>
+          <Link
+            href="/dashboard/assessment"
+            className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2"
+          >
+            <Brain className="w-4 h-4" /> Take Assessment
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── Assessment Gate: Low Score ──────────────────
+  if (scoreCheck === 'low_score') {
+    return (
+      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="card text-center py-16 px-8 max-w-md w-full"
+        >
+          <Lock className="w-16 h-16 text-neon-orange mx-auto mb-6" />
+          <h2 className="text-xl font-bold mb-3">Almost There!</h2>
+          <p className="text-white/40 text-sm mb-2">
+            Your assessment score: <span className="text-neon-orange font-bold text-2xl">{assessmentScore}%</span>
+          </p>
+          <p className="text-white/40 text-sm mb-6">
+            You need at least 85% to unlock job applications.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Link
+              href="/dashboard/learning"
+              className="btn-secondary text-sm px-5 py-2.5 inline-flex items-center gap-2"
+            >
+              <BookOpen className="w-4 h-4" /> Learning Path
+            </Link>
+            <Link
+              href="/dashboard/assessment"
+              className="btn-primary text-sm px-5 py-2.5 inline-flex items-center gap-2"
+            >
+              <Brain className="w-4 h-4" /> Re-Take Assessment
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── Unlocked: Normal Job Search UI ─────────────
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}

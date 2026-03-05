@@ -13,6 +13,8 @@ import {
 import { signOut } from 'next-auth/react';
 import FloatingCoach from '@/components/ai-coach/FloatingCoach';
 import Logo from '@/components/brand/Logo';
+import CareerJourneyBar, { JourneyProgress } from '@/components/dashboard/CareerJourneyBar';
+import RoleSwitcher from '@/components/dashboard/RoleSwitcher';
 import { getInitials, getCreditUsagePercent } from '@/lib/utils';
 
 const sidebarLinks = [
@@ -45,6 +47,7 @@ interface UserData {
   targetRole?: string;
   location?: string;
   image?: string | null;
+  journey?: JourneyProgress;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -237,9 +240,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <badge.icon className="w-2.5 h-2.5 mr-0.5" /> {badge.label}
                   </span>
                   {userData?.targetRole && (
-                    <span className="text-[10px] text-white/30 truncate">
-                      {userData.targetRole}
-                    </span>
+                    <RoleSwitcher
+                      currentRole={userData.targetRole}
+                      onRoleChange={(role) => setUserData((prev) => prev ? { ...prev, targetRole: role } : prev)}
+                      compact
+                    />
                   )}
                 </div>
                 {/* Location */}
@@ -321,6 +326,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'} pt-14 lg:pt-0`}>
+        {/* Sticky Career Journey Bar (shown on all pages except main dashboard) */}
+        {pathname !== '/dashboard' && (
+          <CareerJourneyBar journey={userData?.journey} loading={!userData} />
+        )}
+
         {/* Upgrade nudge for Basic users */}
         {userPlan === 'BASIC' && showUpgradeNudge && (
           <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 rounded-xl bg-gradient-to-r from-neon-blue/10 to-neon-purple/10 border border-neon-blue/20 flex items-center justify-between">

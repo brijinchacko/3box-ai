@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FolderOpen, Plus, ExternalLink, Eye, Edit3, Code, Star,
   Globe, Github, CheckCircle2, Sparkles, Share2, Copy,
-  Loader2, Wand2, Lightbulb, X, Save, Trash2, Upload
+  Loader2, Wand2, Lightbulb, X, Save, Trash2, Upload,
+  Mail, MapPin, Linkedin, ArrowUpRight
 } from 'lucide-react';
 
 interface Project {
@@ -28,8 +29,12 @@ function ensureUrl(url: string): string {
 }
 
 export default function PortfolioPage() {
+  const [activeTab, setActiveTab] = useState<'builder' | 'preview'>('builder');
   const [projects, setProjects] = useState<Project[]>([]);
   const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userLocation, setUserLocation] = useState('');
+  const [userLinkedin, setUserLinkedin] = useState('');
   const [copied, setCopied] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState<string | null>(null);
   const [suggestingProjects, setSuggestingProjects] = useState(false);
@@ -93,13 +98,16 @@ export default function PortfolioPage() {
     loadPortfolio();
   }, []);
 
-  // Fetch user profile for share URL (fallback if not loaded from portfolio)
+  // Fetch user profile for share URL and preview data
   useEffect(() => {
     if (!userName) {
       fetch('/api/user/profile')
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.name) setUserName(data.name);
+          if (data?.email) setUserEmail(data.email);
+          if (data?.location) setUserLocation(data.location);
+          if (data?.linkedin) setUserLinkedin(data.linkedin);
         })
         .catch(() => {});
     }
@@ -391,6 +399,127 @@ export default function PortfolioPage() {
         </div>
       </motion.div>
 
+      {/* Tab Switch */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setActiveTab('builder')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'builder' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+        >
+          <Edit3 className="w-4 h-4 inline mr-1" /> Builder
+        </button>
+        <button
+          onClick={() => setActiveTab('preview')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'preview' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+        >
+          <Eye className="w-4 h-4 inline mr-1" /> Preview
+        </button>
+      </div>
+
+      {/* ── Portfolio Preview Mode ── */}
+      {activeTab === 'preview' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="rounded-2xl overflow-hidden border border-white/10 bg-[#0a0a0f] min-h-[600px]"
+        >
+          {/* Preview gradient background */}
+          <div className="relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-[#a855f7]/5 rounded-full blur-[100px]" />
+              <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] bg-[#00d4ff]/5 rounded-full blur-[100px]" />
+            </div>
+
+            <div className="relative z-10 max-w-3xl mx-auto px-6 sm:px-8 py-10 sm:py-16">
+              {/* Header */}
+              <div className="text-center mb-12">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#00d4ff]/30 to-[#a855f7]/30 border-2 border-white/10 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold bg-gradient-to-r from-[#00d4ff] to-[#a855f7] bg-clip-text text-transparent">
+                    {userName?.charAt(0) || 'U'}
+                  </span>
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-[#00d4ff] via-[#a855f7] to-[#00ff88] bg-clip-text text-transparent">
+                  {userName || 'Your Name'}
+                </h1>
+                <p className="text-white/60 text-base mb-3">{portfolioTitle || 'My Portfolio'}</p>
+                {portfolioBio && <p className="text-white/40 max-w-xl mx-auto text-sm leading-relaxed">{portfolioBio}</p>}
+                <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/30">
+                  {userEmail && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {userEmail}</span>}
+                  {userLocation && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {userLocation}</span>}
+                  {userLinkedin && <span className="flex items-center gap-1"><Linkedin className="w-3 h-3" /> LinkedIn</span>}
+                </div>
+              </div>
+
+              {/* Skills */}
+              {portfolioSkills.length > 0 && (
+                <div className="mb-12">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Code className="w-4 h-4 text-[#00d4ff]" />
+                    <h2 className="text-sm font-semibold text-white/70">Skills</h2>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {portfolioSkills.map(skill => (
+                      <span key={skill} className="px-3 py-1 rounded-full text-xs bg-white/[0.04] border border-white/[0.08] text-white/50">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Projects */}
+              {projects.length > 0 ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-4 h-4 text-[#a855f7]" />
+                    <h2 className="text-sm font-semibold text-white/70">Projects</h2>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {projects.map(project => (
+                      <div
+                        key={project.id}
+                        className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 hover:border-[#a855f7]/20 hover:bg-white/[0.05] transition-all"
+                      >
+                        <h3 className="font-semibold text-sm mb-1.5 text-white/90">{project.title}</h3>
+                        <p className="text-xs text-white/40 mb-3 line-clamp-2">{project.description}</p>
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {project.skills.map(s => (
+                            <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-[#a855f7]/10 text-[#a855f7]/60 border border-[#a855f7]/10">{s}</span>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {project.github && (
+                            <span className="text-[11px] text-white/30 flex items-center gap-1">
+                              <Github className="w-3 h-3" /> GitHub
+                            </span>
+                          )}
+                          {project.live && (
+                            <span className="text-[11px] text-[#00d4ff]/60 flex items-center gap-1">
+                              <ArrowUpRight className="w-3 h-3" /> Live Demo
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FolderOpen className="w-12 h-12 text-white/10 mx-auto mb-3" />
+                  <p className="text-sm text-white/30">No projects yet. Add projects in the Builder tab to see them here.</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="mt-12 pt-6 border-t border-white/[0.06] text-center">
+                <p className="text-[10px] text-white/15">Built with NXTED AI</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Builder Mode ── */}
+      {activeTab === 'builder' && (<>
       {/* Coming Soon Toast */}
       <AnimatePresence>
         {comingSoonMsg && (
@@ -517,6 +646,33 @@ export default function PortfolioPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Portfolio Customization */}
+      <div className="card mb-8">
+        <h3 className="text-sm font-semibold text-white/60 mb-3 flex items-center gap-2">
+          <Edit3 className="w-4 h-4 text-neon-blue" /> Customize Portfolio
+        </h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-white/40 mb-1">Portfolio Title</label>
+            <input
+              value={portfolioTitle}
+              onChange={e => setPortfolioTitle(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neon-blue"
+              placeholder="My Portfolio"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-white/40 mb-1">Bio / Tagline</label>
+            <input
+              value={portfolioBio}
+              onChange={e => setPortfolioBio(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neon-blue"
+              placeholder="Full-stack developer passionate about building great products..."
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Stats */}
       <div className="grid sm:grid-cols-4 gap-4 mb-8">
@@ -726,6 +882,7 @@ export default function PortfolioPage() {
           )}
         </AnimatePresence>
       </div>
+      </>)}
     </div>
   );
 }
