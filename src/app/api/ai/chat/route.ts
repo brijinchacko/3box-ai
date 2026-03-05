@@ -14,6 +14,78 @@ export interface ChatContext {
   history?: { role: 'user' | 'assistant'; content: string }[];
 }
 
+const VALID_PROFILE_FIELDS = ['name', 'phone', 'location', 'linkedin', 'bio', 'targetRole'];
+
+// ─── Helper: execute a profile update via Prisma ──────────
+async function executeProfileUpdate(userId: string, updates: Record<string, string>) {
+  // Update user-level fields
+  if (updates.name) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { name: updates.name },
+    });
+  }
+
+  // Update CareerTwin fields
+  const careerFieldKeys = ['phone', 'location', 'linkedin', 'bio', 'targetRole'];
+  const careerUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([key]) => careerFieldKeys.includes(key))
+  );
+
+  if (Object.keys(careerUpdates).length > 0) {
+    const existing = await prisma.careerTwin.findUnique({ where: { userId } });
+    if (existing) {
+      const careerUpdate: Record<string, unknown> = {};
+
+      if (careerUpdates.targetRole) {
+        careerUpdate.targetRoles = [{ title: careerUpdates.targetRole, probability: 0 }];
+        delete careerUpdates.targetRole;
+      }
+
+      if (Object.keys(careerUpdates).length > 0) {
+        const snap = (existing.skillSnapshot as any) || {};
+        const currentProfile = snap._profile || {};
+        careerUpdate.skillSnapshot = {
+          ...snap,
+          _profile: { ...currentProfile, ...careerUpdates },
+        };
+      }
+
+      if (Object.keys(careerUpdate).length > 0) {
+        await prisma.careerTwin.update({
+          where: { userId },
+          data: careerUpdate,
+        });
+      }
+    }
+  }
+}
+
+// ─── Parse action blocks from AI reply ──────────
+function parseActions(reply: string) {
+  let cleanReply = reply;
+  const actions: { type: string; field: string; value: string; success: boolean }[] = [];
+
+  const actionMatch = reply.match(/---ACTION---\s*([\s\S]*?)\s*---END_ACTION---/);
+  if (actionMatch) {
+    cleanReply = reply.replace(/\s*---ACTION---[\s\S]*?---END_ACTION---\s*/g, '').trim();
+    try {
+      const parsed = JSON.parse(actionMatch[1].trim());
+      if (Array.isArray(parsed.actions)) {
+        for (const a of parsed.actions) {
+          if (a.type === 'update_profile' && VALID_PROFILE_FIELDS.includes(a.field) && a.value) {
+            actions.push({ type: a.type, field: a.field, value: String(a.value), success: false });
+          }
+        }
+      }
+    } catch {
+      // JSON parse failed — ignore action block
+    }
+  }
+
+  return { cleanReply, actions };
+}
+
 export async function POST(req: Request) {
   try {
     // Auth check
@@ -45,7 +117,25 @@ export async function POST(req: Request) {
 
     const reply = await coachChat(message, chatContext, user?.plan || 'BASIC', userContext);
 
-    return NextResponse.json({ reply });
+    // Parse actions from AI reply
+    const { cleanReply, actions } = parseActions(reply);
+
+    // Execute any profile update actions
+    for (const action of actions) {
+      try {
+        const updatePayload: Record<string, string> = { [action.field]: action.value };
+        await executeProfileUpdate(session.user.id, updatePayload);
+        action.success = true;
+      } catch (err) {
+        console.error('[AI Chat] Action execution error:', err);
+        action.success = false;
+      }
+    }
+
+    return NextResponse.json({
+      reply: cleanReply,
+      actions: actions.length > 0 ? actions : undefined,
+    });
   } catch (error) {
     console.error('[AI Chat]', error);
     return NextResponse.json(

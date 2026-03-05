@@ -90,7 +90,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, targetRole, location } = body;
+    const { name, targetRole, location, phone, linkedin, bio } = body;
 
     // Update user name
     const updateData: Record<string, unknown> = {};
@@ -103,8 +103,9 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    // Update targetRole/location in CareerTwin
-    if (targetRole !== undefined || location !== undefined) {
+    // Update targetRole / profile fields in CareerTwin
+    const hasProfileUpdate = targetRole !== undefined || location !== undefined || phone !== undefined || linkedin !== undefined || bio !== undefined;
+    if (hasProfileUpdate) {
       const existing = await prisma.careerTwin.findUnique({
         where: { userId: session.user.id },
       });
@@ -113,17 +114,29 @@ export async function PUT(request: NextRequest) {
         if (targetRole !== undefined) {
           careerUpdate.targetRoles = [{ title: targetRole, probability: 0 }];
         }
-        if (location !== undefined) {
-          const snap = (existing.skillSnapshot as any) || {};
+
+        const snap = (existing.skillSnapshot as any) || {};
+        const currentProfile = snap._profile || {};
+        const profileUpdates: Record<string, string> = {};
+
+        if (location !== undefined) profileUpdates.location = location;
+        if (phone !== undefined) profileUpdates.phone = phone;
+        if (linkedin !== undefined) profileUpdates.linkedin = linkedin;
+        if (bio !== undefined) profileUpdates.bio = bio;
+
+        if (Object.keys(profileUpdates).length > 0) {
           careerUpdate.skillSnapshot = {
             ...snap,
-            _profile: { ...(snap._profile || {}), location },
+            _profile: { ...currentProfile, ...profileUpdates },
           };
         }
-        await prisma.careerTwin.update({
-          where: { userId: session.user.id },
-          data: careerUpdate,
-        });
+
+        if (Object.keys(careerUpdate).length > 0) {
+          await prisma.careerTwin.update({
+            where: { userId: session.user.id },
+            data: careerUpdate,
+          });
+        }
       }
     }
 

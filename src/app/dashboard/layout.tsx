@@ -186,91 +186,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* User Details + Credits */}
-        <div className="p-3 border-t border-white/5 space-y-2">
-          {/* Credit Usage */}
-          {sidebarOpen && creditsLimit !== -1 && (
-            <div className="px-3">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-white/40">AI Credits</span>
-                <span className={creditPercent > 80 ? 'text-red-400' : 'text-white/60'}>
-                  {creditsUsed}/{creditsLimit}
-                </span>
+        {/* User — Minimal */}
+        <div className="p-3 border-t border-white/5">
+          <div className="flex items-center gap-2.5">
+            {userData?.image ? (
+              <img src={userData.image} alt={userName} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                {initials}
               </div>
-              <div className="skill-bar h-1.5">
-                <div
-                  className={`skill-bar-fill ${creditPercent > 80 ? 'bg-red-400' : creditPercent > 50 ? 'bg-yellow-400' : 'bg-neon-green'}`}
-                  style={{ width: `${creditPercent}%` }}
-                />
-              </div>
-              {creditPercent > 80 && (
-                <a href="/pricing#credits" className="text-[10px] text-red-400 hover:text-red-300 mt-1 block">
-                  Buy more credits
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* User card */}
-          <div className={`rounded-xl ${sidebarOpen ? 'bg-white/[0.03] p-3' : 'px-3 py-2'}`}>
-            <div className="flex items-center gap-3">
-              {userData?.image ? (
-                <img
-                  src={userData.image}
-                  alt={userName}
-                  className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-white/10"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold flex-shrink-0 ring-2 ring-white/10">
-                  {initials}
-                </div>
-              )}
-              {sidebarOpen && (
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold truncate">{userName}</div>
-                  <div className="text-[11px] text-white/30 truncate">{userEmail}</div>
-                </div>
-              )}
-            </div>
+            )}
             {sidebarOpen && (
-              <div className="mt-2.5 space-y-1.5">
-                {/* Plan badge */}
-                <div className="flex items-center gap-2">
-                  <span className={`badge text-[10px] ${badge.color}`}>
-                    <badge.icon className="w-2.5 h-2.5 mr-0.5" /> {badge.label}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium truncate">{userName}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${badge.color}`}>
+                    {badge.label}
                   </span>
-                  {userData?.targetRole && (
-                    <RoleSwitcher
-                      currentRole={userData.targetRole}
-                      onRoleChange={(role) => setUserData((prev) => prev ? { ...prev, targetRole: role } : prev)}
-                      compact
-                    />
-                  )}
-                </div>
-                {/* Location */}
-                {userData?.location && (
-                  <div className="flex items-center gap-1 text-[10px] text-white/25">
-                    <MapPin className="w-2.5 h-2.5" />
-                    <span className="truncate">{userData.location}</span>
-                  </div>
-                )}
-                {/* Actions row */}
-                <div className="flex items-center gap-1 pt-1">
-                  <Link
-                    href="/dashboard/settings"
-                    className="text-[10px] text-white/30 hover:text-white/60 flex items-center gap-0.5 transition-colors"
-                  >
-                    <Settings className="w-2.5 h-2.5" /> Settings
-                  </Link>
-                  <span className="text-white/10">|</span>
-                  <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
-                    className="text-[10px] text-white/30 hover:text-red-400 flex items-center gap-0.5 transition-colors"
-                  >
-                    <LogOut className="w-2.5 h-2.5" /> Sign out
-                  </button>
                 </div>
               </div>
+            )}
+            {sidebarOpen && (
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-white/5 transition-colors flex-shrink-0"
+                title="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
         </div>

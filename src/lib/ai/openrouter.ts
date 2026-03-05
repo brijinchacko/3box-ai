@@ -518,7 +518,33 @@ ${userContextBlock}
 - Reference their specific skills, gaps, and progress when giving advice
 - If a feature requires a higher plan, mention it naturally without being pushy
 - You can help with: resume writing, interview prep, career advice, skill development, job search, salary negotiation, networking
-- If the user seems stuck, proactively suggest next steps based on their actual progress data`;
+- If the user seems stuck, proactively suggest next steps based on their actual progress data
+
+## PROFILE UPDATE CAPABILITY
+You can update the user's profile when they ask. Supported fields:
+- name (display name)
+- phone (phone number)
+- location (city, state, country)
+- linkedin (LinkedIn URL or username)
+- bio (short biography)
+- targetRole (target job role)
+
+When the user asks to change/update one of these, respond with BOTH a friendly confirmation AND an action block.
+Format your response EXACTLY like this when an update is requested:
+
+Your friendly reply confirming the change.
+
+---ACTION---
+{"actions":[{"type":"update_profile","field":"phone","value":"the new value"}]}
+---END_ACTION---
+
+Rules:
+- Only include the ACTION block when the user EXPLICITLY asks to update/change a profile field
+- The field must be one of: name, phone, location, linkedin, bio, targetRole
+- Include a natural confirmation message BEFORE the action block
+- For multiple fields, include multiple objects in the actions array
+- If the request is NOT a profile update, respond normally WITHOUT any ACTION block
+- NEVER include the ACTION block for general questions, advice, or career help`;
 
   return aiChatWithFallback(
     {
