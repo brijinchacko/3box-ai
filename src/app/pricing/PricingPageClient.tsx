@@ -25,13 +25,16 @@ import {
   Headphones,
   Briefcase,
   Users,
+  Globe,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useRegion } from '@/lib/geo';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import RegionSelector from '@/components/geo/RegionSelector';
 
 // ---------------------------------------------------------------------------
-// Plan data
+// Plan data (features only -- prices come from region config)
 // ---------------------------------------------------------------------------
 
 interface PlanFeature {
@@ -39,27 +42,23 @@ interface PlanFeature {
   included: boolean;
 }
 
-interface Plan {
+interface PlanDefinition {
   name: string;
-  key: string;
+  key: 'basic' | 'starter' | 'pro' | 'ultra';
   icon: React.ElementType;
   description: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
   badge: string;
   badgeColor: string;
   popular: boolean;
   features: PlanFeature[];
 }
 
-const plans: Plan[] = [
+const planDefinitions: PlanDefinition[] = [
   {
     name: 'Basic',
     key: 'basic',
     icon: Sparkles,
     description: 'Explore AI career tools at zero cost',
-    monthlyPrice: 0,
-    yearlyPrice: 0,
     badge: 'Free Forever',
     badgeColor: 'bg-white/10 text-white/60',
     popular: false,
@@ -80,8 +79,6 @@ const plans: Plan[] = [
     key: 'starter',
     icon: Rocket,
     description: 'Everything you need to start your job search',
-    monthlyPrice: 12,
-    yearlyPrice: 10,
     badge: 'Best Value',
     badgeColor: 'bg-neon-green/10 text-neon-green border border-neon-green/20',
     popular: false,
@@ -103,8 +100,6 @@ const plans: Plan[] = [
     key: 'pro',
     icon: Zap,
     description: 'Full career toolkit for serious job seekers',
-    monthlyPrice: 29,
-    yearlyPrice: 24,
     badge: 'Most Popular',
     badgeColor: 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20',
     popular: true,
@@ -130,8 +125,6 @@ const plans: Plan[] = [
     key: 'ultra',
     icon: Crown,
     description: 'Maximum automation and intelligence',
-    monthlyPrice: 59,
-    yearlyPrice: 49,
     badge: 'Maximum Power',
     badgeColor: 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20',
     popular: false,
@@ -154,23 +147,6 @@ const plans: Plan[] = [
       { label: 'Premium support', included: true },
     ],
   },
-];
-
-// ---------------------------------------------------------------------------
-// Credit Packs
-// ---------------------------------------------------------------------------
-
-interface CreditPack {
-  id: string;
-  credits: number;
-  price: number;
-  popular: boolean;
-}
-
-const creditPacks: CreditPack[] = [
-  { id: 'pack_100', credits: 100, price: 5, popular: false },
-  { id: 'pack_500', credits: 500, price: 15, popular: true },
-  { id: 'pack_1000', credits: 1000, price: 25, popular: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -220,7 +196,7 @@ const faqs = [
   },
   {
     q: 'Is there a student discount?',
-    a: 'Yes! Students get 30% off Starter, Pro, and Ultra plans with a valid .edu email address.',
+    a: 'Yes! Students get a discount on Starter, Pro, and Ultra plans with a valid .edu email address. The exact discount varies by region.',
   },
   {
     q: 'What payment methods do you accept?',
@@ -237,6 +213,48 @@ const faqs = [
 ];
 
 // ---------------------------------------------------------------------------
+// Skeleton component for loading state
+// ---------------------------------------------------------------------------
+
+function PricingSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <Navbar />
+      <section className="pt-32 pb-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-30" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header skeleton */}
+          <div className="text-center mb-16">
+            <div className="h-6 w-48 mx-auto rounded-full bg-white/5 animate-pulse mb-6" />
+            <div className="h-12 w-96 mx-auto rounded-xl bg-white/5 animate-pulse mb-4" />
+            <div className="h-5 w-72 mx-auto rounded-lg bg-white/5 animate-pulse mb-8" />
+            <div className="h-10 w-52 mx-auto rounded-full bg-white/5 animate-pulse" />
+          </div>
+
+          {/* Plan cards skeleton */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="card p-6 space-y-4">
+                <div className="h-5 w-24 rounded bg-white/5 animate-pulse" />
+                <div className="h-3 w-full rounded bg-white/5 animate-pulse" />
+                <div className="h-10 w-32 rounded bg-white/5 animate-pulse" />
+                <div className="h-10 w-full rounded-xl bg-white/5 animate-pulse" />
+                <div className="space-y-2 pt-4 border-t border-white/5">
+                  {[1, 2, 3, 4, 5].map((j) => (
+                    <div key={j} className="h-3 w-full rounded bg-white/5 animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      <Footer />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -245,11 +263,68 @@ export default function PricingPageClient() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [loadingPack, setLoadingPack] = useState<string | null>(null);
   const { data: session } = useSession();
+  const {
+    region,
+    country,
+    currency,
+    currencySymbol,
+    pricing,
+    studentDiscount,
+    isLoading,
+    formatPrice,
+  } = useRegion();
 
   // ---- Stripe checkout for plans ----
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const handlePlanCheckout = async (plan: Plan) => {
+  // Show skeleton while region is loading
+  if (isLoading) {
+    return <PricingSkeleton />;
+  }
+
+  // ---- Compute plan prices from region ----
+  const getPlanPrice = (planKey: string, isYearly: boolean): number => {
+    if (planKey === 'basic') return 0;
+    const planPricing = pricing[planKey as keyof typeof pricing];
+    if (!planPricing || typeof planPricing !== 'object' || !('monthly' in planPricing)) return 0;
+    const p = planPricing as { monthly: number; yearly: number };
+    if (isYearly) {
+      // Yearly = per-month cost when billed yearly
+      return Math.round(p.yearly / 12);
+    }
+    return p.monthly;
+  };
+
+  const getPlanYearlyTotal = (planKey: string): number => {
+    if (planKey === 'basic') return 0;
+    const planPricing = pricing[planKey as keyof typeof pricing];
+    if (!planPricing || typeof planPricing !== 'object' || !('yearly' in planPricing)) return 0;
+    return (planPricing as { yearly: number }).yearly;
+  };
+
+  const getPlanMonthlyPrice = (planKey: string): number => {
+    if (planKey === 'basic') return 0;
+    const planPricing = pricing[planKey as keyof typeof pricing];
+    if (!planPricing || typeof planPricing !== 'object' || !('monthly' in planPricing)) return 0;
+    return (planPricing as { monthly: number }).monthly;
+  };
+
+  // Credit pack prices from region config
+  const creditPacks = [
+    { id: 'pack_100', credits: 100, price: pricing.credits.pack100, popular: false },
+    { id: 'pack_500', credits: 500, price: pricing.credits.pack500, popular: true },
+    { id: 'pack_1000', credits: 1000, price: pricing.credits.pack1000, popular: false },
+  ];
+
+  // Monthly savings when billing yearly
+  const yearlySavings = (planKey: string): number => {
+    if (planKey === 'basic') return 0;
+    const monthlyTotal = getPlanMonthlyPrice(planKey) * 12;
+    const yearlyTotal = getPlanYearlyTotal(planKey);
+    return monthlyTotal - yearlyTotal;
+  };
+
+  const handlePlanCheckout = async (plan: PlanDefinition) => {
     if (plan.key === 'basic') return;
     if (!session) {
       window.location.href = '/login?redirect=/pricing';
@@ -265,6 +340,7 @@ export default function PricingPageClient() {
           action: 'checkout',
           plan: plan.key,
           interval: yearly ? 'yearly' : 'monthly',
+          region,
         }),
       });
       const data = await res.json();
@@ -286,7 +362,7 @@ export default function PricingPageClient() {
   };
 
   // ---- Stripe checkout for credit packs ----
-  const handleCreditCheckout = async (pack: CreditPack) => {
+  const handleCreditCheckout = async (pack: typeof creditPacks[0]) => {
     if (!session) {
       window.location.href = '/login?redirect=/pricing';
       return;
@@ -300,6 +376,7 @@ export default function PricingPageClient() {
         body: JSON.stringify({
           action: 'credit-pack',
           packId: pack.id,
+          region,
         }),
       });
       const data = await res.json();
@@ -328,11 +405,7 @@ export default function PricingPageClient() {
     return <span className="text-white/70 text-sm">{value}</span>;
   };
 
-  const planCTA = (plan: Plan) => {
-    if (plan.key === 'basic') return 'Start Free';
-    if (session) return `Upgrade to ${plan.name}`;
-    return `Start ${plan.name} Trial`;
-  };
+  const isIndia = region === 'IN';
 
   return (
     <div className="min-h-screen">
@@ -365,6 +438,15 @@ export default function PricingPageClient() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-16"
           >
+            {/* Region indicator */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="inline-flex items-center gap-2 text-xs text-white/40">
+                <Globe className="w-3.5 h-3.5" />
+                <span>Prices shown for {country} in {currency}</span>
+              </div>
+              <RegionSelector />
+            </div>
+
             <div className="inline-flex items-center gap-2 badge-neon mb-6">
               <Star className="w-3.5 h-3.5" />
               <span>14-day money-back guarantee</span>
@@ -404,113 +486,129 @@ export default function PricingPageClient() {
           {/* PLANS GRID                                                   */}
           {/* ============================================================ */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {plans.map((plan, i) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className={`card relative flex flex-col ${
-                  plan.popular ? 'border-neon-blue/30 neon-glow lg:scale-105 z-10' : ''
-                }`}
-              >
-                {/* Badge */}
-                {(plan.popular || plan.badge) && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className={`badge ${plan.badgeColor} text-xs whitespace-nowrap`}>
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
+            {planDefinitions.map((plan, i) => {
+              const displayPrice = getPlanPrice(plan.key, yearly);
+              const monthlyPrice = getPlanMonthlyPrice(plan.key);
+              const savings = yearlySavings(plan.key);
 
-                {/* Plan info */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <plan.icon className="w-5 h-5 text-neon-blue" />
-                    <h3 className="text-xl font-bold">{plan.name}</h3>
-                  </div>
-                  <p className="text-sm text-white/40 mb-4">{plan.description}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold">
-                      ${yearly ? plan.yearlyPrice : plan.monthlyPrice}
-                    </span>
-                    {plan.monthlyPrice > 0 ? (
-                      <span className="text-sm text-white/40">
-                        /mo{yearly ? ', billed yearly' : ''}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-white/40">forever</span>
-                    )}
-                  </div>
-                  {yearly && plan.monthlyPrice > 0 && (
-                    <p className="text-xs text-neon-green/70 mt-1">
-                      Save ${(plan.monthlyPrice - plan.yearlyPrice) * 12}/yr
-                    </p>
-                  )}
-                </div>
+              // For India, show special badge on Pro plan
+              const badgeText = isIndia && plan.key === 'pro'
+                ? 'Most Popular in India'
+                : plan.badge;
 
-                {/* CTA Button */}
-                {plan.key === 'basic' ? (
-                  <Link
-                    href="/signup"
-                    className="block text-center py-3 rounded-xl font-semibold text-sm transition-all btn-secondary"
-                  >
-                    Start Free
-                  </Link>
-                ) : !session ? (
-                  <Link
-                    href="/signup"
-                    className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
-                      plan.popular ? 'btn-primary' : 'btn-secondary'
-                    }`}
-                  >
-                    Start {plan.name} Trial
-                  </Link>
-                ) : (
-                  <button
-                    onClick={() => handlePlanCheckout(plan)}
-                    disabled={loadingPlan === plan.key}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                      plan.popular ? 'btn-primary' : 'btn-secondary'
-                    }`}
-                  >
-                    {loadingPlan === plan.key ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Upgrade to {plan.name}
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                )}
-
-                {/* Features list */}
-                <div className="mt-6 pt-6 border-t border-white/5 space-y-3 flex-1">
-                  {plan.features.map((f) => (
-                    <div key={f.label} className="flex items-center gap-2 text-sm">
-                      {f.included ? (
-                        <Check className="w-4 h-4 text-neon-green flex-shrink-0" />
-                      ) : (
-                        <X className="w-4 h-4 text-white/15 flex-shrink-0" />
-                      )}
-                      <span className={f.included ? 'text-white/60' : 'text-white/20'}>
-                        {f.label}
+              return (
+                <motion.div
+                  key={plan.name}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={`card relative flex flex-col ${
+                    plan.popular ? 'border-neon-blue/30 neon-glow lg:scale-105 z-10' : ''
+                  }`}
+                >
+                  {/* Badge */}
+                  {(plan.popular || plan.badge) && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className={`badge ${plan.badgeColor} text-xs whitespace-nowrap`}>
+                        {badgeText}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
+                  )}
+
+                  {/* Plan info */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <plan.icon className="w-5 h-5 text-neon-blue" />
+                      <h3 className="text-xl font-bold">{plan.name}</h3>
+                    </div>
+                    <p className="text-sm text-white/40 mb-4">{plan.description}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-extrabold">
+                        {plan.key === 'basic' ? (
+                          formatPrice(0)
+                        ) : (
+                          <>
+                            {currencySymbol}{displayPrice.toLocaleString()}
+                          </>
+                        )}
+                      </span>
+                      {plan.key !== 'basic' ? (
+                        <span className="text-sm text-white/40">
+                          /mo{yearly ? ', billed yearly' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-white/40">forever</span>
+                      )}
+                    </div>
+                    {yearly && plan.key !== 'basic' && savings > 0 && (
+                      <p className="text-xs text-neon-green/70 mt-1">
+                        Save {currencySymbol}{savings.toLocaleString()}/yr
+                      </p>
+                    )}
+                  </div>
+
+                  {/* CTA Button */}
+                  {plan.key === 'basic' ? (
+                    <Link
+                      href="/signup"
+                      className="block text-center py-3 rounded-xl font-semibold text-sm transition-all btn-secondary"
+                    >
+                      Start Free
+                    </Link>
+                  ) : !session ? (
+                    <Link
+                      href="/signup"
+                      className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
+                        plan.popular ? 'btn-primary' : 'btn-secondary'
+                      }`}
+                    >
+                      Start {plan.name} Trial
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => handlePlanCheckout(plan)}
+                      disabled={loadingPlan === plan.key}
+                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                        plan.popular ? 'btn-primary' : 'btn-secondary'
+                      }`}
+                    >
+                      {loadingPlan === plan.key ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Upgrade to {plan.name}
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Features list */}
+                  <div className="mt-6 pt-6 border-t border-white/5 space-y-3 flex-1">
+                    {plan.features.map((f) => (
+                      <div key={f.label} className="flex items-center gap-2 text-sm">
+                        {f.included ? (
+                          <Check className="w-4 h-4 text-neon-green flex-shrink-0" />
+                        ) : (
+                          <X className="w-4 h-4 text-white/15 flex-shrink-0" />
+                        )}
+                        <span className={f.included ? 'text-white/60' : 'text-white/20'}>
+                          {f.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
 
           {/* ============================================================ */}
           {/* HUMAN + AI SECTION                                           */}
           {/* ============================================================ */}
-          {/* Human + AI Section */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -521,7 +619,7 @@ export default function PricingPageClient() {
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-2 badge-purple mb-4">
                   <Users className="w-3.5 h-3.5" />
-                  <span>Not just AI — Real humans too</span>
+                  <span>Not just AI -- Real humans too</span>
                 </div>
                 <h2 className="text-3xl font-bold mb-3">
                   AI-powered, <span className="gradient-text">human-verified</span>
@@ -577,7 +675,7 @@ export default function PricingPageClient() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="text-left py-4 px-5 font-semibold text-white/60">Feature</th>
-                    {plans.map((p) => (
+                    {planDefinitions.map((p) => (
                       <th
                         key={p.key}
                         className={`py-4 px-4 text-center font-bold ${
@@ -604,7 +702,7 @@ export default function PricingPageClient() {
                       </td>
                       <td className="py-3 px-4 text-center">{renderComparisonCell(row.basic)}</td>
                       <td className="py-3 px-4 text-center">{renderComparisonCell(row.starter)}</td>
-                      <td className={`py-3 px-4 text-center ${plans[2].popular ? 'bg-neon-blue/5' : ''}`}>
+                      <td className={`py-3 px-4 text-center ${planDefinitions[2].popular ? 'bg-neon-blue/5' : ''}`}>
                         {renderComparisonCell(row.pro)}
                       </td>
                       <td className="py-3 px-4 text-center">{renderComparisonCell(row.ultra)}</td>
@@ -666,9 +764,11 @@ export default function PricingPageClient() {
                     {pack.credits.toLocaleString()}
                   </div>
                   <p className="text-sm text-white/40 mb-1">credits</p>
-                  <div className="text-2xl font-bold mb-4">${pack.price}</div>
+                  <div className="text-2xl font-bold mb-4">
+                    {formatPrice(pack.price)}
+                  </div>
                   <p className="text-xs text-white/30 mb-5">
-                    ${(pack.price / pack.credits * 100).toFixed(1)}&cent; per credit
+                    {formatPrice(Math.round((pack.price / pack.credits) * 100) / 100)} per credit
                   </p>
                   <button
                     onClick={() => handleCreditCheckout(pack)}
@@ -706,7 +806,7 @@ export default function PricingPageClient() {
                 <div className="text-left">
                   <div className="font-semibold">Student Discount</div>
                   <div className="text-sm text-white/40">
-                    30% off with a .edu email
+                    {studentDiscount}% off with a .edu email
                   </div>
                 </div>
               </div>

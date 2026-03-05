@@ -198,7 +198,57 @@ export const PAGE_SEO = {
     keywords: 'NXTED AI GDPR, data rights, GDPR compliance, data protection officer, right to erasure',
     canonical: '/gdpr',
   },
+  // ─── Comparison Pages (High-Intent SEO) ──────────────
+  compareHub: {
+    title: 'NXTED AI vs Competitors — See How We Compare',
+    description: 'Compare NXTED AI with Jobscan, Teal, Rezi, Kickresume, Careerflow, and Hiration. See why NXTED AI is the best all-in-one AI career platform.',
+    keywords: 'NXTED AI alternatives, Jobscan alternative, Teal alternative, Rezi alternative, best AI resume builder comparison, AI career platform comparison 2026',
+    canonical: '/compare',
+  },
+  compareJobscan: {
+    title: 'NXTED AI vs Jobscan — The Better Jobscan Alternative (2026)',
+    description: 'Looking for a Jobscan alternative? NXTED AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one at $12/mo vs Jobscan $49.95/mo.',
+    keywords: 'Jobscan alternative, NXTED AI vs Jobscan, Jobscan competitor, best ATS resume checker, AI resume builder vs Jobscan, cheaper Jobscan alternative 2026',
+    canonical: '/compare/jobscan',
+  },
+  compareTeal: {
+    title: 'NXTED AI vs Teal — The Better Teal Alternative (2026)',
+    description: 'Looking for a Teal alternative? NXTED AI offers salary tools, skills assessment, portfolio builder, AI career coaching, and job matching that Teal lacks.',
+    keywords: 'Teal alternative, Teal vs Jobscan, NXTED AI vs Teal, Teal resume builder alternative, Teal HQ competitor, best job tracker alternative 2026',
+    canonical: '/compare/teal',
+  },
+  compareRezi: {
+    title: 'NXTED AI vs Rezi — The Better Rezi Alternative (2026)',
+    description: 'Looking for a Rezi alternative? NXTED AI offers AI career coaching, salary estimator, skills assessment, job matching, and portfolio builder that Rezi lacks.',
+    keywords: 'Rezi alternative, Rezi vs Kickresume, NXTED AI vs Rezi, Rezi AI resume builder alternative, best AI resume builder 2026',
+    canonical: '/compare/rezi',
+  },
+  compareAll: {
+    title: 'Best AI Resume Builder 2026 — NXTED AI vs Jobscan vs Teal vs Rezi vs Kickresume',
+    description: 'Comprehensive comparison of the best AI resume builders in 2026. NXTED AI vs Jobscan vs Teal vs Rezi vs Kickresume vs Careerflow vs Hiration — features, pricing, and ratings.',
+    keywords: 'best AI resume builder 2026, AI resume builder comparison, Jobscan vs Teal vs Rezi, AI career platform comparison, Kickresume alternative, Careerflow alternative, Hiration alternative',
+    canonical: '/compare/all',
+  },
 } as const;
+
+// ─── Competitor Comparison Keywords (for PPC/SEO) ──────
+export const COMPARISON_KEYWORDS = [
+  'Jobscan alternative',
+  'Teal alternative',
+  'Teal vs Jobscan',
+  'Rezi alternative',
+  'Rezi vs Kickresume',
+  'Kickresume alternative',
+  'Careerflow alternative',
+  'Hiration alternative',
+  'best AI resume builder 2026',
+  'best AI career platform 2026',
+  'AI resume builder comparison',
+  'Jobscan vs NXTED AI',
+  'cheaper Jobscan alternative',
+  'free AI resume builder alternative',
+  'all in one career platform',
+] as const;
 
 // ─── Schema.org Structured Data Templates ──────────────
 export const SCHEMA_ORG = {

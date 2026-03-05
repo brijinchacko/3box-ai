@@ -506,3 +506,73 @@ model NewsletterCampaign {
   sentAt    DateTime?
   createdAt DateTime  @default(now())
 }
+
+// ─── Marketing Dashboard ────────────────────────
+
+model MarketingPhase {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Phase 1: India + US"
+  description String   @db.Text
+  status      String   @default("not_started") // not_started, in_progress, completed
+  progress    Int      @default(0) // 0-100
+  startDate   DateTime?
+  endDate     DateTime?
+  tasks       MarketingTask[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MarketingTask {
+  id          String   @id @default(cuid())
+  phaseId     String
+  phase       MarketingPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?  @db.Text
+  category    String   @default("seo") // seo, content, youtube, social, partnerships, technical
+  status      String   @default("pending") // pending, in_progress, completed, blocked
+  priority    String   @default("medium") // low, medium, high, critical
+  assignee    String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([phaseId])
+  @@index([status])
+}
+
+model MarketingKPI {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "Organic Traffic", "Blog Articles", "Paying Subscribers"
+  category  String   @default("traffic") // traffic, content, revenue, social
+  target    Int      // target value
+  current   Int      @default(0) // current value
+  unit      String   @default("count") // count, currency, percentage
+  period    String   @default("monthly") // daily, weekly, monthly, quarterly
+  month     Int      // 1-12
+  year      Int      // 2026
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, month, year])
+  @@index([category])
+}
+
+model ContentCalendar {
+  id            String   @id @default(cuid())
+  title         String
+  targetKeyword String?
+  keywordDifficulty Int?  @default(0)
+  category      String   @default("blog") // blog, landing_page, comparison, video, social
+  status        String   @default("planned") // planned, writing, review, published, scheduled
+  scheduledDate DateTime?
+  publishedDate DateTime?
+  publishedUrl  String?
+  author        String?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+}

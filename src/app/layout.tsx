@@ -42,7 +42,14 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
-  alternates: { canonical: SITE_URL },
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      'en-IN': SITE_URL,
+      'en-US': SITE_URL,
+      'x-default': SITE_URL,
+    },
+  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -75,6 +82,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Hreflang alternate links for geo-targeting */}
+        <link rel="alternate" hrefLang="en-in" href="https://nxted.ai" />
+        <link rel="alternate" hrefLang="en-us" href="https://nxted.ai" />
+        <link rel="alternate" hrefLang="x-default" href="https://nxted.ai" />
         {/* Schema.org Organization */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SCHEMA_ORG.organization) }} />
         {/* Schema.org WebSite with SearchAction */}

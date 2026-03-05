@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
-  LayoutDashboard, Users, BarChart3,
+  LayoutDashboard, Users, BarChart3, TrendingUp,
   Shield, ArrowLeft, FileText, MessageSquare, Mail,
 } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
@@ -13,6 +13,7 @@ import Logo from '@/components/brand/Logo';
 const adminLinks = [
   { href: '/admin', icon: LayoutDashboard, label: 'Overview' },
   { href: '/admin/monitoring', icon: BarChart3, label: 'Monitoring' },
+  { href: '/admin/marketing', icon: TrendingUp, label: 'Marketing' },
   { href: '/admin/content', icon: FileText, label: 'Content' },
   { href: '/admin/support', icon: MessageSquare, label: 'Support' },
   { href: '/admin/email', icon: Mail, label: 'Email' },
