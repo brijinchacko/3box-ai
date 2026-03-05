@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { generateCoverLetter } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -24,7 +25,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const coverLetter = await generateCoverLetter(resume, jobDescription, user?.plan || 'BASIC');
+    // Build user context for AI personalization
+    const userContext = await getUserContextString(session.user.id);
+
+    const coverLetter = await generateCoverLetter(resume, jobDescription, user?.plan || 'BASIC', userContext);
 
     return NextResponse.json({ coverLetter });
   } catch (error) {

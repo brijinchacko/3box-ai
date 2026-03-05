@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { generateLearningPath, extractJSON } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -24,9 +25,12 @@ export async function POST(req: Request) {
       );
     }
 
+    // Build user context for AI personalization
+    const userContext = await getUserContextString(session.user.id);
+
     let learningPathData;
     try {
-      const aiResponse = await generateLearningPath(targetRole, gaps, user?.plan || 'BASIC');
+      const aiResponse = await generateLearningPath(targetRole, gaps, user?.plan || 'BASIC', userContext);
       learningPathData = JSON.parse(extractJSON(aiResponse));
     } catch (aiError) {
       console.warn('[Learning Path] AI generation failed, using demo data:', aiError);

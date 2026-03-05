@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -135,6 +136,9 @@ export async function GET() {
       plan: user.plan,
     };
 
+    // Build rich user context for AI personalization
+    const userContext = await getUserContextString(userId);
+
     const systemPrompt = `You are a career analytics AI for the NXTED platform. Analyze the user's career data and generate personalized insights. Return JSON with:
 {
   "insights": [
@@ -150,7 +154,7 @@ export async function GET() {
   "weeklyTip": "<personalized weekly tip based on their data>"
 }
 
-Generate 3-5 relevant insights. Prioritize actionable items. Be encouraging but realistic.`;
+Generate 3-5 relevant insights. Prioritize actionable items. Be encouraging but realistic. Address the user by name.${userContext ? `\n\n${userContext}` : ''}`;
 
     const model = getModelForFeature('dashboard-insights', user.plan);
     const aiResponse = await aiChat({

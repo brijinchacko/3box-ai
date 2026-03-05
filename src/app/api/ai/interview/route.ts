@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -26,6 +27,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // Build user context for AI personalization
+    const userContext = await getUserContextString(session.user.id);
+
     if (action === 'generate') {
       const count = questionsCount || 5;
       const systemPrompt = `You are an expert interview coach. Generate ${count} interview questions for the role of "${targetRole}". Include a mix of:
@@ -44,7 +48,7 @@ Return a valid JSON array with format:
   "timeLimit": <seconds 60-180>,
   "hints": ["<hint1>", "<hint2>"],
   "keyPoints": ["<point to cover>", "<point to cover>"]
-}]`;
+}]${userContext ? `\n\n${userContext}\n\nUse the above user context to tailor questions to the candidate's actual experience level and background.` : ''}`;
 
       const aiResponse = await aiChat({
         messages: [
@@ -94,7 +98,7 @@ Return valid JSON:
   "strengths": ["<strength1>", "<strength2>"],
   "improvements": ["<area1>", "<area2>"],
   "improvedAnswer": "<a model answer demonstrating best practices, 3-4 sentences>"
-}`;
+}${userContext ? `\n\n${userContext}\n\nUse the above user context to provide personalized feedback based on the candidate's actual background and experience.` : ''}`;
 
       const aiResponse = await aiChat({
         messages: [

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { generateAssessmentQuestions, analyzeAssessment, extractJSON, type PlanTier } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -17,13 +18,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { action, targetRole, answers, existingSkills } = body;
 
+    // Build user context for AI personalization (only if authenticated)
+    const userContext = session?.user?.id ? await getUserContextString(session.user.id) : '';
+
     if (action === 'generate') {
-      const questions = await generateAssessmentQuestions(targetRole, existingSkills, userPlan);
+      const questions = await generateAssessmentQuestions(targetRole, existingSkills, userPlan, userContext);
       return NextResponse.json({ questions: JSON.parse(extractJSON(questions)) });
     }
 
     if (action === 'analyze') {
-      const analysis = await analyzeAssessment(targetRole, answers, userPlan);
+      const analysis = await analyzeAssessment(targetRole, answers, userPlan, userContext);
       return NextResponse.json({ analysis: JSON.parse(extractJSON(analysis)) });
     }
 

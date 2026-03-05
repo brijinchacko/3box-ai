@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -65,9 +66,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // Build user context for AI personalization
+    const userContext = await getUserContextString(session.user.id);
+
     let result: { enhanced: string; suggestions: string[] };
     try {
-      const systemPrompt = SECTION_PROMPTS[section](targetJob);
+      let systemPrompt = SECTION_PROMPTS[section](targetJob);
+      if (userContext) {
+        systemPrompt += `\n\n${userContext}\n\nIMPORTANT: Use the user's real name, skills, experience, and career goals from the context above to personalize the enhanced content. Write in first person using their actual details.`;
+      }
       const model = getModelForFeature('resume', user.plan);
       const aiResponse = await aiChat({
         messages: [

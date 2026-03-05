@@ -272,12 +272,21 @@ export async function aiChatWithFallback(
   throw new Error('All AI models unavailable. Please try again later.');
 }
 
+// ─── Context injection helper ─────────────────
+function injectContext(basePrompt: string, userContext?: string): string {
+  if (!userContext) return basePrompt;
+  return `${basePrompt}\n\n${userContext}\n\nUse the above user context to personalize your response. Reference the user's actual name, skills, experience, and goals when relevant.`;
+}
+
 // ─── Specialized AI Functions ──────────────────
+// All functions accept an optional `userContext` string (from context.ts)
+// that gets injected into the system prompt for personalization.
 
 export async function generateAssessmentQuestions(
   targetRole: string,
   existingSkills?: string[],
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('assessment', userPlan);
   return aiChatWithFallback(
@@ -285,7 +294,7 @@ export async function generateAssessmentQuestions(
       messages: [
         {
           role: 'system',
-          content: `You are an expert career assessment AI for NXTED AI platform. Generate adaptive skill assessment questions for someone targeting the role of "${targetRole}". Return a JSON array of 10 questions with format: { id, type: "mcq"|"scenario"|"task", question, options (for mcq), difficulty: "beginner"|"intermediate"|"advanced", skill, timeLimit (seconds) }. Mix question types. If existing skills provided, adapt difficulty accordingly. Return ONLY valid JSON.`,
+          content: injectContext(`You are an expert career assessment AI for NXTED AI platform. Generate adaptive skill assessment questions for someone targeting the role of "${targetRole}". Return a JSON array of 10 questions with format: { id, type: "mcq"|"scenario"|"task", question, options (for mcq), difficulty: "beginner"|"intermediate"|"advanced", skill, timeLimit (seconds) }. Mix question types. If existing skills provided, adapt difficulty accordingly. Adapt question difficulty based on the user's education and experience level. Return ONLY valid JSON.`, userContext),
         },
         {
           role: 'user',
@@ -304,7 +313,8 @@ export async function generateAssessmentQuestions(
 export async function analyzeAssessment(
   targetRole: string,
   answers: Record<string, any>,
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('assessment', userPlan);
   return aiChatWithFallback(
@@ -312,7 +322,7 @@ export async function analyzeAssessment(
       messages: [
         {
           role: 'system',
-          content: `You are an expert career assessment analyzer. Analyze the assessment results and return JSON with: { skillScores: [{ skill, score (0-100), level, color }], overallScore, gaps: [{ skill, current, required, priority }], recommendations: string[], timelineEstimate: string, marketReadiness: number, hireProbability: number }. Return ONLY valid JSON.`,
+          content: injectContext(`You are an expert career assessment analyzer. Analyze the assessment results and return JSON with: { skillScores: [{ skill, score (0-100), level, color }], overallScore, gaps: [{ skill, current, required, priority }], recommendations: string[], timelineEstimate: string, marketReadiness: number, hireProbability: number }. Factor in the user's existing background and experience when scoring. Return ONLY valid JSON.`, userContext),
         },
         {
           role: 'user',
@@ -329,7 +339,8 @@ export async function analyzeAssessment(
 export async function generateCareerPlan(
   targetRole: string,
   skillScores: Record<string, number>,
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('career-plan', userPlan);
   return aiChatWithFallback(
@@ -337,7 +348,7 @@ export async function generateCareerPlan(
       messages: [
         {
           role: 'system',
-          content: `You are an expert career planner. Generate a detailed career plan with milestones and proof-of-work projects. Return JSON with: { milestones: [{ id, title, description, skills, duration, status: "upcoming", projects: [{ id, title, description, skills, difficulty, estimatedHours }] }], totalDuration: string, keyMetrics: {} }. Return ONLY valid JSON.`,
+          content: injectContext(`You are an expert career planner. Generate a detailed career plan with milestones and proof-of-work projects. Tailor the plan to the user's current experience level, education, and career goals. Return JSON with: { milestones: [{ id, title, description, skills, duration, status: "upcoming", projects: [{ id, title, description, skills, difficulty, estimatedHours }] }], totalDuration: string, keyMetrics: {} }. Return ONLY valid JSON.`, userContext),
         },
         {
           role: 'user',
@@ -354,7 +365,8 @@ export async function generateCareerPlan(
 export async function generateLearningPath(
   targetRole: string,
   gaps: any[],
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('learning-path', userPlan);
   return aiChatWithFallback(
@@ -362,7 +374,7 @@ export async function generateLearningPath(
       messages: [
         {
           role: 'system',
-          content: `You are an adaptive learning path designer. Create a learning path that fills skill gaps. Return JSON with: { modules: [{ id, title, description, type: "course"|"project"|"reading"|"practice", provider, url, duration, skills, isAdaptive }], estimatedCompletion: string }. Return ONLY valid JSON.`,
+          content: injectContext(`You are an adaptive learning path designer. Create a learning path that fills skill gaps. Consider the user's current knowledge level, education, and learning history to recommend appropriate resources. Return JSON with: { modules: [{ id, title, description, type: "course"|"project"|"reading"|"practice", provider, url, duration, skills, isAdaptive }], estimatedCompletion: string }. Return ONLY valid JSON.`, userContext),
         },
         {
           role: 'user',
@@ -378,7 +390,8 @@ export async function generateLearningPath(
 export async function generateResume(
   profile: any,
   targetJob?: string,
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('resume', userPlan);
   return aiChatWithFallback(
@@ -386,7 +399,7 @@ export async function generateResume(
       messages: [
         {
           role: 'system',
-          content: `You are an expert resume writer and ATS optimization specialist. Generate an ATS-friendly resume tailored to the target job. Return JSON with the full resume structure including summary, experience bullets, and skills section optimized for ATS keywords. Return ONLY valid JSON.`,
+          content: injectContext(`You are an expert resume writer and ATS optimization specialist. Generate an ATS-friendly resume tailored to the target job. Use the user's actual name, skills, experience, education, and career goals to write authentic, personalized content. Write the summary in first person using the user's real details. Return JSON with the full resume structure including summary, experience bullets, and skills section optimized for ATS keywords. Return ONLY valid JSON.`, userContext),
         },
         {
           role: 'user',
@@ -403,7 +416,8 @@ export async function generateResume(
 export async function generateCoverLetter(
   resume: any,
   jobDescription: string,
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('cover-letter', userPlan);
   return aiChatWithFallback(
@@ -411,7 +425,7 @@ export async function generateCoverLetter(
       messages: [
         {
           role: 'system',
-          content: `Write a compelling, personalized cover letter. Keep it concise (3-4 paragraphs). Match the candidate's experience to the job requirements. Return plain text.`,
+          content: injectContext(`Write a compelling, personalized cover letter using the user's actual name and background. Keep it concise (3-4 paragraphs). Match the candidate's real experience and skills to the job requirements. Return plain text.`, userContext),
         },
         {
           role: 'user',
@@ -426,7 +440,8 @@ export async function generateCoverLetter(
 export async function matchJobs(
   profile: any,
   preferences: any,
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('job-matching', userPlan);
   return aiChatWithFallback(
@@ -434,7 +449,7 @@ export async function matchJobs(
       messages: [
         {
           role: 'system',
-          content: `You are a job matching AI. Analyze the candidate profile against available jobs and return matches with reasoning. Return JSON: { matches: [{ id, title, company, location, salary, matchScore (0-100), matchReasons: string[], improvementSteps: string[], source, url }] }. Return ONLY valid JSON.`,
+          content: injectContext(`You are a job matching AI. Analyze the candidate profile against available jobs and return matches with reasoning. Consider the user's actual skills, experience level, and career goals for accurate matching. Return JSON: { matches: [{ id, title, company, location, salary, matchScore (0-100), matchReasons: string[], improvementSteps: string[], source, url }] }. Return ONLY valid JSON.`, userContext),
         },
         {
           role: 'user',
@@ -450,9 +465,12 @@ export async function matchJobs(
 export async function coachChat(
   userMessage: string,
   context: any,
-  userPlan: PlanTier = 'BASIC'
+  userPlan: PlanTier = 'BASIC',
+  userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('coach', userPlan);
+  const userContextBlock = userContext ? `\n\n## User Profile\n${userContext}\n\nIMPORTANT: Use the user's actual name, skills, targets, and progress data above to give highly personalized advice. Reference their specific situation.` : '';
+
   const systemPrompt = `You are ${context.coachName || 'Horace'}, the AI career coach for NXTED AI — an AI-powered career acceleration platform.
 
 ## About NXTED AI
@@ -461,54 +479,30 @@ NXTED AI (nxted.ai) is an AI-driven career platform that combines artificial int
 ### Core Features:
 1. **AI Skill Assessment** — Adaptive tests that analyze your skills against target roles. Generates skill scores, gap analysis, and market readiness percentage.
 2. **Career Plan Generator** — AI creates personalized career roadmaps with milestones, timelines, and proof-of-work projects.
-3. **Adaptive Learning Paths** — AI-curated courses, projects, and resources tailored to fill your skill gaps. Sources from Coursera, Udemy, freeCodeCamp, etc.
+3. **Adaptive Learning Paths** — AI-curated courses, projects, and resources tailored to fill your skill gaps.
 4. **AI Resume Builder** — Create ATS-optimized resumes. AI enhances bullet points, writes summaries, and tailors content to specific job descriptions.
-5. **Free ATS Resume Checker** — Paste resume text and get instant ATS compatibility score with detailed keyword analysis.
-6. **Free Resume Builder** — Build professional resumes at /tools/resume-builder without logging in.
-7. **AI Interview Prep** — Generate role-specific interview questions (behavioral, technical, situational). AI evaluates answers and provides feedback.
-8. **Job Matching** — Discover jobs matching your skills via real job market data.
-9. **Portfolio Builder** — Showcase projects with AI-generated descriptions.
-10. **AI Career Coach (You!)** — You are Horace, an always-available AI coach that helps with career questions, resume tips, interview prep, learning advice, and more.
-11. **Salary Estimator** — Free AI-powered tool to estimate salary ranges for any role.
-12. **Cover Letter Generator** — AI writes personalized cover letters matched to job descriptions.
+5. **Free ATS Resume Checker** — Paste resume text and get instant ATS compatibility score.
+6. **AI Interview Prep** — Generate role-specific interview questions with AI feedback.
+7. **Job Matching** — Discover jobs matching your skills via real job market data.
+8. **Portfolio Builder** — Showcase projects with AI-generated descriptions.
+9. **AI Career Coach (You!)** — Always-available AI coach for career questions.
+10. **Salary Estimator** — Free AI-powered salary range estimation.
+11. **Cover Letter Generator** — AI writes personalized cover letters.
 
-### Plans & Pricing:
-- **Basic (Free)**: 1 assessment, 10 AI credits/mo, 1 watermarked resume, basic career plan, limited AI coach
-- **Starter ($12/mo)**: 5 assessments, 100 credits, 3 templates, 5 PDF exports, full career plan, full AI coach, learning path
-- **Pro ($29/mo)**: Unlimited assessments, 500 credits, all templates, unlimited exports, job matching, interview prep, portfolio, PLUS real human mock interviews (1/mo) and human resume review
-- **Ultra ($59/mo)**: Everything in Pro + unlimited credits, auto-apply, dedicated career mentor, unlimited human mock interviews, 1-on-1 expert coaching, LinkedIn optimizer, role simulator
+### Plans: Basic (Free) | Starter ($12/mo) | Pro ($29/mo + human experts) | Ultra ($59/mo + dedicated mentor)
 
-### What Makes NXTED Different:
-- Not just AI bots — Pro & Ultra plans include REAL HUMAN industry experts for mock interviews, resume verification, and career mentoring
-- Powered by advanced AI models (OpenRouter) for intelligent, personalized guidance
-- Free tools available without login (ATS checker, resume builder, salary estimator)
-- Career Twin technology that builds a persistent model of your skills and goals
-
-### Navigation Help:
-- Dashboard: /dashboard
-- Assessment: /dashboard/assessment
-- Career Plan: /dashboard/career-plan
-- Learning Path: /dashboard/learning
-- Resume Builder: /dashboard/resume
-- Jobs: /dashboard/jobs
-- Interview Prep: /dashboard/interview
-- Portfolio: /dashboard/portfolio
-- Settings: /dashboard/settings
-- Pricing: /pricing
-- Free ATS Checker: /tools/ats-checker
-- Free Resume Builder: /tools/resume-builder
-- Salary Estimator: /tools/salary-estimator
+### Navigation: /dashboard, /dashboard/assessment, /dashboard/career-plan, /dashboard/learning, /dashboard/resume, /dashboard/jobs, /dashboard/interview, /dashboard/portfolio, /dashboard/settings, /pricing, /tools/ats-checker, /tools/resume-builder, /tools/salary-estimator
+${userContextBlock}
 
 ## Your Personality
 - Personality: ${context.personality || 'friendly'}
 - Be concise (2-3 paragraphs max), encouraging, and actionable
 - Always suggest specific next steps
-- If the user asks about features, explain them and link to the relevant page
-- If the user needs help with resume, interview, or career questions, provide expert advice
+- Address the user by their first name when you know it
+- Reference their specific skills, gaps, and progress when giving advice
 - If a feature requires a higher plan, mention it naturally without being pushy
-- Use the user's context: target role is "${context.targetRole || 'not set yet'}", career progress is ${context.progress || 0}%
-- You can help with: resume writing tips, interview preparation, career advice, skill development, job search strategy, salary negotiation, networking, and anything career-related
-- If the user seems stuck, proactively suggest next steps based on their progress`;
+- You can help with: resume writing, interview prep, career advice, skill development, job search, salary negotiation, networking
+- If the user seems stuck, proactively suggest next steps based on their actual progress data`;
 
   return aiChatWithFallback(
     {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { generateCareerPlan, extractJSON } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -30,9 +31,12 @@ export async function POST(req: Request) {
       );
     }
 
+    // Build user context for AI personalization
+    const userContext = await getUserContextString(session.user.id);
+
     let careerPlanData;
     try {
-      const aiResponse = await generateCareerPlan(targetRole, skillScores, user.plan);
+      const aiResponse = await generateCareerPlan(targetRole, skillScores, user.plan, userContext);
       careerPlanData = JSON.parse(extractJSON(aiResponse));
     } catch (aiError) {
       console.warn('[Career Plan] AI generation failed, using demo data:', aiError);

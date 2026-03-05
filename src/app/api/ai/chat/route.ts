@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { coachChat } from '@/lib/ai/openrouter';
+import { getUserContextString } from '@/lib/ai/context';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -39,7 +40,10 @@ export async function POST(req: Request) {
       history: context?.history || [],
     };
 
-    const reply = await coachChat(message, chatContext, user?.plan || 'BASIC');
+    // Build user context for AI personalization
+    const userContext = await getUserContextString(session.user.id);
+
+    const reply = await coachChat(message, chatContext, user?.plan || 'BASIC', userContext);
 
     return NextResponse.json({ reply });
   } catch (error) {
