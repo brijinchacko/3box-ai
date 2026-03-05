@@ -149,8 +149,13 @@ export default function LoginPageClient() {
         redirect: false,
       });
 
-      // OTP login doesn't use password auth - redirect directly
-      // We already verified the OTP, so we can trust the session
+      if (result?.error) {
+        setError('Verification succeeded but sign-in failed. Please try again.');
+        setOtpCode(['', '', '', '', '', '']);
+        otpRefs.current[0]?.focus();
+        return;
+      }
+
       window.location.href = '/dashboard';
     } catch {
       setError('Something went wrong');

@@ -48,11 +48,11 @@ export const authOptions: NextAuthOptions = {
         // Check if this is an OTP-verified login (password starts with "otp:")
         if (credentials.password.startsWith('otp:')) {
           const otpCode = credentials.password.slice(4);
-          // Verify there's a recently used OTP for this email
+          // Verify there's a recently used OTP for this email (accept both login and signup types)
           const recentOtp = await prisma.otpToken.findFirst({
             where: {
               email: credentials.email,
-              type: 'login',
+              type: { in: ['login', 'signup'] },
               code: otpCode,
               used: true,
               createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) }, // within last 5 min
