@@ -58,6 +58,14 @@ function hasPostHog(): boolean {
   );
 }
 
+/** Returns `true` when running in a browser with GA4 gtag on the window. */
+function hasGA4(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof (window as any).gtag === 'function'
+  );
+}
+
 /** Returns `true` in a non-production environment. */
 function isDev(): boolean {
   return process.env.NODE_ENV !== 'production';
@@ -83,8 +91,14 @@ export function track(
     console.log('[analytics] track', event, properties ?? '');
   }
 
+  // Send to PostHog
   if (hasPostHog()) {
     (window as any).posthog.capture(event, properties);
+  }
+
+  // Send to Google Analytics (GA4)
+  if (hasGA4()) {
+    (window as any).gtag('event', event, properties ?? {});
   }
 }
 

@@ -9,11 +9,40 @@ interface AnalyticsProviderProps {
 /**
  * Client-side analytics provider.
  *
- * If `NEXT_PUBLIC_POSTHOG_KEY` is set the component will dynamically load the
- * PostHog snippet on mount. When the env var is absent the component simply
- * renders its children without injecting any scripts.
+ * Loads Google Analytics (GA4) when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set.
+ * Loads PostHog when `NEXT_PUBLIC_POSTHOG_KEY` is set.
+ * When neither env var is present the component simply renders its children
+ * without injecting any scripts.
  */
 export default function AnalyticsProvider({ children }: AnalyticsProviderProps) {
+  // ─── Google Analytics (GA4) ──────────────────────────────────────
+  useEffect(() => {
+    const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    if (!gaId) return;
+
+    // Avoid double-loading
+    if (typeof window !== 'undefined' && (window as any).gtag) return;
+
+    // Initialize dataLayer
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    function gtag(...args: any[]) {
+      (window as any).dataLayer.push(args);
+    }
+    (window as any).gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', gaId, {
+      page_path: window.location.pathname,
+      send_page_view: true,
+    });
+
+    // Load gtag.js script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
+    document.head.appendChild(script);
+  }, []);
+
+  // ─── PostHog ─────────────────────────────────────────────────────
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!key) return;

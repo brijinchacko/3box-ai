@@ -39,6 +39,15 @@ export default function PageTracker() {
     startTime.current = Date.now();
     lastPath.current = pathname;
 
+    // Send page_view to GA4 on route change
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'page_view', {
+        page_path: pathname,
+        page_location: window.location.href,
+        page_title: document.title,
+      });
+    }
+
     const trackView = async () => {
       try {
         await fetch('/api/analytics/track', {
