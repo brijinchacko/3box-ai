@@ -29,8 +29,10 @@ import {
   Lock,
   Brain,
   BookOpen,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 // ── Types ──────────────────────────────────────────────
 interface Job {
@@ -105,11 +107,12 @@ const SAVED_JOBS_KEY = 'nxted_saved_jobs';
 
 // ── Main Page ──────────────────────────────────────────
 export default function JobsPage() {
+  const { data: session } = useSession();
   const [tab, setTab] = useState<'discover' | 'saved' | 'applications'>('discover');
 
-  // Assessment gate state
-  const [scoreCheck, setScoreCheck] = useState<'loading' | 'no_assessment' | 'low_score' | 'unlocked'>('loading');
-  const [assessmentScore, setAssessmentScore] = useState<number | null>(null);
+  // Upgrade modal state
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,6 +130,9 @@ export default function JobsPage() {
   // Saved jobs
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
 
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
+  const isUltra = userPlan === 'ULTRA';
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(SAVED_JOBS_KEY);
@@ -134,33 +140,15 @@ export default function JobsPage() {
     } catch {}
   }, []);
 
-  // ── Assessment Score Gate ─────────────────────────
-  useEffect(() => {
-    async function checkAssessment() {
-      try {
-        const res = await fetch('/api/user/assessment');
-        if (!res.ok) {
-          setScoreCheck('no_assessment');
-          return;
-        }
-        const data = await res.json();
-        if (!data.hasAssessment) {
-          setScoreCheck('no_assessment');
-          return;
-        }
-        const score = data.overallScore ?? 0;
-        setAssessmentScore(score);
-        if (score >= 85) {
-          setScoreCheck('unlocked');
-        } else {
-          setScoreCheck('low_score');
-        }
-      } catch {
-        setScoreCheck('no_assessment');
-      }
+  // Handle "View Job" click: ULTRA users go directly, others see upgrade modal
+  const handleViewJob = (job: Job) => {
+    if (isUltra) {
+      window.open(job.url, '_blank', 'noopener,noreferrer');
+    } else {
+      setSelectedJob(job);
+      setShowUpgradeModal(true);
     }
-    checkAssessment();
-  }, []);
+  };
 
   const toggleSaveJob = (job: Job) => {
     setSavedJobs(prev => {
@@ -243,88 +231,65 @@ export default function JobsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Assessment Gate: Loading State ────────────────
-  if (scoreCheck === 'loading') {
-    return (
-      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="card text-center py-16 px-8 max-w-md w-full"
-        >
-          <Loader2 className="w-10 h-10 text-neon-orange animate-spin mx-auto mb-4" />
-          <p className="text-white/50 text-sm">Checking assessment score...</p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ── Assessment Gate: No Assessment ──────────────
-  if (scoreCheck === 'no_assessment') {
-    return (
-      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="card text-center py-16 px-8 max-w-md w-full"
-        >
-          <Lock className="w-16 h-16 text-white/20 mx-auto mb-6" />
-          <h2 className="text-xl font-bold mb-3">Take Your Assessment First</h2>
-          <p className="text-white/40 text-sm mb-6">
-            Complete the skill assessment to unlock job matching. Score at least 85% to start applying.
-          </p>
-          <Link
-            href="/dashboard/assessment"
-            className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2"
-          >
-            <Brain className="w-4 h-4" /> Take Assessment
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ── Assessment Gate: Low Score ──────────────────
-  if (scoreCheck === 'low_score') {
-    return (
-      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="card text-center py-16 px-8 max-w-md w-full"
-        >
-          <Lock className="w-16 h-16 text-neon-orange mx-auto mb-6" />
-          <h2 className="text-xl font-bold mb-3">Almost There!</h2>
-          <p className="text-white/40 text-sm mb-2">
-            Your assessment score: <span className="text-neon-orange font-bold text-2xl">{assessmentScore}%</span>
-          </p>
-          <p className="text-white/40 text-sm mb-6">
-            You need at least 85% to unlock job applications.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Link
-              href="/dashboard/learning"
-              className="btn-secondary text-sm px-5 py-2.5 inline-flex items-center gap-2"
-            >
-              <BookOpen className="w-4 h-4" /> Learning Path
-            </Link>
-            <Link
-              href="/dashboard/assessment"
-              className="btn-primary text-sm px-5 py-2.5 inline-flex items-center gap-2"
-            >
-              <Brain className="w-4 h-4" /> Re-Take Assessment
-            </Link>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ── Unlocked: Normal Job Search UI ─────────────
+  // ── Normal Job Search UI (no assessment gate) ─────────────
   return (
     <div className="max-w-5xl mx-auto">
+      {/* Upgrade Modal for non-ULTRA users */}
+      <AnimatePresence>
+        {showUpgradeModal && selectedJob && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md glass border border-white/10 rounded-2xl p-6 text-center"
+            >
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/5"
+              >
+                <X className="w-4 h-4 text-white/40" />
+              </button>
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-orange/20 to-neon-purple/20 flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-neon-orange" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Upgrade to Ultra</h3>
+              <p className="text-sm text-white/50 mb-2">
+                You found a great match!
+              </p>
+              <p className="text-sm text-white/40 mb-6">
+                Upgrade to the <span className="text-neon-orange font-semibold">Ultra plan</span> to view full job details, apply directly, and get AI-powered application assistance.
+              </p>
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 mb-6 text-left">
+                <p className="text-sm font-medium text-white/80">{selectedJob.title}</p>
+                <p className="text-xs text-white/40">{selectedJob.company} - {selectedJob.location}</p>
+              </div>
+              <div className="flex gap-3">
+                <Link
+                  href="/pricing"
+                  className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2 text-sm font-semibold"
+                >
+                  <Crown className="w-4 h-4" /> Upgrade Now
+                </Link>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="flex-1 btn-secondary py-2.5 text-sm"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
@@ -523,15 +488,16 @@ export default function JobsPage() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      <a
-                        href={job.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewJob(job);
+                        }}
                         className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         View Job <ExternalLink className="w-3 h-3" />
-                      </a>
+                        {!isUltra && <Lock className="w-3 h-3 ml-0.5 opacity-60" />}
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -661,9 +627,13 @@ export default function JobsPage() {
                     <p className="text-sm text-white/30 line-clamp-2">{job.description}</p>
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
-                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap">
+                    <button
+                      onClick={() => handleViewJob(job)}
+                      className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap"
+                    >
                       View Job <ExternalLink className="w-3 h-3" />
-                    </a>
+                      {!isUltra && <Lock className="w-3 h-3 ml-0.5 opacity-60" />}
+                    </button>
                     <button
                       onClick={() => toggleSaveJob(job)}
                       className="btn-secondary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap text-red-400 hover:text-red-300"

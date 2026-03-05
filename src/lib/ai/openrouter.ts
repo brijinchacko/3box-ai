@@ -436,16 +436,26 @@ export async function generateCoverLetter(
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('cover-letter', userPlan);
+  const isGeneric = !jobDescription || !jobDescription.trim();
+
+  const systemPrompt = isGeneric
+    ? `Write a compelling, personalized GENERIC cover letter using the user's actual name and background. This cover letter should be usable across multiple job applications in the user's industry. Do NOT mention any specific company or job title. Focus on the candidate's transferable skills, key achievements, and professional value proposition. Keep it concise (3-4 paragraphs). Return plain text.`
+    : `Write a compelling, personalized cover letter using the user's actual name and background. Keep it concise (3-4 paragraphs). Match the candidate's real experience and skills to the job requirements. Return plain text.`;
+
+  const userMessage = isGeneric
+    ? `Resume: ${JSON.stringify(resume)}. Generate a generic cover letter that can be used for any relevant job application in my field.`
+    : `Resume: ${JSON.stringify(resume)}. Job description: ${jobDescription}`;
+
   return aiChatWithFallback(
     {
       messages: [
         {
           role: 'system',
-          content: injectContext(`Write a compelling, personalized cover letter using the user's actual name and background. Keep it concise (3-4 paragraphs). Match the candidate's real experience and skills to the job requirements. Return plain text.`, userContext),
+          content: injectContext(systemPrompt, userContext),
         },
         {
           role: 'user',
-          content: `Resume: ${JSON.stringify(resume)}. Job description: ${jobDescription}`,
+          content: userMessage,
         },
       ],
     },

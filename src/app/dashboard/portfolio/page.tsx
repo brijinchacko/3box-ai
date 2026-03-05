@@ -21,6 +21,175 @@ interface Project {
   score: number | null;
 }
 
+// ── Portfolio Theme Definitions ──────────────────────
+type PortfolioTheme = 'midnight' | 'arctic' | 'sunset' | 'forest' | 'neon';
+
+interface ThemeConfig {
+  id: PortfolioTheme;
+  name: string;
+  desc: string;
+  bg: string;
+  cardBg: string;
+  cardBorder: string;
+  cardHover: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  accent1: string;
+  accent2: string;
+  gradientFrom: string;
+  gradientVia: string;
+  gradientTo: string;
+  skillBg: string;
+  skillBorder: string;
+  skillText: string;
+  tagBg: string;
+  tagBorder: string;
+  tagText: string;
+  divider: string;
+  blob1: string;
+  blob2: string;
+  previewSwatch: string;
+}
+
+const PORTFOLIO_THEMES: ThemeConfig[] = [
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    desc: 'Dark bg, purple/blue gradient accents',
+    bg: 'bg-[#0a0a0f]',
+    cardBg: 'bg-white/[0.03]',
+    cardBorder: 'border-white/[0.06]',
+    cardHover: 'hover:border-[#a855f7]/20 hover:bg-white/[0.05]',
+    textPrimary: 'text-white/90',
+    textSecondary: 'text-white/60',
+    textMuted: 'text-white/40',
+    accent1: '#00d4ff',
+    accent2: '#a855f7',
+    gradientFrom: 'from-[#00d4ff]',
+    gradientVia: 'via-[#a855f7]',
+    gradientTo: 'to-[#00ff88]',
+    skillBg: 'bg-white/[0.04]',
+    skillBorder: 'border-white/[0.08]',
+    skillText: 'text-white/50',
+    tagBg: 'bg-[#a855f7]/10',
+    tagBorder: 'border-[#a855f7]/10',
+    tagText: 'text-[#a855f7]/60',
+    divider: 'border-white/[0.06]',
+    blob1: 'bg-[#a855f7]/5',
+    blob2: 'bg-[#00d4ff]/5',
+    previewSwatch: 'bg-gradient-to-br from-[#a855f7] to-[#00d4ff]',
+  },
+  {
+    id: 'arctic',
+    name: 'Arctic',
+    desc: 'Light/white bg, clean minimal, blue accents',
+    bg: 'bg-[#f8fafc]',
+    cardBg: 'bg-white',
+    cardBorder: 'border-[#e2e8f0]',
+    cardHover: 'hover:border-[#3b82f6]/30 hover:shadow-md',
+    textPrimary: 'text-[#0f172a]',
+    textSecondary: 'text-[#475569]',
+    textMuted: 'text-[#94a3b8]',
+    accent1: '#3b82f6',
+    accent2: '#0ea5e9',
+    gradientFrom: 'from-[#3b82f6]',
+    gradientVia: 'via-[#0ea5e9]',
+    gradientTo: 'to-[#06b6d4]',
+    skillBg: 'bg-[#f1f5f9]',
+    skillBorder: 'border-[#e2e8f0]',
+    skillText: 'text-[#475569]',
+    tagBg: 'bg-[#3b82f6]/10',
+    tagBorder: 'border-[#3b82f6]/20',
+    tagText: 'text-[#3b82f6]',
+    divider: 'border-[#e2e8f0]',
+    blob1: 'bg-[#3b82f6]/5',
+    blob2: 'bg-[#0ea5e9]/5',
+    previewSwatch: 'bg-gradient-to-br from-[#f8fafc] to-[#3b82f6]',
+  },
+  {
+    id: 'sunset',
+    name: 'Sunset',
+    desc: 'Dark bg with warm orange/amber/gold gradients',
+    bg: 'bg-[#0c0a09]',
+    cardBg: 'bg-white/[0.03]',
+    cardBorder: 'border-white/[0.06]',
+    cardHover: 'hover:border-[#f59e0b]/20 hover:bg-white/[0.05]',
+    textPrimary: 'text-white/90',
+    textSecondary: 'text-white/60',
+    textMuted: 'text-white/40',
+    accent1: '#f59e0b',
+    accent2: '#ef4444',
+    gradientFrom: 'from-[#f59e0b]',
+    gradientVia: 'via-[#ef4444]',
+    gradientTo: 'to-[#ec4899]',
+    skillBg: 'bg-white/[0.04]',
+    skillBorder: 'border-white/[0.08]',
+    skillText: 'text-white/50',
+    tagBg: 'bg-[#f59e0b]/10',
+    tagBorder: 'border-[#f59e0b]/10',
+    tagText: 'text-[#f59e0b]/70',
+    divider: 'border-white/[0.06]',
+    blob1: 'bg-[#f59e0b]/5',
+    blob2: 'bg-[#ef4444]/5',
+    previewSwatch: 'bg-gradient-to-br from-[#f59e0b] to-[#ef4444]',
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    desc: 'Dark bg with green/emerald accents, nature feel',
+    bg: 'bg-[#0a0f0c]',
+    cardBg: 'bg-white/[0.03]',
+    cardBorder: 'border-white/[0.06]',
+    cardHover: 'hover:border-[#10b981]/20 hover:bg-white/[0.05]',
+    textPrimary: 'text-white/90',
+    textSecondary: 'text-white/60',
+    textMuted: 'text-white/40',
+    accent1: '#10b981',
+    accent2: '#059669',
+    gradientFrom: 'from-[#10b981]',
+    gradientVia: 'via-[#059669]',
+    gradientTo: 'to-[#14b8a6]',
+    skillBg: 'bg-white/[0.04]',
+    skillBorder: 'border-white/[0.08]',
+    skillText: 'text-white/50',
+    tagBg: 'bg-[#10b981]/10',
+    tagBorder: 'border-[#10b981]/10',
+    tagText: 'text-[#10b981]/70',
+    divider: 'border-white/[0.06]',
+    blob1: 'bg-[#10b981]/5',
+    blob2: 'bg-[#059669]/5',
+    previewSwatch: 'bg-gradient-to-br from-[#10b981] to-[#059669]',
+  },
+  {
+    id: 'neon',
+    name: 'Neon',
+    desc: 'True black bg with bright neon cyan/pink accents',
+    bg: 'bg-[#000000]',
+    cardBg: 'bg-white/[0.02]',
+    cardBorder: 'border-white/[0.05]',
+    cardHover: 'hover:border-[#06b6d4]/30 hover:bg-white/[0.04]',
+    textPrimary: 'text-white/95',
+    textSecondary: 'text-white/60',
+    textMuted: 'text-white/35',
+    accent1: '#06b6d4',
+    accent2: '#ec4899',
+    gradientFrom: 'from-[#06b6d4]',
+    gradientVia: 'via-[#ec4899]',
+    gradientTo: 'to-[#8b5cf6]',
+    skillBg: 'bg-white/[0.03]',
+    skillBorder: 'border-white/[0.06]',
+    skillText: 'text-white/50',
+    tagBg: 'bg-[#06b6d4]/10',
+    tagBorder: 'border-[#06b6d4]/15',
+    tagText: 'text-[#06b6d4]/80',
+    divider: 'border-white/[0.05]',
+    blob1: 'bg-[#06b6d4]/5',
+    blob2: 'bg-[#ec4899]/5',
+    previewSwatch: 'bg-gradient-to-br from-[#06b6d4] to-[#ec4899]',
+  },
+];
+
 // Helper: ensure URLs have protocol prefix
 function ensureUrl(url: string): string {
   if (!url) return '';
@@ -45,6 +214,7 @@ export default function PortfolioPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProject, setNewProject] = useState<Partial<Project>>({ title: '', description: '', skills: [], github: '', live: '', status: 'draft' });
   const [comingSoonMsg, setComingSoonMsg] = useState('');
+  const [selectedTheme, setSelectedTheme] = useState<PortfolioTheme>('midnight');
 
   // API integration state
   const [saving, setSaving] = useState(false);
@@ -71,6 +241,10 @@ export default function PortfolioPage() {
             setPortfolioSkills(Array.isArray(p.skills) ? p.skills : []);
             setPortfolioSlug(p.slug || null);
             setIsPublished(p.isPublic || false);
+            // Load saved theme
+            if (p.theme && PORTFOLIO_THEMES.some(t => t.id === p.theme)) {
+              setSelectedTheme(p.theme as PortfolioTheme);
+            }
             if (Array.isArray(p.projects) && p.projects.length > 0) {
               setProjects(p.projects);
             }
@@ -139,7 +313,7 @@ export default function PortfolioPage() {
           bio: portfolioBio,
           projects: updatedProjects,
           skills: allSkills,
-          theme: 'dark',
+          theme: selectedTheme,
         }),
       });
       if (res.ok) {
@@ -156,7 +330,7 @@ export default function PortfolioPage() {
     } finally {
       setSaving(false);
     }
-  }, [portfolioTitle, portfolioBio]);
+  }, [portfolioTitle, portfolioBio, selectedTheme]);
 
   // Save projects: update state and debounce API save
   const saveProjects = useCallback((updatedProjects: Project[]) => {
@@ -185,7 +359,7 @@ export default function PortfolioPage() {
           bio: portfolioBio,
           projects,
           skills: allSkills,
-          theme: 'dark',
+          theme: selectedTheme,
         }),
       });
 
@@ -416,33 +590,37 @@ export default function PortfolioPage() {
       </div>
 
       {/* ── Portfolio Preview Mode ── */}
-      {activeTab === 'preview' && (
+      {activeTab === 'preview' && (() => {
+        const theme = PORTFOLIO_THEMES.find(t => t.id === selectedTheme) || PORTFOLIO_THEMES[0];
+        return (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-2xl overflow-hidden border border-white/10 bg-[#0a0a0f] min-h-[600px]"
+          className={`rounded-2xl overflow-hidden border border-white/10 ${theme.bg} min-h-[600px]`}
         >
           {/* Preview gradient background */}
           <div className="relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-[#a855f7]/5 rounded-full blur-[100px]" />
-              <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] bg-[#00d4ff]/5 rounded-full blur-[100px]" />
+              <div className={`absolute top-0 left-1/4 w-[400px] h-[400px] ${theme.blob1} rounded-full blur-[100px]`} />
+              <div className={`absolute bottom-0 right-1/4 w-[350px] h-[350px] ${theme.blob2} rounded-full blur-[100px]`} />
             </div>
 
             <div className="relative z-10 max-w-3xl mx-auto px-6 sm:px-8 py-10 sm:py-16">
               {/* Header */}
               <div className="text-center mb-12">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#00d4ff]/30 to-[#a855f7]/30 border-2 border-white/10 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl font-bold bg-gradient-to-r from-[#00d4ff] to-[#a855f7] bg-clip-text text-transparent">
+                <div className="w-20 h-20 rounded-full border-2 border-white/10 flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `linear-gradient(135deg, ${theme.accent1}30, ${theme.accent2}30)` }}
+                >
+                  <span className="text-2xl font-bold" style={{ background: `linear-gradient(to right, ${theme.accent1}, ${theme.accent2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     {userName?.charAt(0) || 'U'}
                   </span>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-[#00d4ff] via-[#a855f7] to-[#00ff88] bg-clip-text text-transparent">
+                <h1 className={`text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r ${theme.gradientFrom} ${theme.gradientVia} ${theme.gradientTo} bg-clip-text text-transparent`}>
                   {userName || 'Your Name'}
                 </h1>
-                <p className="text-white/60 text-base mb-3">{portfolioTitle || 'My Portfolio'}</p>
-                {portfolioBio && <p className="text-white/40 max-w-xl mx-auto text-sm leading-relaxed">{portfolioBio}</p>}
-                <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/30">
+                <p className={`${theme.textSecondary} text-base mb-3`}>{portfolioTitle || 'My Portfolio'}</p>
+                {portfolioBio && <p className={`${theme.textMuted} max-w-xl mx-auto text-sm leading-relaxed`}>{portfolioBio}</p>}
+                <div className={`flex items-center justify-center gap-4 mt-4 text-xs ${theme.textMuted}`}>
                   {userEmail && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {userEmail}</span>}
                   {userLocation && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {userLocation}</span>}
                   {userLinkedin && <span className="flex items-center gap-1"><Linkedin className="w-3 h-3" /> LinkedIn</span>}
@@ -453,12 +631,12 @@ export default function PortfolioPage() {
               {portfolioSkills.length > 0 && (
                 <div className="mb-12">
                   <div className="flex items-center gap-2 mb-4">
-                    <Code className="w-4 h-4 text-[#00d4ff]" />
-                    <h2 className="text-sm font-semibold text-white/70">Skills</h2>
+                    <Code className="w-4 h-4" style={{ color: theme.accent1 }} />
+                    <h2 className={`text-sm font-semibold ${theme.textSecondary}`}>Skills</h2>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {portfolioSkills.map(skill => (
-                      <span key={skill} className="px-3 py-1 rounded-full text-xs bg-white/[0.04] border border-white/[0.08] text-white/50">
+                      <span key={skill} className={`px-3 py-1 rounded-full text-xs ${theme.skillBg} border ${theme.skillBorder} ${theme.skillText}`}>
                         {skill}
                       </span>
                     ))}
@@ -470,30 +648,30 @@ export default function PortfolioPage() {
               {projects.length > 0 ? (
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Sparkles className="w-4 h-4 text-[#a855f7]" />
-                    <h2 className="text-sm font-semibold text-white/70">Projects</h2>
+                    <Sparkles className="w-4 h-4" style={{ color: theme.accent2 }} />
+                    <h2 className={`text-sm font-semibold ${theme.textSecondary}`}>Projects</h2>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     {projects.map(project => (
                       <div
                         key={project.id}
-                        className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 hover:border-[#a855f7]/20 hover:bg-white/[0.05] transition-all"
+                        className={`rounded-xl ${theme.cardBg} border ${theme.cardBorder} p-5 ${theme.cardHover} transition-all`}
                       >
-                        <h3 className="font-semibold text-sm mb-1.5 text-white/90">{project.title}</h3>
-                        <p className="text-xs text-white/40 mb-3 line-clamp-2">{project.description}</p>
+                        <h3 className={`font-semibold text-sm mb-1.5 ${theme.textPrimary}`}>{project.title}</h3>
+                        <p className={`text-xs ${theme.textMuted} mb-3 line-clamp-2`}>{project.description}</p>
                         <div className="flex flex-wrap gap-1 mb-3">
                           {project.skills.map(s => (
-                            <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-[#a855f7]/10 text-[#a855f7]/60 border border-[#a855f7]/10">{s}</span>
+                            <span key={s} className={`text-[10px] px-2 py-0.5 rounded-full ${theme.tagBg} ${theme.tagText} border ${theme.tagBorder}`}>{s}</span>
                           ))}
                         </div>
                         <div className="flex items-center gap-3">
                           {project.github && (
-                            <span className="text-[11px] text-white/30 flex items-center gap-1">
+                            <span className={`text-[11px] ${theme.textMuted} flex items-center gap-1`}>
                               <Github className="w-3 h-3" /> GitHub
                             </span>
                           )}
                           {project.live && (
-                            <span className="text-[11px] text-[#00d4ff]/60 flex items-center gap-1">
+                            <span className="text-[11px] flex items-center gap-1" style={{ color: `${theme.accent1}99` }}>
                               <ArrowUpRight className="w-3 h-3" /> Live Demo
                             </span>
                           )}
@@ -504,19 +682,20 @@ export default function PortfolioPage() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <FolderOpen className="w-12 h-12 text-white/10 mx-auto mb-3" />
-                  <p className="text-sm text-white/30">No projects yet. Add projects in the Builder tab to see them here.</p>
+                  <FolderOpen className={`w-12 h-12 ${theme.textMuted} mx-auto mb-3`} style={{ opacity: 0.3 }} />
+                  <p className={`text-sm ${theme.textMuted}`}>No projects yet. Add projects in the Builder tab to see them here.</p>
                 </div>
               )}
 
               {/* Footer */}
-              <div className="mt-12 pt-6 border-t border-white/[0.06] text-center">
-                <p className="text-[10px] text-white/15">Built with NXTED AI</p>
+              <div className={`mt-12 pt-6 border-t ${theme.divider} text-center`}>
+                <p className={`text-[10px] ${theme.textMuted}`} style={{ opacity: 0.4 }}>Built with NXTED AI</p>
               </div>
             </div>
           </div>
         </motion.div>
-      )}
+        );
+      })()}
 
       {/* ── Builder Mode ── */}
       {activeTab === 'builder' && (<>
@@ -671,6 +850,43 @@ export default function PortfolioPage() {
               placeholder="Full-stack developer passionate about building great products..."
             />
           </div>
+        </div>
+      </div>
+
+      {/* Theme Picker */}
+      <div className="card mb-8">
+        <h3 className="text-sm font-semibold text-white/60 mb-3 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-neon-purple" /> Choose Theme
+        </h3>
+        <p className="text-xs text-white/30 mb-4">Select a visual theme for your portfolio. The theme will be applied to your public portfolio page.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {PORTFOLIO_THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => {
+                setSelectedTheme(theme.id);
+                // Trigger a save with the new theme
+                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = setTimeout(() => {
+                  savePortfolioToAPI(projects);
+                }, 500);
+              }}
+              className={`relative p-3 rounded-xl border transition-all text-left ${
+                selectedTheme === theme.id
+                  ? 'border-neon-purple/50 bg-neon-purple/5 ring-1 ring-neon-purple/30'
+                  : 'border-white/10 bg-white/[0.02] hover:border-white/20'
+              }`}
+            >
+              <div className={`w-full h-8 rounded-lg mb-2 ${theme.previewSwatch}`} />
+              <div className="text-xs font-medium text-white/80">{theme.name}</div>
+              <div className="text-[10px] text-white/30 leading-tight">{theme.desc}</div>
+              {selectedTheme === theme.id && (
+                <div className="absolute top-2 right-2">
+                  <CheckCircle2 className="w-4 h-4 text-neon-purple" />
+                </div>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 

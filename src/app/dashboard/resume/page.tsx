@@ -189,6 +189,8 @@ export default function ResumePage() {
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
+          // Extract phone & linkedin from careerTwin skillSnapshot profile if available
+          const profileData = data.careerTwin?.skillSnapshot?._profile || {};
           setResume(prev => ({
             ...prev,
             title: data.targetRole ? `${data.targetRole} Resume` : 'My Resume',
@@ -197,6 +199,8 @@ export default function ResumePage() {
               name: data.name || '',
               email: data.email || '',
               location: data.location || '',
+              phone: profileData.phone || data.phone || '',
+              linkedin: profileData.linkedin || data.linkedin || '',
             },
           }));
         }
@@ -430,8 +434,8 @@ export default function ResumePage() {
   };
 
   // ── Generate Cover Letter ──────────────────────
-  const handleGenerateCoverLetter = async () => {
-    if (!coverLetterJobDesc.trim()) {
+  const handleGenerateCoverLetter = async (generic: boolean = false) => {
+    if (!generic && !coverLetterJobDesc.trim()) {
       showToast('Please paste a job description first.', 'error');
       return;
     }
@@ -439,26 +443,31 @@ export default function ResumePage() {
     setCoverLetterLoading(true);
 
     try {
+      const body: any = {
+        resume: {
+          contact: resume.contact,
+          summary: resume.summary,
+          experience: resume.experience,
+          skills: resume.skills,
+          education: resume.education,
+        },
+      };
+      // Only include jobDescription when not generating a generic cover letter
+      if (!generic && coverLetterJobDesc.trim()) {
+        body.jobDescription = coverLetterJobDesc;
+      }
+
       const res = await fetch('/api/ai/cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resume: {
-            contact: resume.contact,
-            summary: resume.summary,
-            experience: resume.experience,
-            skills: resume.skills,
-            education: resume.education,
-          },
-          jobDescription: coverLetterJobDesc,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error('Failed to generate cover letter');
       const data = await res.json();
       setCoverLetter(data.coverLetter || '');
       if (isBasic) incrementAIUses();
-      showToast('Cover letter generated!', 'success');
+      showToast(generic ? 'Generic cover letter generated!' : 'Cover letter generated!', 'success');
     } catch (error) {
       console.error('Cover letter error:', error);
       showToast('Failed to generate cover letter. Try again.', 'error');
@@ -620,28 +629,57 @@ export default function ResumePage() {
               {!coverLetter ? (
                 <>
                   <p className="text-sm text-white/40 mb-4">
-                    Paste the job description below and AI will generate a tailored cover letter based on your resume.
+                    Generate a generic cover letter based on your resume, or paste a job description for a tailored one.
                   </p>
+
+                  {/* Generic Cover Letter Button */}
+                  <button
+                    onClick={() => handleGenerateCoverLetter(true)}
+                    disabled={coverLetterLoading}
+                    className="btn-secondary w-full flex items-center justify-center gap-2 mb-4"
+                  >
+                    {coverLetterLoading && !coverLetterJobDesc.trim() ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        AI is writing your generic cover letter...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Generate Generic Cover Letter
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-white/10" />
+                    <span className="text-xs text-white/30">or tailor to a job</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+
+                  <label className="block text-xs text-white/50 mb-1.5">
+                    Optionally paste a job description for a tailored cover letter
+                  </label>
                   <textarea
                     value={coverLetterJobDesc}
                     onChange={(e) => setCoverLetterJobDesc(e.target.value)}
-                    className="input-field h-40 resize-none mb-4"
+                    className="input-field h-32 resize-none mb-4"
                     placeholder="Paste the job description here..."
                   />
                   <button
-                    onClick={handleGenerateCoverLetter}
-                    disabled={coverLetterLoading}
+                    onClick={() => handleGenerateCoverLetter(false)}
+                    disabled={coverLetterLoading || !coverLetterJobDesc.trim()}
                     className="btn-primary flex items-center gap-2"
                   >
-                    {coverLetterLoading ? (
+                    {coverLetterLoading && coverLetterJobDesc.trim() ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        AI is writing your cover letter...
+                        AI is writing your tailored cover letter...
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4" />
-                        Generate Cover Letter
+                        Generate Tailored Cover Letter
                       </>
                     )}
                   </button>
@@ -1262,31 +1300,108 @@ export default function ResumePage() {
                 </motion.div>
               )}
 
-              {/* Default for other sections */}
-              {!['contact', 'summary', 'experience', 'skills', 'template', 'tailor'].includes(activeSection) && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
-                  <h3 className="font-semibold mb-4 capitalize">{activeSection}</h3>
-                  <p className="text-sm text-white/40">Edit your {activeSection} section here. AI can help generate content.</p>
+              {/* ── Education Section ── */}
+              {activeSection === 'education' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                  {resume.education.map((edu) => (
+                    <div key={edu.id} className="card">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold text-sm">{edu.degree} {edu.field && `in ${edu.field}`}</h4>
+                          <p className="text-xs text-white/40">{edu.institution}</p>
+                          <p className="text-xs text-white/30">{edu.startDate} — {edu.endDate}{edu.gpa && ` | GPA: ${edu.gpa}`}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              const updated = resume.education.filter(e => e.id !== edu.id);
+                              setResume({ ...resume, education: updated });
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Institution</label>
+                          <input
+                            value={edu.institution}
+                            onChange={(e) => setResume({ ...resume, education: resume.education.map(ed => ed.id === edu.id ? { ...ed, institution: e.target.value } : ed) })}
+                            className="input-field text-sm"
+                            placeholder="University name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Degree</label>
+                          <input
+                            value={edu.degree}
+                            onChange={(e) => setResume({ ...resume, education: resume.education.map(ed => ed.id === edu.id ? { ...ed, degree: e.target.value } : ed) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., Bachelor of Science"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Field of Study</label>
+                          <input
+                            value={edu.field}
+                            onChange={(e) => setResume({ ...resume, education: resume.education.map(ed => ed.id === edu.id ? { ...ed, field: e.target.value } : ed) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., Computer Science"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">GPA</label>
+                          <input
+                            value={edu.gpa}
+                            onChange={(e) => setResume({ ...resume, education: resume.education.map(ed => ed.id === edu.id ? { ...ed, gpa: e.target.value } : ed) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., 3.8"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Start Date</label>
+                          <input
+                            value={edu.startDate}
+                            onChange={(e) => setResume({ ...resume, education: resume.education.map(ed => ed.id === edu.id ? { ...ed, startDate: e.target.value } : ed) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., Sep 2018"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">End Date</label>
+                          <input
+                            value={edu.endDate}
+                            onChange={(e) => setResume({ ...resume, education: resume.education.map(ed => ed.id === edu.id ? { ...ed, endDate: e.target.value } : ed) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., May 2022"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const newEdu = { id: Date.now().toString(), institution: '', degree: '', field: '', startDate: '', endDate: '', gpa: '' };
+                      setResume({ ...resume, education: [...resume.education, newEdu] });
+                    }}
+                    className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-white/40 hover:text-white/60 hover:border-white/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Add Education
+                  </button>
                   <button
                     onClick={async () => {
                       if (!checkAILimit()) return;
-                      setAiLoading(activeSection);
+                      setAiLoading('education');
                       try {
-                        // Build content string from the section data
-                        let sectionContent = '';
-                        if (activeSection === 'certifications') {
-                          sectionContent = resume.certifications.map(c => `${c.name} - ${c.issuer} (${c.date})`).join('\n');
-                        } else if (activeSection === 'projects') {
-                          sectionContent = resume.projects.map(p => `${p.name}: ${p.description}`).join('\n');
-                        } else if (activeSection === 'education') {
-                          sectionContent = resume.education.map(e => `${e.degree} ${e.field} at ${e.institution}`).join('\n');
-                        }
+                        const sectionContent = resume.education.map(e => `${e.degree} ${e.field} at ${e.institution}`).join('\n');
                         const res = await fetch('/api/ai/resume/enhance', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            section: 'experience', // Use a valid section type
-                            content: sectionContent || `Generate ${activeSection} content for an AI Engineer with skills: ${resume.skills.join(', ')}`,
+                            section: 'experience',
+                            content: sectionContent || `Generate education content for a professional with skills: ${resume.skills.join(', ')}`,
                           }),
                         });
                         if (!res.ok) {
@@ -1297,9 +1412,8 @@ export default function ResumePage() {
                           }
                           throw new Error('Generation failed');
                         }
-                        const data = await res.json();
                         if (isBasic) incrementAIUses();
-                        showToast(`AI generated ${activeSection} content!`, 'success');
+                        showToast('AI generated education content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
                         showToast('AI generation failed. Try again.', 'error');
@@ -1308,17 +1422,231 @@ export default function ResumePage() {
                       }
                     }}
                     disabled={aiLoading !== null}
-                    className="btn-secondary text-sm mt-4 flex items-center gap-2"
+                    className="btn-secondary text-sm flex items-center gap-2"
                   >
-                    {aiLoading === activeSection ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        AI is generating...
-                      </>
+                    {aiLoading === 'education' ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> AI is generating...</>
                     ) : (
-                      <>
-                        <Wand2 className="w-4 h-4" /> AI Generate {activeSection}
-                      </>
+                      <><Wand2 className="w-4 h-4" /> AI Generate Education</>
+                    )}
+                  </button>
+                </motion.div>
+              )}
+
+              {/* ── Certifications Section ── */}
+              {activeSection === 'certifications' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                  {resume.certifications.map((cert) => (
+                    <div key={cert.id} className="card">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold text-sm">{cert.name || 'New Certification'}</h4>
+                          <p className="text-xs text-white/40">{cert.issuer}{cert.date && ` | ${cert.date}`}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              const updated = resume.certifications.filter(c => c.id !== cert.id);
+                              setResume({ ...resume, certifications: updated });
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Certification Name</label>
+                          <input
+                            value={cert.name}
+                            onChange={(e) => setResume({ ...resume, certifications: resume.certifications.map(c => c.id === cert.id ? { ...c, name: e.target.value } : c) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., AWS Solutions Architect"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Issuer</label>
+                          <input
+                            value={cert.issuer}
+                            onChange={(e) => setResume({ ...resume, certifications: resume.certifications.map(c => c.id === cert.id ? { ...c, issuer: e.target.value } : c) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., Amazon Web Services"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Date</label>
+                          <input
+                            value={cert.date}
+                            onChange={(e) => setResume({ ...resume, certifications: resume.certifications.map(c => c.id === cert.id ? { ...c, date: e.target.value } : c) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., Jan 2024"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const newCert = { id: Date.now().toString(), name: '', issuer: '', date: '', verified: false };
+                      setResume({ ...resume, certifications: [...resume.certifications, newCert] });
+                    }}
+                    className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-white/40 hover:text-white/60 hover:border-white/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Add Certification
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!checkAILimit()) return;
+                      setAiLoading('certifications');
+                      try {
+                        const sectionContent = resume.certifications.map(c => `${c.name} - ${c.issuer} (${c.date})`).join('\n');
+                        const res = await fetch('/api/ai/resume/enhance', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            section: 'experience',
+                            content: sectionContent || `Generate certification recommendations for a professional with skills: ${resume.skills.join(', ')}`,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const errData = await res.json().catch(() => null);
+                          if (errData?.code === 'PLAN_LIMIT_REACHED') {
+                            showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                            return;
+                          }
+                          throw new Error('Generation failed');
+                        }
+                        if (isBasic) incrementAIUses();
+                        showToast('AI generated certification content!', 'success');
+                      } catch (error) {
+                        console.error('AI Generate error:', error);
+                        showToast('AI generation failed. Try again.', 'error');
+                      } finally {
+                        setAiLoading(null);
+                      }
+                    }}
+                    disabled={aiLoading !== null}
+                    className="btn-secondary text-sm flex items-center gap-2"
+                  >
+                    {aiLoading === 'certifications' ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> AI is generating...</>
+                    ) : (
+                      <><Wand2 className="w-4 h-4" /> AI Generate Certifications</>
+                    )}
+                  </button>
+                </motion.div>
+              )}
+
+              {/* ── Projects Section ── */}
+              {activeSection === 'projects' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                  {resume.projects.map((proj) => (
+                    <div key={proj.id} className="card">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold text-sm">{proj.name || 'New Project'}</h4>
+                          <p className="text-xs text-white/40 line-clamp-1">{proj.description}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              const updated = resume.projects.filter(p => p.id !== proj.id);
+                              setResume({ ...resume, projects: updated });
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Project Name</label>
+                          <input
+                            value={proj.name}
+                            onChange={(e) => setResume({ ...resume, projects: resume.projects.map(p => p.id === proj.id ? { ...p, name: e.target.value } : p) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., E-Commerce Platform"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Description</label>
+                          <textarea
+                            value={proj.description}
+                            onChange={(e) => setResume({ ...resume, projects: resume.projects.map(p => p.id === proj.id ? { ...p, description: e.target.value } : p) })}
+                            className="input-field text-sm h-20 resize-none"
+                            placeholder="Brief description of the project and your contributions..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">URL</label>
+                          <input
+                            value={proj.url}
+                            onChange={(e) => setResume({ ...resume, projects: resume.projects.map(p => p.id === proj.id ? { ...p, url: e.target.value } : p) })}
+                            className="input-field text-sm"
+                            placeholder="https://github.com/user/project"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Technologies (comma-separated)</label>
+                          <input
+                            value={proj.technologies.join(', ')}
+                            onChange={(e) => setResume({ ...resume, projects: resume.projects.map(p => p.id === proj.id ? { ...p, technologies: e.target.value.split(',').map(t => t.trim()).filter(Boolean) } : p) })}
+                            className="input-field text-sm"
+                            placeholder="e.g., React, Node.js, PostgreSQL"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const newProj = { id: Date.now().toString(), name: '', description: '', url: '', technologies: [] as string[] };
+                      setResume({ ...resume, projects: [...resume.projects, newProj] });
+                    }}
+                    className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-white/40 hover:text-white/60 hover:border-white/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Add Project
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!checkAILimit()) return;
+                      setAiLoading('projects');
+                      try {
+                        const sectionContent = resume.projects.map(p => `${p.name}: ${p.description}`).join('\n');
+                        const res = await fetch('/api/ai/resume/enhance', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            section: 'experience',
+                            content: sectionContent || `Generate project ideas for a professional with skills: ${resume.skills.join(', ')}`,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const errData = await res.json().catch(() => null);
+                          if (errData?.code === 'PLAN_LIMIT_REACHED') {
+                            showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                            return;
+                          }
+                          throw new Error('Generation failed');
+                        }
+                        if (isBasic) incrementAIUses();
+                        showToast('AI generated projects content!', 'success');
+                      } catch (error) {
+                        console.error('AI Generate error:', error);
+                        showToast('AI generation failed. Try again.', 'error');
+                      } finally {
+                        setAiLoading(null);
+                      }
+                    }}
+                    disabled={aiLoading !== null}
+                    className="btn-secondary text-sm flex items-center gap-2"
+                  >
+                    {aiLoading === 'projects' ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> AI is generating...</>
+                    ) : (
+                      <><Wand2 className="w-4 h-4" /> AI Generate Projects</>
                     )}
                   </button>
                 </motion.div>

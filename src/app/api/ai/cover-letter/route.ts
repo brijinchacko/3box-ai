@@ -18,9 +18,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { resume, jobDescription } = body;
 
-    if (!resume || !jobDescription) {
+    if (!resume) {
       return NextResponse.json(
-        { error: 'resume and jobDescription are required' },
+        { error: 'resume is required' },
         { status: 400 },
       );
     }
@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     // Build user context for AI personalization
     const userContext = await getUserContextString(session.user.id);
 
-    const coverLetter = await generateCoverLetter(resume, jobDescription, user?.plan || 'BASIC', userContext);
+    // jobDescription is now optional — when missing, a generic cover letter is generated
+    const coverLetter = await generateCoverLetter(resume, jobDescription || '', user?.plan || 'BASIC', userContext);
 
     return NextResponse.json({ coverLetter });
   } catch (error) {
