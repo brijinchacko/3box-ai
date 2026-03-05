@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn } from 'next-auth/react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Chrome, KeyRound, ShieldCheck } from 'lucide-react';
@@ -10,20 +11,44 @@ import Logo from '@/components/brand/Logo';
 type AuthMode = 'password' | 'otp';
 type OtpStep = 'email' | 'code';
 
+const ERROR_MESSAGES: Record<string, string> = {
+  OAuthCallback: 'Google sign-in failed. Please try again or use email login.',
+  OAuthSignin: 'Could not start Google sign-in. Please try email login instead.',
+  OAuthAccountNotLinked: 'This email is already registered. Please sign in with your password or OTP.',
+  CredentialsSignin: 'Invalid email or password.',
+  default: 'Something went wrong. Please try again.',
+};
+
 export default function LoginPageClient() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [googleEnabled, setGoogleEnabled] = useState(true);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
 
   // OTP state
   const [otpStep, setOtpStep] = useState<OtpStep>('email');
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [otpTimer, setOtpTimer] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Handle URL error params from NextAuth redirects
+  useEffect(() => {
+    const urlError = searchParams.get('error');
+    if (urlError) {
+      setError(ERROR_MESSAGES[urlError] || ERROR_MESSAGES.default);
+      // Clean up the URL without reloading
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('error');
+        url.searchParams.delete('callbackUrl');
+        window.history.replaceState({}, '', url.pathname);
+      }
+    }
+  }, [searchParams]);
 
   // Check if Google auth is available
   useEffect(() => {
