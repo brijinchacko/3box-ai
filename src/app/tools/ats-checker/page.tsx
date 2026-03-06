@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { getFreeUseCount, incrementFreeUse, hasFreeTrial } from '@/lib/usage/freeUsageTracker';
+import UpgradeModal from '@/components/ui/UpgradeModal';
 
 interface ATSResults {
   score: number;
@@ -91,10 +93,17 @@ export default function ATSCheckerPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ATSResults | null>(null);
   const [error, setError] = useState('');
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!resumeText.trim()) return;
+
+    // Check client-side usage limit
+    if (!hasFreeTrial('ats_checker')) {
+      setShowUpgrade(true);
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -104,15 +113,25 @@ export default function ATSCheckerPage() {
       const res = await fetch('/api/tools/ats-checker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeText, targetJob: targetJob || undefined }),
+        body: JSON.stringify({
+          resumeText,
+          targetJob: targetJob || undefined,
+          clientCount: getFreeUseCount('ats_checker'),
+        }),
       });
 
       if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 403 && errData.error === 'limit_reached') {
+          setShowUpgrade(true);
+          return;
+        }
         throw new Error('Failed to analyze resume');
       }
 
       const data = await res.json();
       setResults(data);
+      incrementFreeUse('ats_checker');
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -559,6 +578,12 @@ export default function ATSCheckerPage() {
           )}
         </div>
       </section>
+
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        serviceName="ATS check"
+      />
 
       <Footer />
     </div>

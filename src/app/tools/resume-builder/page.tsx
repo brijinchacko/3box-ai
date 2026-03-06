@@ -30,6 +30,11 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import TemplatePreview from '@/components/resume/TemplatePreview';
 import Link from 'next/link';
+import LocationInput from '@/components/ui/LocationInput';
+import UpgradeModal from '@/components/ui/UpgradeModal';
+import { getFreeUseCount, incrementFreeUse, hasFreeTrial } from '@/lib/usage/freeUsageTracker';
+import { detectGibberish } from '@/lib/validation/gibberishDetector';
+import { buildResumeHTML } from '@/lib/resume/buildHTML';
 
 // ── Types ──────────────────────────────────────
 
@@ -76,7 +81,7 @@ interface ResumeDataV2 {
 const STORAGE_KEY = 'nxted-resume-builder-data-v2';
 const OLD_STORAGE_KEY = 'nxted-resume-builder-data';
 const DOWNLOAD_KEY = 'nxted-free-downloads';
-const MAX_FREE_DOWNLOADS = 2;
+const MAX_FREE_DOWNLOADS = 1;
 const FREE_TEMPLATE = 'modern';
 
 function generateId() {
@@ -178,7 +183,9 @@ export default function FreeResumeBuilderPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   const [exportSuccess, setExportSuccess] = useState(false);
-  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [enhancing, setEnhancing] = useState<string | null>(null); // 'summary' | 'experience-{id}' | 'skills' | null
+  const [enhanceSuccess, setEnhanceSuccess] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // ── Data migration on mount ────────────────────
   useEffect(() => {
@@ -367,6 +374,13 @@ export default function FreeResumeBuilderPage() {
       return;
     }
 
+    // Gibberish detection
+    const gibCheck = detectGibberish(jobDescription);
+    if (gibCheck.isGibberish) {
+      setGenError('Your message is not clear. Please paste a valid job description with details about the role, responsibilities, and requirements.');
+      return;
+    }
+
     setGenerating(true);
     setGenError('');
 
@@ -439,7 +453,7 @@ export default function FreeResumeBuilderPage() {
 
   const handleExport = async () => {
     if (downloadCount >= MAX_FREE_DOWNLOADS) {
-      setShowLimitModal(true);
+      setShowUpgradeModal(true);
       return;
     }
 
@@ -461,7 +475,7 @@ export default function FreeResumeBuilderPage() {
       if (!res.ok) {
         const err = await res.json();
         if (err.error === 'limit_reached') {
-          setShowLimitModal(true);
+          setShowUpgradeModal(true);
           return;
         }
         throw new Error(err.message || 'Export failed');
@@ -482,6 +496,70 @@ export default function FreeResumeBuilderPage() {
       setExportError(err.message || 'Export failed. Please try again.');
     } finally {
       setExporting(false);
+    }
+  };
+
+  // ── AI Enhance Section ───────────────────────
+  const handleEnhance = async (section: 'summary' | 'experience' | 'skills', expId?: string) => {
+    const enhanceKey = expId ? `experience-${expId}` : section;
+    setEnhancing(enhanceKey);
+    setEnhanceSuccess(null);
+
+    try {
+      let content = '';
+      let context = '';
+
+      if (section === 'summary') {
+        content = resume.summary;
+        context = `Role: ${resume.experience[0]?.role || 'Professional'}. Skills: ${resume.skills.slice(0, 5).join(', ')}`;
+      } else if (section === 'experience' && expId) {
+        const exp = resume.experience.find((e) => e.id === expId);
+        if (!exp) return;
+        content = exp.bullets.join('\n');
+        context = `Role: ${exp.role}, Company: ${exp.company}`;
+      } else if (section === 'skills') {
+        content = resume.skills.join(', ');
+        context = `Role: ${resume.experience[0]?.role || 'Professional'}. Summary: ${resume.summary.slice(0, 100)}`;
+      }
+
+      if (!content.trim()) {
+        setEnhancing(null);
+        return;
+      }
+
+      const res = await fetch('/api/tools/resume-builder/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section, content, context }),
+      });
+
+      if (!res.ok) throw new Error('Enhancement failed');
+
+      const data = await res.json();
+      const enhanced = data.enhanced;
+
+      if (section === 'summary' && typeof enhanced === 'string') {
+        setResume((prev) => ({ ...prev, summary: enhanced }));
+      } else if (section === 'experience' && expId) {
+        const bullets = Array.isArray(enhanced) ? enhanced : typeof enhanced === 'string' ? enhanced.split('\n').filter(Boolean) : [];
+        if (bullets.length > 0) {
+          setResume((prev) => ({
+            ...prev,
+            experience: prev.experience.map((exp) =>
+              exp.id === expId ? { ...exp, bullets } : exp
+            ),
+          }));
+        }
+      } else if (section === 'skills' && Array.isArray(enhanced)) {
+        setResume((prev) => ({ ...prev, skills: enhanced }));
+      }
+
+      setEnhanceSuccess(enhanceKey);
+      setTimeout(() => setEnhanceSuccess(null), 3000);
+    } catch {
+      // Silently fail
+    } finally {
+      setEnhancing(null);
     }
   };
 
@@ -889,13 +967,15 @@ export default function FreeResumeBuilderPage() {
                     placeholder="+1 (555) 000-0000"
                     icon={Phone}
                   />
-                  <Input
-                    label="Location"
-                    value={resume.contact.location}
-                    onChange={(v) => updateContact('location', v)}
-                    placeholder="San Francisco, CA"
-                    icon={MapPin}
-                  />
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1.5 font-medium">Location</label>
+                    <LocationInput
+                      value={resume.contact.location}
+                      onChange={(v) => updateContact('location', v)}
+                      placeholder="San Francisco, CA"
+                      icon={MapPin}
+                    />
+                  </div>
                   <Input
                     label="LinkedIn"
                     value={resume.contact.linkedin}
@@ -924,9 +1004,22 @@ export default function FreeResumeBuilderPage() {
                 exit="exit"
                 className="space-y-4"
               >
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  Professional Summary
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Professional Summary</h3>
+                  <button
+                    onClick={() => handleEnhance('summary')}
+                    disabled={enhancing === 'summary' || !resume.summary.trim()}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/20 hover:bg-[#00d4ff]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {enhancing === 'summary' ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Enhancing...</>
+                    ) : enhanceSuccess === 'summary' ? (
+                      <><Check className="w-3 h-3" /> Enhanced!</>
+                    ) : (
+                      <><Sparkles className="w-3 h-3" /> AI Enhance</>
+                    )}
+                  </button>
+                </div>
                 <textarea
                   value={resume.summary}
                   onChange={(e) =>
@@ -992,12 +1085,14 @@ export default function FreeResumeBuilderPage() {
                         onChange={(v) => updateExperience(exp.id, 'company', v)}
                         placeholder="Google"
                       />
-                      <Input
-                        label="Location"
-                        value={exp.location}
-                        onChange={(v) => updateExperience(exp.id, 'location', v)}
-                        placeholder="Mountain View, CA"
-                      />
+                      <div>
+                        <label className="block text-xs text-white/50 mb-1.5 font-medium">Location</label>
+                        <LocationInput
+                          value={exp.location}
+                          onChange={(v) => updateExperience(exp.id, 'location', v)}
+                          placeholder="Mountain View, CA"
+                        />
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <Input
                           label="Start Date"
@@ -1031,9 +1126,24 @@ export default function FreeResumeBuilderPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-white/50 mb-1.5 font-medium">
-                        Bullet Points (one per line)
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs text-white/50 font-medium">
+                          Bullet Points (one per line)
+                        </label>
+                        <button
+                          onClick={() => handleEnhance('experience', exp.id)}
+                          disabled={enhancing === `experience-${exp.id}` || !exp.bullets.some(b => b.trim())}
+                          className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/20 hover:bg-[#00d4ff]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {enhancing === `experience-${exp.id}` ? (
+                            <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Enhancing...</>
+                          ) : enhanceSuccess === `experience-${exp.id}` ? (
+                            <><Check className="w-2.5 h-2.5" /> Done!</>
+                          ) : (
+                            <><Sparkles className="w-2.5 h-2.5" /> AI Enhance</>
+                          )}
+                        </button>
+                      </div>
                       <textarea
                         value={exp.bullets.join('\n')}
                         onChange={(e) =>
@@ -1146,7 +1256,22 @@ export default function FreeResumeBuilderPage() {
                 exit="exit"
                 className="space-y-4"
               >
-                <h3 className="text-lg font-semibold text-white mb-4">Skills</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Skills</h3>
+                  <button
+                    onClick={() => handleEnhance('skills')}
+                    disabled={enhancing === 'skills' || resume.skills.length === 0}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/20 hover:bg-[#00d4ff]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {enhancing === 'skills' ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Enhancing...</>
+                    ) : enhanceSuccess === 'skills' ? (
+                      <><Check className="w-3 h-3" /> Enhanced!</>
+                    ) : (
+                      <><Sparkles className="w-3 h-3" /> AI Enhance</>
+                    )}
+                  </button>
+                </div>
                 <div>
                   <label className="block text-xs text-white/50 mb-1.5 font-medium">
                     Enter skills separated by commas
@@ -1306,183 +1431,20 @@ export default function FreeResumeBuilderPage() {
         </p>
       </div>
 
-      {/* A4-like preview card */}
+      {/* A4-like preview — rendered via buildResumeHTML */}
       <div className="mx-auto max-w-[800px] bg-white rounded-xl shadow-2xl overflow-hidden">
-        <div className="p-12 md:p-14" style={{ fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif" }}>
-          {/* Header */}
-          <div
-            className="text-center mb-6 pb-5"
-            style={{ borderBottom: `2px solid ${accent}` }}
-          >
-            <h1
-              className="text-2xl font-bold mb-1"
-              style={{ color: accent }}
-            >
-              {resume.contact.name || 'Your Name'}
-            </h1>
-            <div className="text-sm text-gray-500 flex flex-wrap items-center justify-center gap-1">
-              {resume.contact.email && <span>{resume.contact.email}</span>}
-              {resume.contact.phone && (
-                <>
-                  {resume.contact.email && <span className="text-gray-300"> | </span>}
-                  <span>{resume.contact.phone}</span>
-                </>
-              )}
-              {resume.contact.location && (
-                <>
-                  {(resume.contact.email || resume.contact.phone) && (
-                    <span className="text-gray-300"> | </span>
-                  )}
-                  <span>{resume.contact.location}</span>
-                </>
-              )}
-              {resume.contact.linkedin && (
-                <>
-                  <span className="text-gray-300"> | </span>
-                  <span style={{ color: accent }}>{resume.contact.linkedin}</span>
-                </>
-              )}
-              {resume.contact.portfolio && (
-                <>
-                  <span className="text-gray-300"> | </span>
-                  <span style={{ color: accent }}>{resume.contact.portfolio}</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Summary */}
-          {resume.summary && (
-            <>
-              <div
-                className="text-xs font-bold uppercase tracking-widest mb-2 mt-5 pb-1"
-                style={{ color: accent, borderBottom: '1px solid #e5e7eb' }}
-              >
-                Professional Summary
-              </div>
-              <p className="text-sm text-gray-600 leading-relaxed">{resume.summary}</p>
-            </>
-          )}
-
-          {/* Experience */}
-          {resume.experience.length > 0 &&
-            resume.experience.some((e) => e.role || e.company) && (
-              <>
-                <div
-                  className="text-xs font-bold uppercase tracking-widest mb-2 mt-5 pb-1"
-                  style={{ color: accent, borderBottom: '1px solid #e5e7eb' }}
-                >
-                  Experience
-                </div>
-                {resume.experience
-                  .filter((e) => e.role || e.company)
-                  .map((exp) => (
-                    <div key={exp.id} className="mb-4">
-                      <div className="flex justify-between items-baseline flex-wrap">
-                        <div>
-                          <span className="font-semibold text-sm text-gray-800">
-                            {exp.role}
-                          </span>
-                          {exp.company && (
-                            <span className="text-sm text-gray-500">
-                              {' '}
-                              &mdash; {exp.company}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">
-                          {exp.startDate}
-                          {exp.startDate && (exp.endDate || exp.current) && ' \u2013 '}
-                          {exp.current ? 'Present' : exp.endDate}
-                        </span>
-                      </div>
-                      {exp.location && (
-                        <div className="text-xs text-gray-400">{exp.location}</div>
-                      )}
-                      {exp.bullets.filter((b) => b.trim()).length > 0 && (
-                        <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                          {exp.bullets
-                            .filter((b) => b.trim())
-                            .map((bullet, i) => (
-                              <li
-                                key={i}
-                                className="text-sm text-gray-700 leading-snug"
-                              >
-                                {bullet}
-                              </li>
-                            ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-              </>
-            )}
-
-          {/* Education */}
-          {resume.education.length > 0 &&
-            resume.education.some((e) => e.institution || e.degree) && (
-              <>
-                <div
-                  className="text-xs font-bold uppercase tracking-widest mb-2 mt-5 pb-1"
-                  style={{ color: accent, borderBottom: '1px solid #e5e7eb' }}
-                >
-                  Education
-                </div>
-                {resume.education
-                  .filter((e) => e.institution || e.degree)
-                  .map((edu) => (
-                    <div key={edu.id} className="mb-3">
-                      <div className="flex justify-between items-baseline flex-wrap">
-                        <div>
-                          <span className="font-semibold text-sm text-gray-800">
-                            {edu.degree}
-                            {edu.field && ` ${edu.field}`}
-                          </span>
-                          {edu.institution && (
-                            <span className="text-sm text-gray-500">
-                              {' '}
-                              &mdash; {edu.institution}
-                            </span>
-                          )}
-                          {edu.gpa && (
-                            <span className="text-xs text-gray-400 ml-2">
-                              GPA: {edu.gpa}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">
-                          {edu.startDate}
-                          {edu.startDate && edu.endDate && ' \u2013 '}
-                          {edu.endDate}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-              </>
-            )}
-
-          {/* Skills */}
-          {resume.skills.length > 0 && (
-            <>
-              <div
-                className="text-xs font-bold uppercase tracking-widest mb-2 mt-5 pb-1"
-                style={{ color: accent, borderBottom: '1px solid #e5e7eb' }}
-              >
-                Technical Skills
-              </div>
-              <div className="text-sm text-gray-700">
-                {resume.skills.join(' \u2022 ')}
-              </div>
-            </>
-          )}
-
-          {/* Watermark notice for premium templates */}
-          {template !== 'modern' && (
-            <div className="text-center text-xs text-gray-400 mt-8 pt-3 border-t border-gray-200">
-              Created with nxtED AI &mdash; nxted.ai
-            </div>
-          )}
-        </div>
+        <iframe
+          srcDoc={buildResumeHTML({
+            ...resume,
+            certifications: [],
+            template,
+            showWatermark: template !== 'modern',
+          })}
+          className="w-full border-0"
+          style={{ height: '1056px' }}
+          title="Resume Preview"
+          sandbox="allow-same-origin"
+        />
       </div>
 
       {/* Action buttons */}
@@ -1600,7 +1562,7 @@ export default function FreeResumeBuilderPage() {
               </div>
 
               <h3 className="text-lg font-semibold text-white mb-2">
-                You&apos;ve used your 2 free downloads!
+                You&apos;ve used your free download!
               </h3>
               <p className="text-white/40 text-sm mb-6">
                 Create a free account to continue downloading, or upgrade for unlimited
@@ -1638,66 +1600,6 @@ export default function FreeResumeBuilderPage() {
   };
 
   // ═══════════════════════════════════════════════
-  //  LIMIT REACHED MODAL
-  // ═══════════════════════════════════════════════
-
-  const renderLimitModal = () => (
-    <AnimatePresence>
-      {showLimitModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-          onClick={() => setShowLimitModal(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-[#0f0f23] border border-white/10 rounded-2xl p-8 max-w-md w-full text-center relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowLimitModal(false)}
-              className="absolute top-4 right-4 text-white/30 hover:text-white/60 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="w-14 h-14 rounded-2xl bg-white/[0.06] flex items-center justify-center mx-auto mb-5">
-              <Lock className="w-7 h-7 text-white/40" />
-            </div>
-
-            <h3 className="text-xl font-bold text-white mb-2">
-              You&apos;ve used your 2 free downloads!
-            </h3>
-            <p className="text-white/40 text-sm mb-6">
-              Create a free account to continue, or view our premium plans for unlimited
-              exports without watermarks.
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <Link
-                href="/signup"
-                className="w-full bg-gradient-to-r from-[#00d4ff] to-[#0066ff] text-white rounded-xl py-3 font-semibold text-sm text-center hover:shadow-[0_0_24px_rgba(0,212,255,0.3)] transition-all"
-              >
-                Create a Free Account
-              </Link>
-              <Link
-                href="/pricing"
-                className="w-full bg-white/[0.06] border border-white/10 text-white/80 rounded-xl py-3 font-medium text-sm text-center hover:bg-white/[0.1] transition-all"
-              >
-                View Premium Plans
-              </Link>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
-  // ═══════════════════════════════════════════════
   //  MAIN RENDER
   // ═══════════════════════════════════════════════
 
@@ -1721,7 +1623,11 @@ export default function FreeResumeBuilderPage() {
       </main>
 
       {/* Limit modal */}
-      {renderLimitModal()}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        serviceName="resume download"
+      />
 
       <Footer />
     </div>

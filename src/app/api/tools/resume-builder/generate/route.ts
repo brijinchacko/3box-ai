@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { aiChat, AI_MODELS, extractJSON } from '@/lib/ai/openrouter';
+import { detectGibberish } from '@/lib/validation/gibberishDetector';
 
 /**
  * Free Resume Builder - AI Generation Endpoint
@@ -79,6 +80,14 @@ export async function POST(req: Request) {
     if (!basicInfo?.name || !basicInfo?.email) {
       return NextResponse.json(
         { error: 'bad_request', message: 'Name and email are required.' },
+        { status: 400 },
+      );
+    }
+
+    const gibberishCheck = detectGibberish(jobDescription);
+    if (gibberishCheck.isGibberish) {
+      return NextResponse.json(
+        { error: 'invalid_input', message: 'Your message is not clear. Please paste a valid job description with details about the role, responsibilities, and requirements.' },
         { status: 400 },
       );
     }

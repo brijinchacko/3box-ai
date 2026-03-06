@@ -1,21 +1,59 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { aiChat, AI_MODELS } from '@/lib/ai/openrouter';
+import { checkFreeUsage, buildUsageCookie } from '@/lib/usage/serverUsageCheck';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/config';
 
 export async function POST(request: NextRequest) {
   try {
-    const { resumeText, targetJob } = await request.json();
+    const body = await request.json();
+    const { resumeText, targetJob, clientCount } = body;
 
     if (!resumeText || typeof resumeText !== 'string') {
       return NextResponse.json({ error: 'Resume text is required' }, { status: 400 });
+    }
+
+    // ── Usage limit tracking ─────────────────────
+    const cookieHeader = request.headers.get('cookie') || '';
+    const cookieMatch = cookieHeader.match(/nxted-ats-uses=(\d+)/);
+    const cookieValue = cookieMatch ? cookieMatch[1] : undefined;
+    const { allowed, realCount } = checkFreeUsage(cookieValue, clientCount ?? 0);
+
+    if (!allowed) {
+      // Check if user has a paid session
+      let isPaidUser = false;
+      try {
+        const session = await getServerSession(authOptions);
+        if (session?.user?.id) {
+          const { prisma } = await import('@/lib/db/prisma');
+          const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { plan: true },
+          });
+          const plan = (user?.plan ?? 'BASIC').toUpperCase();
+          if (plan !== 'BASIC') {
+            isPaidUser = true;
+          }
+        }
+      } catch {
+        // Session check is optional
+      }
+
+      if (!isPaidUser) {
+        return NextResponse.json(
+          { error: 'limit_reached', message: 'You have used your free ATS check. Sign up or subscribe to continue.' },
+          { status: 403 },
+        );
+      }
     }
 
     // First do a rule-based analysis for instant accuracy
     const ruleBasedResults = performRuleBasedAnalysis(resumeText, targetJob);
 
     // Then enhance with AI analysis
-    const systemPrompt = `You are a senior ATS (Applicant Tracking System) expert and recruiter with 15+ years of experience. You understand how systems like Workday, Taleo, iCIMS, Greenhouse, and Lever parse resumes.
+    const systemPrompt = `You are a senior ATS (Applicant Tracking System) expert and technical recruiter with 15+ years of experience parsing, optimizing, and evaluating resumes across enterprise ATS platforms including Workday, Taleo, iCIMS, Greenhouse, and Lever.
 
-Analyze this resume THOROUGHLY and return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+Analyze this resume THOROUGHLY against modern ATS parsing algorithms and return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
 {
   "score": <number 0-100>,
   "issues": [
@@ -43,25 +81,71 @@ Analyze this resume THOROUGHLY and return ONLY valid JSON (no markdown, no code 
   ]
 }
 
-SCORING RULES:
-- Start at 50 points
-- Contact info complete: +10
-- Has summary/objective: +5
-- Has experience with quantified bullets: +10
-- Has education section: +5
-- Has skills section: +5
-- Keywords match target job: +15
-- Clean formatting (no tables/columns/graphics): +5
-- Action verbs used: +5
-- Proper date formatting: +3
-- Consistent formatting: +2
-- Deduct for: typos, gaps, generic content, missing metrics, poor structure
+DETAILED SCORING RUBRIC (out of 100):
 
-Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics and generic bullets should score below 50.`;
+Contact & Header (15 points):
+- Full name clearly identifiable: +3
+- Professional email address: +3
+- Phone number present: +2
+- Location (city/state): +2
+- LinkedIn URL: +3
+- No photos, logos, or graphics in header: +2
+
+Professional Summary (10 points):
+- Has summary/objective section: +3
+- Summary is 2-4 sentences: +2
+- Contains role-relevant keywords: +3
+- Quantified achievements in summary: +2
+
+Work Experience (25 points):
+- Has clearly labeled experience section: +4
+- Uses reverse chronological order: +3
+- Each entry has: company, title, dates, location: +4
+- Bullet points start with action verbs (Led, Built, Improved, Delivered, Optimized): +4
+- Contains quantified achievements with metrics (%,$,#): +5
+- Date format is consistent (MM/YYYY or Month YYYY): +3
+- No unexplained employment gaps: +2
+
+Skills Section (15 points):
+- Has dedicated skills section: +3
+- Skills match target job requirements: +5
+- Keyword density analysis: relevant terms appear 2-3 times naturally: +4
+- Mix of technical and soft skills: +3
+
+Education (10 points):
+- Has education section: +3
+- Includes degree, institution, graduation date: +4
+- GPA included if > 3.0 or recent graduate: +3
+
+ATS Compatibility (15 points):
+- No tables, columns, or text boxes: +3
+- No headers/footers (ATS often skips these): +2
+- Standard section headings used: +3
+- No special characters or unicode symbols: +2
+- File would parse cleanly in Workday/Taleo: +3
+- No embedded images or charts: +2
+
+Resume Section Ordering (10 points):
+- Optimal order: Contact > Summary > Experience > Skills > Education > Certifications: +5
+- Most impactful sections appear first: +3
+- Consistent section spacing: +2
+
+KEYWORD DENSITY ANALYSIS:
+- Check if key terms from the target role appear at least 2-3 times naturally throughout the resume
+- Flag keyword stuffing (same term > 5 times)
+- Identify missing industry-standard terminology
+- Check for both spelled-out terms and acronyms (e.g., "Search Engine Optimization" AND "SEO")
+
+DATE FORMAT CONSISTENCY:
+- All dates should follow the same format throughout
+- Flag mixed formats (e.g., "Jan 2020" alongside "2020-01")
+- Prefer "Month YYYY" or "MM/YYYY" for ATS compatibility
+
+Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics and generic bullets should score below 50. A perfect resume rarely scores above 90.`;
 
     let userPrompt = `RESUME TEXT:\n\n${resumeText}`;
     if (targetJob) {
-      userPrompt += `\n\n---\nTARGET JOB/ROLE: ${targetJob}\n\nAnalyze keyword match against this target role. Be specific about which keywords are missing for this exact role.`;
+      userPrompt += `\n\n---\nTARGET JOB/ROLE: ${targetJob}\n\nAnalyze keyword match against this target role. Be specific about which keywords are missing for this exact role. Check keyword density and suggest optimal placement.`;
     }
 
     try {
@@ -88,13 +172,16 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
           analysis = JSON.parse(jsonMatch[0]);
         } else {
           // Fallback to rule-based analysis
-          return NextResponse.json(ruleBasedResults);
+          const fallbackResponse = NextResponse.json(ruleBasedResults);
+          const newCount = realCount + 1;
+          fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('nxted-ats-uses', newCount));
+          return fallbackResponse;
         }
       }
 
-      // Merge AI results with rule-based results for accuracy
+      // Merge AI results with rule-based results (60% AI, 40% rule-based)
       const mergedResults = {
-        score: Math.round((analysis.score + ruleBasedResults.score) / 2),
+        score: Math.round((analysis.score * 0.6) + (ruleBasedResults.score * 0.4)),
         issues: [...(analysis.issues || []), ...ruleBasedResults.issues.filter((i: { type: string; message: string }) => !analysis.issues?.some((ai: { type: string; message: string }) => ai.message.toLowerCase().includes(i.message.toLowerCase().split(' ')[0])))],
         keywords: analysis.keywords || ruleBasedResults.keywords,
         formatting: analysis.formatting || ruleBasedResults.formatting,
@@ -103,10 +190,16 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
         improvementPlan: analysis.improvementPlan || [],
       };
 
-      return NextResponse.json(mergedResults);
+      const response = NextResponse.json(mergedResults);
+      const newCount = realCount + 1;
+      response.headers.set('Set-Cookie', buildUsageCookie('nxted-ats-uses', newCount));
+      return response;
     } catch (aiError) {
       console.error('AI analysis failed, using rule-based:', aiError);
-      return NextResponse.json(ruleBasedResults);
+      const fallbackResponse = NextResponse.json(ruleBasedResults);
+      const newCount = realCount + 1;
+      fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('nxted-ats-uses', newCount));
+      return fallbackResponse;
     }
   } catch (error) {
     console.error('Error in ATS checker:', error);

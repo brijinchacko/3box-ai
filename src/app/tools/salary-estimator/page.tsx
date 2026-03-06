@@ -14,9 +14,13 @@ import {
   Sparkles,
   BarChart3,
   Briefcase,
+  Database,
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import LocationInput from '@/components/ui/LocationInput';
+import UpgradeModal from '@/components/ui/UpgradeModal';
+import { getFreeUseCount, incrementFreeUse, hasFreeTrial } from '@/lib/usage/freeUsageTracker';
 
 interface SalaryResults {
   low: number;
@@ -26,6 +30,7 @@ interface SalaryResults {
   factors: string[];
   marketTrend: 'growing' | 'stable' | 'declining';
   demandLevel: 'high' | 'medium' | 'low';
+  dataSources?: string[];
 }
 
 const experienceLevels = [
@@ -81,10 +86,17 @@ export default function SalaryEstimatorPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SalaryResults | null>(null);
   const [error, setError] = useState('');
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!role.trim() || !location.trim() || !experience) return;
+
+    // Check client-side usage limit
+    if (!hasFreeTrial('salary_estimator')) {
+      setShowUpgrade(true);
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -104,15 +116,22 @@ export default function SalaryEstimatorPage() {
           location,
           experience,
           skills: skillsList.length > 0 ? skillsList : undefined,
+          clientCount: getFreeUseCount('salary_estimator'),
         }),
       });
 
       if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 403 && errData.error === 'limit_reached') {
+          setShowUpgrade(true);
+          return;
+        }
         throw new Error('Failed to estimate salary');
       }
 
       const data = await res.json();
       setResults(data);
+      incrementFreeUse('salary_estimator');
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -189,13 +208,10 @@ export default function SalaryEstimatorPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/60 mb-2">Location</label>
-                <input
-                  type="text"
+                <LocationInput
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  onChange={setLocation}
                   placeholder="e.g., San Francisco, CA"
-                  className="input-field"
-                  required
                 />
               </div>
               <div>
@@ -319,6 +335,26 @@ export default function SalaryEstimatorPage() {
                 </div>
               )}
 
+              {/* Data Sources */}
+              {results.dataSources && results.dataSources.length > 0 && (
+                <div className="card">
+                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2 text-white/50">
+                    <Database className="w-4 h-4" />
+                    Data Sources
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {results.dataSources.map((source, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 text-white/50"
+                      >
+                        {source}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* CTA */}
               <div className="card text-center bg-gradient-to-br from-neon-green/5 to-neon-blue/5">
                 <Sparkles className="w-8 h-8 text-neon-green mx-auto mb-4" />
@@ -335,6 +371,11 @@ export default function SalaryEstimatorPage() {
         </div>
       </section>
 
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        serviceName="salary estimate"
+      />
       <Footer />
     </div>
   );

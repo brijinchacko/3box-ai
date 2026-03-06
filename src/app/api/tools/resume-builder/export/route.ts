@@ -13,7 +13,7 @@ import { cookies } from 'next/headers';
  */
 
 const COOKIE_NAME = 'nxted-fdl';
-const MAX_FREE_DOWNLOADS = 2;
+const MAX_FREE_DOWNLOADS = 1;
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
 export async function POST(req: Request) {
