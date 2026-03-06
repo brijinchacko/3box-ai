@@ -6,6 +6,8 @@ interface TemplatePreviewProps {
   template: 'modern' | 'classic' | 'minimal' | 'creative';
   selected: boolean;
   onClick: () => void;
+  isFree?: boolean;
+  isPremium?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -241,6 +243,8 @@ export default function TemplatePreview({
   template,
   selected,
   onClick,
+  isFree,
+  isPremium,
 }: TemplatePreviewProps) {
   const Preview = templatePreviews[template];
   const meta = templateMeta[template];
@@ -279,6 +283,31 @@ export default function TemplatePreview({
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </motion.div>
+        )}
+
+        {/* FREE badge */}
+        {isFree && (
+          <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-lg">
+            FREE
+          </div>
+        )}
+
+        {/* Premium lock overlay */}
+        {isPremium && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px]">
+            <svg
+              className="w-6 h-6 text-white/70 mb-1.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span className="text-white/90 text-xs font-semibold">Premium</span>
+            <span className="text-white/40 text-[9px] mt-0.5">Includes watermark</span>
+          </div>
         )}
 
         {/* Mini resume skeleton */}

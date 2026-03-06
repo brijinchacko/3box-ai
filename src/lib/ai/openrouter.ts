@@ -32,10 +32,10 @@ export interface AIModelConfig {
 
 export const AI_MODELS: Record<ModelTier, AIModelConfig> = {
   free: {
-    id: 'meta-llama/llama-3.3-8b-instruct:free',
-    name: 'Llama 3.3 8B (Free)',
+    id: 'arcee-ai/trinity-large-preview:free',
+    name: 'Arcee Trinity Large (Free)',
     tier: 'free',
-    maxTokens: 4096,
+    maxTokens: 8192,
     supportsJsonMode: false,
   },
   standard: {
