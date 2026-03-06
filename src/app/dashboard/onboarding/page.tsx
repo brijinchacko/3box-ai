@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Briefcase, GraduationCap, Sparkles, ArrowRight, ArrowLeft,
   Check, MapPin, Phone, Linkedin, Plus, X, Loader2, Rocket,
-  Brain, Target, FileText, Zap, DollarSign,
+  DollarSign,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────
@@ -109,6 +109,7 @@ const STEPS = [
   { icon: Briefcase, label: 'Career' },
   { icon: GraduationCap, label: 'Background' },
   { icon: Sparkles, label: 'Skills' },
+  { icon: Sparkles, label: 'Agents' },
 ];
 
 // ─── Component ──────────────────────────────────
@@ -193,6 +194,7 @@ export default function OnboardingPage() {
       case 1: return !!data.targetRole.trim() && !!data.experienceLevel && !!data.currentStatus;
       case 2: return !!data.educationLevel;
       case 3: return data.skills.length >= 2;
+      case 4: return true;
       default: return true;
     }
   };
@@ -564,26 +566,48 @@ export default function OnboardingPage() {
                   )}
                 </div>
 
-                {/* What AI does next */}
-                <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-white/5">
-                  <h4 className="text-xs font-semibold text-white/60 mb-3">After launch, AI will instantly:</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { icon: FileText, text: 'Draft your resume' },
-                      { icon: Target, text: 'Create career plan' },
-                      { icon: Brain, text: 'Analyze skill gaps' },
-                      { icon: Zap, text: 'Find matching jobs' },
-                    ].map((item) => (
-                      <div key={item.text} className="flex items-center gap-2 text-[11px] text-white/40">
-                        <item.icon className="w-3.5 h-3.5 text-neon-blue" /><span>{item.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="flex gap-3 mt-6">
                   <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={handleSubmit} disabled={!canProceed(3) || loading}
+                  <button onClick={goNext} disabled={!canProceed(3)} className="btn-primary flex-1 flex items-center justify-center gap-2">Continue <ArrowRight className="w-4 h-4" /></button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ─── Step 4: Meet Your Agents ──── */}
+            {step === 4 && (
+              <motion.div key="step-4" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
+                <div className="text-center mb-5">
+                  <h2 className="text-xl font-bold">Meet Your AI Agents</h2>
+                  <p className="text-xs text-white/40 mt-1 max-w-md mx-auto">Your personal team of AI agents will work together to accelerate your career. Here&apos;s your team:</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    { emoji: '\uD83D\uDD0D', name: 'Scout', role: 'Job Hunter', desc: 'Finds jobs matching your profile', borderColor: 'border-l-blue-500' },
+                    { emoji: '\uD83D\uDCC4', name: 'Forge', role: 'Resume Optimizer', desc: 'Optimizes your resume per job', borderColor: 'border-l-orange-500' },
+                    { emoji: '\uD83D\uDCE8', name: 'Archer', role: 'Application Agent', desc: 'Sends applications & cover letters', borderColor: 'border-l-green-500' },
+                    { emoji: '\uD83C\uDFAF', name: 'Atlas', role: 'Interview Coach', desc: 'Preps company-specific interviews', borderColor: 'border-l-purple-500' },
+                    { emoji: '\uD83D\uDCDA', name: 'Sage', role: 'Skill Trainer', desc: 'Identifies gaps & recommends learning', borderColor: 'border-l-teal-500' },
+                    { emoji: '\uD83D\uDEE1\uFE0F', name: 'Sentinel', role: 'Quality Reviewer', desc: 'Reviews apps before sending', borderColor: 'border-l-rose-500' },
+                  ].map((agent) => (
+                    <div key={agent.name} className={`p-3 rounded-xl bg-white/[0.03] border border-white/5 border-l-[3px] ${agent.borderColor} transition-all hover:bg-white/[0.06]`}>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-base">{agent.emoji}</span>
+                        <span className="text-sm font-bold text-white">{agent.name}</span>
+                        <span className="text-[10px] text-white/30 font-medium">{agent.role}</span>
+                      </div>
+                      <p className="text-[11px] text-white/40 pl-7">{agent.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-white/5 text-center">
+                  <p className="text-[11px] text-white/40">Agents are coordinated by <span className="text-neon-blue font-semibold">Cortex</span>, your AI brain. Available agents scale with your plan.</p>
+                </div>
+
+                <div className="flex gap-3 mt-5">
+                  <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
+                  <button onClick={handleSubmit} disabled={!canProceed(4) || loading}
                     className="btn-primary flex-1 flex items-center justify-center gap-2 text-base py-3">
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Rocket className="w-5 h-5" /> Launch My Career</>}
                   </button>

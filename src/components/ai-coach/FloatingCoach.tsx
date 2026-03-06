@@ -20,36 +20,56 @@ interface Message {
   actions?: ActionResult[];
 }
 
-const COACH_NAME = 'Horace';
-
-const greetings = [
-  `Hey! I'm ${COACH_NAME} 👋 What can I help you with?`,
-  `Ready to level up your career? Ask me anything!`,
-  `What would you like to work on today?`,
-];
-
 const QUICK_ACTIONS: Record<string, string> = {
-  '📄 Resume help': 'I need help improving my resume. What should I focus on?',
-  '🔍 Find jobs': 'Help me find jobs that match my skills.',
-  '📚 Study plan': 'Create a study plan for my career goals.',
-  '🧠 Reassess': "I'd like to reassess my skills.",
-};
-
-const initialMessage: Message = {
-  id: '0',
-  role: 'assistant',
-  content: greetings[0],
-  timestamp: new Date(),
+  '\uD83E\uDD16 Run agents': 'Run my agent team to find and apply to jobs.',
+  '\uD83D\uDCC4 Resume help': 'I need help improving my resume. What should I focus on?',
+  '\uD83D\uDD0D Find jobs': 'Help me find jobs that match my skills.',
+  '\uD83D\uDCDA Study plan': 'Create a study plan for my career goals.',
 };
 
 export default function FloatingCoach() {
+  const [coachName, setCoachName] = useState('Cortex');
   const [open, setOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([initialMessage]);
   const [typing, setTyping] = useState(false);
   const [horaceExpression, setHoraceExpression] = useState<HoraceExpression>('normal');
   const chatRef = useRef<HTMLDivElement>(null);
+
+  const greetings = useMemo(() => [
+    `Hey! I'm ${coachName}, your AI coordinator \uD83E\uDDE0 What can I help you with?`,
+    `Your agent team is ready. What would you like to work on?`,
+    `Need help? I can coordinate your agents or answer questions.`,
+  ], [coachName]);
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '0',
+      role: 'assistant',
+      content: `Hey! I'm Cortex, your AI coordinator \uD83E\uDDE0 What can I help you with?`,
+      timestamp: new Date(),
+    },
+  ]);
+
+  // Fetch coach name on mount
+  useEffect(() => {
+    fetch('/api/user/coach-settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.name) setCoachName(data.name);
+      })
+      .catch(() => {}); // silently fail, keep default
+  }, []);
+
+  // When coachName changes and messages is still at initial state, update the first message
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === '0') {
+        return [{ ...prev[0], content: greetings[0] }];
+      }
+      return prev;
+    });
+  }, [coachName, greetings]);
 
   // Derive Horace's expression from state
   useEffect(() => {
@@ -69,7 +89,7 @@ export default function FloatingCoach() {
 
   // Latest assistant message (the "speech" content)
   const latestAssistant = useMemo(
-    () => [...messages].reverse().find((m) => m.role === 'assistant') || initialMessage,
+    () => [...messages].reverse().find((m) => m.role === 'assistant') || messages[0],
     [messages]
   );
 
@@ -192,7 +212,7 @@ export default function FloatingCoach() {
               {/* ── Header ── */}
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">{COACH_NAME}</span>
+                  <span className="text-sm font-semibold text-white">{coachName}</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
                 </div>
                 <div className="flex items-center gap-0.5">
@@ -330,7 +350,7 @@ export default function FloatingCoach() {
                     onChange={(e) => setInput(e.target.value)}
                     disabled={typing}
                     className="flex-1 bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm placeholder:text-white/20 focus:outline-none focus:border-neon-blue/30 disabled:opacity-50 transition-colors"
-                    placeholder={`Ask ${COACH_NAME}...`}
+                    placeholder={`Ask ${coachName}...`}
                   />
                   <button
                     type="submit"

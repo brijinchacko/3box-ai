@@ -7,7 +7,7 @@ import {
   Brain, Target, BookOpen, FileText, Briefcase, TrendingUp,
   ArrowRight, BarChart3, Zap, Award, Clock, CheckCircle2,
   AlertCircle, Star, Sparkles, Lightbulb, Rocket, RefreshCw,
-  Mic, UserCheck, Send, MessageSquare, Trophy
+  Mic, UserCheck, Send, MessageSquare, Trophy, Bot
 } from 'lucide-react';
 
 const fadeUp = {
@@ -65,6 +65,7 @@ const quickActions = [
   { icon: FileText, label: 'Build Resume', href: '/dashboard/resume', color: 'from-green-500 to-emerald-400' },
   { icon: Briefcase, label: 'Find Jobs', href: '/dashboard/jobs', color: 'from-orange-500 to-yellow-400' },
   { icon: Mic, label: 'Interview Prep', href: '/dashboard/interview', color: 'from-rose-500 to-red-400' },
+  { icon: Bot, label: 'AI Agents', href: '/dashboard/agents', color: 'from-indigo-500 to-purple-400' },
 ];
 
 const insightTypeIcons: Record<string, typeof Brain> = {
@@ -629,6 +630,32 @@ export default function DashboardPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* ── Agent Report Card ── */}
+      <motion.div custom={3.5} variants={fadeUp} initial="hidden" animate="visible">
+        <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold">Cortex Agent Team</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-medium">Active</span>
+              </div>
+              <p className="text-sm text-white/40 mb-3">
+                Your AI agents are ready to hunt for jobs, optimize resumes, and send applications automatically.
+              </p>
+              <Link
+                href="/dashboard/agents"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neon-purple/20 text-neon-purple text-sm font-medium hover:bg-neon-purple/30 transition-colors"
+              >
+                <Rocket className="w-4 h-4" /> Go to Agent Dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Bottom Grid */}
       <div className="grid lg:grid-cols-2 gap-6">

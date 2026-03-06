@@ -95,6 +95,9 @@ model User {
   portfolios      Portfolio[]
   jobApplications JobApplication[]
   coachSettings   CoachSettings?
+  autoApplyConfig AutoApplyConfig?
+  autoApplyRuns   AutoApplyRun[]
+  agentActivities AgentActivity[]
   auditLogs       AuditLog[]
   careerTwin      CareerTwin?
   subscriptions   Subscription[]
@@ -370,6 +373,7 @@ model Resume {
   targetJob   String?
   atsScore    Float?
   pdfUrl      String?
+  isFinalized Boolean  @default(false)
   version     Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -402,6 +406,7 @@ model Portfolio {
 enum ApplicationStatus {
   QUEUED
   APPLIED
+  EMAILED
   VIEWED
   INTERVIEW
   OFFER
@@ -410,23 +415,25 @@ enum ApplicationStatus {
 }
 
 model JobApplication {
-  id            String            @id @default(cuid())
-  userId        String
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle      String
-  company       String
-  location      String?
-  salaryRange   String?
-  matchScore    Float?
-  status        ApplicationStatus @default(QUEUED)
-  appliedAt     DateTime?
-  source        String?
-  auditTrail    Json?
-  resumeId      String?
-  coverLetter   String?           @db.Text
-  notes         String?           @db.Text
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle        String
+  company         String
+  location        String?
+  salaryRange     String?
+  matchScore      Float?
+  status          ApplicationStatus @default(QUEUED)
+  appliedAt       DateTime?
+  source          String?
+  auditTrail      Json?
+  resumeId        String?
+  coverLetter     String?           @db.Text
+  notes           String?           @db.Text
+  jobUrl          String?
+  autoApplyRunId  String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([userId])
 }
@@ -437,10 +444,67 @@ model CoachSettings {
   id          String  @id @default(cuid())
   userId      String  @unique
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String  @default("Nova")
+  name        String  @default("Cortex")
   personality String  @default("friendly")
   avatarUrl   String?
   enabled     Boolean @default(true)
+}
+
+// ─── Auto Apply System ──────────────────────────
+
+model AutoApplyConfig {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled          Boolean   @default(false)
+  resumeId         String?
+  targetRoles      Json      @default("[]")
+  targetLocations  Json      @default("[]")
+  minMatchScore    Int       @default(60)
+  maxAppliesPerRun Int       @default(5)
+  excludeCompanies Json      @default("[]")
+  excludeKeywords  Json      @default("[]")
+  scheduleTime     String?
+  preferRemote     Boolean   @default(false)
+  lastRunAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model AutoApplyRun {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String    @default("running")
+  jobsFound   Int       @default(0)
+  jobsApplied Int       @default(0)
+  jobsSkipped Int       @default(0)
+  creditsUsed Int       @default(0)
+  summary     String?   @db.Text
+  details     Json?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model AgentActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent       String   // scout | archer | forge | atlas | sage | sentinel
+  action      String   // discovered_jobs | sent_application | optimized_resume | etc
+  summary     String
+  details     Json?
+  creditsUsed Int      @default(0)
+  runId       String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([agent])
+  @@index([createdAt])
 }
 
 // ─── Audit Logs ────────────────────────────────

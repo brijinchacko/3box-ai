@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { targetRole, interests, profile } = body;
+    const { targetRole, interests, profile, agentName } = body;
 
     if (!targetRole) {
       return NextResponse.json(
@@ -113,6 +113,15 @@ export async function POST(request: NextRequest) {
         hireProb: 0,
       },
     });
+
+    // Upsert CoachSettings with agent name if provided
+    if (agentName && typeof agentName === 'string' && agentName.trim().length > 0) {
+      await prisma.coachSettings.upsert({
+        where: { userId: session.user.id },
+        update: { name: agentName.trim().slice(0, 20) },
+        create: { userId: session.user.id, name: agentName.trim().slice(0, 20) },
+      });
+    }
 
     return NextResponse.json({
       success: true,

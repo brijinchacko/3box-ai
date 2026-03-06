@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Brain, Target, BookOpen, FileText,
   Briefcase, Mic, FolderOpen, Settings, Menu, X, ChevronLeft,
-  Crown, Zap, Star, Gift, AlertTriangle, MapPin, LogOut
+  Crown, Zap, Star, Gift, AlertTriangle, MapPin, LogOut, Bot
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import FloatingCoach from '@/components/ai-coach/FloatingCoach';
@@ -23,6 +23,7 @@ const sidebarLinks = [
   { href: '/dashboard/career-plan', icon: Target, label: 'Career Plan' },
   { href: '/dashboard/learning', icon: BookOpen, label: 'Learning Path' },
   { href: '/dashboard/resume', icon: FileText, label: 'Resume Builder' },
+  { href: '/dashboard/agents', icon: Bot, label: 'Agents' },
   { href: '/dashboard/jobs', icon: Briefcase, label: 'Jobs' },
   { href: '/dashboard/interview', icon: Mic, label: 'Interview Prep' },
   { href: '/dashboard/portfolio', icon: FolderOpen, label: 'Portfolio' },

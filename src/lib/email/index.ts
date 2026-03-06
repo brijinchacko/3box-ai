@@ -458,3 +458,118 @@ export async function sendWeeklyDigestEmail(
     `),
   });
 }
+
+// ─── Job Application Email (Cold Outreach by Archer Agent) ──
+
+export async function sendJobApplicationEmail({
+  to,
+  candidateName,
+  candidateEmail,
+  jobTitle,
+  company,
+  coverLetter,
+  resumeUrl,
+}: {
+  to: string;
+  candidateName: string;
+  candidateEmail: string;
+  jobTitle: string;
+  company: string;
+  coverLetter: string;
+  resumeUrl?: string;
+}): Promise<{ id?: string; error?: string }> {
+  const subject = `Application for ${jobTitle} — ${candidateName}`;
+
+  // Use a clean professional template (NOT the branded NXTED template)
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #ffffff; color: #333333; line-height: 1.6; }
+    .container { max-width: 640px; margin: 0 auto; padding: 32px 24px; }
+    .greeting { font-size: 16px; margin-bottom: 16px; }
+    .body-text { font-size: 15px; margin-bottom: 16px; white-space: pre-wrap; }
+    .resume-link { display: inline-block; padding: 12px 28px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; margin: 16px 0; }
+    .signature { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; }
+    .signature strong { color: #333333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="greeting">Dear Hiring Manager,</div>
+    <div class="body-text">${coverLetter}</div>
+    ${resumeUrl ? `<p style="margin: 24px 0;"><a href="${resumeUrl}" class="resume-link">View My Resume</a></p>` : ''}
+    <div class="signature">
+      <strong>${candidateName}</strong><br>
+      <a href="mailto:${candidateEmail}" style="color: #2563eb; text-decoration: none;">${candidateEmail}</a>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `Dear Hiring Manager,\n\n${coverLetter}\n\n${resumeUrl ? `Resume: ${resumeUrl}\n\n` : ''}Best regards,\n${candidateName}\n${candidateEmail}`;
+
+  return sendEmail({ to, subject, html, text });
+}
+
+// ─── Agent Run Summary Email ────────────────────
+
+export async function sendAgentRunSummaryEmail(
+  to: string,
+  name: string,
+  summary: {
+    jobsFound: number;
+    jobsApplied: number;
+    topMatches: { title: string; company: string; matchScore: number }[];
+    agentsUsed: string[];
+    creditsUsed: number;
+  }
+) {
+  return sendEmail({
+    to,
+    subject: `Agent Report: ${summary.jobsFound} jobs found, ${summary.jobsApplied} applications sent`,
+    html: baseTemplate(`
+      <div class="card">
+        <h2>Agent Pipeline Report</h2>
+        <p>Hi ${name}, your AI agents just completed a run. Here's the summary:</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">Jobs Discovered</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right; font-weight: 600;">${summary.jobsFound}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">Applications Sent</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right; font-weight: 600;">${summary.jobsApplied}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">Agents Used</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right; font-weight: 600;">${summary.agentsUsed.join(', ')}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; color: rgba(255,255,255,0.4);">Credits Used</td>
+            <td style="padding: 12px 0; text-align: right; font-weight: 600;">${summary.creditsUsed}</td>
+          </tr>
+        </table>
+        ${summary.topMatches.length > 0 ? `
+        <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; color: rgba(255,255,255,0.6);">Top Matches</h3>
+        ${summary.topMatches.slice(0, 5).map(job => `
+        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <div>
+            <div style="font-weight: 600; font-size: 14px;">${job.title}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.4);">${job.company}</div>
+          </div>
+          <div style="text-align: right;">
+            <span class="badge badge-green">${job.matchScore}% match</span>
+          </div>
+        </div>`).join('')}
+        ` : ''}
+        <p style="text-align: center; margin-top: 24px;">
+          <a href="${APP_URL}/dashboard/agents" class="btn">View Full Report</a>
+        </p>
+      </div>
+    `),
+  });
+}
