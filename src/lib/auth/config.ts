@@ -20,6 +20,37 @@ export const authOptions: NextAuthOptions = {
     newUser: '/dashboard',
     error: '/login',
   },
+  // Use standard cookie names (no __Secure-/__Host- prefixes)
+  // This fixes auth behind reverse proxies where the browser may not trust prefixed cookies
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+      },
+    },
+    callbackUrl: {
+      name: 'next-auth.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+      },
+    },
+    csrfToken: {
+      name: 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+      },
+    },
+  },
   providers: [
     // Only include Google provider when credentials are configured
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
