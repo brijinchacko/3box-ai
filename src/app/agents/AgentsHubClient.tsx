@@ -9,6 +9,7 @@ import CortexAvatar from '@/components/brand/CortexAvatar';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
 import { AGENT_PAGES } from '@/lib/agents/agentContent';
+import { useVisitorName } from '@/hooks/useVisitorName';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -19,6 +20,7 @@ const fadeUp = {
 };
 
 export default function AgentsHubClient() {
+  const { firstName } = useVisitorName();
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -34,7 +36,7 @@ export default function AgentsHubClient() {
               <Bot className="w-3.5 h-3.5" /> 6 Specialized Agents + 1 Coordinator
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight">
-              Meet Your <span className="gradient-text">AI Agent Team</span>
+              {firstName ? `${firstName}, Meet` : 'Meet'} Your <span className="gradient-text">AI Agent Team</span>
             </h1>
             <p className="text-lg text-white/50 max-w-2xl mx-auto mb-10">
               Each agent is purpose-built for a specific phase of your job search.
@@ -201,9 +203,9 @@ export default function AgentsHubClient() {
             viewport={{ once: true }}
           >
             <Sparkles className="w-8 h-8 text-neon-blue mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-4">Ready to Activate Your Agent Team?</h2>
+            <h2 className="text-3xl font-bold mb-4">{firstName ? `${firstName}, Ready` : 'Ready'} to Activate Your Agent Team?</h2>
             <p className="text-white/40 mb-8">Set your career goals and let 6 AI agents handle the rest.</p>
-            <Link href="/dashboard/onboarding" className="btn-primary text-sm inline-flex items-center gap-2">
+            <Link href="/get-started" className="btn-primary text-sm inline-flex items-center gap-2">
               Get Started Free <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>

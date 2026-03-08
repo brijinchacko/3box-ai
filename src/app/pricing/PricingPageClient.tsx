@@ -24,6 +24,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import RegionSelector from '@/components/geo/RegionSelector';
 import AgentAvatar from '@/components/brand/AgentAvatar';
+import { useVisitorName } from '@/hooks/useVisitorName';
 import { AgentAvatarMini } from '@/components/brand/AgentAvatar';
 import { AGENTS, AGENT_LIST, type AgentId } from '@/lib/agents/registry';
 
@@ -200,6 +201,7 @@ function PricingSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function PricingPageClient() {
+  const { firstName } = useVisitorName();
   const [yearly, setYearly] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [loadingPack, setLoadingPack] = useState<string | null>(null);
@@ -368,7 +370,7 @@ export default function PricingPageClient() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-4">
-              Hire Your{' '}
+              {firstName ? `${firstName}, Hire` : 'Hire'} Your{' '}
               <span className="gradient-text">AI Agent Team</span>
             </h1>
             <p className="text-white/40 max-w-xl mx-auto mb-3 text-lg">

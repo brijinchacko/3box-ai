@@ -15,6 +15,7 @@ const getPrisma = () => require('@/lib/db/prisma').prisma;
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(getPrisma()),
   session: { strategy: 'jwt' },
+  // debug: true — disabled; was flooding /api/auth/_log and hitting rate limits
   pages: {
     signIn: '/login',
     newUser: '/dashboard',
@@ -122,18 +123,24 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
       }
-      // Always refresh plan/credits from DB so coupon upgrades, Stripe changes, etc. take effect immediately
+      // Refresh plan/credits from DB — wrapped in try/catch so DB connection
+      // errors don't prevent session token creation (which blocks sign-in)
       if (token.id) {
-        const prisma = getPrisma();
-        const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
-        if (dbUser) {
-          token.plan = dbUser.plan;
-          token.isOforoInternal = dbUser.isOforoInternal;
-          token.onboardingDone = dbUser.onboardingDone;
-          token.referralCode = dbUser.referralCode;
-          token.stripeCustomerId = dbUser.stripeCustomerId;
-          token.aiCreditsUsed = dbUser.aiCreditsUsed;
-          token.aiCreditsLimit = dbUser.aiCreditsLimit;
+        try {
+          const prisma = getPrisma();
+          const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
+          if (dbUser) {
+            token.plan = dbUser.plan;
+            token.isOforoInternal = dbUser.isOforoInternal;
+            token.onboardingDone = dbUser.onboardingDone;
+            token.referralCode = dbUser.referralCode;
+            token.stripeCustomerId = dbUser.stripeCustomerId;
+            token.aiCreditsUsed = dbUser.aiCreditsUsed;
+            token.aiCreditsLimit = dbUser.aiCreditsLimit;
+          }
+        } catch (err) {
+          console.error('[NextAuth] jwt callback DB error:', err);
+          // Keep existing token data if DB fails — session still works
         }
       }
       return token;

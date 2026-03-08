@@ -48,6 +48,32 @@ export function middleware(request: NextRequest) {
     });
   }
 
+  // 4. Referral source tracking — store in cookie for attribution
+  const existingRef = request.cookies.get('3box_ref_source');
+  if (!existingRef?.value) {
+    const url = request.nextUrl;
+    const ref = url.searchParams.get('ref');
+    const utmSource = url.searchParams.get('utm_source');
+
+    let refSource: string | null = null;
+    if (ref === 'wa' || utmSource === 'whatsapp') refSource = 'whatsapp';
+    else if (ref === 'tw' || utmSource === 'twitter') refSource = 'twitter';
+    else if (ref === 'li' || utmSource === 'linkedin') refSource = 'linkedin';
+    else if (ref === 'share') refSource = 'share';
+    else if (ref) refSource = ref;
+    else if (utmSource) refSource = utmSource;
+
+    if (refSource) {
+      response.cookies.set('3box_ref_source', refSource, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+    }
+  }
+
   return response;
 }
 

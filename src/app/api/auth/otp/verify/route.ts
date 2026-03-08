@@ -112,6 +112,9 @@ export async function POST(req: Request) {
       const isOforo = isOforoDomain(email);
       const referralCode = generateReferralCode();
 
+      // Detect student emails for automatic discount
+      const isStudent = /\.(edu|edu\.\w{2}|ac\.\w{2})$/i.test(email);
+
       const user = await prisma.user.create({
         data: {
           name,
@@ -119,6 +122,7 @@ export async function POST(req: Request) {
           hashedPassword,
           emailVerified: new Date(),
           isOforoInternal: isOforo,
+          isStudent,
           plan: isOforo ? 'ULTRA' : 'BASIC',
           aiCreditsLimit: isOforo ? -1 : 10,
           referralCode,

@@ -75,6 +75,7 @@ model User {
   hashedPassword  String?
   plan            PlanTier  @default(BASIC)
   isOforoInternal Boolean   @default(false)
+  isStudent       Boolean   @default(false)
   stripeCustomerId String?  @unique
   stripeSubId     String?
   stripePriceId   String?
@@ -711,4 +712,35 @@ model ContentCalendar {
 
   @@index([status])
   @@index([category])
+}
+
+// ─── Free Auto-Apply Burst ──────────────────────
+
+model FreeAutoApplyBurst {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  resumeText      String    @db.Text
+  targetRole      String
+  targetLocation  String?
+  jobsFound       Int       @default(0)
+  jobsApplied     Int       @default(0)
+  status          String    @default("pending") // pending | scanning | found | applying | completed
+  jobs            Json?     // matched jobs array
+  appliedJobs     Json?     // applied jobs array
+  ipAddress       String?
+  countryCode     String?
+  referralSource  String?   // whatsapp | twitter | linkedin | direct
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ViralCounter {
+  id            String   @id @default("global")
+  totalApplied  Int      @default(0)
+  todayApplied  Int      @default(0)
+  lastResetDate DateTime @default(now())
 }

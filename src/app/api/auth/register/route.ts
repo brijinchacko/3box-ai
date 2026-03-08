@@ -24,6 +24,7 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const isOforo = isOforoDomain(email);
+    const isStudent = /\.(edu|edu\.\w{2}|ac\.\w{2})$/i.test(email);
     const referralCode = generateReferralCode();
 
     const user = await prisma.user.create({
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
         email,
         hashedPassword,
         isOforoInternal: isOforo,
+        isStudent,
         plan: isOforo ? 'ULTRA' : 'BASIC',
         aiCreditsLimit: isOforo ? -1 : 10,
         referralCode,

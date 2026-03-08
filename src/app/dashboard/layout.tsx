@@ -115,6 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [status, pathname, router]);
 
   useEffect(() => {
+    if (status === 'loading') return;
     if (status === 'unauthenticated') router.push('/login');
   }, [status, router]);
 

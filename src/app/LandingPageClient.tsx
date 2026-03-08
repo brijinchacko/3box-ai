@@ -13,10 +13,16 @@ import {
   Clock, Heart, Shield, Rocket, Lock, Eye, ShieldCheck, Upload, Search
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
+import { useVisitorName } from '@/hooks/useVisitorName';
 import Footer from '@/components/layout/Footer';
 import CortexAvatar, { type CortexExpression } from '@/components/brand/CortexAvatar';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
+import ResumePreviewSection from '@/components/landing/ResumePreviewSection';
+import FreeAutoApplyHero from '@/components/landing/FreeAutoApplyHero';
+import LiveApplicationCounter from '@/components/landing/LiveApplicationCounter';
+import PlacementCellBanner from '@/components/landing/PlacementCellBanner';
+import { saveOnboardingProfile } from '@/lib/onboarding/onboardingData';
 import { useRegion } from '@/lib/geo';
 
 // ─── Data Constants ──────────────────────────
@@ -271,12 +277,12 @@ const howItWorks = [
 
 // ─── FAQ Data ───────────────────────────────
 const faqItems = [
-  { q: 'What is 3BOX AI?', a: 'Your personal AI career team. Six specialized agents handle everything — from finding matching jobs to sending applications and prepping you for interviews. Think of it as a career operating system that works around the clock while you focus on living your life.' },
-  { q: 'Will AI send wrong applications?', a: 'No. You choose your control level: Copilot mode lets you approve every application before it goes out. Autopilot auto-applies to high-match jobs you pre-approve. Full Agent mode works hands-free while you sleep. Plus, Sentinel reviews every application for quality before sending.' },
-  { q: 'Will companies block me?', a: 'No. Each application is individually crafted by Forge — no mass blasts or spam. Sentinel ensures every submission meets quality standards and relevance thresholds. Companies see a thoughtfully tailored application, not a generic template.' },
-  { q: 'Is my data safe?', a: 'Absolutely. All data is encrypted in transit and at rest. We never sell or share your information with third parties. You can delete your account and all data anytime — no questions asked. We are GDPR compliant.' },
-  { q: 'Is it actually free?', a: 'Yes! The Basic plan is free forever with limited AI credits and access to 17 career tools. Paid plans unlock unlimited agent work, more job sources, and full automation features. No credit card required to start.' },
-  { q: 'Do I need to install anything?', a: 'No. 3BOX AI is entirely browser-based. Sign up and your agents start working immediately — no downloads, no extensions, no setup required.' },
+  { q: 'Do I really get 20 free applications?', a: 'Yes. Upload your resume, pick your target role, and our AI finds 20 matching jobs and applies to each one with a tailored cover letter. No credit card. No catch. After your free burst, plans start at \u20B9249/mo for unlimited applications.' },
+  { q: 'Will AI send wrong or spammy applications?', a: 'No. Each application is individually crafted by Agent Forge \u2014 unique cover letter, tailored resume, quality-checked by Sentinel before sending. Companies see a thoughtful application, not a template.' },
+  { q: 'How does the AI actually apply?', a: 'Archer generates a unique cover letter for each job, then either submits through job portals directly or sends a professional cold email to the company\u2019s HR. Every application is tracked in your dashboard.' },
+  { q: 'Is my data safe?', a: 'Absolutely. All data is encrypted in transit and at rest. We never sell or share your information. You can delete your account and all data anytime. GDPR compliant.' },
+  { q: 'Do I need to install anything?', a: 'No. 3BOX AI is entirely browser-based. Sign up and your agents start working immediately \u2014 no downloads, no extensions, no setup.' },
+  { q: 'What happens after the free 20 applications?', a: 'You can track all your applications and responses for free. To get unlimited auto-applications every night, interview prep, and full agent access, plans start at \u20B9249/mo.' },
 ];
 
 // ─── Reviews Data ──────────────────────────
@@ -326,6 +332,11 @@ const allReviews: Review[] = [
   { name: 'Grace Kim', role: 'Business Analyst', text: 'The interview prep was insanely thorough. Atlas knew the exact questions my target companies ask. I walked in prepared.', rating: 5, avatar: 'GK', transformation: 'Interview ace', country: 'KR' },
   { name: 'Marco Bianchi', role: 'DevOps Engineer', text: 'Sentinel reviewed my applications before they went out. Caught formatting issues, keyword gaps, even tone problems. Flawless.', rating: 5, avatar: 'MB', transformation: 'Flawless applications', country: 'IT' },
   { name: 'Chloe Martin', role: 'Content Strategist', text: 'I thought AI could not write creative cover letters. Forge proved me wrong every single time. Each one felt personal and authentic.', rating: 5, avatar: 'CM', transformation: 'Personal cover letters', country: 'AU' },
+  // ── India Focus ──
+  { name: 'Sneha Reddy', role: 'Software Developer', text: 'Applied to 15 companies through Naukri in one night. Got placed in 2 weeks with a 45% hike.', rating: 5, avatar: 'SR', transformation: '45% salary hike', country: 'IN' },
+  { name: 'Arjun Nair', role: 'Data Analyst', text: 'Fresher from VIT. No connections. 3BOX found me a Bangalore startup paying 8 LPA. Unreal.', rating: 5, avatar: 'AN', transformation: 'Fresher \u2192 8 LPA', country: 'IN' },
+  { name: 'Rohit Bansal', role: 'Full Stack Developer', text: 'Applied to TCS, Infosys, Wipro, and 12 startups in one night. Got calls from 4 companies.', rating: 5, avatar: 'RB', transformation: '4 calls in 1 week', country: 'IN' },
+  { name: 'Kavitha Suresh', role: 'Product Manager', text: 'Shared 3BOX with my batch. 15 out of 20 got placed. Our placement cell is shook.', rating: 5, avatar: 'KS', transformation: '15/20 batch placed', country: 'IN' },
 ];
 
 // Keep region-based for initial featured display
@@ -352,6 +363,7 @@ interface Message {
 
 export default function LandingPageClient() {
   const router = useRouter();
+  const { firstName } = useVisitorName();
   const { countryCode, isLoading: geoLoading } = useRegion();
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -534,18 +546,14 @@ export default function LandingPageClient() {
     addUserMessage(`${fullName} from ${location}`);
     triggerExpression('heart');
 
-    // Save to localStorage
+    // Save to unified onboarding data model
     const actualSkills = selectedSkills.includes('None') ? [] : selectedSkills;
-    const profile = {
-      fullName, location, phone: '', linkedin: '', bio: '',
+    saveOnboardingProfile({
+      fullName, location,
       targetRole, experienceLevel: experience, currentStatus: status,
-      educationLevel: education, fieldOfStudy: '', institution: '', graduationYear: '',
-      skills: actualSkills, experiences: [],
-    };
-    localStorage.setItem('3box_onboarding_profile', JSON.stringify(profile));
-    localStorage.setItem('3box_target_role', targetRole);
-    localStorage.setItem('3box_interests', JSON.stringify(actualSkills.slice(0, 5)));
-    localStorage.setItem('3box_user_location', location);
+      educationLevel: education, skills: actualSkills,
+    });
+    // Also save skill scores and resume draft (legacy keys still used by dashboard)
     localStorage.setItem('3box_skill_scores', JSON.stringify(
       actualSkills.reduce((acc, skill) => {
         acc[skill] = experience === 'fresher' ? 30 : experience === '0-1' ? 40 : experience === '1-3' ? 55 : experience === '3-5' ? 65 : experience === '5-10' ? 75 : 85;
@@ -618,36 +626,46 @@ export default function LandingPageClient() {
     <div className="min-h-screen">
       <Navbar />
 
-      {/* ─── Chapter Zero: The Struggle ─── */}
-      <section className="relative py-24 sm:py-32 overflow-hidden" aria-label="The Struggle">
+      {/* ─── Hero: The Hook ─── */}
+      <section className="relative pt-32 pb-20 overflow-hidden" aria-label="Hero">
         <div className="absolute inset-0 bg-grid opacity-20" aria-hidden="true" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-gradient-radial from-rose-500/6 via-transparent to-transparent rounded-full blur-3xl" aria-hidden="true" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-gradient-radial from-neon-blue/8 via-neon-purple/5 to-transparent rounded-full blur-3xl" aria-hidden="true" />
         <div className="relative max-w-3xl mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-xs font-medium mb-8">
-              <Heart className="w-3.5 h-3.5 text-rose-400" /> Every job seeker has felt this
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-8">
+              <Users className="w-3.5 h-3.5" /> Used by 2,400+ job seekers
             </div>
-            <p className="text-xl sm:text-2xl lg:text-3xl text-white/60 leading-relaxed font-light italic mb-6">
-              &ldquo;You spent years building skills. Months perfecting your resume. Hundreds of hours applying. And still&hellip; silence.&rdquo;
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+              {firstName ? <>{firstName}, Stop Applying<br />to Jobs.</> : <>Stop Applying<br />to Jobs.</>}
+              <br />
+              <span className="gradient-text">Let AI Do It For You.</span>
+            </h1>
+            <p className="text-lg sm:text-xl text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
+              {countryCode === 'IN' ? (
+                <span className="sm:hidden">Resume upload karo. Target role batao. AI baaki sab handle karega.</span>
+              ) : null}
+              <span className={countryCode === 'IN' ? 'hidden sm:inline' : ''}>
+                Upload your resume. Pick your target role. Our AI applies to 20 matching jobs &mdash; free. No credit card.
+              </span>
             </p>
-            <p className="text-sm sm:text-base text-white/30 max-w-xl mx-auto leading-relaxed mb-8">
-              The average job seeker sends 100+ applications before hearing back. That is not a career strategy &mdash; that is a full-time job nobody signed up for.
-            </p>
-            <p className="text-base sm:text-lg text-white/50 font-medium">
-              What if it didn&apos;t have to be this way?
-            </p>
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="mt-10"
-            >
-              <ArrowRight className="w-5 h-5 text-white/20 mx-auto rotate-90" />
-            </motion.div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <a
+                href="#free-burst"
+                className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('free-burst')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                Get 20 Free Applications <ArrowRight className="w-5 h-5" />
+              </a>
+              <p className="text-xs text-white/30">No credit card required</p>
+            </div>
+            <LiveApplicationCounter className="mt-6" />
           </motion.div>
         </div>
       </section>
@@ -664,13 +682,13 @@ export default function LandingPageClient() {
             className="text-center mb-12"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-5">
-              <Zap className="w-3.5 h-3.5" /> Your AI Career Operating System
+              <Zap className="w-3.5 h-3.5" /> How it works
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-              One Platform. Six AI Agents. <span className="gradient-text">From Resume to Hired.</span>
+              4 Steps. <span className="gradient-text">Zero Effort.</span>
             </h2>
             <p className="text-white/40 max-w-xl mx-auto">
-              Free forever &middot; No credit card &middot; Your agents start in seconds
+              Upload once. AI handles the rest &mdash; finding, tailoring, and applying.
             </p>
           </motion.div>
 
@@ -707,6 +725,9 @@ export default function LandingPageClient() {
         </div>
       </section>
 
+      {/* ─── Free Auto-Apply Widget ─── */}
+      <FreeAutoApplyHero />
+
       {/* ─── Chapter One: The Encounter (Hero) ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" aria-label="AI Career Coach Onboarding">
         <div className="absolute inset-0 bg-grid opacity-30" aria-hidden="true" />
@@ -723,16 +744,16 @@ export default function LandingPageClient() {
               className="text-center mb-8"
             >
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-5">
-                <Bot className="w-3.5 h-3.5" /> Meet the team that never sleeps
+                <Bot className="w-3.5 h-3.5" /> Tell us your target role
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-                <span className="gradient-text">Your Story Deserves</span>
+                <span className="gradient-text">{firstName ? `${firstName}, Let\u2019s Build` : 'Let\u2019s Build'}</span>
                 <br />
-                A Better Chapter.
+                Your Career Profile.
               </h1>
               <p className="text-base sm:text-lg text-white/50 max-w-lg mx-auto mb-6">
-                Upload your resume. Tell us your dream role. Wake up to tailored applications,
-                matched jobs, and interview prep &mdash; all done by your AI career team.
+                Answer a few quick questions and your AI team starts finding
+                matching jobs and sending applications automatically.
               </p>
 
               {/* Agent mini-avatar row */}
@@ -1061,10 +1082,10 @@ export default function LandingPageClient() {
                               </div>
                             </div>
 
-                            <Link href="/signup" className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3">
-                              Activate Your Agent Team <ArrowRight className="w-5 h-5" />
+                            <Link href="/get-started" className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3">
+                              Get 20 Free Applications <ArrowRight className="w-5 h-5" />
                             </Link>
-                            <p className="text-center text-[10px] text-white/20">Free forever. No credit card. Your agents start immediately.</p>
+                            <p className="text-center text-[10px] text-white/20">No credit card required. AI starts applying in 60 seconds.</p>
                           </div>
                         </motion.div>
                       )}
@@ -1082,10 +1103,10 @@ export default function LandingPageClient() {
               <h2 className="text-3xl font-bold mb-2">
                 Welcome back{fullName ? `, ${fullName.split(' ')[0]}` : ''}!
               </h2>
-              <p className="text-white/40 mb-6">Your {targetRole} career profile is ready. Sign up to unlock everything.</p>
+              <p className="text-white/40 mb-6">Your {targetRole} career profile is ready. Get your free applications now.</p>
               <div className="flex gap-3 justify-center">
-                <Link href="/signup" className="btn-primary text-sm flex items-center gap-2">
-                  Create Free Account <ArrowRight className="w-4 h-4" />
+                <Link href="/get-started" className="btn-primary text-sm flex items-center gap-2">
+                  Get 20 Free Applications <ArrowRight className="w-4 h-4" />
                 </Link>
                 <button onClick={handleRestart} className="btn-secondary text-sm">
                   Start Over
@@ -1212,9 +1233,9 @@ export default function LandingPageClient() {
             className="text-center mb-14"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-purple/10 border border-neon-purple/20 text-neon-purple text-xs font-semibold mb-4">
-              <Bot className="w-3.5 h-3.5" /> Chapter Two — The Assembly
+              <Bot className="w-3.5 h-3.5" /> Your AI team
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Meet Your AI <span className="gradient-text">Career Team</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">6 AI Agents <span className="gradient-text">Working For You</span></h2>
             <p className="text-white/40 max-w-lg mx-auto">
               One coordinator. Six specialists. Working in perfect sync.
             </p>
@@ -1371,47 +1392,6 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ─── Chapter Three: The Quest Begins (How It Works) ─── */}
-      <section id="features" className="py-20 scroll-mt-20" aria-label="The Quest Begins">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-4">
-              <Rocket className="w-3.5 h-3.5" /> Chapter Three — The Quest
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Here&apos;s What Happens <span className="gradient-text">Next</span></h2>
-            <p className="text-white/40">You say &ldquo;go.&rdquo; Your agents take it from there.</p>
-          </motion.div>
-          <div className="relative">
-            {/* Connecting line */}
-            <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-neon-blue/40 via-neon-purple/40 to-neon-green/40 hidden sm:block" aria-hidden="true" />
-            <div className="space-y-6">
-              {howItWorks.map((item, i) => {
-                const Icon = item.icon;
-                return (
-                  <motion.div
-                    key={item.step}
-                    custom={i}
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    className="flex items-start gap-4 sm:gap-5"
-                  >
-                    <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg`}>
-                      <Icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="pt-1">
-                      <div className="text-[10px] text-white/30 font-medium uppercase tracking-wider mb-1">Step {item.step}</div>
-                      <h3 className="text-base font-semibold mb-0.5">{item.title}</h3>
-                      <p className="text-sm text-white/40 leading-relaxed">{item.desc}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ─── Chapter Four: The Journey (Agent Pipeline) ─── */}
       <section className="py-20 bg-surface-50 overflow-hidden" aria-label="A Night in the Life">
@@ -1423,9 +1403,9 @@ export default function LandingPageClient() {
             className="text-center mb-14"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-4">
-              <Clock className="w-3.5 h-3.5" /> Chapter Four — The Journey
+              <Clock className="w-3.5 h-3.5" /> While you sleep
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">A Night in the Life of <span className="gradient-text">Your AI Team</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">What Happens <span className="gradient-text">While You Sleep</span></h2>
             <p className="text-white/40">While you rest, an entire career operation unfolds. Here is the timeline.</p>
           </motion.div>
 
@@ -1518,10 +1498,10 @@ export default function LandingPageClient() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" /> Chapter Six — The Questions
+              <Shield className="w-3.5 h-3.5" /> FAQ
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">You Probably Have <span className="gradient-text">Questions</span></h2>
-            <p className="text-white/40">Totally fair. Here are the ones everyone asks.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Common <span className="gradient-text">Questions</span></h2>
+            <p className="text-white/40">Everything you need to know before getting started.</p>
           </motion.div>
           <div className="space-y-3">
             {faqItems.map((item, i) => (
@@ -1567,12 +1547,12 @@ export default function LandingPageClient() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-xs font-semibold mb-4">
-              <Star className="w-3.5 h-3.5" /> Chapter Five — The Proof
+              <Star className="w-3.5 h-3.5" /> Real results
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-              Their Story Could Be <span className="gradient-text">Yours</span>
+              Real Results From <span className="gradient-text">Real Job Seekers</span>
             </h2>
-            <p className="text-white/40 mb-2">Real transformations from real people who took the leap.</p>
+            <p className="text-white/40 mb-2">See how AI auto-apply is changing careers.</p>
             <p className="text-xs text-white/20">{allReviews.length}+ stories and counting</p>
           </motion.div>
         </div>
@@ -1760,6 +1740,9 @@ export default function LandingPageClient() {
         </motion.div>
       </section>
 
+      {/* ─── Placement Cell Banner (India-only) ─── */}
+      <PlacementCellBanner countryCode={countryCode} />
+
       {/* ─── Chapter Seven: The First Step (Closing CTA) ─── */}
       <section className="relative py-24 sm:py-32 overflow-hidden" aria-label="Your Story Starts Now">
         <div className="absolute inset-0 bg-grid opacity-20" aria-hidden="true" />
@@ -1772,23 +1755,32 @@ export default function LandingPageClient() {
             transition={{ duration: 0.8 }}
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-8">
-              <Sparkles className="w-3.5 h-3.5" /> Chapter Seven — The First Step
+              <Sparkles className="w-3.5 h-3.5" /> Start free
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
-              Stop Applying.<br />
-              Start <span className="gradient-text">Getting Hired</span>.
+              Your First 20 Applications<br />
+              Are <span className="gradient-text">Free</span>.
             </h2>
             <p className="text-base sm:text-lg text-white/40 max-w-xl mx-auto mb-10 leading-relaxed">
-              2,400+ jobs matched. 94% got hired faster. Your AI team is ready.
+              {countryCode === 'IN' ? (
+                <span className="sm:hidden">Pehle 20 applications bilkul free. Sochna kya?</span>
+              ) : null}
+              <span className={countryCode === 'IN' ? 'hidden sm:inline' : ''}>
+                Upload your resume. Pick a role. AI does the rest in 60 seconds.
+              </span>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
-                href="/signup"
+              <a
+                href="#free-burst"
                 className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('free-burst')?.scrollIntoView({ behavior: 'smooth' });
+                }}
               >
-                Start Free &mdash; No Credit Card <ArrowRight className="w-5 h-5" />
-              </Link>
-              <p className="text-xs text-white/30">7 agents. One mission. Your career.</p>
+                {firstName ? `${firstName}, ` : ''}Get 20 Free Applications <ArrowRight className="w-5 h-5" />
+              </a>
+              <p className="text-xs text-white/30">No credit card required</p>
             </div>
 
             {/* Mini agent row as visual anchor */}
@@ -1802,11 +1794,12 @@ export default function LandingPageClient() {
                 <CortexAvatar size={22} />
               </div>
             </div>
-            <p className="text-[10px] text-white/20 mt-3">7 agents. One mission. Your career.</p>
+            <p className="text-[10px] text-white/20 mt-3">7 AI agents. Unlimited applications. Your career on autopilot.</p>
           </motion.div>
         </div>
       </section>
 
+      <ResumePreviewSection />
       <Footer />
     </div>
   );

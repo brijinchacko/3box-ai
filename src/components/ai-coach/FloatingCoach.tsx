@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Minimize2, Maximize2, Trash2, CheckCircle2, XCircle, ArrowRight, Navigation } from 'lucide-react';
 import Link from 'next/link';
 import CortexAvatar, { CortexExpression } from '@/components/brand/CortexAvatar';
+import NameGreeting from '@/components/ai-coach/NameGreeting';
+import { useVisitorName } from '@/hooks/useVisitorName';
 
 interface ActionResult {
   type: string;
@@ -73,8 +75,10 @@ export default function FloatingCoach() {
   const isAuthenticated = status === 'authenticated';
   const isDashboard = pathname.startsWith('/dashboard');
 
+  const { firstName } = useVisitorName();
   const [coachName] = useState('Cortex');
   const [open, setOpen] = useState(false);
+  const [showNameGreeting, setShowNameGreeting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -84,23 +88,24 @@ export default function FloatingCoach() {
   // Pick context-appropriate quick actions
   const quickActions = isDashboard ? DASHBOARD_QUICK_ACTIONS : PUBLIC_QUICK_ACTIONS;
 
-  const publicGreeting = `Hey! I'm Cortex, the AI ninja who never sleeps \uD83E\uDD77 Ask me anything about 3BOX AI!`;
-  const authGreeting = `Hey! I'm Cortex, your AI coordinator \uD83E\uDDE0 What can I help you with?`;
+  const namePrefix = firstName ? `Hey ${firstName}!` : 'Hey!';
+  const publicGreeting = `${namePrefix} I'm Cortex, the AI ninja who never sleeps \uD83E\uDD77 Ask me anything about 3BOX AI!`;
+  const authGreeting = `${namePrefix} I'm Cortex, your AI coordinator \uD83E\uDDE0 What can I help you with?`;
 
   const greetings = useMemo(() => {
     if (!isAuthenticated) {
       return [
         publicGreeting,
-        `I'm Cortex — I command a team of 6 AI agents built to get you hired. Want to know more?`,
-        `Curious how 3BOX AI works? Ask me anything!`,
+        `${firstName ? `${firstName}, ` : ''}I'm Cortex — I command a team of 6 AI agents built to get you hired. Want to know more?`,
+        `Curious how 3BOX AI works? Ask me anything${firstName ? `, ${firstName}` : ''}!`,
       ];
     }
     return [
       authGreeting,
-      `Your agent team is ready. What would you like to work on?`,
-      `Need help? I can coordinate your agents or answer questions.`,
+      `${firstName ? `${firstName}, your` : 'Your'} agent team is ready. What would you like to work on?`,
+      `Need help${firstName ? `, ${firstName}` : ''}? I can coordinate your agents or answer questions.`,
     ];
-  }, [isAuthenticated]);
+  }, [isAuthenticated, firstName]);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -289,9 +294,17 @@ export default function FloatingCoach() {
     );
   };
 
+  const [greetingActive, setGreetingActive] = useState(false);
+
   return (
     <>
-      {/* ── Floating Cortex Avatar (always visible) ── */}
+      {/* ── Name Greeting Popup (first-time visitors only) ── */}
+      {!open && !isAuthenticated && !isDashboard && (
+        <NameGreeting onActiveChange={setGreetingActive} />
+      )}
+
+      {/* ── Floating Cortex Avatar (hidden during centered greeting) ── */}
+      {!greetingActive && (
       <motion.div
         className="fixed bottom-6 right-6 z-50 cursor-pointer"
         onClick={() => setOpen(!open)}
@@ -313,6 +326,7 @@ export default function FloatingCoach() {
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-neon-green rounded-full border-2 border-[#0a0a0f]" />
         </div>
       </motion.div>
+      )}
 
       {/* ── Speech Bubble ── */}
       <AnimatePresence>

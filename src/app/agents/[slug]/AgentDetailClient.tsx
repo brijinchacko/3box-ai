@@ -12,6 +12,7 @@ import CortexAvatar from '@/components/brand/CortexAvatar';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import { AGENT_LIST } from '@/lib/agents/registry';
 import { AGENT_PAGES, type AgentPageContent } from '@/lib/agents/agentContent';
+import { useVisitorName } from '@/hooks/useVisitorName';
 
 interface Props {
   slug: string;
@@ -26,6 +27,7 @@ const fadeUp = {
 };
 
 export default function AgentDetailClient({ slug }: Props) {
+  const { firstName } = useVisitorName();
   const agent = AGENT_PAGES[slug];
   if (!agent) return null;
 
@@ -286,9 +288,11 @@ export default function AgentDetailClient({ slug }: Props) {
             viewport={{ once: true }}
           >
             <Sparkles className="w-8 h-8 text-neon-blue mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-4">Activate {agent.displayName}</h2>
+            <h2 className="text-3xl font-bold mb-4">
+              {firstName ? `${firstName}, Activate ${agent.displayName}` : `Activate ${agent.displayName}`}
+            </h2>
             <p className="text-white/40 mb-8">Start your free account and let the agent team go to work.</p>
-            <Link href="/dashboard/onboarding" className="btn-primary text-sm inline-flex items-center gap-2">
+            <Link href="/get-started" className="btn-primary text-sm inline-flex items-center gap-2">
               Get Started Free <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>

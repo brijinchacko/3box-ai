@@ -1,5 +1,5 @@
-# jobTED AI — AI Career Operating System
-# https://jobted.ai
+# 3BOX AI — AI Career Operating System
+# https://3box.ai
 
 User-agent: *
 Allow: /
@@ -29,4 +29,4 @@ Allow: /
 User-agent: Bytespider
 Disallow: /
 
-Sitemap: https://jobted.ai/sitemap.xml
+Sitemap: https://3box.ai/sitemap.xml

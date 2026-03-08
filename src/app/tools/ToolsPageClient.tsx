@@ -6,12 +6,14 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { TOOL_CATEGORIES, ALL_TOOLS, type ToolCategory } from '@/lib/tools/toolsConfig';
+import { useVisitorName } from '@/hooks/useVisitorName';
 
 function getToolsByCategory(category: ToolCategory) {
   return ALL_TOOLS.filter((t) => t.category === category);
 }
 
 export default function ToolsPageClient() {
+  const { firstName } = useVisitorName();
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -31,7 +33,7 @@ export default function ToolsPageClient() {
               Free AI Tools
             </span>
             <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">
-              AI <span className="gradient-text">Career Tools</span>
+              {firstName ? `${firstName}'s ` : ''}AI <span className="gradient-text">Career Tools</span>
             </h1>
             <p className="text-white/40 max-w-xl mx-auto text-lg">
               17 free AI-powered tools to supercharge your job search. No signup required.

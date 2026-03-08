@@ -1,7 +1,7 @@
 {
-  "name": "3BOX AI — AI Career Operating System",
+  "name": "3BOX AI — AI Applies to Jobs For You",
   "short_name": "3BOX AI",
-  "description": "Free AI resume builder, career coaching, skill assessment, and job matching platform. From skill assessment to dream job — powered by AI.",
+  "description": "Stop applying to jobs manually. Upload your resume, pick your target role, and AI finds matching jobs and applies automatically. 20 free applications.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",

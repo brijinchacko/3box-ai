@@ -18,6 +18,8 @@ export interface ScoutConfig {
   limit?: number;
   /** Optional platform filter — only search these sources */
   platforms?: string[];
+  /** Burst mode — skip credit checks, limit to 20 results, search all platforms */
+  burstMode?: boolean;
 }
 
 export interface ScoutResult {
@@ -37,25 +39,29 @@ export async function runScout(config: ScoutConfig, ctx?: AgentContext): Promise
     minMatchScore,
     excludeCompanies,
     excludeKeywords,
-    limit = 30,
+    limit = config.burstMode ? 20 : 30,
+    burstMode = false,
   } = config;
 
   // Get user profile for match scoring
   let userProfile = { targetRole: targetRoles[0] || '', skills: [] as string[], location: targetLocations[0] || '' };
-  
-  try {
-    const careerTwin = await prisma.careerTwin.findUnique({
-      where: { userId },
-      select: { targetRoles: true, skillSnapshot: true },
-    });
-    if (careerTwin) {
-      const skills = careerTwin.skillSnapshot as any;
-      const skillList = Array.isArray(skills)
-        ? skills.map((s: any) => typeof s === 'string' ? s : s.skill || s.name || '')
-        : (typeof skills === 'object' && skills !== null ? Object.keys(skills) : []);
-      userProfile = { targetRole: targetRoles[0] || '', skills: skillList, location: targetLocations[0] || '' };
-    }
-  } catch {}
+
+  // In burst mode, skip careerTwin lookup (no real user profile exists)
+  if (!burstMode) {
+    try {
+      const careerTwin = await prisma.careerTwin.findUnique({
+        where: { userId },
+        select: { targetRoles: true, skillSnapshot: true },
+      });
+      if (careerTwin) {
+        const skills = careerTwin.skillSnapshot as any;
+        const skillList = Array.isArray(skills)
+          ? skills.map((s: any) => typeof s === 'string' ? s : s.skill || s.name || '')
+          : (typeof skills === 'object' && skills !== null ? Object.keys(skills) : []);
+        userProfile = { targetRole: targetRoles[0] || '', skills: skillList, location: targetLocations[0] || '' };
+      }
+    } catch {}
+  }
 
   // Discover jobs — request extra to ensure at least 20 after filtering
   const MIN_JOBS = 20;
@@ -95,23 +101,25 @@ export async function runScout(config: ScoutConfig, ctx?: AgentContext): Promise
   // Collect unique sources
   const sources = [...new Set(allJobs.map(j => j.source))];
 
-  // Log agent activity
-  await prisma.agentActivity.create({
-    data: {
-      userId,
-      agent: 'scout',
-      action: 'discovered_jobs',
-      summary: `Found ${allJobs.length} jobs, ${cleanJobs.length} qualified (${scamJobsFiltered} scam filtered)`,
-      details: {
-        totalFound: allJobs.length,
-        qualified: cleanJobs.length,
-        scamFiltered: scamJobsFiltered,
-        suspiciousCount: scamResult.stats.suspicious,
-        sources,
-        topMatch: cleanJobs[0] ? { title: cleanJobs[0].title, company: cleanJobs[0].company, score: cleanJobs[0].matchScore } : null,
+  // Log agent activity (skip in burst mode — no real user to log for)
+  if (!burstMode) {
+    await prisma.agentActivity.create({
+      data: {
+        userId,
+        agent: 'scout',
+        action: 'discovered_jobs',
+        summary: `Found ${allJobs.length} jobs, ${cleanJobs.length} qualified (${scamJobsFiltered} scam filtered)`,
+        details: {
+          totalFound: allJobs.length,
+          qualified: cleanJobs.length,
+          scamFiltered: scamJobsFiltered,
+          suspiciousCount: scamResult.stats.suspicious,
+          sources,
+          topMatch: cleanJobs[0] ? { title: cleanJobs[0].title, company: cleanJobs[0].company, score: cleanJobs[0].matchScore } : null,
+        },
       },
-    },
-  });
+    });
+  }
 
   // Log to shared agent context
   if (ctx) {

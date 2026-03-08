@@ -154,12 +154,17 @@ export async function applyToJob(
   resume: ResumeData,
   runId?: string,
   ctx?: AgentContext,
+  options?: { burstMode?: boolean },
 ): Promise<ApplicationResult> {
-  // ── Rate limit check ──
-  const rateCheck = canSendApplication(job.company);
-  if (!rateCheck.allowed) {
-    if (ctx) logActivity(ctx, 'archer', 'rate_limited', `Rate limited: ${rateCheck.reason}`);
-    return { success: false, method: 'none', strategy: 'standard', details: `Rate limited: ${rateCheck.reason}` };
+  const burstMode = options?.burstMode ?? false;
+
+  // ── Rate limit check (skip in burst mode) ──
+  if (!burstMode) {
+    const rateCheck = canSendApplication(job.company);
+    if (!rateCheck.allowed) {
+      if (ctx) logActivity(ctx, 'archer', 'rate_limited', `Rate limited: ${rateCheck.reason}`);
+      return { success: false, method: 'none', strategy: 'standard', details: `Rate limited: ${rateCheck.reason}` };
+    }
   }
 
   // Generate cover letter and add subtle uniqueness
@@ -171,40 +176,44 @@ export async function applyToJob(
 
   // Strategy 1: Queue portal application (always do this if URL exists)
   if (job.url && job.url.startsWith('http')) {
-    const application = await prisma.jobApplication.create({
-      data: {
-        userId,
-        jobTitle: job.title,
-        company: job.company,
-        location: job.location,
-        matchScore: job.matchScore || null,
-        status: 'QUEUED',
-        source: job.source,
-        coverLetter,
-        jobUrl: job.url,
-        autoApplyRunId: runId || null,
-        auditTrail: { method: 'portal', url: job.url, agentName: 'Archer' },
-      },
-    });
+    let applicationId: string | undefined;
 
-    // Log activity
-    await prisma.agentActivity.create({
-      data: {
-        userId,
-        agent: 'archer',
-        action: 'queued_portal',
-        summary: `Queued application for "${job.title}" at ${job.company} via ${job.source}`,
-        details: { jobId: job.id, company: job.company, method: 'portal', matchScore: job.matchScore },
-        runId,
-      },
-    });
+    // In burst mode, skip creating full JobApplication record (no real user)
+    if (!burstMode) {
+      const application = await prisma.jobApplication.create({
+        data: {
+          userId,
+          jobTitle: job.title,
+          company: job.company,
+          location: job.location,
+          matchScore: job.matchScore || null,
+          status: 'QUEUED',
+          source: job.source,
+          coverLetter,
+          jobUrl: job.url,
+          autoApplyRunId: runId || null,
+          auditTrail: { method: 'portal', url: job.url, agentName: 'Archer' },
+        },
+      });
+      applicationId = application.id;
 
-    // Log to shared agent context
+      await prisma.agentActivity.create({
+        data: {
+          userId,
+          agent: 'archer',
+          action: 'queued_portal',
+          summary: `Queued application for "${job.title}" at ${job.company} via ${job.source}`,
+          details: { jobId: job.id, company: job.company, method: 'portal', matchScore: job.matchScore },
+          runId,
+        },
+      });
+    }
+
     if (ctx) {
       logActivity(ctx, 'archer', 'queued_portal', `Queued portal application for "${job.title}" at ${job.company} via ${job.source} (match: ${job.matchScore}%)`);
     }
 
-    return { success: true, method: 'portal', strategy: 'standard', jobApplicationId: application.id, details: `Queued portal application for ${job.title} at ${job.company}` };
+    return { success: true, method: 'portal', strategy: 'standard', jobApplicationId: applicationId, details: `Queued portal application for ${job.title} at ${job.company}` };
   }
 
   // Strategy 2: Cold email
@@ -221,41 +230,45 @@ export async function applyToJob(
         text: `${coverLetter}\n\nBest regards,\n${resume.contact.name}\n${resume.contact.email}\n${resume.contact.phone}`,
       });
       
-      const application = await prisma.jobApplication.create({
-        data: {
-          userId,
-          jobTitle: job.title,
-          company: job.company,
-          location: job.location,
-          matchScore: job.matchScore || null,
-          status: 'EMAILED',
-          appliedAt: new Date(),
-          source: job.source,
-          coverLetter,
-          jobUrl: job.url || null,
-          autoApplyRunId: runId || null,
-          auditTrail: { method: 'email', sentTo: companyEmail, messageId: emailResult.id || null, agentName: 'Archer' },
-        },
-      });
+      let applicationId: string | undefined;
 
-      await prisma.agentActivity.create({
-        data: {
-          userId,
-          agent: 'archer',
-          action: 'sent_email',
-          summary: `Emailed application for "${job.title}" to ${companyEmail}`,
-          details: { jobId: job.id, company: job.company, method: 'email', sentTo: companyEmail },
-          creditsUsed: 1,
-          runId,
-        },
-      });
+      if (!burstMode) {
+        const application = await prisma.jobApplication.create({
+          data: {
+            userId,
+            jobTitle: job.title,
+            company: job.company,
+            location: job.location,
+            matchScore: job.matchScore || null,
+            status: 'EMAILED',
+            appliedAt: new Date(),
+            source: job.source,
+            coverLetter,
+            jobUrl: job.url || null,
+            autoApplyRunId: runId || null,
+            auditTrail: { method: 'email', sentTo: companyEmail, messageId: emailResult.id || null, agentName: 'Archer' },
+          },
+        });
+        applicationId = application.id;
 
-      // Log to shared agent context
+        await prisma.agentActivity.create({
+          data: {
+            userId,
+            agent: 'archer',
+            action: 'sent_email',
+            summary: `Emailed application for "${job.title}" to ${companyEmail}`,
+            details: { jobId: job.id, company: job.company, method: 'email', sentTo: companyEmail },
+            creditsUsed: 1,
+            runId,
+          },
+        });
+      }
+
       if (ctx) {
         logActivity(ctx, 'archer', 'sent_email', `Emailed application for "${job.title}" at ${job.company} to ${companyEmail}`);
       }
 
-      return { success: true, method: 'email', strategy: 'standard', jobApplicationId: application.id, details: `Emailed application to ${companyEmail}` };
+      return { success: true, method: 'email', strategy: 'standard', jobApplicationId: applicationId, details: `Emailed application to ${companyEmail}` };
     } catch (err) {
       console.error('[Archer] Email failed:', err);
     }

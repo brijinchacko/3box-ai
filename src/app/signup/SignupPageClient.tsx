@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { signIn } from 'next-auth/react';
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Chrome, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
+import { getOnboardingProfile } from '@/lib/onboarding/onboardingData';
 
 type SignupStep = 'form' | 'verify';
 
@@ -37,13 +38,12 @@ export default function SignupPageClient() {
   const [otpTimer, setOtpTimer] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Pre-fill from localStorage onboarding data
+  // Pre-fill from unified onboarding profile
   useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        const profileStr = localStorage.getItem('3box_onboarding_profile');
-        if (profileStr) {
-          const profile = JSON.parse(profileStr);
+        const profile = getOnboardingProfile();
+        if (profile) {
           if (profile.fullName) setName(profile.fullName);
           if (profile.targetRole) {
             setTargetRole(profile.targetRole);
@@ -157,14 +157,24 @@ export default function SignupPageClient() {
         return;
       }
 
-      // Sign in
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      // Sign in via direct fetch (bypasses next-auth/react signIn quirks)
+      const csrf = await fetch('/api/auth/csrf').then(r => r.json());
+      const signInRes = await fetch('/api/auth/callback/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Auth-Return-Redirect': '1',
+        },
+        body: new URLSearchParams({
+          email,
+          password,
+          csrfToken: csrf.csrfToken,
+          callbackUrl: '/dashboard',
+          json: 'true',
+        }),
       });
 
-      if (result?.error) {
+      if (!signInRes.ok) {
         setError('Account created but sign-in failed. Please try logging in.');
       } else {
         await saveOnboardingFromLocalStorage();
@@ -203,10 +213,15 @@ export default function SignupPageClient() {
 
   const saveOnboardingFromLocalStorage = async () => {
     try {
-      const profileStr = localStorage.getItem('3box_onboarding_profile');
+      // Check /get-started wizard data first (sessionStorage)
+      const wizardStr = sessionStorage.getItem('3box_onboarding_data');
+      const profileStr = wizardStr || localStorage.getItem('3box_onboarding_profile');
       if (!profileStr) return;
       const profile = JSON.parse(profileStr);
       if (!profile.targetRole) return;
+
+      // Clean up sessionStorage after reading
+      if (wizardStr) sessionStorage.removeItem('3box_onboarding_data');
 
       await fetch('/api/user/onboarding', {
         method: 'POST',

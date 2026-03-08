@@ -68,13 +68,26 @@ export default function LoginPageClient() {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const csrf = await fetch('/api/auth/csrf').then(r => r.json());
+      const res = await fetch('/api/auth/callback/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Auth-Return-Redirect': '1',
+        },
+        body: new URLSearchParams({
+          email,
+          password,
+          csrfToken: csrf.csrfToken,
+          callbackUrl: '/dashboard',
+          json: 'true',
+        }),
       });
 
-      if (result?.error) {
+      const data = await res.json();
+      const hasError = data.url && new URL(data.url, window.location.origin).searchParams.get('error');
+
+      if (!res.ok || hasError) {
         setError('Invalid email or password');
       } else {
         window.location.href = '/dashboard';
@@ -168,13 +181,23 @@ export default function LoginPageClient() {
       }
 
       // Sign in via NextAuth using a special OTP credential
-      const result = await signIn('credentials', {
-        email,
-        password: `otp:${code}`,
-        redirect: false,
+      const csrf = await fetch('/api/auth/csrf').then(r => r.json());
+      const signInRes = await fetch('/api/auth/callback/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Auth-Return-Redirect': '1',
+        },
+        body: new URLSearchParams({
+          email,
+          password: `otp:${code}`,
+          csrfToken: csrf.csrfToken,
+          callbackUrl: '/dashboard',
+          json: 'true',
+        }),
       });
 
-      if (result?.error) {
+      if (!signInRes.ok) {
         setError('Verification succeeded but sign-in failed. Please try again.');
         setOtpCode(['', '', '', '', '', '']);
         otpRefs.current[0]?.focus();

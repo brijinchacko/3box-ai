@@ -47,6 +47,10 @@ interface AppState {
   careerTwin: CareerTwinData | null;
   setCareerTwin: (data: CareerTwinData | null) => void;
 
+  // Visitor personalization
+  visitorName: string | null;
+  setVisitorName: (name: string | null) => void;
+
   // UI
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -97,6 +101,17 @@ export const useStore = create<AppState>((set, get) => ({
   // Career Twin
   careerTwin: null,
   setCareerTwin: (data) => set({ careerTwin: data }),
+
+  // Visitor personalization
+  visitorName: null,
+  setVisitorName: (name) => {
+    if (name) {
+      localStorage.setItem('3box_visitor_name', name);
+    } else {
+      localStorage.removeItem('3box_visitor_name');
+    }
+    set({ visitorName: name });
+  },
 
   // UI
   sidebarOpen: true,

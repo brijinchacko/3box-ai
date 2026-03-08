@@ -68,3 +68,11 @@ export const PLAN_AGENT_COUNTS: Record<PlanTier, number> = {
   PRO: 4,
   ULTRA: 6,
 };
+
+/**
+ * Check if an agent is allowed to run in burst mode (free auto-apply).
+ * Burst mode bypasses plan checks for a limited set of agents.
+ */
+export function isBurstModeAllowed(agentId: AgentId): boolean {
+  return ['scout', 'archer'].includes(agentId);
+}

@@ -13,12 +13,10 @@ import { TOOL_CATEGORIES, ALL_TOOLS } from '@/lib/tools/toolsConfig';
 import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
 
 const navLinks = [
-  { href: '/#features', label: 'Features' },
   { href: '/agents', label: 'AI Agents', hasMegaMenu: 'agents' as const },
   { href: '/tools', label: 'AI Tools', hasMegaMenu: 'tools' as const },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/about', label: 'About' },
+  { href: '/case-studies', label: 'Case Studies' },
 ];
 
 export default function Navbar() {
@@ -291,8 +289,8 @@ export default function Navbar() {
                 <Link href="/login" className="btn-ghost text-sm">
                   Sign In
                 </Link>
-                <Link href="/dashboard/onboarding" className="btn-primary text-sm flex items-center gap-1">
-                  Get Started <ChevronRight className="w-4 h-4" />
+                <Link href="/get-started" className="btn-primary text-sm flex items-center gap-1">
+                  Get 20 Free Apps <ChevronRight className="w-4 h-4" />
                 </Link>
               </>
             )}
@@ -464,8 +462,8 @@ export default function Navbar() {
                     <Link href="/login" className="block w-full text-center btn-secondary text-sm">
                       Sign In
                     </Link>
-                    <Link href="/dashboard/onboarding" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-primary text-sm">
-                      Get Started Free
+                    <Link href="/get-started" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-primary text-sm">
+                      Get 20 Free Apps
                     </Link>
                   </>
                 )}
