@@ -53,7 +53,7 @@ While AI tools are powerful, they work best when combined with human judgment. H
 Looking ahead, the line between resume creation and job application will continue to blur. AI systems are already beginning to auto-match candidates to openings, generate customized cover letters, and even prepare candidates for interviews based on the specific company and role. The professionals who learn to work effectively with these tools today will have a significant advantage in the job market of tomorrow.
 
 The key takeaway is clear: AI is not replacing the need for strong professional experience, but it is ensuring that strong experience gets the recognition it deserves.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'ai-technology',
     tags: ['AI', 'resume', 'career tools', 'ATS', 'job search'],
     status: 'PUBLISHED' as const,
@@ -111,7 +111,7 @@ Interviews are not just about qualifications. They are also about cultural fit a
 ## Building Interview Confidence
 
 The common thread through all these mistakes is preparation. Candidates who invest time in research, practice, and self-reflection consistently outperform those who wing it. Consider recording practice sessions, working with a career coach, or using AI-powered mock interview tools to refine your approach before the real thing.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'interview-prep',
     tags: ['interviews', 'career advice', 'job search', 'STAR method', 'preparation'],
     status: 'PUBLISHED' as const,
@@ -174,7 +174,7 @@ The best career plan in the world is useless without accountability. Set up syst
 This framework works whether you are a recent graduate planning your first career moves, a mid-career professional looking to pivot, or a senior leader preparing for executive roles. The key is adapting the specifics to your situation while maintaining the discipline of the five-phase structure.
 
 Career development is not a one-time event. It is an ongoing process. The professionals who build and maintain effective career plans consistently outperform those who leave their career trajectory to chance.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['career planning', 'professional development', 'goal setting', 'skills', 'framework'],
     status: 'PUBLISHED' as const,
@@ -249,7 +249,7 @@ Before submitting, test your resume against ATS scoring tools. Upload your resum
 **Myth: ATS only care about keywords.** Reality: While keywords are important, modern ATS systems also evaluate work history consistency, education relevance, and overall resume structure.
 
 The goal is not to trick the ATS. It is to ensure that a well-qualified candidate like you does not get unfairly filtered out due to formatting issues or missing terminology. Optimize for the machine, but write for the human who will read it after it passes the screen.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'resume-writing',
     tags: ['ATS', 'resume', 'job applications', 'formatting', 'keywords', 'career tools'],
     status: 'PUBLISHED' as const,
@@ -309,7 +309,7 @@ To compete effectively in the current remote job market:
 ## Looking Ahead
 
 The remote work trend is not reversing. It is maturing. Companies that resist flexible work arrangements are increasingly losing talent to those that embrace them. For job seekers, this means developing the skills and habits that make you an effective remote collaborator is one of the highest-return investments you can make in your career.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'industry-trends',
     tags: ['remote work', 'hiring trends', 'future of work', 'career advice', 'job market'],
     status: 'PUBLISHED' as const,
@@ -383,7 +383,7 @@ The demonstration piece is critical. Closing a skill gap means nothing if you ca
 ## Making the Leap
 
 Career changers who follow a structured gap analysis typically reach interview-readiness in 3 to 9 months, depending on the distance between their current and target roles. The key is consistent, focused effort guided by a clear understanding of what matters most. Do not try to become a perfect candidate. Focus on becoming a viable one, then improve from there.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['career change', 'skill gap', 'professional development', 'learning', 'career pivot'],
     status: 'PUBLISHED' as const,
@@ -405,7 +405,7 @@ Career changers who follow a structured gap analysis typically reach interview-r
 
 ## 1. AI Resume Builders
 
-The first and most impactful category of AI tools for job seekers is the AI-powered resume builder. Tools like jobTED AI analyze job descriptions and automatically tailor your resume to match the requirements. They go beyond simple keyword matching by understanding the context of your experience and suggesting how to present it most effectively.
+The first and most impactful category of AI tools for job seekers is the AI-powered resume builder. Tools like 3BOX AI analyze job descriptions and automatically tailor your resume to match the requirements. They go beyond simple keyword matching by understanding the context of your experience and suggesting how to present it most effectively.
 
 The best resume builders provide ATS compatibility scores, letting you know exactly how likely your resume is to pass automated screening. They also suggest quantified achievement statements based on your role descriptions, turning vague responsibilities into compelling metrics.
 
@@ -460,7 +460,7 @@ Finally, AI-powered application tracking tools help you manage the logistics of 
 ## Getting the Most from AI Tools
 
 The candidates who benefit most from AI tools treat them as force multipliers, not replacements for genuine effort. Use AI to save time on repetitive tasks, get data-driven insights, and improve the quality of your job search materials. But always apply your own judgment, add your personal voice, and remember that at the end of the day, hiring decisions are made by humans who want to work with other humans.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'ai-technology',
     tags: ['AI tools', 'job search', 'career technology', 'resume', 'interview prep'],
     status: 'PUBLISHED' as const,
@@ -538,7 +538,7 @@ Write out each story in full STAR format, then practice telling it in 90 seconds
 **Time your answers.** Practice with a timer. Answers under 60 seconds often lack sufficient detail. Answers over 3 minutes typically lose the interviewer's attention. The sweet spot for most behavioral questions is 90 seconds to 2 minutes.
 
 Behavioral interviews reward preparation. The candidates who invest time in building and practicing their story bank consistently outperform equally qualified candidates who improvise their answers on the spot.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'interview-prep',
     tags: ['behavioral interviews', 'STAR method', 'interview prep', 'career advice', 'job search'],
     status: 'PUBLISHED' as const,
@@ -598,7 +598,7 @@ Understanding AI in hiring is not about gaming the system. It is about presentin
 5. **Be authentic.** AI systems are increasingly good at detecting inconsistencies between your resume, your online presence, and your interview responses. Consistency across all touchpoints builds trust with both AI and human evaluators.
 
 The companies using AI in hiring are trying to make better, faster decisions. Candidates who understand and adapt to these systems put themselves in the strongest possible position.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'ai-technology',
     tags: ['AI hiring', 'recruitment technology', 'ATS', 'job search', 'career advice'],
     status: 'PUBLISHED' as const,
@@ -672,7 +672,7 @@ If you are early in your career or switching fields, you may not have profession
 ## The Portfolio as a Living Document
 
 Think of your portfolio as a living representation of your professional identity. It should evolve as you grow, reflect your current interests and capabilities, and always present your best work. The time you invest in maintaining a strong portfolio pays dividends throughout your career in the form of inbound opportunities, stronger interview performance, and higher perceived credibility.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['portfolio', 'web development', 'design', 'career advice', 'job search'],
     status: 'PUBLISHED' as const,
@@ -754,7 +754,7 @@ A compensation package includes much more than base salary. Be prepared to negot
 **Track your wins.** Document your negotiated compensation to use as a baseline for future raises and role changes. Many professionals forget what they negotiated and lose ground over time.
 
 Salary negotiation is a learnable skill. Every negotiation, successful or not, builds your confidence and ability for the next one. The key is preparation, professionalism, and the willingness to advocate for your own value.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['salary negotiation', 'compensation', 'career advice', 'job offers', 'professional development'],
     status: 'PUBLISHED' as const,
@@ -822,7 +822,7 @@ In 2026, AI tools are making networking more efficient and strategic:
 The professionals who network most effectively share a common mindset: they see networking not as a transactional activity but as a practice of building genuine professional relationships. They are curious about other people's work, generous with their own knowledge, and patient about the return on their investment.
 
 Networking is a long game. The connections you build today may not produce visible results for months or even years. But when opportunities do arise, they come to the people who have invested consistently in their professional relationships.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['networking', 'LinkedIn', 'career advice', 'professional development', 'job search'],
     status: 'PUBLISHED' as const,
@@ -892,7 +892,7 @@ The languages you should prioritize depend on your career goals:
 With AI-assisted coding tools becoming increasingly capable, some argue that language-specific expertise will matter less. The opposite is true. AI tools are most effective when the developer understands the language deeply enough to evaluate, modify, and optimize the generated code. AI raises the bar for what constitutes competent programming. It does not lower it.
 
 The best investment is to go deep in one or two languages while maintaining working knowledge of others. Depth creates expertise. Breadth creates adaptability. The combination creates a resilient career.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'skill-development',
     tags: ['programming languages', 'Python', 'TypeScript', 'Rust', 'Go', 'career development'],
     status: 'PUBLISHED' as const,
@@ -968,7 +968,7 @@ System design interviews are less about finding the right answer and more about 
 **Send a thoughtful follow-up.** Reference something specific from the technical discussion. This demonstrates engagement and helps the interviewer remember you positively.
 
 Technical interviews reward systematic preparation. The candidates who invest in structured practice, develop repeatable frameworks, and maintain composure under pressure consistently outperform those who rely on raw talent alone.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'interview-prep',
     tags: ['technical interviews', 'coding challenges', 'system design', 'software engineering', 'career advice'],
     status: 'PUBLISHED' as const,
@@ -1053,7 +1053,7 @@ Posting content on LinkedIn is the single most effective way to build visibility
 **Use LinkedIn's AI features.** LinkedIn's AI-powered tools can suggest profile improvements, draft outreach messages, and identify connections at target companies. Take advantage of these features to work smarter.
 
 A well-optimized LinkedIn profile works for you around the clock, attracting opportunities even when you are not actively searching. The investment of a few hours in optimization can generate returns for years.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['LinkedIn', 'personal branding', 'recruiter visibility', 'career advice', 'job search'],
     status: 'PUBLISHED' as const,
@@ -1129,7 +1129,7 @@ Unlike technical skills, soft skills cannot be learned through courses alone. Th
 Soft skills are best demonstrated, not claimed. Instead of listing "strong communicator" on your resume, include examples that prove it. Use your cover letter to show your writing ability. Use interviews to demonstrate listening, empathy, and clear articulation. Use references who can speak to your interpersonal effectiveness.
 
 The professionals who combine strong technical foundations with exceptional soft skills are the ones who build the most successful, resilient, and fulfilling careers.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'skill-development',
     tags: ['soft skills', 'communication', 'leadership', 'emotional intelligence', 'career advice'],
     status: 'PUBLISHED' as const,
@@ -1205,7 +1205,7 @@ The most effective way to use Career Twin technology is as one input among sever
 5. **Revisit regularly** as your career evolves and new data becomes available.
 
 Career Twin technology does not replace the need for thoughtful career planning. It enhances it by providing data-driven insights that complement your own knowledge, experience, and intuition. The result is a career plan that is both personally meaningful and statistically informed.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'ai-technology',
     tags: ['Career Twin', 'AI career planning', 'career development', 'machine learning', 'professional growth'],
     status: 'PUBLISHED' as const,
@@ -1273,7 +1273,7 @@ For job seekers, evaluating a company's approach to employee wellbeing should be
 These trends create both opportunities and challenges. The professionals who navigate them most successfully share common habits: they invest consistently in skill development, build diverse professional networks, maintain flexibility in their career plans, and stay informed about industry changes.
 
 The future of work rewards adaptability, continuous learning, and the uniquely human skills that technology cannot replicate. Position yourself at the intersection of technical competence and human capability, and you will be well-prepared for whatever changes come next.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'industry-trends',
     tags: ['future of work', 'AI', 'remote work', 'career trends', 'skills-based hiring'],
     status: 'PUBLISHED' as const,
@@ -1350,7 +1350,7 @@ A cover letter generated entirely by AI will often sound polished but impersonal
 - Save as PDF unless otherwise instructed.
 
 A great cover letter takes 30 to 45 minutes to write. That investment is worth it when it transforms your application from one in a stack of 200 to one the hiring manager is genuinely excited to interview.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'resume-writing',
     tags: ['cover letter', 'job applications', 'writing tips', 'career advice', 'hiring'],
     status: 'PUBLISHED' as const,
@@ -1432,7 +1432,7 @@ Data science salaries vary significantly by specialization, location, and experi
 ## The Long View
 
 Data science is a field that rewards continuous learning. The specific tools and techniques will continue to evolve, but the foundational skills of statistical thinking, programming, and clear communication will remain valuable regardless of how the field changes. Invest in fundamentals, specialize strategically, and never stop building.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'skill-development',
     tags: ['data science', 'machine learning', 'Python', 'career roadmap', 'technical skills'],
     status: 'PUBLISHED' as const,
@@ -1528,7 +1528,7 @@ The UX community is unusually welcoming to newcomers. Attend local UX meetups, j
 UX design offers clear growth paths: from junior designer to mid-level to senior, then branching into management (design lead, head of design, VP of design) or individual contributor (principal designer, staff designer). The field also provides strong foundations for transitions into product management, design strategy, or design entrepreneurship.
 
 The demand for UX designers continues to grow as more companies recognize that user experience is a competitive advantage. For professionals with the right skills and portfolio, the opportunities are abundant.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'skill-development',
     tags: ['UX design', 'career change', 'Figma', 'user research', 'portfolio'],
     status: 'PUBLISHED' as const,
@@ -1627,7 +1627,7 @@ In practice, the boundary between these roles is blurring. Many companies expect
 The most marketable engineers in 2026 have a primary specialization with working knowledge of the other domain. A full stack developer who can configure a CI/CD pipeline and deploy to Kubernetes has a significant advantage over one who cannot. A DevOps engineer who can write clean application code and understand the developer experience has a significant advantage over one who focuses solely on infrastructure.
 
 Whatever path you choose, invest deeply in the fundamentals. The specific tools will change over the years, but the underlying principles of building and operating reliable software will remain relevant throughout your career.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'skill-development',
     tags: ['DevOps', 'full stack', 'software engineering', 'career path', 'web development'],
     status: 'PUBLISHED' as const,
@@ -1727,7 +1727,7 @@ Another option is contract-to-hire arrangements, where you start as a freelancer
 There is no universally right answer. The best choice is the one that aligns with your current career stage, financial situation, and personal priorities. Many successful professionals move between freelancing and full-time employment multiple times throughout their careers, leveraging each mode when it serves them best.
 
 Whatever you choose, invest in building skills, relationships, and a professional reputation. These assets compound over time and remain valuable regardless of your employment structure.`,
-    author: 'jobTED AI Team',
+    author: '3BOX AI Team',
     category: 'career-tips',
     tags: ['freelancing', 'full-time employment', 'career decisions', 'work-life balance', 'income'],
     status: 'PUBLISHED' as const,

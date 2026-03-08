@@ -105,7 +105,7 @@ Respond in JSON:
       : '';
 
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: `You are Sentinel, the Quality Reviewer in jobTED's AI agent team.
+      { role: 'system', content: `You are Sentinel, the Quality Reviewer in 3BOX's AI agent team.
 ${contextBlock}
 ${handoffBlock}
 ${scamWarning}

@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-resumescore-uses',
+    cookieName: '3box-resumescore-uses',
     requiredFields: ['resumeText'],
     systemPrompt:
       'You are an expert resume reviewer and ATS specialist. Score the resume on a scale of 0-100 and provide detailed feedback. Return JSON: { "overallScore": number, "categories": [{ "name": string, "score": number, "feedback": string }], "strengths": string[], "improvements": string[], "keywords": { "found": string[], "missing": string[] } }. Categories should include: Content Quality, ATS Compatibility, Formatting, Impact & Metrics, Keywords.',

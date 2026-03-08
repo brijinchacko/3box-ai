@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-liheadline-uses',
+    cookieName: '3box-liheadline-uses',
     requiredFields: ['currentRole'],
     systemPrompt:
       'You are a LinkedIn profile expert. Generate 5 compelling LinkedIn headlines (max 120 chars each). Each should be unique in style. Return JSON: { "headlines": [{ "label": "Professional", "content": "..." }, { "label": "Creative", "content": "..." }, { "label": "Keyword-Rich", "content": "..." }, { "label": "Value-Driven", "content": "..." }, { "label": "Bold", "content": "..." }] }',

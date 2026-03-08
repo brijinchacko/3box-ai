@@ -151,7 +151,7 @@ export async function GET() {
     // Build rich user context for AI personalization
     const userContext = await getUserContextString(userId);
 
-    const systemPrompt = `You are a career analytics AI for the jobTED platform. Analyze the user's career data and generate personalized insights. Return JSON with:
+    const systemPrompt = `You are a career analytics AI for the 3BOX platform. Analyze the user's career data and generate personalized insights. Return JSON with:
 {
   "insights": [
     {

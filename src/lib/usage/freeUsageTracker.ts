@@ -28,7 +28,7 @@ export type FreeService =
   | 'thank_you_email'
   | 'elevator_pitch';
 
-const STORAGE_KEY_PREFIX = 'jobted-free-use-';
+const STORAGE_KEY_PREFIX = '3box-free-use-';
 
 /**
  * Get the current usage count for a free service.

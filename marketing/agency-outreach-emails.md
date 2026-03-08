@@ -1,10 +1,10 @@
-# jobTED AI — Placement Agency & Training Institute Outreach Emails
+# 3BOX AI — Placement Agency & Training Institute Outreach Emails
 
 ---
 
 ## Email 1: Placement Agencies (India)
 
-**Subject:** Partnership: AI career tools for your candidates — jobTED AI
+**Subject:** Partnership: AI career tools for your candidates — 3BOX AI
 
 **To:** Placement agency managers, recruitment consultants
 
@@ -12,11 +12,11 @@
 
 Hi [Name],
 
-I'm Brijin from jobTED AI — an AI-powered career platform that helps job seekers with skill assessment, resume building, career planning, and job matching.
+I'm Brijin from 3BOX AI — an AI-powered career platform that helps job seekers with skill assessment, resume building, career planning, and job matching.
 
 I'm reaching out because I think our platform could add real value to your candidates:
 
-**What jobTED AI offers your candidates:**
+**What 3BOX AI offers your candidates:**
 - AI Skill Assessment — Identifies exact skill gaps for target roles
 - AI Resume Builder — Creates ATS-optimized resumes in minutes
 - Career Plan — Personalized roadmaps with milestones and projects
@@ -33,15 +33,15 @@ I'm reaching out because I think our platform could add real value to your candi
 - Individual: Starts at ₹399/mo
 - Agency/Bulk: Custom pricing (significant discounts for 50+ candidates)
 
-Would you be open to a 15-minute call to explore how jobTED AI could help improve your placement rates?
+Would you be open to a 15-minute call to explore how 3BOX AI could help improve your placement rates?
 
 I'm happy to set up free trial accounts for your team to evaluate the platform.
 
 Best regards,
 Brijin Chacko
-Founder, jobTED AI
-https://jobted.ai
-brijin@jobted.ai
+Founder, 3BOX AI
+https://3box.ai
+brijin@3box.ai
 
 ---
 
@@ -53,7 +53,7 @@ brijin@jobted.ai
 
 Hi [Name],
 
-I'm Brijin, founder of jobTED AI (https://jobted.ai) — an AI career platform that helps people go from skill assessment to job placement.
+I'm Brijin, founder of 3BOX AI (https://3box.ai) — an AI career platform that helps people go from skill assessment to job placement.
 
 I noticed [Institute Name] trains students in [specific domain — e.g., software development, data science, digital marketing]. I think we could add value to your students' outcomes.
 
@@ -82,8 +82,8 @@ Happy to start with a free pilot for one batch of students.
 
 Best regards,
 Brijin Chacko
-Founder, jobTED AI
-https://jobted.ai
+Founder, 3BOX AI
+https://3box.ai
 
 ---
 
@@ -95,9 +95,9 @@ https://jobted.ai
 
 Hi [Name],
 
-I'm reaching out from jobTED AI — an AI career platform that combines skill assessment, personalized learning paths, and career planning.
+I'm reaching out from 3BOX AI — an AI career platform that combines skill assessment, personalized learning paths, and career planning.
 
-While we started as a job seeker tool, several companies have asked us about using jobTED AI for internal employee development. Here's what we can offer:
+While we started as a job seeker tool, several companies have asked us about using 3BOX AI for internal employee development. Here's what we can offer:
 
 **For your L&D / HR team:**
 - **Skill Gap Analysis** — AI assessments identify exact skill gaps across your team
@@ -118,8 +118,8 @@ Would a 20-minute demo be useful? I can show you real examples of how the skill 
 
 Best regards,
 Brijin Chacko
-Founder, jobTED AI
-https://jobted.ai
+Founder, 3BOX AI
+https://3box.ai
 
 ---
 
@@ -131,17 +131,17 @@ https://jobted.ai
 
 Hi [Name],
 
-I'm Brijin from jobTED AI. I build AI career tools, and I think our platform could complement your coaching practice.
+I'm Brijin from 3BOX AI. I build AI career tools, and I think our platform could complement your coaching practice.
 
-**How jobTED AI helps career coaches:**
-- **Pre-session Assessment:** Send clients to jobTED AI for a skill assessment before coaching sessions. You get data-driven insights instead of relying on self-reporting.
+**How 3BOX AI helps career coaches:**
+- **Pre-session Assessment:** Send clients to 3BOX AI for a skill assessment before coaching sessions. You get data-driven insights instead of relying on self-reporting.
 - **Resume Optimization:** Clients build ATS-optimized resumes between sessions, freeing your time for higher-value coaching.
 - **Learning Path:** Between your sessions, clients follow AI-curated learning plans aligned with their career goals.
 - **Progress Tracking:** Monitor client progress through the dashboard — skills improving, milestones completed, portfolio growing.
 
 **Our coach-friendly model:**
 - You keep coaching — we handle the tools
-- Clients pay jobTED AI separately (you earn affiliate commission)
+- Clients pay 3BOX AI separately (you earn affiliate commission)
 - Or you bundle it into your coaching package at wholesale pricing
 
 **What coaches have told us:**
@@ -151,8 +151,8 @@ Would you be open to trying the platform? I'll set up a free Pro account for you
 
 Best regards,
 Brijin Chacko
-Founder, jobTED AI
-https://jobted.ai
+Founder, 3BOX AI
+https://3box.ai
 
 ---
 
@@ -188,7 +188,7 @@ https://jobted.ai
 
 ### Outreach Sequence
 1. **Day 1:** Send initial email (above templates)
-2. **Day 4:** Follow-up if no response: "Hi [Name], following up on my earlier email about jobTED AI. Would a quick 10-minute call work this week?"
+2. **Day 4:** Follow-up if no response: "Hi [Name], following up on my earlier email about 3BOX AI. Would a quick 10-minute call work this week?"
 3. **Day 8:** Value-add follow-up: Share a relevant blog post or industry insight
 4. **Day 14:** Final follow-up: "Last note from me — if the timing isn't right now, I'd love to stay connected for the future."
 5. **Move on** if no response after 14 days

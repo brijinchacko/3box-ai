@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Admin Overview</h1>
-        <p className="text-white/40 text-sm mt-1">jobTED AI platform analytics</p>
+        <p className="text-white/40 text-sm mt-1">3BOX AI platform analytics</p>
       </div>
 
       {/* Key Metrics */}

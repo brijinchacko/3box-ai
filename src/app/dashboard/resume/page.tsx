@@ -17,7 +17,7 @@ import AgentLoader from '@/components/brand/AgentLoader';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
-const RESUME_STORAGE_KEY = 'jobted_resume_data';
+const RESUME_STORAGE_KEY = '3box_resume_data';
 
 // Empty resume template
 const emptyResume = {
@@ -48,7 +48,7 @@ const templates = [
 ];
 
 const AI_FREE_LIMIT = 3;
-const AI_USES_KEY = 'jobted_ai_uses';
+const AI_USES_KEY = '3box_ai_uses';
 
 function getAIUses(): number {
   if (typeof window === 'undefined') return 0;
@@ -226,7 +226,7 @@ export default function ResumePage() {
   // Pre-fill wizard targetRole from localStorage
   useEffect(() => {
     try {
-      const savedRole = localStorage.getItem('jobted_target_role');
+      const savedRole = localStorage.getItem('3box_target_role');
       if (savedRole) {
         setWizardForm(prev => ({ ...prev, targetRole: savedRole }));
       }
@@ -1024,7 +1024,7 @@ export default function ResumePage() {
 
               {isStarter && (
                 <span className="text-xs text-white/40 hidden sm:inline">
-                  Exported with jobTED AI watermark
+                  Exported with 3BOX AI watermark
                 </span>
               )}
             </div>

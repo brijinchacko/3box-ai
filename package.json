@@ -1,8 +1,8 @@
 {
-  "name": "jobted-ai",
+  "name": "3box-ai",
   "version": "1.6.0",
   "private": true,
-  "description": "jobTED AI — Full Career Operating System by OFORO AI",
+  "description": "3BOX AI — Full Career Operating System by OFORO AI",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

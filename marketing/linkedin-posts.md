@@ -1,4 +1,4 @@
-# jobTED AI — LinkedIn Thought Leadership Posts (8 Posts/Month)
+# 3BOX AI — LinkedIn Thought Leadership Posts (8 Posts/Month)
 
 ---
 
@@ -15,7 +15,7 @@ Every job seeker I talk to uses at least 5 different tools:
 
 Total monthly cost: $170-470. And none of these tools share data.
 
-That's why I built jobTED AI.
+That's why I built 3BOX AI.
 
 One platform. AI skill assessment, resume builder, career coaching, learning paths, job matching, and interview prep — all connected.
 
@@ -23,7 +23,7 @@ Your skill assessment informs your career plan. Your career plan shapes your lea
 
 The free tools (ATS checker, resume builder, salary estimator) work without even creating an account.
 
-Try it: https://jobted.ai
+Try it: https://3box.ai
 
 #CareerDevelopment #AI #JobSearch #ResumeBuilder #Startup
 
@@ -51,7 +51,7 @@ What you can do:
 - Include both the full term AND the acronym (e.g., "Artificial Intelligence (AI)")
 - Test your resume against job descriptions before submitting
 
-We built a free ATS checker at jobted.ai/tools/ats-checker that scores your resume against any job description — no signup needed.
+We built a free ATS checker at 3box.ai/tools/ats-checker that scores your resume against any job description — no signup needed.
 
 #ATS #Resume #JobSearch #CareerTips #HiringProcess
 
@@ -74,7 +74,7 @@ My ATS checker didn't know what skills I was developing. My career coach couldn'
 
 That's when I realized: the career tools industry is fragmented by design. Each tool wants its own subscription.
 
-So I built jobTED AI — a platform where every tool shares context. When you complete a skill assessment, your career plan, resume, and job matches all update automatically.
+So I built 3BOX AI — a platform where every tool shares context. When you complete a skill assessment, your career plan, resume, and job matches all update automatically.
 
 The starter plan is ₹399/month. That replaces ₹50,000 worth of tools.
 
@@ -112,7 +112,7 @@ Total: 20 minutes.
 
 The key: AI doesn't replace your judgment. It does the heavy lifting so you can focus on quality over quantity.
 
-Tools like jobTED AI (free resume builder + ATS checker at jobted.ai) are making this accessible to everyone, not just people who can afford premium subscriptions.
+Tools like 3BOX AI (free resume builder + ATS checker at 3box.ai) are making this accessible to everyone, not just people who can afford premium subscriptions.
 
 #ProductivityHacks #JobSearch #AI #Career #ResumeWriting
 
@@ -142,7 +142,7 @@ CARL: "Our team was behind on a project deadline (C). I implemented daily standu
 
 Same story. But CARL makes you sound like someone who grows from every experience.
 
-Practice this with our free AI interview prep at jobted.ai.
+Practice this with our free AI interview prep at 3box.ai.
 
 #InterviewTips #CareerAdvice #JobInterview #Leadership #GrowthMindset
 
@@ -165,9 +165,9 @@ This is exactly where AI shines:
 3. AI reframes your experience to match (without lying)
 4. You review, tweak, and submit
 
-At jobTED AI, our AI resume builder does this in under 5 minutes per application. And our ATS checker scores the result before you submit.
+At 3BOX AI, our AI resume builder does this in under 5 minutes per application. And our ATS checker scores the result before you submit.
 
-Both are free at jobted.ai — no account needed.
+Both are free at 3box.ai — no account needed.
 
 The era of "one resume fits all" is over. The era of AI-assisted, targeted applications is here.
 
@@ -189,7 +189,7 @@ What this means for job seekers:
 2. Continuous learning is no longer optional — it's the new minimum
 3. Portfolio projects and proof-of-work matter more than certifications
 
-At jobTED AI, we built our platform around this "skills-first" philosophy:
+At 3BOX AI, we built our platform around this "skills-first" philosophy:
 - Assess your actual skills (not your resume)
 - Identify specific gaps for your target role
 - Create a learning path to close those gaps
@@ -206,7 +206,7 @@ The future belongs to people who can prove what they know, not just list where t
 
 **What's the ONE career tool you wish existed?**
 
-I'm building jobTED AI — an all-in-one AI career platform — and I'm genuinely curious:
+I'm building 3BOX AI — an all-in-one AI career platform — and I'm genuinely curious:
 
 If you could wave a magic wand and have any career tool built for you, what would it be?
 
@@ -216,7 +216,7 @@ Some things people have told me:
 - "A coach that's available at 2 AM when I'm anxious about interviews"
 - "Something that tracks my career progress over years, not just one job search"
 
-We've built versions of all of these into jobTED AI, but there's always more to do.
+We've built versions of all of these into 3BOX AI, but there's always more to do.
 
 What's YOUR "I wish this existed" career tool?
 

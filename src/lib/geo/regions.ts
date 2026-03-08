@@ -1,5 +1,5 @@
 // =============================================================================
-// jobTED AI — Regional Pricing & Geo Configuration
+// 3BOX AI — Regional Pricing & Geo Configuration
 // =============================================================================
 // Maps countries to regions, defines pricing per region in local currencies,
 // and provides utility functions for price formatting and region lookup.

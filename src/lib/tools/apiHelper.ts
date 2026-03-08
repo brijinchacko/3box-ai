@@ -10,7 +10,7 @@ import { authOptions } from '@/lib/auth/config';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
 
 export interface ToolAPIConfig {
-  /** Cookie name for usage tracking, e.g. "jobted-resumesum-uses" */
+  /** Cookie name for usage tracking, e.g. "3box-resumesum-uses" */
   cookieName: string;
   /** Required body fields — returns 400 if any missing */
   requiredFields: string[];

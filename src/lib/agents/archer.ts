@@ -97,7 +97,7 @@ Write ONLY the cover letter body text (no subject line, no "Dear Hiring Manager"
     const handoffBlock = ctx ? `\n\nHANDOFF DATA:\n${getAgentHandoff(ctx, 'sentinel', 'archer')}` : '';
 
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: `You are Archer, the Application Specialist in jobTED's AI agent team.
+      { role: 'system', content: `You are Archer, the Application Specialist in 3BOX's AI agent team.
 ${contextBlock}
 ${handoffBlock}
 
@@ -284,7 +284,7 @@ function buildApplicationEmail(resume: ResumeData, job: JobForApplication, cover
   <div class="body">${coverLetter.replace(/\n/g, '<br>')}</div>
   <div class="footer">
     <p>Best regards,<br><strong>${resume.contact.name}</strong></p>
-    <p style="font-size: 11px; color: #94a3b8;">This application was sent via jobTED AI Career Platform</p>
+    <p style="font-size: 11px; color: #94a3b8;">This application was sent via 3BOX AI Career Platform</p>
   </div>
 </body>
 </html>`;

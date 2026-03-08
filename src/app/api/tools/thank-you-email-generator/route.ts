@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-thankyou-uses',
+    cookieName: '3box-thankyou-uses',
     requiredFields: ['interviewerName', 'company', 'position'],
     systemPrompt: `You are a career communications expert. Write a post-interview thank you email that is genuine, specific, and professional. Reference the interview highlights if provided. The email should reinforce the candidate's interest and qualifications. Return JSON: { subject: string, body: string }`,
     buildUserPrompt: (body) => {

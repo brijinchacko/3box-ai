@@ -47,7 +47,7 @@ Identify 3-6 skill gaps and 3-5 learning recommendations.`;
     const contextBlock = ctx ? `\n\nTEAM CONTEXT:\n${getContextSummary(ctx)}` : '';
 
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: `You are Sage, the Skill Trainer in jobTED's AI agent team.
+      { role: 'system', content: `You are Sage, the Skill Trainer in 3BOX's AI agent team.
 ${contextBlock}
 
 YOUR ROLE: Identify skill gaps between the candidate's current abilities and market demands, then recommend targeted learning paths.

@@ -1,7 +1,7 @@
 /**
  * Stripe Setup Script
  *
- * Creates all required Stripe products and prices for jobTED AI,
+ * Creates all required Stripe products and prices for 3BOX AI,
  * then updates the .env file with the generated price IDs.
  *
  * Prerequisites:
@@ -44,21 +44,21 @@ interface PlanConfig {
 
 const PLANS: Record<string, PlanConfig> = {
   STARTER: {
-    name: 'jobTED AI Starter',
+    name: '3BOX AI Starter',
     description: 'Perfect for getting started with AI-powered career tools',
     monthlyPrice: 1200, // $12
     yearlyPrice: 9600,  // $96/yr ($8/mo)
     features: ['5 assessments/mo', '100 AI credits/mo', '3 resume templates', 'Full career plan', 'AI coach access'],
   },
   PRO: {
-    name: 'jobTED AI Pro',
+    name: '3BOX AI Pro',
     description: 'Advanced career tools with human expert support',
     monthlyPrice: 2900, // $29
     yearlyPrice: 23200, // $232/yr (~$19.33/mo)
     features: ['Unlimited assessments', '500 AI credits/mo', 'All templates', 'Job matching', 'Human mock interviews', 'Human resume review'],
   },
   ULTRA: {
-    name: 'jobTED AI Ultra',
+    name: '3BOX AI Ultra',
     description: 'The complete career acceleration package',
     monthlyPrice: 5900, // $59
     yearlyPrice: 47200, // $472/yr (~$39.33/mo)
@@ -67,7 +67,7 @@ const PLANS: Record<string, PlanConfig> = {
 };
 
 async function main() {
-  console.log('\n🚀 Setting up Stripe products and prices for jobTED AI...\n');
+  console.log('\n🚀 Setting up Stripe products and prices for 3BOX AI...\n');
 
   const envPath = path.join(process.cwd(), '.env');
   let envContent = fs.readFileSync(envPath, 'utf-8');
@@ -81,7 +81,7 @@ async function main() {
     const product = await stripe.products.create({
       name: config.name,
       description: config.description,
-      metadata: { plan: planKey, app: 'jobted-ai' },
+      metadata: { plan: planKey, app: '3box-ai' },
     });
 
     // Monthly price
@@ -120,9 +120,9 @@ async function main() {
 
   for (const pack of creditPacks) {
     const product = await stripe.products.create({
-      name: `jobTED AI - ${pack.name}`,
+      name: `3BOX AI - ${pack.name}`,
       description: `One-time purchase of ${pack.credits} AI credits`,
-      metadata: { type: 'credit-pack', credits: pack.credits.toString(), app: 'jobted-ai' },
+      metadata: { type: 'credit-pack', credits: pack.credits.toString(), app: '3box-ai' },
     });
 
     const price = await stripe.prices.create({

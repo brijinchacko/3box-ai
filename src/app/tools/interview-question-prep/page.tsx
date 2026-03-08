@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import InterviewPrepClient from './InterviewPrepClient';
 
 export const metadata: Metadata = {
-  title: 'AI Interview Question Prep | jobTED AI',
+  title: 'AI Interview Question Prep | 3BOX AI',
   description: 'Prepare for your next interview with AI-generated questions, expert tips, and sample answers tailored to your target role.',
 };
 

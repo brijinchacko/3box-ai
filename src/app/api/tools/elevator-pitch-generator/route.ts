@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-elevator-uses',
+    cookieName: '3box-elevator-uses',
     requiredFields: ['currentRole'],
     systemPrompt:
       'You are a career branding expert. Generate 2 elevator pitches: one 30-second version and one 60-second version. Each should be confident, professional, and memorable. Return JSON: { "pitches": [{ "label": "30-Second Pitch", "content": "...", "meta": "~X words \u2022 30 seconds" }, { "label": "60-Second Pitch", "content": "...", "meta": "~X words \u2022 60 seconds" }] }',

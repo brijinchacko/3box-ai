@@ -145,7 +145,7 @@ const faqs = [
   {
     question: 'How do I write a resume for a career change?',
     answer:
-      'Focus on transferable skills rather than job titles. Lead with a strong professional summary explaining your transition. Use a combination resume format that highlights relevant skills and achievements before work history. Reframe past experience using language from your target industry. jobTED AI automatically identifies transferable skills and suggests how to position them.',
+      'Focus on transferable skills rather than job titles. Lead with a strong professional summary explaining your transition. Use a combination resume format that highlights relevant skills and achievements before work history. Reframe past experience using language from your target industry. 3BOX AI automatically identifies transferable skills and suggests how to position them.',
   },
   {
     question: 'What resume format is best for career changers?',
@@ -165,12 +165,12 @@ const faqs = [
   {
     question: 'How do I pass ATS when changing careers?',
     answer:
-      'Mirror the job description language exactly. Even if you have the skill under a different name, use the target industry terminology. Include both your current industry keywords and target industry keywords in your skills section. jobTED AI cross-references your experience with target job requirements and suggests keyword bridges.',
+      'Mirror the job description language exactly. Even if you have the skill under a different name, use the target industry terminology. Include both your current industry keywords and target industry keywords in your skills section. 3BOX AI cross-references your experience with target job requirements and suggests keyword bridges.',
   },
   {
     question: 'Can AI help with a career change resume?',
     answer:
-      'Absolutely. AI resume builders like jobTED AI are especially powerful for career changers. The AI identifies transferable skills you might overlook, suggests how to reframe your experience for a new industry, generates industry-appropriate bullet points, and optimizes for ATS keywords in your target field. It bridges the gap between what you have done and what you want to do.',
+      'Absolutely. AI resume builders like 3BOX AI are especially powerful for career changers. The AI identifies transferable skills you might overlook, suggests how to reframe your experience for a new industry, generates industry-appropriate bullet points, and optimizes for ATS keywords in your target field. It bridges the gap between what you have done and what you want to do.',
   },
 ];
 
@@ -463,11 +463,11 @@ export default function CareerChangerClient() {
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Join 10,000+ Career Changers Using{' '}
-              <span className="gradient-text">jobTED AI</span>
+              <span className="gradient-text">3BOX AI</span>
             </h2>
             <p className="text-white/50 max-w-2xl mx-auto mb-8">
               Military veterans, teachers moving to corporate, healthcare workers
-              pivoting to tech, and professionals from every industry trust jobTED AI to
+              pivoting to tech, and professionals from every industry trust 3BOX AI to
               build resumes that open doors to their next chapter.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

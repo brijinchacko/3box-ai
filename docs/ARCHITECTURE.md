@@ -1,8 +1,8 @@
-# jobTED AI — Architecture Document
+# 3BOX AI — Architecture Document
 
 ## System Overview
 
-jobTED AI is built as a monolithic Next.js application with a modular architecture designed for future service extraction. The system follows a layered architecture pattern.
+3BOX AI is built as a monolithic Next.js application with a modular architecture designed for future service extraction. The system follows a layered architecture pattern.
 
 ```
 ┌─────────────────────────────────────────────────────┐

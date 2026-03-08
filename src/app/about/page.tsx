@@ -12,8 +12,8 @@ export default function AboutPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://jobted.ai' },
-            { name: 'About', url: 'https://jobted.ai/about' },
+            { name: 'Home', url: 'https://3box.ai' },
+            { name: 'About', url: 'https://3box.ai/about' },
           ])),
         }}
       />

@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             setUserData(data);
             if (data.journey) setJourney(data.journey);
             if (!data.onboardingDone) {
-              const profileStr = localStorage.getItem('jobted_onboarding_profile');
+              const profileStr = localStorage.getItem('3box_onboarding_profile');
               if (profileStr) {
                 try {
                   const profile = JSON.parse(profileStr);

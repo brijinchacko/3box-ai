@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to jobTED AI will be documented in this file.
+All notable changes to 3BOX AI will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -124,7 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-03-02
 
 ### Added
-- Initial release of jobTED AI — Full Career Operating System by OFORO AI.
+- Initial release of 3BOX AI — Full Career Operating System by OFORO AI.
 - Next.js 14 App Router with TypeScript and Tailwind CSS.
 - Prisma ORM with database schema for users, sessions, skills, and career data.
 - SEO optimization with structured data, meta tags, and sitemap generation.

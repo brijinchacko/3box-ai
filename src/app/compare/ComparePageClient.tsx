@@ -13,7 +13,7 @@ import Footer from '@/components/layout/Footer';
 // ─── Types ─────────────────────────────────────────────
 export interface FeatureRow {
   feature: string;
-  jobted: boolean | string;
+  boxAi: boolean | string;
   competitor: boolean | string;
 }
 
@@ -36,13 +36,13 @@ export interface ComparisonData {
   verdict: string;
   verdictDetail: string;
   features: FeatureRow[];
-  jobtedPrice: string;
+  boxAiPrice: string;
   competitorPrice: string;
-  jobtedFreeTier: string;
+  boxAiFreeTier: string;
   competitorFreeTier: string;
-  jobtedRating: string;
+  boxAiRating: string;
   competitorRating: string;
-  jobtedReviewCount: string;
+  boxAiReviewCount: string;
   competitorReviewCount: string;
   advantages: Advantage[];
   faqs: FAQ[];
@@ -135,7 +135,7 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                       Feature
                     </th>
                     <th className="text-center px-6 py-4 text-sm font-semibold text-neon-blue border-x border-neon-blue/20 bg-neon-blue/5 w-1/3">
-                      jobTED AI
+                      3BOX AI
                     </th>
                     <th className="text-center px-6 py-4 text-sm text-white/50 font-medium w-1/3">
                       {data.competitorName}
@@ -152,7 +152,7 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                     >
                       <td className="px-6 py-4 text-sm font-medium">{row.feature}</td>
                       <td className="px-6 py-4 text-center border-x border-neon-blue/20 bg-neon-blue/[0.03]">
-                        <CellValue value={row.jobted} />
+                        <CellValue value={row.boxAi} />
                       </td>
                       <td className="px-6 py-4 text-center">
                         <CellValue value={row.competitor} />
@@ -164,7 +164,7 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                   <tr className="border-b border-white/5 bg-white/[0.02]">
                     <td className="px-6 py-4 text-sm font-medium">Starting Price</td>
                     <td className="px-6 py-4 text-center border-x border-neon-blue/20 bg-neon-blue/[0.03]">
-                      <span className="text-neon-green font-semibold">{data.jobtedPrice}</span>
+                      <span className="text-neon-green font-semibold">{data.boxAiPrice}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-white/60">{data.competitorPrice}</span>
@@ -175,7 +175,7 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                   <tr className="border-b border-white/5">
                     <td className="px-6 py-4 text-sm font-medium">Free Tier</td>
                     <td className="px-6 py-4 text-center border-x border-neon-blue/20 bg-neon-blue/[0.03]">
-                      <span className="text-neon-green text-sm">{data.jobtedFreeTier}</span>
+                      <span className="text-neon-green text-sm">{data.boxAiFreeTier}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-white/40 text-sm">{data.competitorFreeTier}</span>
@@ -188,8 +188,8 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                     <td className="px-6 py-4 text-center border-x border-neon-blue/20 bg-neon-blue/[0.03]">
                       <div className="flex items-center justify-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span className="font-semibold">{data.jobtedRating}</span>
-                        <span className="text-white/30 text-xs">({data.jobtedReviewCount})</span>
+                        <span className="font-semibold">{data.boxAiRating}</span>
+                        <span className="text-white/30 text-xs">({data.boxAiReviewCount})</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -207,14 +207,14 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
         </div>
       </section>
 
-      {/* ── Why Choose jobTED AI ──────────────────────── */}
+      {/* ── Why Choose 3BOX AI ──────────────────────── */}
       <section className="pb-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.h2
             {...fadeUp}
             className="text-2xl sm:text-3xl font-bold text-center mb-10"
           >
-            Why Choose <span className="gradient-text">jobTED AI</span> Over{' '}
+            Why Choose <span className="gradient-text">3BOX AI</span> Over{' '}
             {data.competitorName}
           </motion.h2>
 
@@ -288,7 +288,7 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
             className="rounded-2xl border border-white/10 bg-gradient-to-br from-neon-blue/10 via-neon-purple/5 to-transparent backdrop-blur-xl p-8 sm:p-12 text-center"
           >
             <h2 className="text-2xl sm:text-3xl font-bold mb-4">
-              Ready to Switch to <span className="gradient-text">jobTED AI</span>?
+              Ready to Switch to <span className="gradient-text">3BOX AI</span>?
             </h2>
             <p className="text-white/50 mb-8 max-w-lg mx-auto">
               Join thousands of professionals who chose the all-in-one AI career platform.
@@ -296,7 +296,7 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-                Try jobTED AI Free <ArrowRight className="w-4 h-4" />
+                Try 3BOX AI Free <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/pricing"

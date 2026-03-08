@@ -1,5 +1,5 @@
 // =============================================================================
-// jobTED AI — Next.js Middleware
+// 3BOX AI — Next.js Middleware
 // =============================================================================
 // Lightweight middleware that sets a geo cookie for client-side region detection.
 // Does NOT block or redirect any requests — only adds a cookie if missing.
@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // Skip if the cookie is already set
-  const existingCookie = request.cookies.get('jobted-region');
+  const existingCookie = request.cookies.get('3box-region');
   if (existingCookie?.value) {
     return response;
   }
@@ -39,7 +39,7 @@ export function middleware(request: NextRequest) {
   // 3. If we detected a country, set the cookie
   // If we couldn't detect here, the client will call /api/geo as fallback
   if (countryCode) {
-    response.cookies.set('jobted-region', countryCode, {
+    response.cookies.set('3box-region', countryCode, {
       path: '/',
       maxAge: 60 * 60 * 24 * 30, // 30 days
       httpOnly: false, // Needs to be readable by client JS

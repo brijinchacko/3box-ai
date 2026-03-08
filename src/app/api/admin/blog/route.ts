@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       excerpt,
       content,
       coverImage: coverImage || null,
-      author: author || 'jobTED AI Team',
+      author: author || '3BOX AI Team',
       category: category || 'career-tips',
       tags: tags || [],
       status: postStatus === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT',

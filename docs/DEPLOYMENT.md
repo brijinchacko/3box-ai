@@ -1,4 +1,4 @@
-# jobTED AI — Deployment Guide
+# 3BOX AI — Deployment Guide
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 1. **Push to GitHub**
    ```bash
    git init && git add . && git commit -m "Initial commit"
-   gh repo create jobted-ai --private --push
+   gh repo create 3box-ai --private --push
    ```
 
 2. **Deploy to Vercel**
@@ -95,7 +95,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://jobted:password@db:5432/jobted_ai
+      - DATABASE_URL=postgresql://3box:password@db:5432/3box_ai
       - REDIS_URL=redis://redis:6379
     depends_on:
       - db
@@ -104,9 +104,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: jobted
+      POSTGRES_USER: 3box
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: jobted_ai
+      POSTGRES_DB: 3box_ai
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:

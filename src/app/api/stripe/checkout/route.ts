@@ -14,7 +14,7 @@ import {
   createBillingPortalSession,
 } from '@/lib/stripe';
 
-const APP_URL = process.env.NEXTAUTH_URL || 'https://jobted.ai';
+const APP_URL = process.env.NEXTAUTH_URL || 'https://3box.ai';
 
 type PlanKey = 'STARTER' | 'PRO' | 'ULTRA';
 type IntervalKey = 'monthly' | 'yearly';

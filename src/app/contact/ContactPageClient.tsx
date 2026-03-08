@@ -14,7 +14,7 @@ const contactMethods = [
     icon: Mail,
     color: 'text-neon-blue',
     title: 'General Inquiries',
-    description: 'For questions about jobTED AI, our mission, or anything else.',
+    description: 'For questions about 3BOX AI, our mission, or anything else.',
     action: { type: 'email' as const, value: 'hello@oforo.ai' },
   },
   {

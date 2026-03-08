@@ -121,7 +121,7 @@ export default function AssessmentPage() {
 
   const selectRole = (role: string) => {
     setTargetRole(role);
-    localStorage.setItem('jobted_target_role', role);
+    localStorage.setItem('3box_target_role', role);
     setStep('profile');
   };
 
@@ -273,7 +273,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
           // Save to localStorage
           const scoreMap: Record<string, number> = {};
           aiResults.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
-          localStorage.setItem('jobted_skill_scores', JSON.stringify(scoreMap));
+          localStorage.setItem('3box_skill_scores', JSON.stringify(scoreMap));
 
           // Save to database
           try {
@@ -312,7 +312,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
     const fallback = { ...defaultResults, targetRole };
     const scoreMap: Record<string, number> = {};
     fallback.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
-    localStorage.setItem('jobted_skill_scores', JSON.stringify(scoreMap));
+    localStorage.setItem('3box_skill_scores', JSON.stringify(scoreMap));
     setResults(fallback);
     setStep('results');
   };

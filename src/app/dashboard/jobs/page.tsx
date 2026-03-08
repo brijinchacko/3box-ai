@@ -123,7 +123,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 30)} month(s) ago`;
 }
 
-const SAVED_JOBS_KEY = 'jobted_saved_jobs';
+const SAVED_JOBS_KEY = '3box_saved_jobs';
 
 // ── Job Detail Overlay for Grid View ───────────────────
 function JobDetailOverlay({
@@ -481,8 +481,8 @@ export default function JobsPage() {
 
   // Initial load with user's target role and location from localStorage
   useEffect(() => {
-    const savedRole = localStorage.getItem('jobted_target_role');
-    const savedLocation = localStorage.getItem('jobted_user_location');
+    const savedRole = localStorage.getItem('3box_target_role');
+    const savedLocation = localStorage.getItem('3box_user_location');
     if (savedRole && !searchQuery) {
       setSearchQuery(savedRole);
     }

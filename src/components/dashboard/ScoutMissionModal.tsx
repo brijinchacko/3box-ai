@@ -64,8 +64,8 @@ export default function ScoutMissionModal({ open, onClose, onComplete, onBackgro
   // Pre-fill from localStorage
   useEffect(() => {
     if (open) {
-      const savedRole = localStorage.getItem('jobted_target_role');
-      const savedLocation = localStorage.getItem('jobted_user_location');
+      const savedRole = localStorage.getItem('3box_target_role');
+      const savedLocation = localStorage.getItem('3box_user_location');
       if (savedRole && !targetRole) setTargetRole(savedRole);
       if (savedLocation && !location) setLocation(savedLocation);
     }

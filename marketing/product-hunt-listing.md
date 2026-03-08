@@ -1,10 +1,10 @@
-# jobTED AI — Product Hunt Listing Draft
+# 3BOX AI — Product Hunt Listing Draft
 
 ## Tagline (60 chars max)
 AI career platform: Resume builder, coach, jobs — all free
 
 ## One-liner Description
-jobTED AI is an all-in-one AI career platform that takes you from skill assessment to dream job with AI resume building, personalized coaching, learning paths, and job matching — starting free.
+3BOX AI is an all-in-one AI career platform that takes you from skill assessment to dream job with AI resume building, personalized coaching, learning paths, and job matching — starting free.
 
 ## Description (Longer)
 
@@ -12,7 +12,7 @@ jobTED AI is an all-in-one AI career platform that takes you from skill assessme
 Job seekers today juggle 5-8 different tools: one for resume building, another for ATS checking, a separate career coach, salary research sites, job boards, interview prep apps, and portfolio platforms. Each costs $20-50/month. That's $100-400/month and hours switching between tools that don't talk to each other.
 
 ### Our Solution
-jobTED AI combines everything into one intelligent platform:
+3BOX AI combines everything into one intelligent platform:
 
 **Free tools (no signup needed):**
 - AI Resume Builder — Create professional resumes with AI-powered content suggestions
@@ -47,11 +47,11 @@ Next.js 14, TypeScript, Prisma, PostgreSQL, OpenRouter AI, Tailwind CSS
 
 ## Maker Comment (First Comment)
 
-Hey Product Hunt! I'm Brijin, and I built jobTED AI because I experienced the frustration of job searching firsthand.
+Hey Product Hunt! I'm Brijin, and I built 3BOX AI because I experienced the frustration of job searching firsthand.
 
 When I was job hunting, I used Jobscan for ATS checking ($50/mo), paid for a resume builder ($20/mo), subscribed to a career coaching service ($100/mo), and still had to use separate tools for interview prep and salary research. The total cost was insane, and none of these tools shared data with each other.
 
-jobTED AI is our answer: one platform that handles the entire career journey — from "I have no idea what skills I need" to "I just got the job offer."
+3BOX AI is our answer: one platform that handles the entire career journey — from "I have no idea what skills I need" to "I just got the job offer."
 
 A few things we're proud of:
 - Our free tools (ATS checker, resume builder, salary estimator) work without even creating an account

@@ -12,8 +12,8 @@ export default function SecurityPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://jobted.ai' },
-            { name: 'Security & Privacy', url: 'https://jobted.ai/security' },
+            { name: 'Home', url: 'https://3box.ai' },
+            { name: 'Security & Privacy', url: 'https://3box.ai/security' },
           ])),
         }}
       />

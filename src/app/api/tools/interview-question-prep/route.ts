@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-interviewprep-uses',
+    cookieName: '3box-interviewprep-uses',
     requiredFields: ['role', 'type'],
     systemPrompt: `You are an expert interview coach. Generate likely interview questions for the specified role and type. For each question, provide expert answer tips. Return JSON: { "questions": [{ "id": 1, "type": "string", "question": "string", "tips": "string", "sampleAnswer": "string", "difficulty": "easy" | "medium" | "hard" }] }. Generate 8-10 questions. Ensure a good mix of difficulty levels. Make tips actionable and specific. Sample answers should use the STAR method where appropriate.`,
     buildUserPrompt: (body) => {

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // ── Usage limit tracking ─────────────────────
     const cookieHeader = request.headers.get('cookie') || '';
-    const cookieMatch = cookieHeader.match(/jobted-salary-uses=(\d+)/);
+    const cookieMatch = cookieHeader.match(/3box-salary-uses=(\d+)/);
     const cookieValue = cookieMatch ? cookieMatch[1] : undefined;
     const { allowed, realCount } = checkFreeUsage(cookieValue, clientCount ?? 0);
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       const response = NextResponse.json(estimate);
       const newCount = realCount + 1;
-      response.headers.set('Set-Cookie', buildUsageCookie('jobted-salary-uses', newCount));
+      response.headers.set('Set-Cookie', buildUsageCookie('3box-salary-uses', newCount));
       return response;
     } catch (estimateError) {
       console.error('Salary estimation failed:', estimateError);
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
       const response = NextResponse.json(defaultEstimate);
       const newCount = realCount + 1;
-      response.headers.set('Set-Cookie', buildUsageCookie('jobted-salary-uses', newCount));
+      response.headers.set('Set-Cookie', buildUsageCookie('3box-salary-uses', newCount));
       return response;
     }
   } catch (error) {

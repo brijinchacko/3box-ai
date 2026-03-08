@@ -47,7 +47,7 @@ function getAgentColors(agentId: AgentId | 'cortex'): { start: string; end: stri
 /* ═══════════════ PER-AGENT BODY SHAPE ═══════════════ */
 
 function getBodyShape(_agentId: AgentId | 'cortex'): BodyShape {
-  // Standard jobTED logo shape — same for all agents
+  // Standard 3BOX logo shape — same for all agents
   return { body: { x: 1, y: 10, w: 14, h: 12 }, legs: { x: 11, y: 18, w: 12, h: 13 } };
 }
 

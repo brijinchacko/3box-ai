@@ -11,7 +11,7 @@ const MODE_ICONS: Record<AutomationMode, typeof MousePointerClick> = {
   'full-agent': BrainCircuit,
 };
 
-const MODE_STORAGE_KEY = 'jobted_automation_mode';
+const MODE_STORAGE_KEY = '3box_automation_mode';
 
 export default function AutomationModeSelector() {
   const [mode, setMode] = useState<AutomationMode>('copilot');

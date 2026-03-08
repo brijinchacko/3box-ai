@@ -12,8 +12,8 @@ export default function PressPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://jobted.ai' },
-            { name: 'Press & Media', url: 'https://jobted.ai/press' },
+            { name: 'Home', url: 'https://3box.ai' },
+            { name: 'Press & Media', url: 'https://3box.ai/press' },
           ])),
         }}
       />

@@ -157,7 +157,7 @@ export default function StatusPage() {
           <Activity className="w-6 h-6 text-neon-blue" />
           <h1 className="text-3xl font-bold">System Status</h1>
         </div>
-        <p className="text-white/40 ml-8 mb-8">Real-time health monitoring for jobTED AI services</p>
+        <p className="text-white/40 ml-8 mb-8">Real-time health monitoring for 3BOX AI services</p>
 
         {/* Overall Status Banner */}
         {loading ? (
@@ -315,7 +315,7 @@ export default function StatusPage() {
                 <div className="text-sm font-medium">Platform Launch</div>
                 <div className="text-xs text-white/30 mt-0.5">March 3, 2026 &middot; Deployed</div>
                 <div className="text-xs text-white/40 mt-1">
-                  jobTED AI deployed to production. All core services operational.
+                  3BOX AI deployed to production. All core services operational.
                 </div>
               </div>
             </div>

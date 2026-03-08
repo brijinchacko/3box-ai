@@ -80,7 +80,7 @@ export default function SecurityPageClient() {
             <h2 className="text-2xl font-bold mb-6">Terms of Service</h2>
             <div className="space-y-4 text-sm text-white/50 leading-relaxed">
               <h3 className="text-white font-semibold">Service Description</h3>
-              <p>jobTED AI provides AI-powered career development tools including skill assessments, career planning, resume building, and job matching. The platform is provided &quot;as is&quot; and we continuously improve features.</p>
+              <p>3BOX AI provides AI-powered career development tools including skill assessments, career planning, resume building, and job matching. The platform is provided &quot;as is&quot; and we continuously improve features.</p>
 
               <h3 className="text-white font-semibold">User Responsibilities</h3>
               <p>You agree to provide accurate information, maintain the security of your account, and use the platform in compliance with applicable laws. Automated access without permission is prohibited.</p>
@@ -89,7 +89,7 @@ export default function SecurityPageClient() {
               <p>Paid plans are billed monthly or yearly as selected. You can cancel anytime. Refunds are available within 14 days of purchase. Plan changes take effect immediately with prorated billing.</p>
 
               <h3 className="text-white font-semibold">Automation Disclaimer</h3>
-              <p>Ultra automation features apply to jobs on your behalf. You are responsible for reviewing automation settings and maintaining compliance with job platform terms. jobTED AI provides tools, not guarantees of employment.</p>
+              <p>Ultra automation features apply to jobs on your behalf. You are responsible for reviewing automation settings and maintaining compliance with job platform terms. 3BOX AI provides tools, not guarantees of employment.</p>
 
               <h3 className="text-white font-semibold">Intellectual Property</h3>
               <p>You retain ownership of all content you create (resumes, portfolios, etc). We retain rights to the platform, AI models, and proprietary algorithms.</p>

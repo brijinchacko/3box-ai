@@ -238,7 +238,7 @@ export default function PortfolioPublicClient({ portfolio, user, story }: Portfo
               href="/"
               className="text-[#00d4ff]/50 hover:text-[#00d4ff] transition-colors"
             >
-              jobTED AI
+              3BOX AI
             </Link>
           </p>
         </motion.footer>

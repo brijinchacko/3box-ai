@@ -4,7 +4,7 @@ import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import CareerChangerClient from './CareerChangerClient';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Resume Builder for Career Changers | Transition Your Career with AI | jobTED AI',
+  title: 'Resume Builder for Career Changers | Transition Your Career with AI | 3BOX AI',
   description:
     'Build an ATS-optimized resume for your career change. AI identifies your transferable skills, reframes your experience for a new industry, and helps you tell a compelling career pivot story. Free to start.',
   keywords:
@@ -16,7 +16,7 @@ const faqData = [
   {
     question: 'How do I write a resume for a career change?',
     answer:
-      'Focus on transferable skills rather than job titles. Lead with a strong professional summary explaining your transition. Use a combination resume format that highlights relevant skills and achievements before work history. Reframe past experience using language from your target industry. jobTED AI automatically identifies transferable skills and suggests how to position them.',
+      'Focus on transferable skills rather than job titles. Lead with a strong professional summary explaining your transition. Use a combination resume format that highlights relevant skills and achievements before work history. Reframe past experience using language from your target industry. 3BOX AI automatically identifies transferable skills and suggests how to position them.',
   },
   {
     question: 'What resume format is best for career changers?',
@@ -36,12 +36,12 @@ const faqData = [
   {
     question: 'How do I pass ATS when changing careers?',
     answer:
-      'Mirror the job description language exactly. Even if you have the skill under a different name, use the target industry terminology. Include both your current industry keywords and target industry keywords in your skills section. jobTED AI cross-references your experience with target job requirements and suggests keyword bridges.',
+      'Mirror the job description language exactly. Even if you have the skill under a different name, use the target industry terminology. Include both your current industry keywords and target industry keywords in your skills section. 3BOX AI cross-references your experience with target job requirements and suggests keyword bridges.',
   },
   {
     question: 'Can AI help with a career change resume?',
     answer:
-      'Absolutely. AI resume builders like jobTED AI are especially powerful for career changers. The AI identifies transferable skills you might overlook, suggests how to reframe your experience for a new industry, generates industry-appropriate bullet points, and optimizes for ATS keywords in your target field. It bridges the gap between what you have done and what you want to do.',
+      'Absolutely. AI resume builders like 3BOX AI are especially powerful for career changers. The AI identifies transferable skills you might overlook, suggests how to reframe your experience for a new industry, generates industry-appropriate bullet points, and optimizes for ATS keywords in your target field. It bridges the gap between what you have done and what you want to do.',
   },
 ];
 
@@ -54,7 +54,7 @@ export default function CareerChangerResumePage() {
           __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
-            name: 'jobTED AI Resume Builder for Career Changers',
+            name: '3BOX AI Resume Builder for Career Changers',
             applicationCategory: 'BusinessApplication',
             operatingSystem: 'Web',
             description:
@@ -83,9 +83,9 @@ export default function CareerChangerResumePage() {
         dangerouslySetInnerHTML={{
           __html: jsonLd(
             SCHEMA_ORG.breadcrumb([
-              { name: 'Home', url: 'https://jobted.ai' },
-              { name: 'Resume Builder', url: 'https://jobted.ai/resume' },
-              { name: 'Career Changer', url: 'https://jobted.ai/resume/career-changer' },
+              { name: 'Home', url: 'https://3box.ai' },
+              { name: 'Resume Builder', url: 'https://3box.ai/resume' },
+              { name: 'Career Changer', url: 'https://3box.ai/resume/career-changer' },
             ])
           ),
         }}

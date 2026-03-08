@@ -12,8 +12,8 @@ export default function PrivacyPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://jobted.ai' },
-            { name: 'Privacy Policy', url: 'https://jobted.ai/privacy' },
+            { name: 'Home', url: 'https://3box.ai' },
+            { name: 'Privacy Policy', url: 'https://3box.ai/privacy' },
           ])),
         }}
       />

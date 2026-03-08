@@ -1,7 +1,7 @@
 'use client';
 
 // =============================================================================
-// jobTED AI - Region Selector
+// 3BOX AI - Region Selector
 // =============================================================================
 // A glass-morphism dropdown that shows the current region flag + currency
 // and allows users to manually switch regions.

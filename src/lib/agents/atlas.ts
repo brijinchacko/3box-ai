@@ -45,7 +45,7 @@ Generate a JSON response with:
     const handoffBlock = ctx ? `\n\nHANDOFF DATA:\n${getAgentHandoff(ctx, 'scout', 'atlas')}` : '';
 
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: `You are Atlas, the Interview Coach in jobTED's AI agent team.
+      { role: 'system', content: `You are Atlas, the Interview Coach in 3BOX's AI agent team.
 ${contextBlock}
 ${handoffBlock}
 

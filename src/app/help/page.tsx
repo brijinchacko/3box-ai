@@ -24,9 +24,9 @@ const categories = [
 
 const faqs: Record<string, { q: string; a: string }[]> = {
   'getting-started': [
-    { q: 'How do I get started with jobTED AI?', a: 'Simply visit our homepage and tell Agent Cortex (our AI coordinator) what role you want to pursue. Complete the quick onboarding by sharing your experience, education, and skills. No signup required for free tools — create a free account to unlock your full career dashboard and AI agent team.' },
-    { q: 'Is jobTED AI really free?', a: 'Yes! Our core tools (ATS Resume Checker, Resume Builder, Salary Estimator) are 100% free with no signup required. Creating a free account gives you access to your career dashboard, AI skill assessment, and personalized career plan. Pro and Ultra plans unlock advanced features like human mentorship and auto-apply.' },
-    { q: 'What roles and industries does jobTED AI support?', a: 'jobTED AI supports all career fields — not just tech. Whether you want to be a Software Engineer, Nurse, Financial Analyst, Teacher, Graphic Designer, or Architect, our AI adapts assessments, skills, and career plans for your specific industry.' },
+    { q: 'How do I get started with 3BOX AI?', a: 'Simply visit our homepage and tell Agent Cortex (our AI coordinator) what role you want to pursue. Complete the quick onboarding by sharing your experience, education, and skills. No signup required for free tools — create a free account to unlock your full career dashboard and AI agent team.' },
+    { q: 'Is 3BOX AI really free?', a: 'Yes! Our core tools (ATS Resume Checker, Resume Builder, Salary Estimator) are 100% free with no signup required. Creating a free account gives you access to your career dashboard, AI skill assessment, and personalized career plan. Pro and Ultra plans unlock advanced features like human mentorship and auto-apply.' },
+    { q: 'What roles and industries does 3BOX AI support?', a: '3BOX AI supports all career fields — not just tech. Whether you want to be a Software Engineer, Nurse, Financial Analyst, Teacher, Graphic Designer, or Architect, our AI adapts assessments, skills, and career plans for your specific industry.' },
     { q: 'How does the onboarding process work?', a: 'Our conversational onboarding takes about 2 minutes. Agent Cortex asks about your dream role, experience level, current situation, education, and skills. Based on your answers, we create a personalized career profile with salary data, skill gaps, and a custom learning path — then your AI agents get to work.' },
   ],
   'tools': [
@@ -54,11 +54,11 @@ const faqs: Record<string, { q: string; a: string }[]> = {
     { q: 'How does job matching work?', a: 'Our AI analyzes job listings across major platforms, scores each against your profile (skills, experience, location, salary expectations), and presents the best matches with a fit percentage. You can filter by remote/onsite, salary range, company size, and more.' },
   ],
   'technical': [
-    { q: 'What AI models power jobTED AI?', a: 'We use a multi-model architecture: GPT-4o for career coaching and resume generation, Claude for nuanced skill assessment, and custom fine-tuned models for job matching and salary prediction. Our model router automatically selects the best model for each task.' },
-    { q: 'What is the tech stack?', a: 'jobTED AI is built with Next.js 14 (App Router), TypeScript, Tailwind CSS, and Framer Motion on the frontend. Backend uses Next.js API routes, Prisma ORM with PostgreSQL, NextAuth.js for authentication, and Stripe for payments. AI integration via OpenRouter API.' },
-    { q: 'Is there an API available?', a: 'We are planning a public API for enterprise integrations. If you are interested in API access for your organization (career services, universities, HR platforms), please contact us at api@jobted.ai.' },
+    { q: 'What AI models power 3BOX AI?', a: 'We use a multi-model architecture: GPT-4o for career coaching and resume generation, Claude for nuanced skill assessment, and custom fine-tuned models for job matching and salary prediction. Our model router automatically selects the best model for each task.' },
+    { q: 'What is the tech stack?', a: '3BOX AI is built with Next.js 14 (App Router), TypeScript, Tailwind CSS, and Framer Motion on the frontend. Backend uses Next.js API routes, Prisma ORM with PostgreSQL, NextAuth.js for authentication, and Stripe for payments. AI integration via OpenRouter API.' },
+    { q: 'Is there an API available?', a: 'We are planning a public API for enterprise integrations. If you are interested in API access for your organization (career services, universities, HR platforms), please contact us at api@3box.ai.' },
     { q: 'How does data privacy work technically?', a: 'All user data is encrypted with AES-256 at rest. API calls use TLS 1.3. We implement row-level security in PostgreSQL. AI prompts are anonymized before processing. We do not use your data to train AI models. Full GDPR compliance with data export and deletion capabilities.' },
-    { q: 'Browser and device support?', a: 'jobTED AI works on all modern browsers (Chrome, Firefox, Safari, Edge) and is fully responsive for mobile, tablet, and desktop. We recommend the latest browser version for the best experience.' },
+    { q: 'Browser and device support?', a: '3BOX AI works on all modern browsers (Chrome, Firefox, Safari, Edge) and is fully responsive for mobile, tablet, and desktop. We recommend the latest browser version for the best experience.' },
   ],
 };
 
@@ -66,7 +66,7 @@ const communityTopics = [
   { title: 'Career Advice & Stories', desc: 'Share your journey, ask for advice, and learn from others who landed their dream roles.', posts: 234, icon: Users },
   { title: 'Resume & Portfolio Reviews', desc: 'Get feedback on your resume, portfolio, and cover letters from the community.', posts: 187, icon: FileText },
   { title: 'Interview Prep', desc: 'Practice questions, mock interview tips, and strategies for different companies and roles.', posts: 156, icon: MessageCircle },
-  { title: 'Feature Requests & Feedback', desc: 'Suggest new features, report bugs, and help shape the future of jobTED AI.', posts: 98, icon: HelpCircle },
+  { title: 'Feature Requests & Feedback', desc: 'Suggest new features, report bugs, and help shape the future of 3BOX AI.', posts: 98, icon: HelpCircle },
   { title: 'Industry Insights', desc: 'Market trends, salary discussions, emerging roles, and career path analysis.', posts: 142, icon: BarChart3 },
   { title: 'Skill Development', desc: 'Learning resources, study groups, project ideas, and certification discussions.', posts: 211, icon: Award },
 ];

@@ -22,11 +22,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const post = await getPost(slug);
 
   if (!post) {
-    return { title: 'Post Not Found | jobTED AI Blog' };
+    return { title: 'Post Not Found | 3BOX AI Blog' };
   }
 
   return {
-    title: `${post.title} | jobTED AI Blog`,
+    title: `${post.title} | 3BOX AI Blog`,
     description: post.excerpt,
   };
 }

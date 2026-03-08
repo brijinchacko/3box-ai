@@ -10,7 +10,7 @@ const STORY_PROMPT = `You are a master storyteller crafting a short, cinematic "
 Rules:
 - Maximum 3 short paragraphs (total under 150 words)
 - First paragraph: Set the scene — where they are now (their current status, struggles)
-- Second paragraph: The turning point — they discovered jobTED AI and its agent team
+- Second paragraph: The turning point — they discovered 3BOX AI and its agent team
 - Third paragraph: The vision — paint a vivid picture of where they're heading (their dream role)
 - Use their actual name, target role, skills, and background
 - Tone: cinematic, inspiring, personal — like a movie trailer narration

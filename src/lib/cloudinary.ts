@@ -30,7 +30,7 @@ export async function uploadAvatar(
     (resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'jobted/avatars',
+          folder: '3box/avatars',
           public_id: userId,
           overwrite: true,
           resource_type: 'image',

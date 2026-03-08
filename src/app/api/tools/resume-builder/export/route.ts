@@ -12,7 +12,7 @@ import { cookies } from 'next/headers';
  * - Modern template: no watermark; other templates: watermark for free users
  */
 
-const COOKIE_NAME = 'jobted-fdl';
+const COOKIE_NAME = '3box-fdl';
 const MAX_FREE_DOWNLOADS = 1;
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 

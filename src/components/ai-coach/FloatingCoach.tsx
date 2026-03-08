@@ -32,10 +32,10 @@ const DASHBOARD_QUICK_ACTIONS: Record<string, string> = {
 };
 
 const PUBLIC_QUICK_ACTIONS: Record<string, string> = {
-  '\uD83E\uDD14 What is jobTED?': 'What is jobTED AI and how can it help my career?',
+  '\uD83E\uDD14 What is 3BOX?': 'What is 3BOX AI and how can it help my career?',
   '\uD83E\uDD16 Meet the agents': 'Tell me about the AI agents and what they do.',
-  '\uD83D\uDE80 How it works': 'How does jobTED AI help me get a job?',
-  '\u2728 Free features': 'What can I do for free on jobTED AI?',
+  '\uD83D\uDE80 How it works': 'How does 3BOX AI help me get a job?',
+  '\u2728 Free features': 'What can I do for free on 3BOX AI?',
 };
 
 /* ── Client-side navigation intent detection ── */
@@ -84,7 +84,7 @@ export default function FloatingCoach() {
   // Pick context-appropriate quick actions
   const quickActions = isDashboard ? DASHBOARD_QUICK_ACTIONS : PUBLIC_QUICK_ACTIONS;
 
-  const publicGreeting = `Hey! I'm Cortex, the AI ninja who never sleeps \uD83E\uDD77 Ask me anything about jobTED AI!`;
+  const publicGreeting = `Hey! I'm Cortex, the AI ninja who never sleeps \uD83E\uDD77 Ask me anything about 3BOX AI!`;
   const authGreeting = `Hey! I'm Cortex, your AI coordinator \uD83E\uDDE0 What can I help you with?`;
 
   const greetings = useMemo(() => {
@@ -92,7 +92,7 @@ export default function FloatingCoach() {
       return [
         publicGreeting,
         `I'm Cortex — I command a team of 6 AI agents built to get you hired. Want to know more?`,
-        `Curious how jobTED AI works? Ask me anything!`,
+        `Curious how 3BOX AI works? Ask me anything!`,
       ];
     }
     return [

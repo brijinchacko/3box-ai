@@ -150,7 +150,7 @@ const faqs = [
   {
     question: 'How do I pass ATS as a data scientist?',
     answer:
-      'Data science ATS systems look for specific technical terms. Include exact tool names (e.g., "Scikit-learn" not just "machine learning"), statistical methods (regression, classification, clustering), and business metrics. Use standard headings and avoid abbreviations that ATS may not recognize. jobTED AI auto-maps your skills to ATS-friendly terminology.',
+      'Data science ATS systems look for specific technical terms. Include exact tool names (e.g., "Scikit-learn" not just "machine learning"), statistical methods (regression, classification, clustering), and business metrics. Use standard headings and avoid abbreviations that ATS may not recognize. 3BOX AI auto-maps your skills to ATS-friendly terminology.',
   },
   {
     question: 'Should I include Kaggle and personal projects on my data science resume?',
@@ -170,7 +170,7 @@ const faqs = [
   {
     question: 'Should I use AI to write my data scientist resume?',
     answer:
-      'Yes. AI resume builders understand data science terminology and can help you articulate model performance, business impact, and technical depth. jobTED AI suggests quantified bullet points, maps your skills to job requirements, and optimizes for ATS systems used by tech companies and consulting firms hiring data scientists.',
+      'Yes. AI resume builders understand data science terminology and can help you articulate model performance, business impact, and technical depth. 3BOX AI suggests quantified bullet points, maps your skills to job requirements, and optimizes for ATS systems used by tech companies and consulting firms hiring data scientists.',
   },
 ];
 
@@ -460,11 +460,11 @@ export default function DataScientistClient() {
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Join 10,000+ Data Scientists Using{' '}
-              <span className="gradient-text">jobTED AI</span>
+              <span className="gradient-text">3BOX AI</span>
             </h2>
             <p className="text-white/50 max-w-2xl mx-auto mb-8">
               Data scientists at Google, Meta, Netflix, Spotify, and leading analytics
-              firms use jobTED AI to build resumes that showcase their impact and pass
+              firms use 3BOX AI to build resumes that showcase their impact and pass
               every ATS filter.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

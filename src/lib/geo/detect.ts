@@ -1,5 +1,5 @@
 // =============================================================================
-// jobTED AI — Server-Side Geo Detection
+// 3BOX AI — Server-Side Geo Detection
 // =============================================================================
 // Detects the visitor's country using IP geolocation (ip-api.com free tier)
 // with in-memory caching. Falls back to timezone-based detection on the client.

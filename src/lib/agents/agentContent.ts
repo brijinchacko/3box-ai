@@ -25,7 +25,7 @@ export const AGENT_PAGES: Record<string, AgentPageContent> = {
     displayName: 'Agent Cortex',
     tagline: 'The AI Coordinator That Never Sleeps',
     role: 'AI Coordinator',
-    heroDescription: 'Agent Cortex is the brain of your jobTED AI agent team. It coordinates all 6 specialist agents, decides what to run and when, and orchestrates your entire job search pipeline from a single command.',
+    heroDescription: 'Agent Cortex is the brain of your 3BOX AI agent team. It coordinates all 6 specialist agents, decides what to run and when, and orchestrates your entire job search pipeline from a single command.',
     origin: 'Agent Cortex was born from a simple observation: job seekers waste hours switching between tools — resume builders, job boards, email templates, interview prep. Each tool works in isolation. What if one AI brain could coordinate everything? Cortex was designed as the central nervous system — a coordinator that understands your career goals and deploys the right agent at the right time. When you tell Cortex your dream role, it activates Scout to find jobs, Forge to optimize your resume, Archer to send applications, Atlas to prep interviews, Sage to upskill you, and Sentinel to quality-check everything. One command, six agents, zero micromanagement.',
     gradient: 'from-cyan-500/20 to-purple-500/20',
     colorHex: '#00d4ff',

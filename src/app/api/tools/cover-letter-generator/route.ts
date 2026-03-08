@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-coverletter-uses',
+    cookieName: '3box-coverletter-uses',
     requiredFields: ['jobTitle', 'jobDescription'],
     systemPrompt: `You are an expert cover letter writer. Write a compelling, professional cover letter tailored to the specific job description provided. The letter should:
 - Be 3-4 paragraphs long

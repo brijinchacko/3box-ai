@@ -41,7 +41,7 @@ export default function SignupPageClient() {
   useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        const profileStr = localStorage.getItem('jobted_onboarding_profile');
+        const profileStr = localStorage.getItem('3box_onboarding_profile');
         if (profileStr) {
           const profile = JSON.parse(profileStr);
           if (profile.fullName) setName(profile.fullName);
@@ -203,7 +203,7 @@ export default function SignupPageClient() {
 
   const saveOnboardingFromLocalStorage = async () => {
     try {
-      const profileStr = localStorage.getItem('jobted_onboarding_profile');
+      const profileStr = localStorage.getItem('3box_onboarding_profile');
       if (!profileStr) return;
       const profile = JSON.parse(profileStr);
       if (!profile.targetRole) return;
@@ -257,7 +257,7 @@ export default function SignupPageClient() {
             <p className="text-white/40 mb-8">
               {hasOnboardingData
                 ? `Create your free account to unlock your personalized ${targetRole} career plan, AI resume, and job matching.`
-                : 'Join jobTED AI and get access to AI-powered career tools that help you land your dream job faster.'}
+                : 'Join 3BOX AI and get access to AI-powered career tools that help you land your dream job faster.'}
             </p>
             <div className="space-y-4">
               {(hasOnboardingData

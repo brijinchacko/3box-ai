@@ -147,7 +147,7 @@ export default function SettingsPage() {
   // Load coach settings from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('jobted_coach_settings');
+      const stored = localStorage.getItem('3box_coach_settings');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.personality) setCoachPersonality(parsed.personality);
@@ -158,7 +158,7 @@ export default function SettingsPage() {
   // Load notification preferences from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('jobted_notification_prefs');
+      const stored = localStorage.getItem('3box_notification_prefs');
       if (stored) {
         setNotifications(JSON.parse(stored));
       } else {
@@ -353,7 +353,7 @@ export default function SettingsPage() {
   };
 
   const saveCoachSettings = () => {
-    localStorage.setItem('jobted_coach_settings', JSON.stringify({ name: 'Cortex', personality: coachPersonality }));
+    localStorage.setItem('3box_coach_settings', JSON.stringify({ name: 'Cortex', personality: coachPersonality }));
     setCoachSaved(true);
     setTimeout(() => setCoachSaved(false), 2000);
   };
@@ -361,7 +361,7 @@ export default function SettingsPage() {
   const toggleNotification = (label: string) => {
     const updated = { ...notifications, [label]: !notifications[label] };
     setNotifications(updated);
-    localStorage.setItem('jobted_notification_prefs', JSON.stringify(updated));
+    localStorage.setItem('3box_notification_prefs', JSON.stringify(updated));
   };
 
   const showComingSoon = (feature: string) => {
@@ -1006,7 +1006,7 @@ export default function SettingsPage() {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `jobted-data-export-${new Date().toISOString().split('T')[0]}.json`;
+                        a.download = `3box-data-export-${new Date().toISOString().split('T')[0]}.json`;
                         a.click();
                         URL.revokeObjectURL(url);
                       }

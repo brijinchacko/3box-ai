@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 /**
- * Cortex — the jobTED AI coordinator / master ninja.
+ * Cortex — the 3BOX AI coordinator / master ninja.
  * Maximum ninja effects: dual orbiting shuriken, multi-layer chakra aura,
  * forehead protector with glowing leaf emblem, 3 flowing tails,
  * chakra energy wisps, floating energy particles, determined glowing eyes.

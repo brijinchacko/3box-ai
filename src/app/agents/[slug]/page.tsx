@@ -14,10 +14,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const agent = AGENT_PAGES[slug];
-  if (!agent) return { title: 'Agent Not Found | jobTED AI' };
+  if (!agent) return { title: 'Agent Not Found | 3BOX AI' };
 
   return {
-    title: `${agent.displayName} — ${agent.tagline} | jobTED AI`,
+    title: `${agent.displayName} — ${agent.tagline} | 3BOX AI`,
     description: agent.heroDescription,
   };
 }

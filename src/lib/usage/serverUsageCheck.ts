@@ -41,7 +41,7 @@ export function checkFreeUsage(
 /**
  * Build a Set-Cookie header string for tracking usage.
  *
- * @param cookieName - The name of the cookie (e.g., "jobted-free-ats")
+ * @param cookieName - The name of the cookie (e.g., "3box-free-ats")
  * @param newCount - The updated usage count to store
  * @param maxAgeDays - How many days the cookie should persist (default: 30)
  * @returns A fully formatted cookie string ready for Set-Cookie header

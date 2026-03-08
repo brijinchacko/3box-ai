@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // ── Usage limit tracking ─────────────────────
     const cookieHeader = request.headers.get('cookie') || '';
-    const cookieMatch = cookieHeader.match(/jobted-ats-uses=(\d+)/);
+    const cookieMatch = cookieHeader.match(/3box-ats-uses=(\d+)/);
     const cookieValue = cookieMatch ? cookieMatch[1] : undefined;
     const { allowed, realCount } = checkFreeUsage(cookieValue, clientCount ?? 0);
 
@@ -174,7 +174,7 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
           // Fallback to rule-based analysis
           const fallbackResponse = NextResponse.json(ruleBasedResults);
           const newCount = realCount + 1;
-          fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('jobted-ats-uses', newCount));
+          fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('3box-ats-uses', newCount));
           return fallbackResponse;
         }
       }
@@ -192,13 +192,13 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
 
       const response = NextResponse.json(mergedResults);
       const newCount = realCount + 1;
-      response.headers.set('Set-Cookie', buildUsageCookie('jobted-ats-uses', newCount));
+      response.headers.set('Set-Cookie', buildUsageCookie('3box-ats-uses', newCount));
       return response;
     } catch (aiError) {
       console.error('AI analysis failed, using rule-based:', aiError);
       const fallbackResponse = NextResponse.json(ruleBasedResults);
       const newCount = realCount + 1;
-      fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('jobted-ats-uses', newCount));
+      fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('3box-ats-uses', newCount));
       return fallbackResponse;
     }
   } catch (error) {

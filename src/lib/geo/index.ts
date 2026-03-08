@@ -1,5 +1,5 @@
 // =============================================================================
-// jobTED AI — Geo Module Barrel Export
+// 3BOX AI — Geo Module Barrel Export
 // =============================================================================
 
 // Region configuration & pricing

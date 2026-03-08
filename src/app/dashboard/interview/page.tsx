@@ -135,7 +135,7 @@ export default function InterviewPrepPage() {
   // Auto-fill targetRole from localStorage on mount
   useEffect(() => {
     try {
-      const savedRole = localStorage.getItem('jobted_target_role');
+      const savedRole = localStorage.getItem('3box_target_role');
       if (savedRole) {
         setTargetRole(savedRole);
       }

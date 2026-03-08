@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jobted.ai';
-const SITE_NAME = 'jobTED AI';
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
+const SITE_NAME = '3BOX AI';
 
 interface PageSEO {
   title: string;
@@ -57,8 +57,8 @@ export function generatePageMetadata(page: PageSEO): Metadata {
       title: page.title,
       description: page.description,
       images: [ogImage],
-      creator: '@jobtedai',
-      site: '@jobtedai',
+      creator: '@3boxai',
+      site: '@3boxai',
     },
     other: {
       'application-name': SITE_NAME,

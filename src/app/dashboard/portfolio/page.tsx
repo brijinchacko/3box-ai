@@ -256,7 +256,7 @@ export default function PortfolioPage() {
       } catch (err) {
         console.error('Failed to load portfolio:', err);
         // Fallback: try localStorage for migration
-        const stored = localStorage.getItem('jobted_portfolio_projects');
+        const stored = localStorage.getItem('3box_portfolio_projects');
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
@@ -292,7 +292,7 @@ export default function PortfolioPage() {
     : '';
 
   const shareUrl = publicUrl || (userName
-    ? `https://jobted.ai/p/${userName.toLowerCase().replace(/\s+/g, '-')}`
+    ? `https://3box.ai/p/${userName.toLowerCase().replace(/\s+/g, '-')}`
     : '');
 
   const showComingSoon = (feature: string) => {
@@ -689,7 +689,7 @@ export default function PortfolioPage() {
 
               {/* Footer */}
               <div className={`mt-12 pt-6 border-t ${theme.divider} text-center`}>
-                <p className={`text-[10px] ${theme.textMuted}`} style={{ opacity: 0.4 }}>Built with jobTED AI</p>
+                <p className={`text-[10px] ${theme.textMuted}`} style={{ opacity: 0.4 }}>Built with 3BOX AI</p>
               </div>
             </div>
           </div>

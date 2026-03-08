@@ -12,7 +12,7 @@ import Footer from '@/components/layout/Footer';
 
 // ─── Data ──────────────────────────────────────────────
 const competitors = [
-  'jobTED AI',
+  '3BOX AI',
   'Jobscan',
   'Teal',
   'Rezi',
@@ -33,71 +33,71 @@ const features: FeatureRow[] = [
   {
     feature: 'AI Resume Builder',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: true, Rezi: true,
+      '3BOX AI': true, Jobscan: false, Teal: true, Rezi: true,
       Kickresume: true, Careerflow: true, Hiration: true,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'ATS Checker',
     values: {
-      'jobTED AI': true, Jobscan: true, Teal: 'Basic', Rezi: true,
+      '3BOX AI': true, Jobscan: true, Teal: 'Basic', Rezi: true,
       Kickresume: 'Basic', Careerflow: true, Hiration: true,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'AI Career Coach',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: false, Rezi: false,
+      '3BOX AI': true, Jobscan: false, Teal: false, Rezi: false,
       Kickresume: false, Careerflow: false, Hiration: false,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'Salary Estimator',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: false, Rezi: false,
+      '3BOX AI': true, Jobscan: false, Teal: false, Rezi: false,
       Kickresume: false, Careerflow: false, Hiration: false,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'Skills Assessment',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: false, Rezi: false,
+      '3BOX AI': true, Jobscan: false, Teal: false, Rezi: false,
       Kickresume: false, Careerflow: false, Hiration: false,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'Portfolio Builder',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: false, Rezi: false,
+      '3BOX AI': true, Jobscan: false, Teal: false, Rezi: false,
       Kickresume: 'Basic', Careerflow: false, Hiration: false,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'Job Matching',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: false, Rezi: false,
+      '3BOX AI': true, Jobscan: false, Teal: false, Rezi: false,
       Kickresume: false, Careerflow: true, Hiration: false,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
   {
     feature: 'Interview Prep',
     values: {
-      'jobTED AI': true, Jobscan: false, Teal: false, Rezi: false,
+      '3BOX AI': true, Jobscan: false, Teal: false, Rezi: false,
       Kickresume: false, Careerflow: false, Hiration: true,
     },
-    winner: 'jobTED AI',
+    winner: '3BOX AI',
   },
 ];
 
 const pricing: Record<Competitor, string> = {
-  'jobTED AI': '$12/mo',
+  '3BOX AI': '$12/mo',
   Jobscan: '$49.95/mo',
   Teal: '$29/mo',
   Rezi: '$29/mo',
@@ -107,7 +107,7 @@ const pricing: Record<Competitor, string> = {
 };
 
 const ratings: Record<Competitor, { score: string; count: string }> = {
-  'jobTED AI': { score: '4.8', count: '2,847' },
+  '3BOX AI': { score: '4.8', count: '2,847' },
   Jobscan: { score: '4.4', count: '1,200+' },
   Teal: { score: '4.5', count: '900+' },
   Rezi: { score: '4.6', count: '500+' },
@@ -120,27 +120,27 @@ const faqs = [
   {
     question: 'What is the best AI resume builder in 2026?',
     answer:
-      'jobTED AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at $12/mo.',
+      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at $12/mo.',
   },
   {
-    question: 'How does jobTED AI compare to Jobscan, Teal, and Rezi?',
+    question: 'How does 3BOX AI compare to Jobscan, Teal, and Rezi?',
     answer:
-      'jobTED AI offers the widest feature set of any AI career platform. While Jobscan focuses on ATS scanning ($49.95/mo), Teal on job tracking ($29/mo), and Rezi on resume building ($29/mo), jobTED AI combines all these capabilities plus career coaching, salary estimator, skills assessment, and portfolio builder for just $12/mo.',
+      '3BOX AI offers the widest feature set of any AI career platform. While Jobscan focuses on ATS scanning ($49.95/mo), Teal on job tracking ($29/mo), and Rezi on resume building ($29/mo), 3BOX AI combines all these capabilities plus career coaching, salary estimator, skills assessment, and portfolio builder for just $12/mo.',
   },
   {
     question: 'Which AI career platform has the most features?',
     answer:
-      'jobTED AI is the only platform that includes all 8 core career features: AI resume builder, ATS checker, career coaching, salary estimator, skills assessment, portfolio builder, job matching, and interview prep. No other competitor offers all of these in a single platform.',
+      '3BOX AI is the only platform that includes all 8 core career features: AI resume builder, ATS checker, career coaching, salary estimator, skills assessment, portfolio builder, job matching, and interview prep. No other competitor offers all of these in a single platform.',
   },
   {
     question: 'Is there a free AI resume builder that includes career coaching?',
     answer:
-      'Yes. jobTED AI offers a free plan that includes an AI resume builder, 2 skill assessments, and 50 AI credits per month. The Pro plan at $12/mo unlocks unlimited access to all features including AI career coaching.',
+      'Yes. 3BOX AI offers a free plan that includes an AI resume builder, 2 skill assessments, and 50 AI credits per month. The Pro plan at $12/mo unlocks unlimited access to all features including AI career coaching.',
   },
   {
-    question: 'What makes jobTED AI different from other AI resume builders?',
+    question: 'What makes 3BOX AI different from other AI resume builders?',
     answer:
-      'jobTED AI is not just a resume builder — it is a complete AI career operating system. It takes you from skill assessment through personalized learning, resume building, career coaching, salary negotiation, portfolio creation, to job matching and automated applications.',
+      '3BOX AI is not just a resume builder — it is a complete AI career operating system. It takes you from skill assessment through personalized learning, resume building, career coaching, salary negotiation, portfolio creation, to job matching and automated applications.',
   },
 ];
 
@@ -181,7 +181,7 @@ export default function CompareAllClient() {
               <span className="gradient-text">Full Comparison</span>
             </h1>
             <p className="text-lg text-white/50 max-w-2xl mx-auto">
-              jobTED AI vs Jobscan vs Teal vs Rezi vs Kickresume vs Careerflow vs Hiration.
+              3BOX AI vs Jobscan vs Teal vs Rezi vs Kickresume vs Careerflow vs Hiration.
               See which platform wins across 8 key features, pricing, and ratings.
             </p>
           </motion.div>
@@ -200,10 +200,10 @@ export default function CompareAllClient() {
               <h2 className="text-xl font-bold">Quick Verdict</h2>
             </div>
             <p className="text-white/80 text-lg font-medium mb-2">
-              jobTED AI wins {winCounts['jobTED AI']} out of {features.length} categories.
+              3BOX AI wins {winCounts['3BOX AI']} out of {features.length} categories.
             </p>
             <p className="text-white/50 text-sm">
-              jobTED AI is the only platform that offers all 8 features — AI resume builder,
+              3BOX AI is the only platform that offers all 8 features — AI resume builder,
               ATS checker, career coaching, salary estimator, skills assessment, portfolio
               builder, job matching, and interview prep — at the lowest price point of $12/mo.
             </p>
@@ -236,7 +236,7 @@ export default function CompareAllClient() {
                       <th
                         key={c}
                         className={`text-center px-3 py-4 text-xs font-semibold min-w-[100px] ${
-                          c === 'jobTED AI'
+                          c === '3BOX AI'
                             ? 'text-neon-blue border-x border-neon-blue/20 bg-neon-blue/5'
                             : 'text-white/50'
                         }`}
@@ -264,7 +264,7 @@ export default function CompareAllClient() {
                         <td
                           key={c}
                           className={`px-3 py-3 text-center ${
-                            c === 'jobTED AI'
+                            c === '3BOX AI'
                               ? 'border-x border-neon-blue/20 bg-neon-blue/[0.03]'
                               : ''
                           }`}
@@ -290,14 +290,14 @@ export default function CompareAllClient() {
                       <td
                         key={c}
                         className={`px-3 py-3 text-center ${
-                          c === 'jobTED AI'
+                          c === '3BOX AI'
                             ? 'border-x border-neon-blue/20 bg-neon-blue/[0.03]'
                             : ''
                         }`}
                       >
                         <span
                           className={`text-sm font-semibold ${
-                            c === 'jobTED AI' ? 'text-neon-green' : 'text-white/50'
+                            c === '3BOX AI' ? 'text-neon-green' : 'text-white/50'
                           }`}
                         >
                           {pricing[c]}
@@ -307,7 +307,7 @@ export default function CompareAllClient() {
                     <td className="px-3 py-3 text-center">
                       <span className="inline-flex items-center gap-1 text-xs text-neon-green font-medium">
                         <Trophy className="w-3 h-3" />
-                        jobTED AI
+                        3BOX AI
                       </span>
                     </td>
                   </tr>
@@ -321,7 +321,7 @@ export default function CompareAllClient() {
                       <td
                         key={c}
                         className={`px-3 py-3 text-center ${
-                          c === 'jobTED AI'
+                          c === '3BOX AI'
                             ? 'border-x border-neon-blue/20 bg-neon-blue/[0.03]'
                             : ''
                         }`}
@@ -330,7 +330,7 @@ export default function CompareAllClient() {
                           <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                           <span
                             className={`text-xs ${
-                              c === 'jobTED AI' ? 'font-semibold' : 'text-white/50'
+                              c === '3BOX AI' ? 'font-semibold' : 'text-white/50'
                             }`}
                           >
                             {ratings[c].score}
@@ -344,7 +344,7 @@ export default function CompareAllClient() {
                     <td className="px-3 py-3 text-center">
                       <span className="inline-flex items-center gap-1 text-xs text-neon-green font-medium">
                         <Trophy className="w-3 h-3" />
-                        jobTED AI
+                        3BOX AI
                       </span>
                     </td>
                   </tr>
@@ -368,14 +368,14 @@ export default function CompareAllClient() {
         </div>
       </section>
 
-      {/* Why jobTED AI */}
+      {/* Why 3BOX AI */}
       <section className="pb-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.h2
             {...fadeUp}
             className="text-2xl sm:text-3xl font-bold text-center mb-10"
           >
-            Why <span className="gradient-text">jobTED AI</span> is the Best Choice
+            Why <span className="gradient-text">3BOX AI</span> is the Best Choice
           </motion.h2>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -383,12 +383,12 @@ export default function CompareAllClient() {
               {
                 title: 'Only All-in-One Platform',
                 description:
-                  'jobTED AI is the only career platform that offers all 8 features in a single subscription. Every competitor is missing at least 4 tools.',
+                  '3BOX AI is the only career platform that offers all 8 features in a single subscription. Every competitor is missing at least 4 tools.',
               },
               {
                 title: 'Lowest Price Point',
                 description:
-                  'At $12/mo, jobTED AI is 50-76% cheaper than competitors while offering significantly more features. Jobscan charges $49.95/mo for just ATS scanning.',
+                  'At $12/mo, 3BOX AI is 50-76% cheaper than competitors while offering significantly more features. Jobscan charges $49.95/mo for just ATS scanning.',
               },
               {
                 title: 'Free Tier Available',
@@ -479,12 +479,12 @@ export default function CompareAllClient() {
               <span className="gradient-text">Entire Career</span>
             </h2>
             <p className="text-white/50 mb-8 max-w-lg mx-auto">
-              Stop paying for 5 different tools. jobTED AI combines everything into one
+              Stop paying for 5 different tools. 3BOX AI combines everything into one
               powerful AI career platform. Start free today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-                Try jobTED AI Free <ArrowRight className="w-4 h-4" />
+                Try 3BOX AI Free <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/pricing"

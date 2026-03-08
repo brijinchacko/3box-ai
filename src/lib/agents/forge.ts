@@ -62,7 +62,7 @@ Respond in JSON:
     const handoffBlock = ctx ? `\n\nHANDOFF DATA:\n${getAgentHandoff(ctx, 'scout', 'forge')}` : '';
 
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: `You are Forge, the ATS Resume Optimizer in jobTED's AI agent team.
+      { role: 'system', content: `You are Forge, the ATS Resume Optimizer in 3BOX's AI agent team.
 ${contextBlock}
 ${handoffBlock}
 

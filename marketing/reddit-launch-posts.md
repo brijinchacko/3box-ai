@@ -1,4 +1,4 @@
-# jobTED AI — Reddit Launch Posts
+# 3BOX AI — Reddit Launch Posts
 
 ---
 
@@ -10,7 +10,7 @@ I built a free AI career platform with Indian pricing — ATS checker, resume bu
 ### Body
 Hey everyone,
 
-I've been working on jobTED AI (https://jobted.ai) — an all-in-one AI career platform designed to help job seekers at every stage.
+I've been working on 3BOX AI (https://3box.ai) — an all-in-one AI career platform designed to help job seekers at every stage.
 
 **Why I built this:**
 As someone from India, I noticed that most career tools are priced for the US market ($30-50/mo each). If you want an ATS checker + resume builder + career coach, you're looking at $100+/month. That's ₹8,000+/month — unrealistic for most job seekers here.
@@ -45,7 +45,7 @@ Would love feedback from the community. What features would be most useful for I
 Free AI tool to check your resume's ATS score — no signup, no paywall
 
 ### Body
-I built a free ATS resume checker at https://jobted.ai/tools/ats-checker
+I built a free ATS resume checker at https://3box.ai/tools/ats-checker
 
 How it works:
 1. Paste your resume text
@@ -58,9 +58,9 @@ How it works:
 
 It's completely free, no signup required, no paywall, no "upgrade to see full results" nonsense.
 
-I also built a free AI resume builder at https://jobted.ai/tools/resume-builder that helps you create an ATS-friendly resume from scratch.
+I also built a free AI resume builder at https://3box.ai/tools/resume-builder that helps you create an ATS-friendly resume from scratch.
 
-Both are part of jobTED AI, a career platform I'm building. Would love to hear if the tools are helpful and what you'd want to see improved.
+Both are part of 3BOX AI, a career platform I'm building. Would love to hear if the tools are helpful and what you'd want to see improved.
 
 ---
 
@@ -72,7 +72,7 @@ I built a free AI career coach — it assesses your skills, creates a career pla
 ### Body
 After spending too much money on career coaches and job search tools, I decided to build what I wished existed: one platform that handles everything.
 
-jobTED AI (https://jobted.ai) includes:
+3BOX AI (https://3box.ai) includes:
 
 **Free tools (no account needed):**
 - ATS Resume Checker
@@ -105,17 +105,17 @@ Would love feedback. What would make a tool like this more useful for your caree
 Free career tools: ATS checker, resume builder, and salary estimator — no signup required
 
 ### Body
-I wanted to share three free tools I built as part of jobTED AI:
+I wanted to share three free tools I built as part of 3BOX AI:
 
-1. **ATS Resume Checker** (https://jobted.ai/tools/ats-checker) — Paste your resume, get an instant ATS compatibility score with specific improvement suggestions.
+1. **ATS Resume Checker** (https://3box.ai/tools/ats-checker) — Paste your resume, get an instant ATS compatibility score with specific improvement suggestions.
 
-2. **AI Resume Builder** (https://jobted.ai/tools/resume-builder) — Build a professional, ATS-optimized resume from scratch with AI assistance.
+2. **AI Resume Builder** (https://3box.ai/tools/resume-builder) — Build a professional, ATS-optimized resume from scratch with AI assistance.
 
-3. **Salary Estimator** (https://jobted.ai/tools/salary-estimator) — Get AI-powered salary estimates for any role in any location.
+3. **Salary Estimator** (https://3box.ai/tools/salary-estimator) — Get AI-powered salary estimates for any role in any location.
 
 All three are completely free — no signup, no paywall, no hidden "upgrade" prompts.
 
-They're part of a larger platform (jobTED AI) that also includes skill assessments, career planning, learning paths, and job matching for those who want more. But the free tools work standalone.
+They're part of a larger platform (3BOX AI) that also includes skill assessments, career planning, learning paths, and job matching for those who want more. But the free tools work standalone.
 
 Let me know if you find them useful or have suggestions for improvement.
 
@@ -127,7 +127,7 @@ Let me know if you find them useful or have suggestions for improvement.
 Built an AI platform that assesses your tech skills and creates a career roadmap — looking for beta testers
 
 ### Body
-I built jobTED AI (https://jobted.ai) specifically to help tech professionals and aspiring developers map their career progression.
+I built 3BOX AI (https://3box.ai) specifically to help tech professionals and aspiring developers map their career progression.
 
 **How the skill assessment works:**
 - Tell the platform your target role (e.g., "Frontend Developer," "Data Scientist," "DevOps Engineer")

@@ -1,13 +1,13 @@
-// PM2 Ecosystem Configuration for jobTED AI
+// PM2 Ecosystem Configuration for 3BOX AI
 // Run: pm2 start deploy/ecosystem.config.js
 
 module.exports = {
   apps: [
     {
-      name: 'jobted-ai',
+      name: '3box-ai',
       script: 'node_modules/.bin/next',
       args: 'start -p 3003',
-      cwd: '/var/www/jobtedai',
+      cwd: '/var/www/3boxai',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -22,9 +22,9 @@ module.exports = {
         PORT: 3003,
       },
       // Logging
-      error_file: '/var/log/pm2/jobted-ai-error.log',
-      out_file: '/var/log/pm2/jobted-ai-out.log',
-      log_file: '/var/log/pm2/jobted-ai-combined.log',
+      error_file: '/var/log/pm2/3box-ai-error.log',
+      out_file: '/var/log/pm2/3box-ai-out.log',
+      log_file: '/var/log/pm2/3box-ai-combined.log',
       time: true,
       // Graceful shutdown
       kill_timeout: 5000,

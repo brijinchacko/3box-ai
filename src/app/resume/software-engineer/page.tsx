@@ -4,7 +4,7 @@ import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import SoftwareEngineerClient from './SoftwareEngineerClient';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'AI Resume Builder for Software Engineers | ATS-Optimized Tech Resumes | jobTED AI',
+  title: 'AI Resume Builder for Software Engineers | ATS-Optimized Tech Resumes | 3BOX AI',
   description:
     'Build an ATS-optimized software engineer resume with AI. Tailored for FAANG, startups, and top tech companies. Highlight your technical skills, projects, and impact metrics. Free to start.',
   keywords:
@@ -21,17 +21,17 @@ const faqData = [
   {
     question: 'How do I pass ATS as a software engineer?',
     answer:
-      'To pass ATS filters, include exact keywords from the job description such as specific programming languages, frameworks, and tools. Use standard section headings like "Work Experience" and "Skills." Avoid graphics, tables, and columns. jobTED AI scans your resume against ATS algorithms and suggests missing keywords automatically.',
+      'To pass ATS filters, include exact keywords from the job description such as specific programming languages, frameworks, and tools. Use standard section headings like "Work Experience" and "Skills." Avoid graphics, tables, and columns. 3BOX AI scans your resume against ATS algorithms and suggests missing keywords automatically.',
   },
   {
     question: 'Should I use AI to write my software engineer resume?',
     answer:
-      'Yes, AI resume builders like jobTED AI help you structure your experience effectively, suggest impactful bullet points with quantified metrics, and optimize for ATS compatibility. The AI understands tech industry conventions and can tailor your resume for specific roles like frontend, backend, full-stack, DevOps, or ML engineering.',
+      'Yes, AI resume builders like 3BOX AI help you structure your experience effectively, suggest impactful bullet points with quantified metrics, and optimize for ATS compatibility. The AI understands tech industry conventions and can tailor your resume for specific roles like frontend, backend, full-stack, DevOps, or ML engineering.',
   },
   {
     question: 'How do I quantify achievements on a software engineer resume?',
     answer:
-      'Use specific numbers and percentages: "Improved page load time by 60%," "Architected microservices handling 10M+ requests/day," "Reduced deployment time from 2 hours to 15 minutes with CI/CD pipeline," or "Led team of 5 engineers to deliver product 2 weeks ahead of schedule." jobTED AI suggests metrics based on your experience.',
+      'Use specific numbers and percentages: "Improved page load time by 60%," "Architected microservices handling 10M+ requests/day," "Reduced deployment time from 2 hours to 15 minutes with CI/CD pipeline," or "Led team of 5 engineers to deliver product 2 weeks ahead of schedule." 3BOX AI suggests metrics based on your experience.',
   },
   {
     question: 'What are the best resume formats for software engineers in 2026?',
@@ -54,7 +54,7 @@ export default function SoftwareEngineerResumePage() {
           __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
-            name: 'jobTED AI Resume Builder for Software Engineers',
+            name: '3BOX AI Resume Builder for Software Engineers',
             applicationCategory: 'BusinessApplication',
             operatingSystem: 'Web',
             description:
@@ -83,9 +83,9 @@ export default function SoftwareEngineerResumePage() {
         dangerouslySetInnerHTML={{
           __html: jsonLd(
             SCHEMA_ORG.breadcrumb([
-              { name: 'Home', url: 'https://jobted.ai' },
-              { name: 'Resume Builder', url: 'https://jobted.ai/resume' },
-              { name: 'Software Engineer', url: 'https://jobted.ai/resume/software-engineer' },
+              { name: 'Home', url: 'https://3box.ai' },
+              { name: 'Resume Builder', url: 'https://3box.ai/resume' },
+              { name: 'Software Engineer', url: 'https://3box.ai/resume/software-engineer' },
             ])
           ),
         }}

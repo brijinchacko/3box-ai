@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import LinkedInHeadlineClient from './LinkedInHeadlineClient';
 
 export const metadata: Metadata = {
-  title: 'LinkedIn Headline Generator | jobTED AI',
+  title: 'LinkedIn Headline Generator | 3BOX AI',
   description:
     'Generate attention-grabbing LinkedIn headlines that attract recruiters and clients. AI-powered, unique styles, and optimized for search.',
 };

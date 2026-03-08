@@ -8,7 +8,7 @@ import { generateReferralCode } from '@/lib/utils';
 
 // Use NEXTAUTH_URL (runtime) — do NOT use NEXT_PUBLIC_APP_URL here as Next.js
 // inlines it at build time, which bakes in localhost when building locally.
-const APP_URL = process.env.NEXTAUTH_URL || 'https://jobted.ai';
+const APP_URL = process.env.NEXTAUTH_URL || 'https://3box.ai';
 
 export async function GET(request: NextRequest) {
   try {

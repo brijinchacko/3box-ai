@@ -12,9 +12,9 @@ function getResend() {
   return _resend;
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'jobTED AI <hello@jobted.ai>';
+const FROM_EMAIL = process.env.EMAIL_FROM || '3BOX AI <hello@3box.ai>';
 // Use NEXTAUTH_URL (runtime) — NEXT_PUBLIC_APP_URL is inlined at build time by Next.js
-const APP_URL = process.env.NEXTAUTH_URL || 'https://jobted.ai';
+const APP_URL = process.env.NEXTAUTH_URL || 'https://3box.ai';
 
 // ─── Core send function ──────────────────────────
 
@@ -89,13 +89,13 @@ function baseTemplate(content: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">jobTED AI</div>
+      <div class="logo">3BOX AI</div>
       <p class="text-muted">AI Career Operating System</p>
     </div>
     ${content}
     <div class="footer">
       <p class="text-muted">
-        jobTED AI by OFORO AI<br>
+        3BOX AI by OFORO AI<br>
         <a href="${APP_URL}/settings">Manage preferences</a> &bull;
         <a href="${APP_URL}/security">Privacy Policy</a>
       </p>
@@ -109,9 +109,9 @@ function baseTemplate(content: string): string {
 
 export async function sendOtpEmail(to: string, code: string, type: 'login' | 'signup' | 'reset' = 'login') {
   const subjects = {
-    login: `${code} is your jobTED AI login code`,
-    signup: `${code} — Verify your email for jobTED AI`,
-    reset: `${code} — Reset your jobTED AI password`,
+    login: `${code} is your 3BOX AI login code`,
+    signup: `${code} — Verify your email for 3BOX AI`,
+    reset: `${code} — Reset your 3BOX AI password`,
   };
 
   const headings = {
@@ -121,7 +121,7 @@ export async function sendOtpEmail(to: string, code: string, type: 'login' | 'si
   };
 
   const descriptions = {
-    login: 'Use the code below to sign in to your jobTED AI account. This code expires in 10 minutes.',
+    login: 'Use the code below to sign in to your 3BOX AI account. This code expires in 10 minutes.',
     signup: 'Use the code below to verify your email address and complete your registration. This code expires in 10 minutes.',
     reset: 'Use the code below to reset your password. This code expires in 10 minutes.',
   };
@@ -137,7 +137,7 @@ export async function sendOtpEmail(to: string, code: string, type: 'login' | 'si
         <p class="text-muted text-sm" style="text-align: center;">If you didn't request this code, you can safely ignore this email.</p>
       </div>
     `),
-    text: `Your jobTED AI verification code is: ${code}. It expires in 10 minutes.`,
+    text: `Your 3BOX AI verification code is: ${code}. It expires in 10 minutes.`,
   });
 }
 
@@ -146,7 +146,7 @@ export async function sendOtpEmail(to: string, code: string, type: 'login' | 'si
 export async function sendWelcomeEmail(to: string, name: string) {
   return sendEmail({
     to,
-    subject: `Welcome to jobTED AI, ${name || 'there'}! Your career journey starts now`,
+    subject: `Welcome to 3BOX AI, ${name || 'there'}! Your career journey starts now`,
     html: baseTemplate(`
       <div class="card">
         <h2>Welcome aboard, ${name || 'there'}! &#127881;</h2>
@@ -190,14 +190,14 @@ export async function sendWelcomeEmail(to: string, name: string) {
 export async function sendEmailVerifiedEmail(to: string, name: string) {
   return sendEmail({
     to,
-    subject: 'Email verified — Your jobTED AI account is ready',
+    subject: 'Email verified — Your 3BOX AI account is ready',
     html: baseTemplate(`
       <div class="card" style="text-align: center;">
         <div style="font-size: 48px; margin-bottom: 16px;">&#9989;</div>
         <h2>Email Verified!</h2>
-        <p>Hi ${name || 'there'}, your email has been successfully verified. Your jobTED AI account is now fully activated.</p>
+        <p>Hi ${name || 'there'}, your email has been successfully verified. Your 3BOX AI account is now fully activated.</p>
         <p style="margin-top: 24px;">
-          <a href="${APP_URL}/dashboard" class="btn">Start Using jobTED AI</a>
+          <a href="${APP_URL}/dashboard" class="btn">Start Using 3BOX AI</a>
         </p>
       </div>
     `),
@@ -251,7 +251,7 @@ export async function sendOnboardingDay7(to: string, name: string) {
       <div class="card">
         <h2>Special Offer: 40% Off Pro Plan</h2>
         <p>Hi ${name},</p>
-        <p>You've been using jobTED AI for a week now. Upgrade to Pro and get:</p>
+        <p>You've been using 3BOX AI for a week now. Upgrade to Pro and get:</p>
         <p>&#10003; Unlimited AI-powered assessments<br>
         &#10003; 500 AI credits per month<br>
         &#10003; All resume templates + unlimited exports<br>
@@ -289,7 +289,7 @@ export async function sendCreditLowEmail(to: string, name: string, creditsLeft: 
 export async function sendSubscriptionConfirmEmail(to: string, name: string, plan: string) {
   return sendEmail({
     to,
-    subject: `Welcome to jobTED AI ${plan} — You're all set!`,
+    subject: `Welcome to 3BOX AI ${plan} — You're all set!`,
     html: baseTemplate(`
       <div class="card">
         <h2>Subscription Confirmed! &#127881;</h2>
@@ -306,7 +306,7 @@ export async function sendSubscriptionConfirmEmail(to: string, name: string, pla
 export async function sendSubscriptionCanceledEmail(to: string, name: string, endsAt: string) {
   return sendEmail({
     to,
-    subject: 'Your jobTED AI subscription has been canceled',
+    subject: 'Your 3BOX AI subscription has been canceled',
     html: baseTemplate(`
       <div class="card">
         <h2>Subscription Canceled</h2>
@@ -325,7 +325,7 @@ export async function sendSubscriptionCanceledEmail(to: string, name: string, en
 export async function sendPaymentFailedEmail(to: string, name: string) {
   return sendEmail({
     to,
-    subject: 'Action needed: Payment failed for your jobTED AI subscription',
+    subject: 'Action needed: Payment failed for your 3BOX AI subscription',
     html: baseTemplate(`
       <div class="card">
         <h2>Payment Failed</h2>
@@ -345,13 +345,13 @@ export async function sendPaymentFailedEmail(to: string, name: string) {
 export async function sendReferralInviteEmail(to: string, referrerName: string, referralCode: string) {
   return sendEmail({
     to,
-    subject: `${referrerName} invited you to jobTED AI — Get 1 month Pro free`,
+    subject: `${referrerName} invited you to 3BOX AI — Get 1 month Pro free`,
     html: baseTemplate(`
       <div class="card">
-        <h2>${referrerName} thinks you'd love jobTED AI</h2>
+        <h2>${referrerName} thinks you'd love 3BOX AI</h2>
         <p>You've been invited to join the most advanced AI career platform. Sign up and both you and ${referrerName} get <strong>1 month of Pro</strong> free!</p>
         <p style="text-align: center; margin-top: 24px;">
-          <a href="${APP_URL}/signup?ref=${referralCode}" class="btn">Join jobTED AI Free</a>
+          <a href="${APP_URL}/signup?ref=${referralCode}" class="btn">Join 3BOX AI Free</a>
         </p>
       </div>
     `),
@@ -363,7 +363,7 @@ export async function sendReferralInviteEmail(to: string, referrerName: string, 
 export async function sendPasswordResetEmail(to: string, resetToken: string) {
   return sendEmail({
     to,
-    subject: 'Reset your jobTED AI password',
+    subject: 'Reset your 3BOX AI password',
     html: baseTemplate(`
       <div class="card">
         <h2>Password Reset Request</h2>
@@ -382,7 +382,7 @@ export async function sendPasswordResetEmail(to: string, resetToken: string) {
 export async function sendAccountActivityEmail(to: string, name: string, activity: string, details: string) {
   return sendEmail({
     to,
-    subject: `Security alert: ${activity} on your jobTED AI account`,
+    subject: `Security alert: ${activity} on your 3BOX AI account`,
     html: baseTemplate(`
       <div class="card">
         <h2>Account Activity Detected</h2>
@@ -480,7 +480,7 @@ export async function sendJobApplicationEmail({
 }): Promise<{ id?: string; error?: string }> {
   const subject = `Application for ${jobTitle} — ${candidateName}`;
 
-  // Use a clean professional template (NOT the branded jobTED template)
+  // Use a clean professional template (NOT the branded 3BOX template)
   const html = `
 <!DOCTYPE html>
 <html>

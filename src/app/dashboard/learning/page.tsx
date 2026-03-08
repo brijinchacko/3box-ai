@@ -54,10 +54,10 @@ const typeConfig = {
   practice: { icon: Lightbulb, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
 };
 
-const STORAGE_KEY = 'jobted_learning_path';
-const PROGRESS_KEY = 'jobted_learning_progress';
-const ROLE_STORAGE_KEY = 'jobted_target_role';
-const SKILL_SCORES_KEY = 'jobted_skill_scores';
+const STORAGE_KEY = '3box_learning_path';
+const PROGRESS_KEY = '3box_learning_progress';
+const ROLE_STORAGE_KEY = '3box_target_role';
+const SKILL_SCORES_KEY = '3box_skill_scores';
 
 const popularRoles = [
   'AI Engineer', 'Data Scientist', 'Full Stack Developer', 'ML Engineer',
@@ -415,7 +415,7 @@ export default function LearningPathPage() {
         title: m.title || `Module ${i + 1}`,
         description: m.description || '',
         type: (['course', 'project', 'reading', 'practice'].includes(m.type) ? m.type : 'course') as LearningModule['type'],
-        provider: m.provider || 'jobTED AI',
+        provider: m.provider || '3BOX AI',
         url: m.url || undefined,
         duration: m.duration || 'TBD',
         skills: m.skills || [],
@@ -787,7 +787,7 @@ export default function LearningPathPage() {
       {/* Footer info */}
       <div className="mt-6 text-center text-xs text-white/20 flex items-center justify-center gap-2">
         <Brain className="w-3 h-3" />
-        <span>Learning path curated by jobTED AI Engine</span>
+        <span>Learning path curated by 3BOX AI Engine</span>
       </div>
     </div>
   );

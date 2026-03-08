@@ -42,14 +42,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const portfolio = await getPortfolio(username);
 
   if (!portfolio) {
-    return { title: 'Portfolio Not Found | jobTED AI' };
+    return { title: 'Portfolio Not Found | 3BOX AI' };
   }
 
   const description = portfolio.bio
     || `${portfolio.user.name}'s professional portfolio showcasing projects and skills.`;
 
   return {
-    title: `${portfolio.title} | ${portfolio.user.name} - jobTED AI`,
+    title: `${portfolio.title} | ${portfolio.user.name} - 3BOX AI`,
     description,
     openGraph: {
       title: `${portfolio.title} | ${portfolio.user.name}`,

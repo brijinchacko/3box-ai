@@ -3,7 +3,7 @@ import { handleToolRequest } from '@/lib/tools/apiHelper';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
-    cookieName: 'jobted-coldemail-uses',
+    cookieName: '3box-coldemail-uses',
     requiredFields: ['recipientRole', 'yourBackground', 'purpose'],
     systemPrompt: `You are an expert in professional networking and cold outreach. Write a concise, compelling cold email that gets responses. The email should be short (under 150 words for the body), have a clear ask, show research/interest, and not feel generic. Return JSON: { subject: string, body: string }`,
     buildUserPrompt: (body) => {

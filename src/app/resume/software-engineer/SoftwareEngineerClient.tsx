@@ -150,17 +150,17 @@ const faqs = [
   {
     question: 'How do I pass ATS as a software engineer?',
     answer:
-      'To pass ATS filters, include exact keywords from the job description such as specific programming languages, frameworks, and tools. Use standard section headings like "Work Experience" and "Skills." Avoid graphics, tables, and columns. jobTED AI scans your resume against ATS algorithms and suggests missing keywords automatically.',
+      'To pass ATS filters, include exact keywords from the job description such as specific programming languages, frameworks, and tools. Use standard section headings like "Work Experience" and "Skills." Avoid graphics, tables, and columns. 3BOX AI scans your resume against ATS algorithms and suggests missing keywords automatically.',
   },
   {
     question: 'Should I use AI to write my software engineer resume?',
     answer:
-      'Yes, AI resume builders like jobTED AI help you structure your experience effectively, suggest impactful bullet points with quantified metrics, and optimize for ATS compatibility. The AI understands tech industry conventions and can tailor your resume for specific roles like frontend, backend, full-stack, DevOps, or ML engineering.',
+      'Yes, AI resume builders like 3BOX AI help you structure your experience effectively, suggest impactful bullet points with quantified metrics, and optimize for ATS compatibility. The AI understands tech industry conventions and can tailor your resume for specific roles like frontend, backend, full-stack, DevOps, or ML engineering.',
   },
   {
     question: 'How do I quantify achievements on a software engineer resume?',
     answer:
-      'Use specific numbers and percentages: "Improved page load time by 60%," "Architected microservices handling 10M+ requests/day," "Reduced deployment time from 2 hours to 15 minutes with CI/CD pipeline," or "Led team of 5 engineers to deliver product 2 weeks ahead of schedule." jobTED AI suggests metrics based on your experience.',
+      'Use specific numbers and percentages: "Improved page load time by 60%," "Architected microservices handling 10M+ requests/day," "Reduced deployment time from 2 hours to 15 minutes with CI/CD pipeline," or "Led team of 5 engineers to deliver product 2 weeks ahead of schedule." 3BOX AI suggests metrics based on your experience.',
   },
   {
     question: 'What are the best resume formats for software engineers in 2026?',
@@ -462,11 +462,11 @@ export default function SoftwareEngineerClient() {
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Join 10,000+ Software Engineers Using{' '}
-              <span className="gradient-text">jobTED AI</span>
+              <span className="gradient-text">3BOX AI</span>
             </h2>
             <p className="text-white/50 max-w-2xl mx-auto mb-8">
               Engineers from Google, Amazon, Meta, Netflix, and hundreds of startups
-              trust jobTED AI to build resumes that pass ATS filters and impress hiring
+              trust 3BOX AI to build resumes that pass ATS filters and impress hiring
               managers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

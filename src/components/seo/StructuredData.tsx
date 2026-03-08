@@ -9,7 +9,7 @@
  * - ComparisonPage (custom WebPage with review)
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jobted.ai';
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
 
 // ─── Generic renderer ──────────────────────────────────
 interface StructuredDataProps {
@@ -30,8 +30,8 @@ export function organizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'jobTED AI',
-    alternateName: 'jobTED AI by OFORO AI',
+    name: '3BOX AI',
+    alternateName: '3BOX AI by OFORO AI',
     url: SITE_URL,
     logo: `${SITE_URL}/assets/brand/logo.svg`,
     description:
@@ -42,8 +42,8 @@ export function organizationSchema() {
       url: 'https://oforo.ai',
     },
     sameAs: [
-      'https://twitter.com/jobtedai',
-      'https://linkedin.com/company/jobtedai',
+      'https://twitter.com/3boxai',
+      'https://linkedin.com/company/3boxai',
       'https://github.com/brijinchacko',
     ],
   };
@@ -54,7 +54,7 @@ export function softwareApplicationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'jobTED AI',
+    name: '3BOX AI',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     url: SITE_URL,
@@ -146,7 +146,7 @@ export function comparisonPageSchema({
     url,
     about: {
       '@type': 'SoftwareApplication',
-      name: 'jobTED AI',
+      name: '3BOX AI',
       applicationCategory: 'BusinessApplication',
     },
     mentions: competitors.map((name) => ({

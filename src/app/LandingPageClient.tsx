@@ -10,7 +10,7 @@ import {
   CheckCircle2, BarChart3, Bot, Cpu, Award,
   DollarSign, Send, User, MapPin,
   Moon, Users, Workflow, Star, ChevronDown, ChevronUp, Quote,
-  Clock, Heart, Shield, Rocket
+  Clock, Heart, Shield, Rocket, Lock, Eye, ShieldCheck, Upload, Search
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -263,20 +263,20 @@ const fadeUp = {
 
 
 const howItWorks = [
-  { step: '01', title: 'You share your dream', desc: 'Tell Cortex the role you want, the skills you have, and the career you imagine. From that single conversation, your entire AI team knows exactly what to hunt for.', icon: Target, color: 'from-neon-blue to-cyan-400' },
-  { step: '02', title: 'Your team assembles', desc: 'Six specialist agents activate instantly — each one trained for a different chapter of your job search. They coordinate. They strategize. They prepare for battle.', icon: Users, color: 'from-neon-purple to-violet-400' },
-  { step: '03', title: 'They work while you rest', desc: 'While the world sleeps, your agents are out there — discovering hidden opportunities, tailoring every resume, writing cover letters, applying to jobs. No breaks. No burnout. Ever.', icon: Moon, color: 'from-amber-400 to-orange-400' },
-  { step: '04', title: 'You wake up to a new chapter', desc: 'Every morning, your dashboard tells a new story — matched jobs, sent applications, interview prep sessions, all completed overnight. Progress, delivered while you dreamed.', icon: Zap, color: 'from-neon-green to-emerald-400' },
+  { step: '01', title: 'Upload & Set Goals', desc: 'Drop your resume and tell us your target role, salary range, and preferred locations. Cortex instantly maps your skills, experience, and career ambitions into a personalized hunt strategy.', icon: Upload, color: 'from-neon-blue to-cyan-400' },
+  { step: '02', title: 'Scout Hunts Jobs', desc: 'Scout searches LinkedIn, Indeed, Naukri, Google Jobs, and 6+ platforms overnight. Every listing is analyzed for fit — not just keywords, but culture, growth potential, and salary match.', icon: Search, color: 'from-neon-purple to-violet-400' },
+  { step: '03', title: 'Forge + Archer Execute', desc: 'Forge tailors your resume for each specific job — different keywords, different emphasis, different story. Archer sends each application with a custom cover letter. Sentinel reviews everything before it goes out.', icon: Moon, color: 'from-amber-400 to-orange-400' },
+  { step: '04', title: 'Wake Up to Results', desc: 'Your dashboard shows matched jobs, sent applications, and Atlas-prepared interview questions — all completed overnight. Real progress, delivered while you slept.', icon: Zap, color: 'from-neon-green to-emerald-400' },
 ];
 
 // ─── FAQ Data ───────────────────────────────
 const faqItems = [
-  { q: 'Wait — what exactly is jobTED AI?', a: 'Think of it as your personal AI career team. Six specialized agents work together around the clock — finding jobs, perfecting your resume, sending applications, and preparing you for interviews. All while you focus on living your life.' },
-  { q: 'Is it actually free?', a: 'Yes, genuinely. You get access to 17 AI career tools with 2 free uses each — resume building, ATS checking, salary estimation, and more. When you are ready for the full autonomous pipeline, premium plans unlock unlimited everything.' },
-  { q: 'How do these agents actually work?', a: 'Cortex is the brain — your coordinator. Under Cortex, Scout hunts for matching jobs, Forge crafts a custom resume for each role, Archer sends applications, Atlas preps you for interviews, Sage identifies skill gaps, and Sentinel quality-checks every detail before anything goes out.' },
-  { q: 'Do I need to install anything?', a: 'Nothing at all. jobTED AI runs entirely in your browser. Create a free account and within seconds, your agent team is assembled and ready to go.' },
-  { q: 'Will they apply without asking me first?', a: 'You are always in control. In Copilot mode, agents ask before every action. In Autopilot mode, they apply to categories you pre-approve. In Full Agent mode, they work autonomously while you sleep — but only within the boundaries you set.' },
-  { q: 'Is my data safe with you?', a: 'Absolutely. Your data is encrypted in transit and at rest. We never share personal information with third parties. And you can delete your account and all data at any time — no questions asked.' },
+  { q: 'What is 3BOX AI?', a: 'Your personal AI career team. Six specialized agents handle everything — from finding matching jobs to sending applications and prepping you for interviews. Think of it as a career operating system that works around the clock while you focus on living your life.' },
+  { q: 'Will AI send wrong applications?', a: 'No. You choose your control level: Copilot mode lets you approve every application before it goes out. Autopilot auto-applies to high-match jobs you pre-approve. Full Agent mode works hands-free while you sleep. Plus, Sentinel reviews every application for quality before sending.' },
+  { q: 'Will companies block me?', a: 'No. Each application is individually crafted by Forge — no mass blasts or spam. Sentinel ensures every submission meets quality standards and relevance thresholds. Companies see a thoughtfully tailored application, not a generic template.' },
+  { q: 'Is my data safe?', a: 'Absolutely. All data is encrypted in transit and at rest. We never sell or share your information with third parties. You can delete your account and all data anytime — no questions asked. We are GDPR compliant.' },
+  { q: 'Is it actually free?', a: 'Yes! The Basic plan is free forever with limited AI credits and access to 17 career tools. Paid plans unlock unlimited agent work, more job sources, and full automation features. No credit card required to start.' },
+  { q: 'Do I need to install anything?', a: 'No. 3BOX AI is entirely browser-based. Sign up and your agents start working immediately — no downloads, no extensions, no setup required.' },
 ];
 
 // ─── Reviews Data ──────────────────────────
@@ -286,12 +286,12 @@ interface Review { name: string; role: string; text: string; rating: number; ava
 const allReviews: Review[] = [
   // ── Row 1 batch ──
   { name: 'Sarah Chen', role: 'UX Designer', text: 'I went to sleep nervous about my job search. Woke up to 5 tailored applications sent overnight. Two weeks later, I was at a FAANG company.', rating: 5, avatar: 'SC', transformation: 'Hired in 14 days', country: 'US' },
-  { name: 'Priya Sharma', role: 'Software Engineer', text: 'I was sending applications into the void for months. jobTED AI changed everything — the ATS checker alone tripled my interview rate.', rating: 5, avatar: 'PS', transformation: 'ATS: 38% → 94%', country: 'IN' },
+  { name: 'Priya Sharma', role: 'Software Engineer', text: 'I was sending applications into the void for months. 3BOX AI changed everything — the ATS checker alone tripled my interview rate.', rating: 5, avatar: 'PS', transformation: 'ATS: 38% → 94%', country: 'IN' },
   { name: 'Emma Thompson', role: 'Marketing Manager', text: 'The agents found roles across London and Manchester I would have completely missed. Three weeks later, I had an offer.', rating: 5, avatar: 'ET', transformation: 'Hired in 3 weeks', country: 'UK' },
-  { name: 'Michael Torres', role: 'Software Engineer', text: 'My resume was invisible to ATS systems. jobTED AI fixed that overnight — three interviews in the first week.', rating: 5, avatar: 'MT', transformation: 'ATS: 45% → 92%', country: 'US' },
+  { name: 'Michael Torres', role: 'Software Engineer', text: 'My resume was invisible to ATS systems. 3BOX AI fixed that overnight — three interviews in the first week.', rating: 5, avatar: 'MT', transformation: 'ATS: 45% → 92%', country: 'US' },
   { name: 'Rahul Verma', role: 'Data Scientist', text: 'The AI built a resume that perfectly highlighted my IIT background. Within a week, Google and Amazon both reached out.', rating: 5, avatar: 'RV', transformation: 'Hired in 8 days', country: 'IN' },
-  { name: 'Lena Kowalski', role: 'Frontend Developer', text: 'Applied to 200 jobs manually with zero results. jobTED sent 30 targeted applications in one night. Got 4 interviews.', rating: 5, avatar: 'LK', transformation: '200 apps → 4 interviews', country: 'DE' },
-  { name: 'James Wilson', role: 'Software Engineer', text: 'My career coach missed ATS issues that jobTED caught instantly. Went from zero callbacks to multiple competing offers.', rating: 5, avatar: 'JW', transformation: '0 → 4 offers', country: 'UK' },
+  { name: 'Lena Kowalski', role: 'Frontend Developer', text: 'Applied to 200 jobs manually with zero results. 3BOX sent 30 targeted applications in one night. Got 4 interviews.', rating: 5, avatar: 'LK', transformation: '200 apps → 4 interviews', country: 'DE' },
+  { name: 'James Wilson', role: 'Software Engineer', text: 'My career coach missed ATS issues that 3BOX caught instantly. Went from zero callbacks to multiple competing offers.', rating: 5, avatar: 'JW', transformation: '0 → 4 offers', country: 'UK' },
   { name: 'Aisha Mohammed', role: 'Data Analyst', text: 'As a fresh graduate, I had no idea where to start. Agent Sage identified my skill gaps and Cortex built a plan. Hired in 3 weeks.', rating: 5, avatar: 'AM', transformation: 'Graduate → Hired', country: 'AE' },
   { name: 'Carlos Rivera', role: 'DevOps Engineer', text: 'The salary negotiation data alone was worth it. I walked into my review with proof and walked out with a 25% raise.', rating: 5, avatar: 'CR', transformation: '+25% salary', country: 'US' },
   { name: 'Yuki Tanaka', role: 'UI Designer', text: 'Agent Forge tailored my portfolio description for each company. The personalization was incredible — 5 out of 8 callbacks.', rating: 5, avatar: 'YT', transformation: '5/8 callbacks', country: 'JP' },
@@ -301,7 +301,7 @@ const allReviews: Review[] = [
   { name: 'Sophie Clarke', role: 'Business Analyst', text: 'The salary estimator knew UK market rates perfectly. I walked into my negotiation armed with data — and walked out with 15% more.', rating: 5, avatar: 'SC', transformation: '+15% salary', country: 'UK' },
   { name: 'David Kim', role: 'Data Scientist', text: 'Forge optimized my resume differently for each application — automatically. That level of personalization got me noticed.', rating: 4, avatar: 'DK', transformation: '3x more callbacks', country: 'US' },
   { name: 'Fatima Al-Hassan', role: 'Project Manager', text: 'Career change at 35 felt impossible. The agents mapped my transferable skills and found PM roles I qualified for. Hired in a month.', rating: 5, avatar: 'FA', transformation: 'Career switch success', country: 'CA' },
-  { name: 'Tomasz Nowak', role: 'Backend Developer', text: 'Three months of silence before jobTED. Two weeks after, I had offers from Berlin and Amsterdam. The agents do not sleep.', rating: 5, avatar: 'TN', transformation: '2 offers in 2 weeks', country: 'PL' },
+  { name: 'Tomasz Nowak', role: 'Backend Developer', text: 'Three months of silence before 3BOX. Two weeks after, I had offers from Berlin and Amsterdam. The agents do not sleep.', rating: 5, avatar: 'TN', transformation: '2 offers in 2 weeks', country: 'PL' },
   { name: 'Maria Garcia', role: 'Data Scientist', text: 'My ATS score went from 50% to 95%. The difference was immediate — callbacks started flooding in within days.', rating: 5, avatar: 'MG', transformation: 'ATS: 50% → 95%' },
   { name: 'Ravi Krishnan', role: 'ML Engineer', text: 'Agent Atlas prepared me for 6 different interview formats. I aced every round. The prep was better than any coaching service.', rating: 5, avatar: 'RK', transformation: 'Aced all rounds', country: 'IN' },
   { name: 'Elena Popova', role: 'QA Engineer', text: 'I was skeptical about AI writing my cover letters. Then I read what Forge produced. It knew my story better than I did.', rating: 5, avatar: 'EP', transformation: 'Cover letters that convert', country: 'RU' },
@@ -312,11 +312,11 @@ const allReviews: Review[] = [
   { name: 'Chris Lee', role: 'Product Manager', text: 'Six AI agents working while I sleep? It sounded like science fiction. Two weeks and one job offer later, I am a believer.', rating: 5, avatar: 'CL', transformation: 'Hired in 2 weeks' },
   { name: 'Nina Patel', role: 'UX Designer', text: 'The cover letter generator and interview prep saved me hours every day. This is what the future of job searching looks like.', rating: 4, avatar: 'NP', transformation: '10+ hrs saved/week' },
   { name: 'Daniel Okafor', role: 'Cybersecurity Analyst', text: 'Applied to niche security roles that need specific certs. Forge highlighted my CISSP perfectly for each application. 3 offers.', rating: 5, avatar: 'DO', transformation: '3 offers in niche field', country: 'NG' },
-  { name: 'Mei Lin', role: 'Product Designer', text: 'Switching countries and careers at the same time. jobTED handled visa-friendly roles and tailored everything. Incredible.', rating: 5, avatar: 'ML', transformation: 'International hire', country: 'SG' },
+  { name: 'Mei Lin', role: 'Product Designer', text: 'Switching countries and careers at the same time. 3BOX handled visa-friendly roles and tailored everything. Incredible.', rating: 5, avatar: 'ML', transformation: 'International hire', country: 'SG' },
   { name: 'Alex Johnson', role: 'Software Engineer', text: 'I used to spend 4 hours a day job searching. Now my agent team does it all — finding, applying, prepping — while I sleep.', rating: 5, avatar: 'AJ', transformation: '4 hrs/day → 0' },
   { name: 'Isabella Romano', role: 'Marketing Analyst', text: 'Sentinel caught a typo in my resume that would have been embarrassing. The quality review step is pure gold.', rating: 5, avatar: 'IR', transformation: 'Zero errors shipped', country: 'IT' },
   { name: 'Hassan Ali', role: 'iOS Developer', text: 'My portfolio was strong but my resume was weak. Forge rewrote it, Archer sent it out, and I had 5 calls in 4 days.', rating: 5, avatar: 'HA', transformation: '5 calls in 4 days', country: 'PK' },
-  { name: 'Sophie Dubois', role: 'HR Manager', text: 'I work in HR and know what recruiters look for. jobTED nailed it — the AI understands hiring better than most humans.', rating: 5, avatar: 'SD', transformation: 'HR expert approved', country: 'FR' },
+  { name: 'Sophie Dubois', role: 'HR Manager', text: 'I work in HR and know what recruiters look for. 3BOX nailed it — the AI understands hiring better than most humans.', rating: 5, avatar: 'SD', transformation: 'HR expert approved', country: 'FR' },
   // ── Row 4 batch (extra) ──
   { name: 'Raj Mehta', role: 'Data Engineer', text: 'Sage told me to learn Spark before applying. I did. Two weeks later, I had an offer I would not have been qualified for otherwise.', rating: 5, avatar: 'RM', transformation: 'Skill gap → Hired', country: 'IN' },
   { name: 'Anna Svensson', role: 'Scrum Master', text: 'The agents sent 15 targeted applications overnight. I woke up to 3 interview requests. This is not normal. This is magic.', rating: 5, avatar: 'AS', transformation: '15 apps → 3 interviews', country: 'SE' },
@@ -390,7 +390,7 @@ export default function LandingPageClient() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('jobted_onboarding_profile');
+    const saved = localStorage.getItem('3box_onboarding_profile');
     if (saved) {
       try {
         const profile = JSON.parse(saved);
@@ -542,11 +542,11 @@ export default function LandingPageClient() {
       educationLevel: education, fieldOfStudy: '', institution: '', graduationYear: '',
       skills: actualSkills, experiences: [],
     };
-    localStorage.setItem('jobted_onboarding_profile', JSON.stringify(profile));
-    localStorage.setItem('jobted_target_role', targetRole);
-    localStorage.setItem('jobted_interests', JSON.stringify(actualSkills.slice(0, 5)));
-    localStorage.setItem('jobted_user_location', location);
-    localStorage.setItem('jobted_skill_scores', JSON.stringify(
+    localStorage.setItem('3box_onboarding_profile', JSON.stringify(profile));
+    localStorage.setItem('3box_target_role', targetRole);
+    localStorage.setItem('3box_interests', JSON.stringify(actualSkills.slice(0, 5)));
+    localStorage.setItem('3box_user_location', location);
+    localStorage.setItem('3box_skill_scores', JSON.stringify(
       actualSkills.reduce((acc, skill) => {
         acc[skill] = experience === 'fresher' ? 30 : experience === '0-1' ? 40 : experience === '1-3' ? 55 : experience === '3-5' ? 65 : experience === '5-10' ? 75 : 85;
         return acc;
@@ -560,7 +560,7 @@ export default function LandingPageClient() {
       skills: actualSkills,
       targetRole,
     };
-    localStorage.setItem('jobted_resume_draft', JSON.stringify(resumeData));
+    localStorage.setItem('3box_resume_draft', JSON.stringify(resumeData));
 
     // Compute salary message based on user's country
     const region = (() => {
@@ -586,8 +586,8 @@ export default function LandingPageClient() {
     setSelectedSkills([]);
     setFullName('');
     setLocation('');
-    localStorage.removeItem('jobted_onboarding_profile');
-    localStorage.removeItem('jobted_target_role');
+    localStorage.removeItem('3box_onboarding_profile');
+    localStorage.removeItem('3box_target_role');
     setTimeout(() => {
       setMessages([{ from: 'nova', text: "Hey! I'm Agent Cortex, your career coach. Let's find the perfect path for you.", type: 'question' }]);
       setTimeout(() => setStep('role'), 600);
@@ -652,6 +652,61 @@ export default function LandingPageClient() {
         </div>
       </section>
 
+      {/* ─── Clear Value Proposition ─── */}
+      <section className="relative py-16 sm:py-20 overflow-hidden" aria-label="How 3BOX AI Works">
+        <div className="absolute inset-0 bg-grid opacity-10" aria-hidden="true" />
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-5">
+              <Zap className="w-3.5 h-3.5" /> Your AI Career Operating System
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">
+              One Platform. Six AI Agents. <span className="gradient-text">From Resume to Hired.</span>
+            </h2>
+            <p className="text-white/40 max-w-xl mx-auto">
+              Free forever &middot; No credit card &middot; Your agents start in seconds
+            </p>
+          </motion.div>
+
+          {/* 4-step flow */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 relative">
+            {/* Connecting line (desktop only) */}
+            <div className="hidden lg:block absolute top-1/2 left-[12%] right-[12%] h-px bg-gradient-to-r from-neon-blue/30 via-neon-purple/30 to-neon-green/30 -translate-y-1/2 z-0" aria-hidden="true" />
+
+            {[
+              { step: '01', icon: Upload, title: 'Upload Resume', desc: 'Share your resume & goals', gradient: 'from-neon-blue to-cyan-400' },
+              { step: '02', icon: Search, title: 'AI Finds Jobs', desc: 'Scout searches 6+ job platforms', gradient: 'from-neon-purple to-violet-400' },
+              { step: '03', icon: Sparkles, title: 'AI Customizes', desc: 'Forge tailors your resume per job', gradient: 'from-amber-400 to-orange-400' },
+              { step: '04', icon: Rocket, title: 'AI Applies', desc: 'Archer sends applications while you sleep', gradient: 'from-neon-green to-emerald-400' },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="relative z-10 text-center"
+              >
+                <div className="glass p-5 sm:p-6 flex flex-col items-center hover:border-white/15 transition-all duration-300 group h-full">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                    <item.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-[10px] text-white/30 font-medium uppercase tracking-wider mb-1">Step {item.step}</div>
+                  <h3 className="text-sm font-semibold mb-1">{item.title}</h3>
+                  <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── Chapter One: The Encounter (Hero) ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" aria-label="AI Career Coach Onboarding">
         <div className="absolute inset-0 bg-grid opacity-30" aria-hidden="true" />
@@ -676,8 +731,8 @@ export default function LandingPageClient() {
                 A Better Chapter.
               </h1>
               <p className="text-base sm:text-lg text-white/50 max-w-lg mx-auto mb-6">
-                6 AI agents work around the clock &mdash; finding opportunities, crafting resumes,
-                sending applications, prepping interviews. Your only job? Dream bigger.
+                Upload your resume. Tell us your dream role. Wake up to tailored applications,
+                matched jobs, and interview prep &mdash; all done by your AI career team.
               </p>
 
               {/* Agent mini-avatar row */}
@@ -1044,8 +1099,111 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ─── Chapter Two: The Assembly (Agent Team — shown first) ─── */}
-      <section className="py-20 bg-surface-50" aria-label="Every Hero Needs a Team">
+      {/* ─── Trust & Safety ─── */}
+      <section className="relative py-16 sm:py-20 overflow-hidden" aria-label="Trust and Safety">
+        <div className="absolute inset-0 bg-grid opacity-10" aria-hidden="true" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-gradient-radial from-neon-green/5 via-transparent to-transparent rounded-full blur-3xl" aria-hidden="true" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-5">
+              <ShieldCheck className="w-3.5 h-3.5" /> Built for trust
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">You Stay In <span className="gradient-text">Control</span></h2>
+            <p className="text-white/40 max-w-lg mx-auto">
+              AI is powerful &mdash; but your career is personal. Here&apos;s how we keep you safe.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+            {[
+              {
+                icon: Eye,
+                title: 'Human Approval Mode',
+                desc: 'Review every application before it\u2019s sent. Switch between Copilot, Autopilot, or Full Agent mode at any time.',
+                gradient: 'from-neon-blue to-cyan-400',
+              },
+              {
+                icon: Shield,
+                title: 'Secure System',
+                desc: 'No spam. No mass blasts. Each application is quality-checked by Sentinel before submission.',
+                gradient: 'from-neon-purple to-violet-400',
+              },
+              {
+                icon: Lock,
+                title: 'Data Protection',
+                desc: 'Your data is encrypted, never shared, and you can delete it anytime. GDPR compliant.',
+                gradient: 'from-neon-green to-emerald-400',
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+              >
+                <div className="glass p-6 h-full hover:border-white/15 transition-all duration-300 group text-center">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
+                    <item.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-sm font-semibold mb-2">{item.title}</h3>
+                  <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Impact Numbers ─── */}
+      <section className="relative py-16 sm:py-20 bg-surface-50 overflow-hidden" aria-label="Real Results">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-xs font-semibold mb-5">
+              <BarChart3 className="w-3.5 h-3.5" /> Real results
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold">Numbers Don&apos;t <span className="gradient-text">Lie</span></h2>
+          </motion.div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            {[
+              { value: '2,400+', label: 'Jobs Matched', color: 'from-neon-blue to-cyan-400' },
+              { value: '94%', label: 'Got Hired Faster', color: 'from-neon-green to-emerald-400' },
+              { value: '14 Days', label: 'Avg. to First Interview', color: 'from-neon-purple to-violet-400' },
+              { value: '4.9\u2605', label: 'Rating from Users', color: 'from-amber-400 to-orange-400' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="text-center"
+              >
+                <div className={`text-3xl sm:text-4xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}>
+                  {stat.value}
+                </div>
+                <div className="text-xs text-white/40 font-medium">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Chapter Two: The Assembly (Agent Team — Structured Diagram) ─── */}
+      <section className="py-20" aria-label="Meet Your AI Career Team">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1056,120 +1214,67 @@ export default function LandingPageClient() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-purple/10 border border-neon-purple/20 text-neon-purple text-xs font-semibold mb-4">
               <Bot className="w-3.5 h-3.5" /> Chapter Two — The Assembly
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Every Hero Needs a <span className="gradient-text">Team</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Meet Your AI <span className="gradient-text">Career Team</span></h2>
             <p className="text-white/40 max-w-lg mx-auto">
-              One coordinator. Six specialists. Each with a unique mission, working in perfect sync to rewrite your career story.
+              One coordinator. Six specialists. Working in perfect sync.
             </p>
           </motion.div>
 
-          {/* ── Orbital Layout (Desktop + Tablet) ── */}
-          <div className="hidden md:block">
-            <div className="relative mx-auto overflow-visible md:scale-[0.82] lg:scale-100 origin-center transition-transform" style={{ width: 520, height: 520 }}>
-
-              {/* Orbit ring — slowly rotating dashed circle */}
-              <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-                  className="rounded-full border border-dashed border-white/[0.08]"
-                  style={{ width: 400, height: 400 }}
-                  aria-hidden="true"
-                />
+          {/* ── Cortex (Coordinator) — Full Width Top ── */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="flex justify-center mb-6"
+          >
+            <Link href="/agents/cortex" className="group">
+              <div className="glass p-5 sm:p-6 flex items-center gap-4 hover:border-white/15 transition-all duration-300 max-w-md">
+                <div className="relative flex-shrink-0">
+                  <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
+                  <CortexAvatar size={52} pulse />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold group-hover:text-neon-blue transition-colors">{COORDINATOR.displayName}</h3>
+                  <p className="text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7]">{COORDINATOR.role}</p>
+                  <p className="text-[10px] text-white/35 mt-1 italic leading-tight">Coordinates all agents. Manages your career strategy.</p>
+                </div>
               </div>
+            </Link>
+          </motion.div>
 
-              {/* Inner ring for depth */}
-              <div
-                className="absolute rounded-full border border-white/[0.04]"
-                style={{ width: 200, height: 200, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
-                aria-hidden="true"
-              />
-
-              {/* SVG connecting lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 520 520" aria-hidden="true">
-                <defs>
-                  <linearGradient id="orbitLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00d4ff" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-                {AGENT_LIST.map((_, i) => {
-                  const angle = (i * 60 - 90) * (Math.PI / 180);
-                  const r = 200;
-                  const x = 260 + r * Math.cos(angle);
-                  const y = 260 + r * Math.sin(angle);
-                  return <line key={i} x1={260} y1={260} x2={x} y2={y} stroke="url(#orbitLineGrad)" strokeWidth="1" strokeDasharray="4 4" opacity="0.12" />;
-                })}
-              </svg>
-
-              {/* Cortex at center — wrapper div handles centering, motion.div handles animation */}
-              <div className="absolute inset-0 flex items-center justify-center z-10">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="flex flex-col items-center group/cortex"
-                >
-                  <Link href="/agents/cortex" className="flex flex-col items-center hover:scale-105 transition-transform">
-                    <div className="relative mb-2">
-                      <div className="absolute -inset-4 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
-                      <CortexAvatar size={64} pulse />
-                    </div>
-                    <h3 className="text-sm font-bold text-center">{COORDINATOR.displayName}</h3>
-                    <p className="text-[10px] font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7] text-center">{COORDINATOR.role}</p>
-                  </Link>
-                  {/* Hover lore tooltip */}
-                  <div className="absolute top-full mt-2 opacity-0 group-hover/cortex:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
-                    <div className="bg-surface-100/95 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 shadow-2xl max-w-[220px] text-center">
-                      <p className="text-[10px] text-white/50 italic leading-relaxed">&ldquo;The ninja never sleeps because opportunities don&rsquo;t wait.&rdquo;</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* 6 Agents — orbit closer when awake, farther when sleeping */}
-              {AGENT_LIST.map((agent, i) => (
-                <OrbitingAgent key={agent.id} agent={agent} index={i} />
-              ))}
+          {/* ── Connecting Lines from Cortex (Desktop) ── */}
+          <div className="hidden sm:flex justify-center mb-4" aria-hidden="true">
+            <div className="w-px h-6 bg-gradient-to-b from-neon-purple/30 to-white/10" />
+          </div>
+          <div className="hidden sm:flex justify-center mb-6" aria-hidden="true">
+            <div className="flex items-center gap-0">
+              <div className="w-[120px] lg:w-[180px] h-px bg-gradient-to-r from-transparent to-white/15" />
+              <div className="w-px h-3 bg-white/15" />
+              <div className="w-[60px] lg:w-[90px] h-px bg-white/15" />
+              <div className="w-px h-3 bg-white/15" />
+              <div className="w-[120px] lg:w-[180px] h-px bg-gradient-to-l from-transparent to-white/15" />
             </div>
           </div>
 
-          {/* ── Mobile Layout (phone only) ── */}
-          <div className="md:hidden">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="flex flex-col items-center mb-8"
-            >
-              <Link href="/agents/cortex" className="flex flex-col items-center">
-                <div className="relative mb-3">
-                  <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
-                  <CortexAvatar size={56} pulse />
-                </div>
-                <h3 className="text-lg font-bold">{COORDINATOR.displayName}</h3>
-                <p className="text-sm text-white/40">{COORDINATOR.role}</p>
+          {/* ── 6 Agent Cards — 3-column grid ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+            {AGENT_LIST.map((agent, i) => (
+              <Link key={agent.id} href={`/agents/${agent.id}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08, duration: 0.4 }}
+                  className="glass p-4 flex flex-col items-center text-center hover:border-white/15 transition-all duration-300 group h-full"
+                >
+                  <AgentAvatar agentId={agent.id} size={40} autoSleep />
+                  <h3 className="text-xs font-semibold mt-2.5 group-hover:text-white transition-colors">{agent.displayName}</h3>
+                  <span className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</span>
+                  <span className="text-[9px] text-white/30 mt-1 leading-tight italic">{agent.storyLine}</span>
+                </motion.div>
               </Link>
-            </motion.div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {AGENT_LIST.map((agent, i) => (
-                <Link key={agent.id} href={`/agents/${agent.id}`}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.08, duration: 0.4 }}
-                    className="flex flex-col items-center p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 transition-colors"
-                  >
-                    <AgentAvatar agentId={agent.id} size={36} autoSleep />
-                    <h3 className="text-xs font-semibold mt-2">{agent.displayName}</h3>
-                    <span className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</span>
-                    <span className="text-[9px] text-white/30 mt-0.5 text-center italic leading-tight">{agent.storyLine}</span>
-                  </motion.div>
-                </Link>
-              ))}
-            </div>
+            ))}
           </div>
 
           {/* ── Cortex Origin Story ── */}
@@ -1630,21 +1735,20 @@ export default function LandingPageClient() {
               <Sparkles className="w-3.5 h-3.5" /> Chapter Seven — The First Step
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
-              Every great career story<br />
-              starts with a <span className="gradient-text">single step</span>.
+              Stop Applying.<br />
+              Start <span className="gradient-text">Getting Hired</span>.
             </h2>
             <p className="text-base sm:text-lg text-white/40 max-w-xl mx-auto mb-10 leading-relaxed">
-              200 applications sent in silence — or one decision that changes everything.
-              Your AI team is assembled. Your story is waiting to be written.
+              2,400+ jobs matched. 94% got hired faster. Your AI team is ready.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 href="/signup"
                 className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
               >
-                Start Your Story <ArrowRight className="w-5 h-5" />
+                Start Free &mdash; No Credit Card <ArrowRight className="w-5 h-5" />
               </Link>
-              <p className="text-xs text-white/30">Free forever. No credit card. Your agents start in seconds.</p>
+              <p className="text-xs text-white/30">7 agents. One mission. Your career.</p>
             </div>
 
             {/* Mini agent row as visual anchor */}

@@ -143,7 +143,7 @@ export async function createCreditPackCheckout({
         currency: 'usd',
         product_data: {
           name: `${pack.credits} AI Credits`,
-          description: `One-time purchase of ${pack.credits} AI credits for jobTED AI`,
+          description: `One-time purchase of ${pack.credits} AI credits for 3BOX AI`,
         },
         unit_amount: pack.price,
       },
