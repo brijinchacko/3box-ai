@@ -4,7 +4,7 @@ import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import TeacherClient from './TeacherClient';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'AI Resume Builder for Teachers | ATS-Optimized Education Resumes | NXTED AI',
+  title: 'AI Resume Builder for Teachers | ATS-Optimized Education Resumes | jobTED AI',
   description:
     'Build an ATS-optimized teacher resume with AI. Highlight your classroom experience, teaching certifications, curriculum development, and student achievement data. Tailored for K-12, higher education, and special education. Free to start.',
   keywords:
@@ -21,12 +21,12 @@ const faqData = [
   {
     question: 'How do I pass ATS as a teacher?',
     answer:
-      'School district ATS systems like Frontline Education, AppliTrack, and TalentEd search for specific education terms. Include your exact certification type, subject endorsements, grade levels, teaching methods (differentiated instruction, project-based learning), and ed-tech tools. NXTED AI identifies missing education keywords and suggests additions.',
+      'School district ATS systems like Frontline Education, AppliTrack, and TalentEd search for specific education terms. Include your exact certification type, subject endorsements, grade levels, teaching methods (differentiated instruction, project-based learning), and ed-tech tools. jobTED AI identifies missing education keywords and suggests additions.',
   },
   {
     question: 'Should I use AI to write my teacher resume?',
     answer:
-      'Yes. AI resume builders like NXTED AI understand education terminology, state certification requirements, and what hiring principals look for. The AI helps you articulate student outcomes, curriculum innovations, and classroom management strategies in a way that passes district ATS filters and impresses interview committees.',
+      'Yes. AI resume builders like jobTED AI understand education terminology, state certification requirements, and what hiring principals look for. The AI helps you articulate student outcomes, curriculum innovations, and classroom management strategies in a way that passes district ATS filters and impresses interview committees.',
   },
   {
     question: 'How do I quantify teaching achievements on a resume?',
@@ -54,7 +54,7 @@ export default function TeacherResumePage() {
           __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
-            name: 'NXTED AI Resume Builder for Teachers',
+            name: 'jobTED AI Resume Builder for Teachers',
             applicationCategory: 'BusinessApplication',
             operatingSystem: 'Web',
             description:
@@ -83,9 +83,9 @@ export default function TeacherResumePage() {
         dangerouslySetInnerHTML={{
           __html: jsonLd(
             SCHEMA_ORG.breadcrumb([
-              { name: 'Home', url: 'https://nxted.ai' },
-              { name: 'Resume Builder', url: 'https://nxted.ai/resume' },
-              { name: 'Teacher', url: 'https://nxted.ai/resume/teacher' },
+              { name: 'Home', url: 'https://jobted.ai' },
+              { name: 'Resume Builder', url: 'https://jobted.ai/resume' },
+              { name: 'Teacher', url: 'https://jobted.ai/resume/teacher' },
             ])
           ),
         }}

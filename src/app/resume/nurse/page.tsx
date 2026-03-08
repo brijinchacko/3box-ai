@@ -4,7 +4,7 @@ import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import NurseClient from './NurseClient';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'AI Resume Builder for Nurses | ATS-Optimized Nursing Resumes | NXTED AI',
+  title: 'AI Resume Builder for Nurses | ATS-Optimized Nursing Resumes | jobTED AI',
   description:
     'Build an ATS-optimized nursing resume with AI. Highlight your clinical experience, certifications (RN, BSN, ACLS, BLS), and patient care achievements. Tailored for hospitals, clinics, and travel nursing. Free to start.',
   keywords:
@@ -21,12 +21,12 @@ const faqData = [
   {
     question: 'How do I pass ATS as a nurse?',
     answer:
-      'Hospital ATS systems like Taleo, Workday, and iCIMS search for specific nursing terms. Include your exact license type (RN, LPN, NP), specialty certifications, EMR systems you have used, clinical procedures, and unit types (ICU, ER, Med-Surg, L&D). NXTED AI auto-detects missing nursing keywords and suggests additions.',
+      'Hospital ATS systems like Taleo, Workday, and iCIMS search for specific nursing terms. Include your exact license type (RN, LPN, NP), specialty certifications, EMR systems you have used, clinical procedures, and unit types (ICU, ER, Med-Surg, L&D). jobTED AI auto-detects missing nursing keywords and suggests additions.',
   },
   {
     question: 'Should I use AI to write my nursing resume?',
     answer:
-      'Yes. AI resume builders like NXTED AI understand healthcare terminology, HIPAA compliance language, and what nursing recruiters look for. The AI helps you articulate patient outcomes, leadership experience, and clinical skills in a way that passes ATS filters used by hospital systems and staffing agencies.',
+      'Yes. AI resume builders like jobTED AI understand healthcare terminology, HIPAA compliance language, and what nursing recruiters look for. The AI helps you articulate patient outcomes, leadership experience, and clinical skills in a way that passes ATS filters used by hospital systems and staffing agencies.',
   },
   {
     question: 'How do I highlight certifications on a nursing resume?',
@@ -54,7 +54,7 @@ export default function NurseResumePage() {
           __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
-            name: 'NXTED AI Resume Builder for Nurses',
+            name: 'jobTED AI Resume Builder for Nurses',
             applicationCategory: 'BusinessApplication',
             operatingSystem: 'Web',
             description:
@@ -83,9 +83,9 @@ export default function NurseResumePage() {
         dangerouslySetInnerHTML={{
           __html: jsonLd(
             SCHEMA_ORG.breadcrumb([
-              { name: 'Home', url: 'https://nxted.ai' },
-              { name: 'Resume Builder', url: 'https://nxted.ai/resume' },
-              { name: 'Nurse', url: 'https://nxted.ai/resume/nurse' },
+              { name: 'Home', url: 'https://jobted.ai' },
+              { name: 'Resume Builder', url: 'https://jobted.ai/resume' },
+              { name: 'Nurse', url: 'https://jobted.ai/resume/nurse' },
             ])
           ),
         }}

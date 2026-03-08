@@ -10,7 +10,7 @@ import {
   createBillingPortalSession,
 } from '@/lib/stripe';
 
-const APP_URL = process.env.NEXTAUTH_URL || 'https://nxted.ai';
+const APP_URL = process.env.NEXTAUTH_URL || 'https://jobted.ai';
 
 export async function POST() {
   try {

@@ -8,6 +8,22 @@ import {
   Code, FileText, Lightbulb, TrendingUp, Star, ArrowRight, Zap,
   Sparkles, Brain, RefreshCw, Search, AlertCircle, Loader2, Target, Trophy
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
+import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
+import AgentLoader from '@/components/brand/AgentLoader';
+import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { notifyAgentCompleted } from '@/lib/notifications/toast';
+
+// ─── Application Gap Types ─────────────────────
+interface ApplicationGapReport {
+  jobCategory: string;
+  totalApplied: number;
+  currentMatchRate: number;
+  projectedMatchRate: number;
+  missingSkills: { skill: string; frequency: number; total: number }[];
+  summary: string;
+}
 
 // ─── Types ──────────────────────────────────────
 interface LearningModule {
@@ -38,10 +54,10 @@ const typeConfig = {
   practice: { icon: Lightbulb, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
 };
 
-const STORAGE_KEY = 'nxted_learning_path';
-const PROGRESS_KEY = 'nxted_learning_progress';
-const ROLE_STORAGE_KEY = 'nxted_target_role';
-const SKILL_SCORES_KEY = 'nxted_skill_scores';
+const STORAGE_KEY = 'jobted_learning_path';
+const PROGRESS_KEY = 'jobted_learning_progress';
+const ROLE_STORAGE_KEY = 'jobted_target_role';
+const SKILL_SCORES_KEY = 'jobted_skill_scores';
 
 const popularRoles = [
   'AI Engineer', 'Data Scientist', 'Full Stack Developer', 'ML Engineer',
@@ -81,59 +97,93 @@ function LoadingSkeleton() {
 
 // ─── AI Generating Animation ────────────────────
 function GeneratingAnimation({ targetRole }: { targetRole: string }) {
-  const messages = [
-    'Analyzing your skill gaps...',
-    `Searching best resources for ${targetRole}...`,
-    'Curating courses from top providers...',
-    'Designing hands-on projects...',
-    'Building adaptive learning modules...',
-    'Personalizing your learning timeline...',
-  ];
-  const [msgIndex, setMsgIndex] = useState(0);
+  return (
+    <div className="card border-neon-green/20 py-8">
+      <AgentLoader agentId="sage" message={`Agent Sage is curating your ${targetRole} learning path`} size="lg" />
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMsgIndex((prev) => (prev + 1) % messages.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [messages.length]);
+// ─── Application Insights Section ───────────────
+function ApplicationInsights({ reports }: { reports: ApplicationGapReport[] }) {
+  if (reports.length === 0) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="card border-neon-green/20 text-center py-16"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-8"
     >
-      <div className="relative w-20 h-20 mx-auto mb-6">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-          className="absolute inset-0 rounded-full border-2 border-transparent border-t-neon-green border-r-neon-blue"
-        />
-        <div className="absolute inset-2 rounded-full bg-gradient-to-br from-neon-green/10 to-neon-blue/10 flex items-center justify-center">
-          <BookOpen className="w-8 h-8 text-neon-green" />
-        </div>
+      <div className="flex items-center gap-2 mb-4">
+        <Target className="w-5 h-5 text-neon-blue" />
+        <h2 className="text-lg font-bold">Application Insights</h2>
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-blue/10 text-neon-blue font-medium">
+          Based on your applications
+        </span>
       </div>
 
-      <h3 className="text-lg font-bold mb-2">AI is curating your personalized learning path</h3>
-      <p className="text-white/40 text-sm mb-6">This usually takes 10-15 seconds</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {reports.map((report) => (
+          <div
+            key={report.jobCategory}
+            className="card border-white/5 hover:border-white/10 transition-colors"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm capitalize">{report.jobCategory}</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40">
+                {report.totalApplied} jobs applied
+              </span>
+            </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={msgIndex}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="flex items-center justify-center gap-2 text-sm text-neon-green"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{messages[msgIndex]}</span>
-        </motion.div>
-      </AnimatePresence>
+            {/* Match Rate Comparison */}
+            <div className="flex items-center gap-4 mb-3">
+              <div className="flex-1">
+                <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
+                  <span>Current</span>
+                  <span className="text-white/60">{report.currentMatchRate}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${report.currentMatchRate}%` }}
+                    transition={{ duration: 0.8 }}
+                    className="h-full rounded-full bg-gradient-to-r from-red-500 to-yellow-500"
+                  />
+                </div>
+              </div>
+              <ArrowRight className="w-3 h-3 text-white/20 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
+                  <span>With skills</span>
+                  <span className="text-neon-green">{report.projectedMatchRate}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${report.projectedMatchRate}%` }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="h-full rounded-full bg-gradient-to-r from-neon-green to-neon-blue"
+                  />
+                </div>
+              </div>
+            </div>
 
-      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-white/20">
-        <Zap className="w-3 h-3" />
-        <span>Powered by NXTED AI Engine</span>
+            {/* Missing Skills */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] text-white/30 uppercase tracking-wider">You lack:</p>
+              {report.missingSkills.slice(0, 4).map((ms) => (
+                <div key={ms.skill} className="flex items-center justify-between text-xs">
+                  <span className="text-white/60">{ms.skill}</span>
+                  <span className="text-white/30">
+                    Required in{' '}
+                    <span className="text-neon-blue font-medium">{ms.frequency}/{ms.total}</span>
+                    {' '}jobs
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </motion.div>
   );
@@ -294,14 +344,18 @@ function EmptyState({
 
 // ─── Main Page ──────────────────────────────────
 export default function LearningPathPage() {
+  const { data: session } = useSession();
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const sageLocked = !isAgentAvailable('sage', userPlan);
   const [filter, setFilter] = useState<string>('all');
   const [learningPath, setLearningPath] = useState<LearningPathData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [moduleProgress, setModuleProgress] = useState<Record<string, number>>({});
+  const [gapReports, setGapReports] = useState<ApplicationGapReport[]>([]);
 
-  // Load saved learning path and progress on mount
+  // Load saved learning path, progress, and application gap reports on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -316,6 +370,17 @@ export default function LearningPathPage() {
     } catch (e) {
       console.error('Failed to load saved learning path:', e);
     }
+
+    // Fetch application-based gap analysis
+    fetch('/api/agents/skill-gaps')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.reports && Array.isArray(data.reports)) {
+          setGapReports(data.reports);
+        }
+      })
+      .catch(() => {});
+
     setIsLoading(false);
   }, []);
 
@@ -350,7 +415,7 @@ export default function LearningPathPage() {
         title: m.title || `Module ${i + 1}`,
         description: m.description || '',
         type: (['course', 'project', 'reading', 'practice'].includes(m.type) ? m.type : 'course') as LearningModule['type'],
-        provider: m.provider || 'NXTED AI',
+        provider: m.provider || 'jobTED AI',
         url: m.url || undefined,
         duration: m.duration || 'TBD',
         skills: m.skills || [],
@@ -368,6 +433,7 @@ export default function LearningPathPage() {
       setLearningPath(path);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(path));
       localStorage.setItem(ROLE_STORAGE_KEY, targetRole);
+      notifyAgentCompleted('sage', `Sage built your learning path with ${modules.length} modules`, '/dashboard/learning');
 
       // Reset progress for new generation
       setModuleProgress({});
@@ -395,11 +461,7 @@ export default function LearningPathPage() {
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <div className="h-8 bg-white/5 rounded-lg w-56 animate-pulse mb-2" />
-          <div className="h-4 bg-white/5 rounded-lg w-80 animate-pulse" />
-        </div>
-        <LoadingSkeleton />
+        <AgentLoader agentId="sage" message="Agent Sage is preparing your learning path" />
       </div>
     );
   }
@@ -467,8 +529,11 @@ export default function LearningPathPage() {
   const adaptiveCount = modules.filter(m => m.isAdaptive).length;
   const allCompleted = modules.length > 0 && modules.every(m => getModuleProgress(m) === 100);
 
+  if (sageLocked) return <AgentLockedPage agentId="sage" />;
+
   return (
     <div className="max-w-4xl mx-auto">
+      <AgentPageHeader agentId="sage" />
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
           <BookOpen className="w-7 h-7 text-neon-green" /> Adaptive Learning Path
@@ -530,6 +595,9 @@ export default function LearningPathPage() {
           <div className="text-xs text-white/40">AI-Adaptive Modules</div>
         </div>
       </div>
+
+      {/* Application Insights */}
+      <ApplicationInsights reports={gapReports} />
 
       {/* Completion Banner */}
       {allCompleted && (
@@ -719,7 +787,7 @@ export default function LearningPathPage() {
       {/* Footer info */}
       <div className="mt-6 text-center text-xs text-white/20 flex items-center justify-center gap-2">
         <Brain className="w-3 h-3" />
-        <span>Learning path curated by NXTED AI Engine</span>
+        <span>Learning path curated by jobTED AI Engine</span>
       </div>
     </div>
   );

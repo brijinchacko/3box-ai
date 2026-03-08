@@ -53,7 +53,7 @@ export default function ChangelogPage() {
             transition={{ delay: 0.1 }}
             className="text-white/40 text-lg"
           >
-            Latest updates and improvements to NXTED AI.
+            Latest updates and improvements to jobTED AI.
           </motion.p>
         </div>
       </section>

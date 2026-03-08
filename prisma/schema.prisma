@@ -92,8 +92,10 @@ model User {
   careerPlans     CareerPlan[]
   learningPaths   LearningPath[]
   resumes         Resume[]
+  resumeVariants  ResumeVariant[]
   portfolios      Portfolio[]
   jobApplications JobApplication[]
+  followUps       FollowUp[]
   coachSettings   CoachSettings?
   autoApplyConfig AutoApplyConfig?
   autoApplyRuns   AutoApplyRun[]
@@ -273,7 +275,7 @@ model BlogPost {
   excerpt     String
   content     String     @db.Text
   coverImage  String?
-  author      String     @default("NXTED AI Team")
+  author      String     @default("jobTED AI Team")
   category    String     @default("career-tips")
   tags        Json       @default("[]")
   status      PostStatus @default(DRAFT)
@@ -364,21 +366,59 @@ model LearningPath {
 // ─── Resumes ───────────────────────────────────
 
 model Resume {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
-  template    String   @default("modern")
+  template    String          @default("modern")
   content     Json
   targetJob   String?
   atsScore    Float?
   pdfUrl      String?
-  isFinalized Boolean  @default(false)
-  version     Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isFinalized Boolean         @default(false)
+  version     Int             @default(1)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  variants    ResumeVariant[]
 
   @@index([userId])
+}
+
+// ─── Resume Variants (per-job tailored resumes) ──
+
+model ResumeVariant {
+  id        String   @id @default(cuid())
+  resumeId  String
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle  String
+  company   String
+  content   Json
+  atsScore  Float?
+  runId     String?
+  createdAt DateTime @default(now())
+
+  @@index([resumeId])
+  @@index([userId])
+}
+
+// ─── Follow-Ups (scheduled post-application follow-ups) ──
+
+model FollowUp {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId  String
+  application    JobApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scheduledDate  DateTime
+  type           String          @default("follow_up_1") // follow_up_1 | follow_up_2 | thank_you
+  status         String          @default("pending")     // pending | sent | cancelled | skipped
+  sentAt         DateTime?
+  createdAt      DateTime        @default(now())
+
+  @@index([userId])
+  @@index([scheduledDate, status])
 }
 
 // ─── Portfolios ────────────────────────────────
@@ -434,6 +474,7 @@ model JobApplication {
   autoApplyRunId  String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  followUps       FollowUp[]
 
   @@index([userId])
 }

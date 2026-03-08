@@ -5,180 +5,130 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   Check,
-  X,
   Sparkles,
   Zap,
   Crown,
   GraduationCap,
-  Rocket,
   CreditCard,
   Loader2,
   ArrowRight,
   Star,
   Shield,
-  Brain,
-  FileText,
-  Target,
-  Mic,
-  Bot,
-  BarChart3,
-  Headphones,
-  Briefcase,
   Users,
   Globe,
+  Rocket,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRegion } from '@/lib/geo';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import RegionSelector from '@/components/geo/RegionSelector';
+import AgentAvatar from '@/components/brand/AgentAvatar';
+import { AgentAvatarMini } from '@/components/brand/AgentAvatar';
+import { AGENTS, AGENT_LIST, type AgentId } from '@/lib/agents/registry';
 
 // ---------------------------------------------------------------------------
-// Plan data (features only -- prices come from region config)
+// Agent data for individual cards
 // ---------------------------------------------------------------------------
 
-interface PlanFeature {
-  label: string;
-  included: boolean;
-}
-
-interface PlanDefinition {
-  name: string;
-  key: 'basic' | 'starter' | 'pro' | 'ultra';
-  icon: React.ElementType;
-  description: string;
-  badge: string;
-  badgeColor: string;
-  popular: boolean;
-  features: PlanFeature[];
-}
-
-const planDefinitions: PlanDefinition[] = [
+const agentShowcase: { id: AgentId; highlights: string[] }[] = [
   {
-    name: 'Basic',
-    key: 'basic',
-    icon: Sparkles,
-    description: 'Explore AI career tools at zero cost',
-    badge: 'Free Forever',
-    badgeColor: 'bg-white/10 text-white/60',
-    popular: false,
-    features: [
-      { label: '1 skill assessment', included: true },
-      { label: '10 AI credits / month', included: true },
-      { label: '1 resume (watermarked)', included: true },
-      { label: 'Basic career plan', included: true },
-      { label: 'AI coach (limited)', included: true },
-      { label: 'PDF resume export', included: false },
-      { label: 'Full assessment suite', included: false },
-      { label: 'Job matching', included: false },
-      { label: 'Automation agent', included: false },
-    ],
+    id: 'scout',
+    highlights: ['Scans 6+ job boards daily', 'AI match scoring', 'Smart alerts'],
   },
   {
-    name: 'Starter',
-    key: 'starter',
-    icon: Rocket,
-    description: 'Everything you need to start your job search',
-    badge: 'Best Value',
-    badgeColor: 'bg-neon-green/10 text-neon-green border border-neon-green/20',
-    popular: false,
-    features: [
-      { label: '5 skill assessments / month', included: true },
-      { label: '100 AI credits / month', included: true },
-      { label: '3 resume templates', included: true },
-      { label: '5 PDF exports / month', included: true },
-      { label: 'Full career plan', included: true },
-      { label: 'AI coach (full access)', included: true },
-      { label: 'Learning path', included: true },
-      { label: 'Portfolio builder', included: false },
-      { label: 'Job matching', included: false },
-      { label: 'Automation agent', included: false },
-    ],
+    id: 'forge',
+    highlights: ['ATS-optimized resumes', 'Keyword injection', 'Multiple variants'],
   },
   {
-    name: 'Pro',
-    key: 'pro',
-    icon: Zap,
-    description: 'Full career toolkit for serious job seekers',
-    badge: 'Most Popular',
-    badgeColor: 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20',
-    popular: true,
-    features: [
-      { label: 'Unlimited assessments', included: true },
-      { label: '500 AI credits / month', included: true },
-      { label: 'All resume templates', included: true },
-      { label: 'Unlimited PDF exports', included: true },
-      { label: 'Full career plan + timeline', included: true },
-      { label: 'AI coach (full access)', included: true },
-      { label: 'Adaptive learning path', included: true },
-      { label: 'Portfolio builder', included: true },
-      { label: 'Job matching + fit reports', included: true },
-      { label: 'AI + Human mock interviews', included: true },
-      { label: 'Human resume review (1/mo)', included: true },
-      { label: 'Industry expert mentoring', included: true },
-      { label: 'Automation agent', included: false },
-      { label: 'Priority processing', included: false },
-    ],
+    id: 'archer',
+    highlights: ['Cover letter generation', 'Portal auto-fill', 'Cold outreach emails'],
   },
   {
-    name: 'Ultra',
-    key: 'ultra',
-    icon: Crown,
-    description: 'Maximum automation and intelligence',
-    badge: 'Maximum Power',
-    badgeColor: 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20',
-    popular: false,
-    features: [
-      { label: 'Everything in Pro', included: true },
-      { label: 'Human resume verification by experts', included: true },
-      { label: 'Unlimited human mock interviews', included: true },
-      { label: 'Dedicated career mentor', included: true },
-      { label: '1-on-1 expert coaching sessions', included: true },
-      { label: 'Unlimited AI credits', included: true },
-      { label: 'Automation agent', included: true },
-      { label: 'Auto-apply to jobs', included: true },
-      { label: 'Advanced analytics', included: true },
-      { label: 'Priority AI processing', included: true },
-      { label: 'LinkedIn optimizer', included: true },
-      { label: 'Cover letter generator', included: true },
-      { label: 'Role simulator', included: true },
-      { label: 'Market readiness forecasting', included: true },
-      { label: 'Verified credentials', included: true },
-      { label: 'Premium support', included: true },
-    ],
+    id: 'atlas',
+    highlights: ['Company-specific prep', 'STAR method coaching', 'Mock interviews'],
+  },
+  {
+    id: 'sage',
+    highlights: ['Skill gap analysis', 'Learning roadmaps', 'Progress tracking'],
+  },
+  {
+    id: 'sentinel',
+    highlights: ['Quality review', 'Fabrication detection', 'Consistency checks'],
   },
 ];
 
 // ---------------------------------------------------------------------------
-// Comparison table data
+// Team bundle definitions (map to existing plan tiers)
 // ---------------------------------------------------------------------------
 
-interface ComparisonRow {
-  feature: string;
+interface TeamBundle {
+  name: string;
+  planKey: 'starter' | 'pro' | 'ultra';
   icon: React.ElementType;
-  basic: string;
-  starter: string;
-  pro: string;
-  ultra: string;
+  description: string;
+  badge?: string;
+  badgeColor?: string;
+  popular: boolean;
+  agents: AgentId[];
+  highlights: string[];
 }
 
-const comparisonRows: ComparisonRow[] = [
-  { feature: 'Assessments', icon: Brain, basic: '1', starter: '5 / mo', pro: 'Unlimited', ultra: 'Unlimited' },
-  { feature: 'AI Credits', icon: Sparkles, basic: '10 / mo', starter: '100 / mo', pro: '500 / mo', ultra: 'Unlimited' },
-  { feature: 'Resume Templates', icon: FileText, basic: '1 (watermarked)', starter: '3', pro: 'All', ultra: 'All' },
-  { feature: 'PDF Exports', icon: FileText, basic: '--', starter: '5 / mo', pro: 'Unlimited', ultra: 'Unlimited' },
-  { feature: 'Career Plan', icon: Target, basic: 'Basic', starter: 'Full', pro: 'Full + Timeline', ultra: 'Full + Timeline' },
-  { feature: 'AI Coach', icon: Bot, basic: 'Limited', starter: 'Full', pro: 'Full', ultra: 'Full' },
-  { feature: 'Learning Path', icon: Rocket, basic: '--', starter: 'check', pro: 'Adaptive', ultra: 'Adaptive' },
-  { feature: 'Portfolio', icon: Briefcase, basic: '--', starter: '--', pro: 'check', ultra: 'check' },
-  { feature: 'Job Matching', icon: Target, basic: '--', starter: '--', pro: 'check', ultra: 'check' },
-  { feature: 'Interview Prep', icon: Mic, basic: '--', starter: '--', pro: 'check', ultra: 'check' },
-  { feature: 'Auto-Apply', icon: Zap, basic: '--', starter: '--', pro: '--', ultra: 'check' },
-  { feature: 'Priority AI', icon: BarChart3, basic: '--', starter: '--', pro: '--', ultra: 'check' },
-  { feature: 'Human Mock Interviews', icon: Users, basic: '--', starter: '--', pro: '1 / mo', ultra: 'Unlimited' },
-  { feature: 'Human Resume Review', icon: Users, basic: '--', starter: '--', pro: '1 / mo', ultra: 'Unlimited' },
-  { feature: 'Career Mentor', icon: Users, basic: '--', starter: '--', pro: '--', ultra: 'Dedicated' },
-  { feature: 'Support', icon: Headphones, basic: 'Community', starter: 'Email', pro: 'Priority', ultra: 'Premium' },
+const teamBundles: TeamBundle[] = [
+  {
+    name: 'Starter Duo',
+    planKey: 'starter',
+    icon: Rocket,
+    description: 'Start your job search with the essentials',
+    badge: 'Best Value',
+    badgeColor: 'bg-neon-green/10 text-neon-green border border-neon-green/20',
+    popular: false,
+    agents: ['scout', 'forge'],
+    highlights: [
+      '100 AI credits / month',
+      'Job discovery + resume optimization',
+      '3 resume templates',
+      'Full career plan',
+      'AI coach (full access)',
+    ],
+  },
+  {
+    name: 'Job Hunter Pack',
+    planKey: 'pro',
+    icon: Zap,
+    description: 'Full toolkit for serious job seekers',
+    badge: 'Most Popular',
+    badgeColor: 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20',
+    popular: true,
+    agents: ['scout', 'forge', 'archer', 'atlas'],
+    highlights: [
+      '500 AI credits / month',
+      'Everything in Starter Duo',
+      'Auto-apply + cover letters',
+      'Interview prep + mock interviews',
+      'Job matching + fit reports',
+      'Human resume review (1/mo)',
+    ],
+  },
+  {
+    name: 'Full Squad',
+    planKey: 'ultra',
+    icon: Crown,
+    description: 'Maximum automation — AI works while you sleep',
+    badge: 'Maximum Power',
+    badgeColor: 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20',
+    popular: false,
+    agents: ['scout', 'forge', 'archer', 'atlas', 'sage', 'sentinel'],
+    highlights: [
+      'Unlimited AI credits',
+      'All 6 agents working 24/7',
+      'Full Agent autopilot mode',
+      'Skill gap analysis + learning',
+      'Quality assurance + verification',
+      'Dedicated career mentor',
+      'Priority AI processing',
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -187,20 +137,20 @@ const comparisonRows: ComparisonRow[] = [
 
 const faqs = [
   {
-    q: 'What can I do on the free plan?',
-    a: 'The Basic plan gives you 1 skill assessment, 10 AI credits per month, a watermarked resume, a basic career plan, and limited AI coaching -- perfect for trying out the platform.',
+    q: 'What is Cortex?',
+    a: 'Cortex is your free AI coordinator. It manages all your hired agents and provides basic career coaching with 10 AI credits per month.',
   },
   {
-    q: 'Can I switch plans anytime?',
-    a: 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately and billing is prorated.',
+    q: 'Can I hire individual agents?',
+    a: 'Currently agents are available in team bundles. Individual agent hiring is coming soon! For now, pick the bundle that best fits your needs.',
   },
   {
-    q: 'Is there a student discount?',
-    a: 'Yes! Students get a discount on Starter, Pro, and Ultra plans with a valid .edu email address. The exact discount varies by region.',
+    q: 'Can I switch bundles anytime?',
+    a: 'Yes, you can upgrade or downgrade your bundle at any time. Changes take effect immediately and billing is prorated.',
   },
   {
-    q: 'What payment methods do you accept?',
-    a: 'We accept all major credit cards, PayPal, and wire transfer for enterprise plans. Payments are processed securely through Stripe.',
+    q: 'What are AI credits?',
+    a: 'AI credits power agent actions like resume optimization, job matching, and cover letter generation. Each bundle includes a monthly allocation, and you can buy extra credit packs anytime.',
   },
   {
     q: 'Can I buy extra AI credits without upgrading?',
@@ -208,7 +158,7 @@ const faqs = [
   },
   {
     q: 'Can I get a refund?',
-    a: 'We offer a 14-day money-back guarantee on all paid plans. No questions asked.',
+    a: 'We offer a 14-day money-back guarantee on all paid bundles. No questions asked.',
   },
 ];
 
@@ -223,27 +173,18 @@ function PricingSkeleton() {
       <section className="pt-32 pb-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-30" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header skeleton */}
           <div className="text-center mb-16">
             <div className="h-6 w-48 mx-auto rounded-full bg-white/5 animate-pulse mb-6" />
             <div className="h-12 w-96 mx-auto rounded-xl bg-white/5 animate-pulse mb-4" />
             <div className="h-5 w-72 mx-auto rounded-lg bg-white/5 animate-pulse mb-8" />
-            <div className="h-10 w-52 mx-auto rounded-full bg-white/5 animate-pulse" />
           </div>
-
-          {/* Plan cards skeleton */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {[1, 2, 3].map((i) => (
               <div key={i} className="card p-6 space-y-4">
                 <div className="h-5 w-24 rounded bg-white/5 animate-pulse" />
                 <div className="h-3 w-full rounded bg-white/5 animate-pulse" />
                 <div className="h-10 w-32 rounded bg-white/5 animate-pulse" />
                 <div className="h-10 w-full rounded-xl bg-white/5 animate-pulse" />
-                <div className="space-y-2 pt-4 border-t border-white/5">
-                  {[1, 2, 3, 4, 5].map((j) => (
-                    <div key={j} className="h-3 w-full rounded bg-white/5 animate-pulse" />
-                  ))}
-                </div>
               </div>
             ))}
           </div>
@@ -262,6 +203,7 @@ export default function PricingPageClient() {
   const [yearly, setYearly] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [loadingPack, setLoadingPack] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { data: session } = useSession();
   const {
     region,
@@ -274,13 +216,7 @@ export default function PricingPageClient() {
     formatPrice,
   } = useRegion();
 
-  // ---- Stripe checkout for plans ----
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
-
-  // Show skeleton while region is loading
-  if (isLoading) {
-    return <PricingSkeleton />;
-  }
+  if (isLoading) return <PricingSkeleton />;
 
   // ---- Compute plan prices from region ----
   const getPlanPrice = (planKey: string, isYearly: boolean): number => {
@@ -288,11 +224,7 @@ export default function PricingPageClient() {
     const planPricing = pricing[planKey as keyof typeof pricing];
     if (!planPricing || typeof planPricing !== 'object' || !('monthly' in planPricing)) return 0;
     const p = planPricing as { monthly: number; yearly: number };
-    if (isYearly) {
-      // Yearly = per-month cost when billed yearly
-      return Math.round(p.yearly / 12);
-    }
-    return p.monthly;
+    return isYearly ? Math.round(p.yearly / 12) : p.monthly;
   };
 
   const getPlanYearlyTotal = (planKey: string): number => {
@@ -309,28 +241,25 @@ export default function PricingPageClient() {
     return (planPricing as { monthly: number }).monthly;
   };
 
-  // Credit pack prices from region config
+  const yearlySavings = (planKey: string): number => {
+    if (planKey === 'basic') return 0;
+    return getPlanMonthlyPrice(planKey) * 12 - getPlanYearlyTotal(planKey);
+  };
+
   const creditPacks = [
     { id: 'pack_100', credits: 100, price: pricing.credits.pack100, popular: false },
     { id: 'pack_500', credits: 500, price: pricing.credits.pack500, popular: true },
     { id: 'pack_1000', credits: 1000, price: pricing.credits.pack1000, popular: false },
   ];
 
-  // Monthly savings when billing yearly
-  const yearlySavings = (planKey: string): number => {
-    if (planKey === 'basic') return 0;
-    const monthlyTotal = getPlanMonthlyPrice(planKey) * 12;
-    const yearlyTotal = getPlanYearlyTotal(planKey);
-    return monthlyTotal - yearlyTotal;
-  };
-
-  const handlePlanCheckout = async (plan: PlanDefinition) => {
-    if (plan.key === 'basic') return;
+  // ---- Stripe checkout for plans ----
+  const handlePlanCheckout = async (planKey: string) => {
+    if (planKey === 'basic') return;
     if (!session) {
       window.location.href = '/login?redirect=/pricing';
       return;
     }
-    setLoadingPlan(plan.key);
+    setLoadingPlan(planKey);
     setCheckoutError(null);
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -338,7 +267,7 @@ export default function PricingPageClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'checkout',
-          plan: plan.key,
+          plan: planKey,
           interval: yearly ? 'yearly' : 'monthly',
           region,
         }),
@@ -347,11 +276,13 @@ export default function PricingPageClient() {
       if (data?.url) {
         window.location.href = data.url;
       } else if (data?.error) {
-        setCheckoutError(data.error === 'Price configuration not found for the selected plan and interval'
-          ? 'Payment system is being configured. Please try again shortly or contact support.'
-          : data.error === 'Authentication required'
-          ? 'Please log in first to upgrade your plan.'
-          : data.error);
+        setCheckoutError(
+          data.error === 'Price configuration not found for the selected plan and interval'
+            ? 'Payment system is being configured. Please try again shortly or contact support.'
+            : data.error === 'Authentication required'
+            ? 'Please log in first to upgrade your plan.'
+            : data.error
+        );
       }
     } catch (err) {
       console.error('Checkout error', err);
@@ -393,32 +324,17 @@ export default function PricingPageClient() {
     }
   };
 
-  // ---- Render helpers ----
-
-  const renderComparisonCell = (value: string) => {
-    if (value === 'check') {
-      return <Check className="w-5 h-5 text-neon-green mx-auto" />;
-    }
-    if (value === '--') {
-      return <X className="w-5 h-5 text-white/15 mx-auto" />;
-    }
-    return <span className="text-white/70 text-sm">{value}</span>;
-  };
-
-  const isIndia = region === 'IN';
-
   return (
     <div className="min-h-screen">
       <Navbar />
 
       <section className="pt-32 pb-24 relative overflow-hidden">
-        {/* Background decorations */}
+        {/* Background */}
         <div className="absolute inset-0 bg-grid opacity-30" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-radial from-neon-purple/8 via-transparent to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-radial from-neon-blue/5 via-transparent to-transparent rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Checkout Error Banner */}
+          {/* Error Banner */}
           {checkoutError && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -431,18 +347,17 @@ export default function PricingPageClient() {
           )}
 
           {/* ============================================================ */}
-          {/* HEADER                                                       */}
+          {/* HERO                                                         */}
           {/* ============================================================ */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-16"
           >
-            {/* Region indicator */}
             <div className="flex items-center justify-center gap-3 mb-6">
               <div className="inline-flex items-center gap-2 text-xs text-white/40">
                 <Globe className="w-3.5 h-3.5" />
-                <span>Prices shown for {country} in {currency}</span>
+                <span>Prices for {country} in {currency}</span>
               </div>
               <RegionSelector />
             </div>
@@ -453,11 +368,14 @@ export default function PricingPageClient() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-4">
-              Simple, transparent{' '}
-              <span className="gradient-text">pricing</span>
+              Hire Your{' '}
+              <span className="gradient-text">AI Agent Team</span>
             </h1>
-            <p className="text-white/40 max-w-xl mx-auto mb-8 text-lg">
-              Start free. Upgrade when you&apos;re ready to accelerate your career.
+            <p className="text-white/40 max-w-xl mx-auto mb-3 text-lg">
+              Pick the agents you need. They work 24/7 so you don&apos;t have to.
+            </p>
+            <p className="text-sm text-white/30 max-w-md mx-auto mb-8">
+              Cortex (free coordinator) is always included with 10 AI credits/mo.
             </p>
 
             {/* Billing Toggle */}
@@ -483,235 +401,190 @@ export default function PricingPageClient() {
           </motion.div>
 
           {/* ============================================================ */}
-          {/* PLANS GRID                                                   */}
+          {/* MEET THE AGENTS                                              */}
           {/* ============================================================ */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {planDefinitions.map((plan, i) => {
-              const displayPrice = getPlanPrice(plan.key, yearly);
-              const monthlyPrice = getPlanMonthlyPrice(plan.key);
-              const savings = yearlySavings(plan.key);
+          <div className="mb-20">
+            <h2 className="text-2xl font-bold text-center mb-2">
+              Meet Your <span className="gradient-text">Agents</span>
+            </h2>
+            <p className="text-white/40 text-center mb-8 text-sm">
+              Each agent is a specialist. Hire them individually or as a team.
+            </p>
 
-              // For India, show special badge on Pro plan
-              const badgeText = isIndia && plan.key === 'pro'
-                ? 'Most Popular in India'
-                : plan.badge;
-
-              return (
-                <motion.div
-                  key={plan.name}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className={`card relative flex flex-col ${
-                    plan.popular ? 'border-neon-blue/30 neon-glow lg:scale-105 z-10' : ''
-                  }`}
-                >
-                  {/* Badge */}
-                  {(plan.popular || plan.badge) && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className={`badge ${plan.badgeColor} text-xs whitespace-nowrap`}>
-                        {badgeText}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Plan info */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <plan.icon className="w-5 h-5 text-neon-blue" />
-                      <h3 className="text-xl font-bold">{plan.name}</h3>
-                    </div>
-                    <p className="text-sm text-white/40 mb-4">{plan.description}</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold">
-                        {plan.key === 'basic' ? (
-                          formatPrice(0)
-                        ) : (
-                          <>
-                            {currencySymbol}{displayPrice.toLocaleString()}
-                          </>
-                        )}
-                      </span>
-                      {plan.key !== 'basic' ? (
-                        <span className="text-sm text-white/40">
-                          /mo{yearly ? ', billed yearly' : ''}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-white/40">forever</span>
-                      )}
-                    </div>
-                    {yearly && plan.key !== 'basic' && savings > 0 && (
-                      <p className="text-xs text-neon-green/70 mt-1">
-                        Save {currencySymbol}{savings.toLocaleString()}/yr
-                      </p>
-                    )}
-                  </div>
-
-                  {/* CTA Button */}
-                  {plan.key === 'basic' ? (
-                    <Link
-                      href="/signup"
-                      className="block text-center py-3 rounded-xl font-semibold text-sm transition-all btn-secondary"
-                    >
-                      Start Free
-                    </Link>
-                  ) : !session ? (
-                    <Link
-                      href="/signup"
-                      className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
-                        plan.popular ? 'btn-primary' : 'btn-secondary'
-                      }`}
-                    >
-                      Start {plan.name} Trial
-                    </Link>
-                  ) : (
-                    <button
-                      onClick={() => handlePlanCheckout(plan)}
-                      disabled={loadingPlan === plan.key}
-                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                        plan.popular ? 'btn-primary' : 'btn-secondary'
-                      }`}
-                    >
-                      {loadingPlan === plan.key ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          Upgrade to {plan.name}
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  {/* Features list */}
-                  <div className="mt-6 pt-6 border-t border-white/5 space-y-3 flex-1">
-                    {plan.features.map((f) => (
-                      <div key={f.label} className="flex items-center gap-2 text-sm">
-                        {f.included ? (
-                          <Check className="w-4 h-4 text-neon-green flex-shrink-0" />
-                        ) : (
-                          <X className="w-4 h-4 text-white/15 flex-shrink-0" />
-                        )}
-                        <span className={f.included ? 'text-white/60' : 'text-white/20'}>
-                          {f.label}
-                        </span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+              {agentShowcase.map((item, i) => {
+                const agent = AGENTS[item.id];
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:border-white/10 transition-all"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <AgentAvatar agentId={item.id} size={36} />
+                      <div>
+                        <h3 className="text-sm font-bold">{agent.displayName}</h3>
+                        <p className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</p>
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
-              );
-            })}
+                    </div>
+                    <ul className="space-y-1.5">
+                      {item.highlights.map((h) => (
+                        <li key={h} className="flex items-center gap-2 text-xs text-white/50">
+                          <Check className="w-3 h-3 text-neon-green flex-shrink-0" />
+                          {h}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <span className="text-[10px] text-white/25">
+                        Included in {agent.minPlan} and above
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
 
           {/* ============================================================ */}
-          {/* HUMAN + AI SECTION                                           */}
+          {/* TEAM BUNDLES                                                  */}
           {/* ============================================================ */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-20 max-w-4xl mx-auto"
-          >
-            <div className="glass p-8 bg-gradient-to-br from-neon-purple/5 to-neon-blue/5 border-neon-purple/20">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 badge-purple mb-4">
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Not just AI -- Real humans too</span>
-                </div>
-                <h2 className="text-3xl font-bold mb-3">
-                  AI-powered, <span className="gradient-text">human-verified</span>
-                </h2>
-                <p className="text-white/40 max-w-lg mx-auto">
-                  Our Pro and Ultra plans combine the speed of AI with the expertise of real industry professionals.
-                </p>
-              </div>
-              <div className="grid sm:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-blue/5 flex items-center justify-center mx-auto mb-3">
-                    <Mic className="w-7 h-7 text-neon-blue" />
-                  </div>
-                  <h3 className="font-semibold mb-1">Mock Interviews</h3>
-                  <p className="text-sm text-white/40">Practice with real industry experts who give personalized feedback</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-green/20 to-neon-green/5 flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-7 h-7 text-neon-green" />
-                  </div>
-                  <h3 className="font-semibold mb-1">Resume Verification</h3>
-                  <p className="text-sm text-white/40">Human recruiters review and verify your resume for accuracy</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-purple/20 to-neon-purple/5 flex items-center justify-center mx-auto mb-3">
-                    <Headphones className="w-7 h-7 text-neon-purple" />
-                  </div>
-                  <h3 className="font-semibold mb-1">Expert Mentoring</h3>
-                  <p className="text-sm text-white/40">1-on-1 sessions with career coaches from top companies</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* ============================================================ */}
-          {/* COMPARISON TABLE                                             */}
-          {/* ============================================================ */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-28 max-w-6xl mx-auto"
-          >
-            <h2 className="text-3xl font-bold text-center mb-2">
-              Full feature <span className="gradient-text">comparison</span>
+          <div className="mb-20">
+            <h2 className="text-2xl font-bold text-center mb-2">
+              Choose Your <span className="gradient-text">Team</span>
             </h2>
-            <p className="text-white/40 text-center mb-10">
-              See exactly what you get at every tier.
+            <p className="text-white/40 text-center mb-8 text-sm">
+              Bundle agents together and save. All bundles include Cortex as your free coordinator.
             </p>
 
-            <div className="glass overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-4 px-5 font-semibold text-white/60">Feature</th>
-                    {planDefinitions.map((p) => (
-                      <th
-                        key={p.key}
-                        className={`py-4 px-4 text-center font-bold ${
-                          p.popular ? 'text-neon-blue' : 'text-white/80'
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {teamBundles.map((bundle, i) => {
+                const displayPrice = getPlanPrice(bundle.planKey, yearly);
+                const savings = yearlySavings(bundle.planKey);
+
+                return (
+                  <motion.div
+                    key={bundle.planKey}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className={`card relative flex flex-col ${
+                      bundle.popular ? 'border-neon-blue/30 neon-glow lg:scale-105 z-10' : ''
+                    }`}
+                  >
+                    {/* Badge */}
+                    {bundle.badge && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className={`badge ${bundle.badgeColor} text-xs whitespace-nowrap`}>
+                          {bundle.badge}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Bundle info */}
+                    <div className="mb-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <bundle.icon className="w-5 h-5 text-neon-blue" />
+                        <h3 className="text-xl font-bold">{bundle.name}</h3>
+                      </div>
+                      <p className="text-sm text-white/40 mb-4">{bundle.description}</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold">
+                          {currencySymbol}{displayPrice.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-white/40">
+                          /mo{yearly ? ', billed yearly' : ''}
+                        </span>
+                      </div>
+                      {yearly && savings > 0 && (
+                        <p className="text-xs text-neon-green/70 mt-1">
+                          Save {currencySymbol}{savings.toLocaleString()}/yr
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Agent avatars */}
+                    <div className="mb-5 p-3 rounded-xl border border-white/5 bg-white/[0.02]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-3.5 h-3.5 text-neon-purple" />
+                        <span className="text-xs font-semibold text-white/70">
+                          {bundle.agents.length} Agents
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        {bundle.agents.map((agentId) => (
+                          <AgentAvatarMini key={agentId} agentId={agentId} size={22} />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-white/40">
+                        {bundle.agents.map((id) => AGENTS[id].displayName).join(' + ')}
+                      </p>
+                    </div>
+
+                    {/* CTA */}
+                    {!session ? (
+                      <Link
+                        href="/signup"
+                        className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
+                          bundle.popular ? 'btn-primary' : 'btn-secondary'
                         }`}
                       >
-                        <div className="flex flex-col items-center gap-1">
-                          <p.icon className="w-4 h-4" />
-                          {p.name}
+                        Hire {bundle.name}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => handlePlanCheckout(bundle.planKey)}
+                        disabled={loadingPlan === bundle.planKey}
+                        className={`w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                          bundle.popular ? 'btn-primary' : 'btn-secondary'
+                        }`}
+                      >
+                        {loadingPlan === bundle.planKey ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Hire {bundle.name}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Highlights */}
+                    <div className="mt-5 pt-5 border-t border-white/5 space-y-2.5 flex-1">
+                      {bundle.highlights.map((h) => (
+                        <div key={h} className="flex items-center gap-2 text-sm">
+                          <Check className="w-4 h-4 text-neon-green flex-shrink-0" />
+                          <span className="text-white/60">{h}</span>
                         </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row, idx) => (
-                    <tr
-                      key={row.feature}
-                      className={idx % 2 === 0 ? 'bg-white/[0.02]' : ''}
-                    >
-                      <td className="py-3 px-5 flex items-center gap-2 text-white/60">
-                        <row.icon className="w-4 h-4 text-white/30 flex-shrink-0" />
-                        {row.feature}
-                      </td>
-                      <td className="py-3 px-4 text-center">{renderComparisonCell(row.basic)}</td>
-                      <td className="py-3 px-4 text-center">{renderComparisonCell(row.starter)}</td>
-                      <td className={`py-3 px-4 text-center ${planDefinitions[2].popular ? 'bg-neon-blue/5' : ''}`}>
-                        {renderComparisonCell(row.pro)}
-                      </td>
-                      <td className="py-3 px-4 text-center">{renderComparisonCell(row.ultra)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ))}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </motion.div>
+
+            {/* Free tier note */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-center mt-8"
+            >
+              <p className="text-sm text-white/30">
+                Not ready to hire?{' '}
+                <Link href="/signup" className="text-neon-blue hover:underline">
+                  Start free with Cortex
+                </Link>
+                {' '} — 10 AI credits/mo, basic career tools, no credit card required.
+              </p>
+            </motion.div>
+          </div>
 
           {/* ============================================================ */}
           {/* BUY AI CREDITS                                               */}
@@ -721,7 +594,7 @@ export default function PricingPageClient() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-28 max-w-4xl mx-auto scroll-mt-24"
+            className="mt-8 max-w-4xl mx-auto scroll-mt-24"
           >
             <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 badge-purple mb-4">

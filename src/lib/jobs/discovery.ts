@@ -21,19 +21,32 @@ export interface DiscoveredJob {
   companyEmail?: string | null;
 }
 
-interface DiscoveryParams {
+export interface DiscoveryParams {
   roles: string[];
   locations: string[];
   preferRemote: boolean;
   limit: number;
   excludeCompanies?: string[];
   excludeKeywords?: string[];
+  /** Optional list of platforms to search. When omitted, all platforms are used. */
+  platforms?: string[];
   userProfile: {
     targetRole: string;
     skills: string[];
     location: string;
   };
 }
+
+const PLATFORM_SEARCH_MAP: Record<string, (role: string, location: string) => Promise<DiscoveredJob[]>> = {
+  jsearch: searchJSearch,
+  adzuna: searchAdzunaIndia,
+  naukri: searchNaukri,
+  linkedin: searchLinkedInJobs,
+  indeed: searchIndeedIndia,
+  google_jobs: searchGoogleJobs,
+};
+
+export const ALL_PLATFORMS = Object.keys(PLATFORM_SEARCH_MAP);
 
 /**
  * Deduplicate jobs by comparing company + title (fuzzy)
@@ -145,22 +158,21 @@ async function searchAdzunaIndia(role: string, location: string): Promise<Discov
  * Main discovery function — aggregates from all sources
  */
 export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJob[]> {
-  const { roles, locations, preferRemote, limit, excludeCompanies = [], excludeKeywords = [], userProfile } = params;
-  
+  const { roles, locations, preferRemote, limit, excludeCompanies = [], excludeKeywords = [], platforms, userProfile } = params;
+
   const allJobs: DiscoveredJob[] = [];
-  
-  // Search all sources in parallel for each role
+
+  // Search selected (or all) sources in parallel for each role
   const searchPromises: Promise<DiscoveredJob[]>[] = [];
-  
+  const activePlatforms = platforms && platforms.length > 0 ? platforms : ALL_PLATFORMS;
+
   for (const role of roles.slice(0, 3)) { // Max 3 roles to avoid rate limits
     const loc = locations[0] || '';
-    
-    searchPromises.push(searchJSearch(role, loc));
-    searchPromises.push(searchAdzunaIndia(role, loc));
-    searchPromises.push(searchNaukri(role, loc));
-    searchPromises.push(searchLinkedInJobs(role, loc));
-    searchPromises.push(searchIndeedIndia(role, loc));
-    searchPromises.push(searchGoogleJobs(role, loc));
+
+    for (const platform of activePlatforms) {
+      const searchFn = PLATFORM_SEARCH_MAP[platform];
+      if (searchFn) searchPromises.push(searchFn(role, loc));
+    }
   }
   
   const results = await Promise.allSettled(searchPromises);

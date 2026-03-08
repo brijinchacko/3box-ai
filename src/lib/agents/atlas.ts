@@ -4,6 +4,7 @@
  */
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
+import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
 
 interface InterviewPrep {
   companyInsights: string;
@@ -22,6 +23,7 @@ export async function prepareInterview(
   company: string,
   jobDescription: string,
   candidateSkills: string[],
+  ctx?: AgentContext,
 ): Promise<InterviewPrep> {
   const prompt = `You are Atlas, an expert Interview Coach AI. Prepare comprehensive interview preparation materials for this candidate.
 
@@ -39,8 +41,33 @@ Generate a JSON response with:
 }`;
 
   try {
+    const contextBlock = ctx ? `\n\nTEAM CONTEXT:\n${getContextSummary(ctx)}` : '';
+    const handoffBlock = ctx ? `\n\nHANDOFF DATA:\n${getAgentHandoff(ctx, 'scout', 'atlas')}` : '';
+
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: 'You are Atlas, an Interview Coach AI agent. Always respond in valid JSON.' },
+      { role: 'system', content: `You are Atlas, the Interview Coach in jobTED's AI agent team.
+${contextBlock}
+${handoffBlock}
+
+YOUR ROLE: Generate company-specific interview questions and preparation materials tailored to the candidate's profile and target role.
+
+THINK STEP BY STEP:
+1. Analyze the job description for required competencies and technical skills
+2. Research common interview patterns for this type of company and role
+3. Map the candidate's skills to likely interview focus areas
+4. Generate questions that reflect real interview scenarios for this specific role
+5. Provide tips based on the company's known culture and interview style
+
+IMPORTANT:
+- Never fabricate company names, job details, or qualifications
+- Only use facts from the user's verified profile
+- Include confidence score (0-100) for each decision
+- Explain reasoning transparently for audit trail
+- Base company insights on the job description, not assumptions
+- Generate questions that test skills actually relevant to the role
+- Tailor behavioral questions to the candidate's experience level
+
+OUTPUT FORMAT: Valid JSON with a "reasoning" field explaining your decisions.` },
       { role: 'user', content: prompt },
     ] }, 'free');
 
@@ -63,6 +90,12 @@ Generate a JSON response with:
         details: { company, jobTitle, questionCount: result.technicalQuestions.length + result.behavioralQuestions.length + result.roleSpecificQuestions.length },
       },
     });
+
+    // Log to shared agent context
+    if (ctx) {
+      const totalQ = result.technicalQuestions.length + result.behavioralQuestions.length + result.roleSpecificQuestions.length;
+      logActivity(ctx, 'atlas', 'generated_questions', `Prepared interview guide for "${jobTitle}" at ${company} — ${totalQ} questions (${result.technicalQuestions.length} technical, ${result.behavioralQuestions.length} behavioral, ${result.roleSpecificQuestions.length} role-specific)`);
+    }
 
     return result;
   } catch (err) {

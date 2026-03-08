@@ -11,23 +11,30 @@ import {
   MapPin, Building2, Filter, Timer, ToggleLeft, ToggleRight,
   TrendingUp, Send, Eye, FileCheck, GraduationCap, ShieldCheck
 } from 'lucide-react';
+import AgentAvatar, { AgentAvatarMini } from '@/components/brand/AgentAvatar';
+import CortexLoader from '@/components/brand/CortexLoader';
+import CortexAvatar from '@/components/brand/CortexAvatar';
+import { AGENTS, AGENT_LIST, COORDINATOR, type AgentId, AUTOMATION_MODES, AUTOMATION_MODE_LIST } from '@/lib/agents/registry';
 
-const AGENT_ICONS: Record<string, any> = {
-  Search, Hammer, Target, Compass, BookOpen, Shield,
-};
-
-const PIPELINE_STAGES = [
-  { key: 'discovered', label: 'Discovered', icon: Search, color: 'text-blue-400' },
-  { key: 'optimized', label: 'Optimized', icon: FileCheck, color: 'text-orange-400' },
-  { key: 'applied', label: 'Applied', icon: Send, color: 'text-green-400' },
-  { key: 'reviewed', label: 'Reviewed', icon: ShieldCheck, color: 'text-rose-400' },
-  { key: 'interview', label: 'Interview', icon: GraduationCap, color: 'text-purple-400' },
+const PIPELINE_STAGES: Array<{
+  key: string;
+  label: string;
+  icon: any;
+  color: string;
+  agentId?: AgentId;
+}> = [
+  { key: 'discovered', label: 'Discovered', icon: Search, color: 'text-blue-400', agentId: 'scout' },
+  { key: 'optimized', label: 'Optimized', icon: FileCheck, color: 'text-orange-400', agentId: 'forge' },
+  { key: 'applied', label: 'Applied', icon: Send, color: 'text-green-400', agentId: 'archer' },
+  { key: 'reviewed', label: 'Reviewed', icon: ShieldCheck, color: 'text-rose-400', agentId: 'sentinel' },
+  { key: 'interview', label: 'Interview', icon: GraduationCap, color: 'text-purple-400', agentId: 'atlas' },
   { key: 'offer', label: 'Offer', icon: Crown, color: 'text-yellow-400' },
 ];
 
 interface AgentDef {
   id: string;
   name: string;
+  displayName: string;
   role: string;
   description: string;
   shortDescription: string;
@@ -169,17 +176,18 @@ export default function AgentDashboardPage() {
     const PLAN_LEVELS: Record<string, number> = { BASIC: 0, STARTER: 1, PRO: 2, ULTRA: 3 };
     const userLevel = PLAN_LEVELS[plan] || 0;
 
-    const allAgents = [
-      { id: 'scout', name: 'Scout', role: 'Job Hunter', description: 'Discovers jobs matching your profile from 6+ sources across the web. Scans Naukri, LinkedIn, Indeed, Google Jobs, and more.', shortDescription: 'Finds jobs matching your profile', icon: 'Search', color: 'text-blue-400', gradient: 'from-blue-500/20 to-cyan-500/20', minPlan: 'STARTER', capabilities: ['Multi-source job scanning', 'Match scoring', 'Smart filtering', 'Exclusion rules'] },
-      { id: 'forge', name: 'Forge', role: 'Resume Optimizer', description: 'Analyzes your resume against target jobs and creates optimized variants. Enhances keywords for ATS systems.', shortDescription: 'Optimizes your resume per job', icon: 'Hammer', color: 'text-orange-400', gradient: 'from-orange-500/20 to-amber-500/20', minPlan: 'STARTER', capabilities: ['ATS keyword optimization', 'Job-specific variants', 'Score analysis', 'Section enhancement'] },
-      { id: 'archer', name: 'Archer', role: 'Application Agent', description: 'Generates tailored cover letters and sends job applications on your behalf via portals and cold emails.', shortDescription: 'Sends applications & cover letters', icon: 'Target', color: 'text-green-400', gradient: 'from-green-500/20 to-emerald-500/20', minPlan: 'PRO', capabilities: ['AI cover letters', 'Portal applications', 'Cold email outreach', 'Application tracking'] },
-      { id: 'atlas', name: 'Atlas', role: 'Interview Coach', description: 'Prepares you for interviews with company-specific questions and practice scenarios.', shortDescription: 'Preps company-specific interviews', icon: 'Compass', color: 'text-purple-400', gradient: 'from-purple-500/20 to-violet-500/20', minPlan: 'PRO', capabilities: ['Company-specific questions', 'Practice scenarios', 'JD analysis', 'Feedback loops'] },
-      { id: 'sage', name: 'Sage', role: 'Skill Trainer', description: 'Identifies skill gaps from job requirements and market trends. Creates personalized learning paths.', shortDescription: 'Identifies gaps & recommends learning', icon: 'BookOpen', color: 'text-teal-400', gradient: 'from-teal-500/20 to-cyan-500/20', minPlan: 'ULTRA', capabilities: ['Skill gap analysis', 'Learning recommendations', 'Growth tracking', 'Market trend analysis'] },
-      { id: 'sentinel', name: 'Sentinel', role: 'Quality Reviewer', description: 'Reviews every application before submission for accuracy and quality. Catches fabricated details.', shortDescription: 'Reviews apps before sending', icon: 'Shield', color: 'text-rose-400', gradient: 'from-rose-500/20 to-pink-500/20', minPlan: 'ULTRA', capabilities: ['Quality scoring', 'Fabrication detection', 'Relevance check', 'Spam prevention'] },
-    ];
-
-    return allAgents.map(a => ({
-      ...a,
+    return AGENT_LIST.map(a => ({
+      id: a.id,
+      name: a.name,
+      displayName: a.displayName,
+      role: a.role,
+      description: a.description,
+      shortDescription: a.shortDescription,
+      icon: a.icon,
+      color: a.color,
+      gradient: a.gradient,
+      minPlan: a.minPlan,
+      capabilities: a.capabilities,
       locked: userLevel < (PLAN_LEVELS[a.minPlan] || 0),
     }));
   }
@@ -255,23 +263,7 @@ export default function AgentDashboardPage() {
   const latestRun = runs.length > 0 ? runs[0] : null;
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-white/5 rounded w-64 mb-2" />
-          <div className="h-4 bg-white/5 rounded w-96 mb-8" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="card h-48 animate-pulse">
-                <div className="h-10 w-10 rounded-xl bg-white/5 mb-4" />
-                <div className="h-4 bg-white/5 rounded w-24 mb-2" />
-                <div className="h-3 bg-white/5 rounded w-40" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <CortexLoader message="Assembling your team" />;
   }
 
   return (
@@ -279,13 +271,11 @@ export default function AgentDashboardPage() {
       {/* ── Cortex Header ── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
-            <Brain className="w-5 h-5 text-white" />
-          </div>
+          <CortexAvatar size={48} pulse />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Your AI Agent Team</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Agent Cortex &mdash; Command Center</h1>
             <p className="text-white/40 text-sm">
-              Coordinated by <span className="text-neon-purple font-semibold">Cortex</span> &middot;{' '}
+              One command activates all agents &middot;{' '}
               <span className="text-neon-green">{activeAgentCount} agents active</span>
               {userPlan === 'BASIC' && <span className="text-white/30"> — Upgrade to unlock agents</span>}
             </p>
@@ -296,7 +286,6 @@ export default function AgentDashboardPage() {
       {/* ── Agent Grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {agents.map((agent, i) => {
-          const Icon = AGENT_ICONS[agent.icon] || Brain;
           const isExpanded = expandedAgent === agent.id;
 
           return (
@@ -320,15 +309,13 @@ export default function AgentDashboardPage() {
 
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-3">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                    agent.locked ? 'bg-white/5' : `bg-gradient-to-br ${agent.gradient}`
-                  }`}>
-                    {agent.locked ? (
+                  {agent.locked ? (
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/5">
                       <Lock className="w-5 h-5 text-white/30" />
-                    ) : (
-                      <Icon className={`w-5 h-5 ${agent.color}`} />
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <AgentAvatar agentId={agent.id as AgentId} size={44} />
+                  )}
                   <div className="flex items-center gap-2">
                     {agent.locked ? (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 font-medium">
@@ -344,7 +331,7 @@ export default function AgentDashboardPage() {
                 </div>
 
                 <h3 className={`font-bold text-lg ${agent.locked ? 'text-white/40' : 'text-white'}`}>
-                  {agent.name}
+                  {agent.displayName}
                 </h3>
                 <p className={`text-sm font-medium mb-1 ${agent.locked ? 'text-white/20' : agent.color}`}>
                   {agent.role}
@@ -613,9 +600,15 @@ export default function AgentDashboardPage() {
               return (
                 <div key={stage.key} className="flex items-center flex-shrink-0">
                   <div className="flex flex-col items-center px-4 py-3 min-w-[100px]">
-                    <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-2 ${count > 0 ? stage.color : 'text-white/20'}`}>
-                      <StageIcon className="w-5 h-5" />
-                    </div>
+                    {stage.agentId ? (
+                      <div className={`mb-2 ${count > 0 ? 'opacity-100' : 'opacity-30'}`}>
+                        <AgentAvatar agentId={stage.agentId} size={24} />
+                      </div>
+                    ) : (
+                      <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-2 ${count > 0 ? stage.color : 'text-white/20'}`}>
+                        <StageIcon className="w-5 h-5" />
+                      </div>
+                    )}
                     <span className={`text-lg font-bold ${count > 0 ? 'text-white' : 'text-white/20'}`}>
                       {count}
                     </span>
@@ -650,15 +643,20 @@ export default function AgentDashboardPage() {
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {activities.map((act) => {
                 const agentDef = agents.find(a => a.id === act.agent);
-                const Icon = agentDef ? (AGENT_ICONS[agentDef.icon] || Brain) : Brain;
                 return (
                   <div key={act.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-white/[0.02] transition-colors">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${agentDef ? `bg-gradient-to-br ${agentDef.gradient}` : 'bg-white/5'}`}>
-                      <Icon className={`w-3.5 h-3.5 ${agentDef?.color || 'text-white/40'}`} />
+                    <div className="flex-shrink-0">
+                      {agentDef ? (
+                        <AgentAvatarMini agentId={agentDef.id as AgentId} size={28} />
+                      ) : (
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5">
+                          <Brain className="w-3.5 h-3.5 text-white/40" />
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white/70">{agentDef?.name || act.agent}</span>
+                        <span className="text-xs font-semibold text-white/70">{agentDef?.displayName || act.agent}</span>
                         <span className="text-[10px] text-white/30">{act.action.replace(/_/g, ' ')}</span>
                       </div>
                       <p className="text-xs text-white/40 mt-0.5 truncate">{act.summary}</p>

@@ -4,7 +4,7 @@ import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import DataScientistClient from './DataScientistClient';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'AI Resume Builder for Data Scientists | ML & Analytics Resumes | NXTED AI',
+  title: 'AI Resume Builder for Data Scientists | ML & Analytics Resumes | jobTED AI',
   description:
     'Build an ATS-optimized data scientist resume with AI. Showcase your machine learning models, statistical analysis, and data pipeline experience. Tailored for analytics, ML, and AI roles. Free to start.',
   keywords:
@@ -21,7 +21,7 @@ const faqData = [
   {
     question: 'How do I pass ATS as a data scientist?',
     answer:
-      'Data science ATS systems look for specific technical terms. Include exact tool names (e.g., "Scikit-learn" not just "machine learning"), statistical methods (regression, classification, clustering), and business metrics. Use standard headings and avoid abbreviations that ATS may not recognize. NXTED AI auto-maps your skills to ATS-friendly terminology.',
+      'Data science ATS systems look for specific technical terms. Include exact tool names (e.g., "Scikit-learn" not just "machine learning"), statistical methods (regression, classification, clustering), and business metrics. Use standard headings and avoid abbreviations that ATS may not recognize. jobTED AI auto-maps your skills to ATS-friendly terminology.',
   },
   {
     question: 'Should I include Kaggle and personal projects on my data science resume?',
@@ -41,7 +41,7 @@ const faqData = [
   {
     question: 'Should I use AI to write my data scientist resume?',
     answer:
-      'Yes. AI resume builders understand data science terminology and can help you articulate model performance, business impact, and technical depth. NXTED AI suggests quantified bullet points, maps your skills to job requirements, and optimizes for ATS systems used by tech companies and consulting firms hiring data scientists.',
+      'Yes. AI resume builders understand data science terminology and can help you articulate model performance, business impact, and technical depth. jobTED AI suggests quantified bullet points, maps your skills to job requirements, and optimizes for ATS systems used by tech companies and consulting firms hiring data scientists.',
   },
 ];
 
@@ -54,7 +54,7 @@ export default function DataScientistResumePage() {
           __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
-            name: 'NXTED AI Resume Builder for Data Scientists',
+            name: 'jobTED AI Resume Builder for Data Scientists',
             applicationCategory: 'BusinessApplication',
             operatingSystem: 'Web',
             description:
@@ -83,9 +83,9 @@ export default function DataScientistResumePage() {
         dangerouslySetInnerHTML={{
           __html: jsonLd(
             SCHEMA_ORG.breadcrumb([
-              { name: 'Home', url: 'https://nxted.ai' },
-              { name: 'Resume Builder', url: 'https://nxted.ai/resume' },
-              { name: 'Data Scientist', url: 'https://nxted.ai/resume/data-scientist' },
+              { name: 'Home', url: 'https://jobted.ai' },
+              { name: 'Resume Builder', url: 'https://jobted.ai/resume' },
+              { name: 'Data Scientist', url: 'https://jobted.ai/resume/data-scientist' },
             ])
           ),
         }}

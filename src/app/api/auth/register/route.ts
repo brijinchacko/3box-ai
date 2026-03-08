@@ -78,12 +78,12 @@ export async function POST(req: Request) {
     // Send welcome email (non-blocking) and log it
     sendWelcomeEmail(email, name).then(() => {
       prisma.emailLog.create({
-        data: { userId: user.id, type: 'WELCOME', subject: 'Welcome to NXTED AI', to: email, status: 'sent' },
+        data: { userId: user.id, type: 'WELCOME', subject: 'Welcome to jobTED AI', to: email, status: 'sent' },
       }).catch(() => {});
     }).catch((err: any) => {
       console.error('[Register] Failed to send welcome email:', err);
       prisma.emailLog.create({
-        data: { userId: user.id, type: 'WELCOME', subject: 'Welcome to NXTED AI', to: email, status: 'failed' },
+        data: { userId: user.id, type: 'WELCOME', subject: 'Welcome to jobTED AI', to: email, status: 'failed' },
       }).catch(() => {});
     });
 

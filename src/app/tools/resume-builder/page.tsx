@@ -78,9 +78,9 @@ interface ResumeDataV2 {
 
 // ── Constants ──────────────────────────────────
 
-const STORAGE_KEY = 'nxted-resume-builder-data-v2';
-const OLD_STORAGE_KEY = 'nxted-resume-builder-data';
-const DOWNLOAD_KEY = 'nxted-free-downloads';
+const STORAGE_KEY = 'jobted-resume-builder-data-v2';
+const OLD_STORAGE_KEY = 'jobted-resume-builder-data';
+const DOWNLOAD_KEY = 'jobted-free-downloads';
 const MAX_FREE_DOWNLOADS = 1;
 const FREE_TEMPLATE = 'modern';
 

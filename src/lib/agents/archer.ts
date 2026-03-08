@@ -5,6 +5,9 @@
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback } from '@/lib/ai/openrouter';
 import { sendEmail } from '@/lib/email';
+import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
+import { canSendApplication, recordApplicationSent, getApplicationDelay, uniquifyCoverLetter } from './humanBehavior';
+import { calculateApplicationQuality, type ApplicationQualityScore } from '@/lib/jobs/qualityScore';
 
 interface JobForApplication {
   id: string;
@@ -27,8 +30,41 @@ interface ResumeData {
 interface ApplicationResult {
   success: boolean;
   method: 'portal' | 'email' | 'none';
+  strategy: 'priority' | 'standard' | 'skip';
   jobApplicationId?: string;
   details: string;
+  qualityScore?: ApplicationQualityScore;
+}
+
+/**
+ * Determine application strategy based on quality scoring
+ * - Priority (80+): Personalized cover letter + apply + cold email
+ * - Standard (60-79): Template cover letter + apply only
+ * - Skip (<60): Don't waste credits
+ */
+export function determineApplicationStrategy(
+  matchScore: number,
+  atsScore: number,
+  scamScore: number,
+): { strategy: 'priority' | 'standard' | 'skip'; quality: ApplicationQualityScore } {
+  const quality = calculateApplicationQuality({
+    matchScore,
+    atsScore,
+    scamScore,
+    hasDirectUrl: true,
+    jobAgeDays: 3,
+  });
+
+  let strategy: 'priority' | 'standard' | 'skip';
+  if (quality.recommendation === 'apply_now' && quality.overall >= 80) {
+    strategy = 'priority';
+  } else if (quality.recommendation === 'apply_now' || quality.recommendation === 'optimize_first') {
+    strategy = 'standard';
+  } else {
+    strategy = 'skip';
+  }
+
+  return { strategy, quality };
 }
 
 /**
@@ -37,6 +73,7 @@ interface ApplicationResult {
 export async function generateCoverLetter(
   resume: ResumeData,
   job: JobForApplication,
+  ctx?: AgentContext,
 ): Promise<string> {
   const prompt = `Write a professional, concise cover letter for this job application. Keep it to 3-4 short paragraphs. Be specific about how the candidate's experience matches the role. Do NOT include any placeholder brackets — use the actual info provided.
 
@@ -56,8 +93,30 @@ Description: ${job.description.slice(0, 1000)}
 Write ONLY the cover letter body text (no subject line, no "Dear Hiring Manager" header, no signature block). Start directly with the opening paragraph.`;
 
   try {
+    const contextBlock = ctx ? `\n\nTEAM CONTEXT:\n${getContextSummary(ctx)}` : '';
+    const handoffBlock = ctx ? `\n\nHANDOFF DATA:\n${getAgentHandoff(ctx, 'sentinel', 'archer')}` : '';
+
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: 'You are Archer, a professional job application specialist. Write concise, impactful cover letters. Never use placeholder brackets.' },
+      { role: 'system', content: `You are Archer, the Application Specialist in jobTED's AI agent team.
+${contextBlock}
+${handoffBlock}
+
+YOUR ROLE: Generate tailored, professional cover letters and manage job application submissions.
+
+THINK STEP BY STEP:
+1. Analyze the job description for key requirements and company values
+2. Map the candidate's actual experience to job requirements
+3. Write a compelling narrative that honestly represents the candidate
+4. Ensure every claim in the cover letter is backed by resume data
+5. Personalize for the specific company — avoid generic language
+
+IMPORTANT:
+- Never fabricate company names, job details, or qualifications
+- Only use facts from the user's verified profile
+- Never use placeholder brackets — use actual provided information
+- Write concise, impactful content (3-4 paragraphs max)
+- Every skill or achievement mentioned must exist in the candidate's resume
+- Tailor tone and language to the company culture when possible` },
       { role: 'user', content: prompt },
     ] }, 'free');
     
@@ -94,10 +153,22 @@ export async function applyToJob(
   job: JobForApplication,
   resume: ResumeData,
   runId?: string,
+  ctx?: AgentContext,
 ): Promise<ApplicationResult> {
-  // Generate cover letter
-  const coverLetter = await generateCoverLetter(resume, job);
-  
+  // ── Rate limit check ──
+  const rateCheck = canSendApplication(job.company);
+  if (!rateCheck.allowed) {
+    if (ctx) logActivity(ctx, 'archer', 'rate_limited', `Rate limited: ${rateCheck.reason}`);
+    return { success: false, method: 'none', strategy: 'standard', details: `Rate limited: ${rateCheck.reason}` };
+  }
+
+  // Generate cover letter and add subtle uniqueness
+  let coverLetter = await generateCoverLetter(resume, job, ctx);
+  coverLetter = uniquifyCoverLetter(coverLetter, job.id);
+
+  // Record that we sent an application (for rate limiting)
+  recordApplicationSent(job.company);
+
   // Strategy 1: Queue portal application (always do this if URL exists)
   if (job.url && job.url.startsWith('http')) {
     const application = await prisma.jobApplication.create({
@@ -128,9 +199,14 @@ export async function applyToJob(
       },
     });
 
-    return { success: true, method: 'portal', jobApplicationId: application.id, details: `Queued portal application for ${job.title} at ${job.company}` };
+    // Log to shared agent context
+    if (ctx) {
+      logActivity(ctx, 'archer', 'queued_portal', `Queued portal application for "${job.title}" at ${job.company} via ${job.source} (match: ${job.matchScore}%)`);
+    }
+
+    return { success: true, method: 'portal', strategy: 'standard', jobApplicationId: application.id, details: `Queued portal application for ${job.title} at ${job.company}` };
   }
-  
+
   // Strategy 2: Cold email
   const companyEmail = findCompanyEmail(job.company);
   if (companyEmail) {
@@ -174,13 +250,18 @@ export async function applyToJob(
         },
       });
 
-      return { success: true, method: 'email', jobApplicationId: application.id, details: `Emailed application to ${companyEmail}` };
+      // Log to shared agent context
+      if (ctx) {
+        logActivity(ctx, 'archer', 'sent_email', `Emailed application for "${job.title}" at ${job.company} to ${companyEmail}`);
+      }
+
+      return { success: true, method: 'email', strategy: 'standard', jobApplicationId: application.id, details: `Emailed application to ${companyEmail}` };
     } catch (err) {
       console.error('[Archer] Email failed:', err);
     }
   }
 
-  return { success: false, method: 'none', details: `No application method available for ${job.company}` };
+  return { success: false, method: 'none', strategy: 'standard', details: `No application method available for ${job.company}` };
 }
 
 function buildApplicationEmail(resume: ResumeData, job: JobForApplication, coverLetter: string): string {
@@ -203,7 +284,7 @@ function buildApplicationEmail(resume: ResumeData, job: JobForApplication, cover
   <div class="body">${coverLetter.replace(/\n/g, '<br>')}</div>
   <div class="footer">
     <p>Best regards,<br><strong>${resume.contact.name}</strong></p>
-    <p style="font-size: 11px; color: #94a3b8;">This application was sent via NXTED AI Career Platform</p>
+    <p style="font-size: 11px; color: #94a3b8;">This application was sent via jobTED AI Career Platform</p>
   </div>
 </body>
 </html>`;

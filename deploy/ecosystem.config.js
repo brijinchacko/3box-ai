@@ -1,13 +1,13 @@
-// PM2 Ecosystem Configuration for NXTED AI
+// PM2 Ecosystem Configuration for jobTED AI
 // Run: pm2 start deploy/ecosystem.config.js
 
 module.exports = {
   apps: [
     {
-      name: 'nxted-ai',
+      name: 'jobted-ai',
       script: 'node_modules/.bin/next',
       args: 'start -p 3001',
-      cwd: '/var/www/nxtedai',
+      cwd: '/var/www/jobtedai',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -22,9 +22,9 @@ module.exports = {
         PORT: 3001,
       },
       // Logging
-      error_file: '/var/log/pm2/nxted-ai-error.log',
-      out_file: '/var/log/pm2/nxted-ai-out.log',
-      log_file: '/var/log/pm2/nxted-ai-combined.log',
+      error_file: '/var/log/pm2/jobted-ai-error.log',
+      out_file: '/var/log/pm2/jobted-ai-out.log',
+      log_file: '/var/log/pm2/jobted-ai-combined.log',
       time: true,
       // Graceful shutdown
       kill_timeout: 5000,

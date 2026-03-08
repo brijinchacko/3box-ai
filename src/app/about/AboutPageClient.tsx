@@ -31,12 +31,12 @@ export default function AboutPageClient() {
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-            <span className="badge-purple text-sm mb-4 inline-block">About NXTED AI</span>
+            <span className="badge-purple text-sm mb-4 inline-block">About jobTED AI</span>
             <h1 className="text-4xl sm:text-5xl font-extrabold mb-6">
               Reimagining how people <span className="gradient-text">build careers</span>
             </h1>
             <p className="text-lg text-white/40 max-w-2xl mx-auto">
-              NXTED AI is a product of OFORO AI, built to transform the career development journey from fragmented tools into a unified, AI-powered operating system.
+              jobTED AI is a product of OFORO AI, built to transform the career development journey from fragmented tools into a unified, AI-powered operating system.
             </p>
           </motion.div>
 
@@ -71,7 +71,7 @@ export default function AboutPageClient() {
                 Career development is broken. Job seekers juggle dozens of tools — one for assessments, another for learning, a third for resume building, and yet another for job applications. Each tool works in isolation, with no shared understanding of the user&apos;s goals or progress.
               </p>
               <p>
-                NXTED AI was born from a simple question: what if one AI system could understand your entire career journey and guide you through every step? From identifying your skills and gaps, to building proof of your abilities, to connecting you with the right opportunities — all in one place.
+                jobTED AI was born from a simple question: what if one AI system could understand your entire career journey and guide you through every step? From identifying your skills and gaps, to building proof of your abilities, to connecting you with the right opportunities — all in one place.
               </p>
               <p>
                 We call it a Career Operating System. Powered by AI, it adapts to you, learns from your progress, and continuously optimizes your path to employment. The result is faster career transitions, higher interview success rates, and a more confident job search experience.

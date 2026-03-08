@@ -1,7 +1,7 @@
 'use client';
 
 // =============================================================================
-// NXTED AI - Region Selector
+// jobTED AI - Region Selector
 // =============================================================================
 // A glass-morphism dropdown that shows the current region flag + currency
 // and allows users to manually switch regions.

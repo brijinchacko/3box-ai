@@ -1,4 +1,4 @@
-# NXTED AI — Deployment Guide
+# jobTED AI — Deployment Guide
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 1. **Push to GitHub**
    ```bash
    git init && git add . && git commit -m "Initial commit"
-   gh repo create nxted-ai --private --push
+   gh repo create jobted-ai --private --push
    ```
 
 2. **Deploy to Vercel**
@@ -95,7 +95,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://nxted:password@db:5432/nxted_ai
+      - DATABASE_URL=postgresql://jobted:password@db:5432/jobted_ai
       - REDIS_URL=redis://redis:6379
     depends_on:
       - db
@@ -104,9 +104,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: nxted
+      POSTGRES_USER: jobted
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: nxted_ai
+      POSTGRES_DB: jobted_ai
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:

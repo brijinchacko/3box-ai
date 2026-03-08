@@ -38,7 +38,7 @@ export default function RoleSwitcher({ currentRole, onRoleChange, compact }: Rol
     setOpen(false);
     setSearch('');
     setCustomRole('');
-    localStorage.setItem('nxted_target_role', role);
+    localStorage.setItem('jobted_target_role', role);
     try {
       await fetch('/api/user/profile', {
         method: 'PUT',

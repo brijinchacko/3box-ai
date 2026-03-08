@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'step and userInput are required' }, { status: 400 });
     }
 
-    const systemPrompt = `You are Horace, the AI career coach at NXTED AI. You're having a warm, encouraging conversation with someone who just visited our career platform. Keep responses SHORT (2-3 sentences max), friendly, and insightful. Include a relevant emoji. Don't be generic — reference their specific input. Be conversational, not corporate.`;
+    const systemPrompt = `You are Cortex, the AI coordinator at jobTED AI. You lead a team of 6 specialized AI agents that find jobs while users sleep. You're having a warm, encouraging conversation with someone who just visited our career platform. Keep responses SHORT (2-3 sentences max), friendly, and insightful. Include a relevant emoji. Don't be generic — reference their specific input. Be conversational, not corporate.`;
 
     let userPrompt = '';
 

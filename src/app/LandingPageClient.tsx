@@ -8,11 +8,15 @@ import {
   Sparkles, Brain, Target, BookOpen, FileText,
   ArrowRight, Zap, TrendingUp,
   CheckCircle2, BarChart3, Bot, Cpu, Award,
-  DollarSign, Send, User, MapPin
+  DollarSign, Send, User, MapPin,
+  Moon, Users, Workflow, Star, ChevronDown, ChevronUp, Quote,
+  Clock, Heart, Shield, Rocket
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import HoraceAvatar, { type HoraceExpression } from '@/components/brand/HoraceAvatar';
+import CortexAvatar, { type CortexExpression } from '@/components/brand/CortexAvatar';
+import AgentAvatar from '@/components/brand/AgentAvatar';
+import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
 import { useRegion } from '@/lib/geo';
 
 // ─── Data Constants ──────────────────────────
@@ -175,6 +179,78 @@ const demoResponses: Record<string, (ctx: any) => string> = {
   skills: (ctx) => `${ctx.skills?.length || 0} skills locked in${ctx.skills?.length >= 5 ? ' — strong profile!' : '. Consider adding more for a stronger match.'}`,
 };
 
+// ─── Orbiting Agent (manages sleep state + orbit radius) ──────────────────
+
+function OrbitingAgent({ agent, index }: { agent: typeof AGENT_LIST[0]; index: number }) {
+  const [isSleeping, setIsSleeping] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverRef = useRef(false);
+  const angle = (index * 60 - 90) * (Math.PI / 180);
+  const awakeR = 160; // closer when awake
+  const sleepR = 220; // farther when sleeping
+
+  useEffect(() => {
+    let cancelled = false;
+    const cycle = () => {
+      if (cancelled) return;
+      const awakeTime = 8000 + Math.random() * 12000;
+      setTimeout(() => {
+        if (cancelled || hoverRef.current) { if (!cancelled) cycle(); return; }
+        setIsSleeping(true);
+        const sleepTime = 4000 + Math.random() * 6000;
+        setTimeout(() => {
+          if (cancelled) return;
+          setIsSleeping(false);
+          cycle();
+        }, sleepTime);
+      }, awakeTime);
+    };
+    setTimeout(() => { if (!cancelled) cycle(); }, Math.random() * 10000);
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleMouseEnter = () => {
+    hoverRef.current = true;
+    setIsHovered(true);
+    setIsSleeping(false); // wake on hover
+  };
+  const handleMouseLeave = () => {
+    hoverRef.current = false;
+    setIsHovered(false);
+  };
+
+  // Agent is visually awake if hovered OR not sleeping
+  const showSleeping = isSleeping && !isHovered;
+  const r = showSleeping ? sleepR : awakeR;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+      whileInView={{ opacity: 1, scale: 1, x: r * Math.cos(angle), y: r * Math.sin(angle) }}
+      viewport={{ once: true }}
+      transition={{ delay: 0.3 + index * 0.1, duration: 0.5, type: 'spring' }}
+      className="absolute z-10 group/agent"
+      animate={{ x: r * Math.cos(angle), y: r * Math.sin(angle), opacity: showSleeping ? 0.5 : 1 }}
+      whileHover={{ opacity: 1, scale: 1.1 }}
+      style={{ left: '50%', top: '50%', marginLeft: -22, marginTop: -22 }}
+      onHoverStart={handleMouseEnter}
+      onHoverEnd={handleMouseLeave}
+    >
+      <Link href={`/agents/${agent.id}`} className="relative block">
+        <AgentAvatar agentId={agent.id} size={44} pulse sleeping={showSleeping} />
+        {/* Tooltip on hover */}
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-20 opacity-0 group-hover/agent:opacity-100 transition-opacity duration-200 pointer-events-none z-30">
+          <div className="bg-surface-100/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-2xl text-center min-w-[160px] max-w-[200px]">
+            <div className="text-xs font-semibold text-white">{agent.displayName}</div>
+            <div className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</div>
+            <div className="text-[9px] text-white/35 mt-1 italic leading-tight">{agent.storyLine}</div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
 // ─── Landing Page Constants ──────────────────
 
 const fadeUp = {
@@ -187,21 +263,78 @@ const fadeUp = {
 
 
 const howItWorks = [
-  { step: '01', title: 'Tell us your dream role', desc: 'Share your career goal — any field, any industry. Our AI coach personalizes every step from here.', icon: Target, color: 'from-neon-blue to-cyan-400' },
-  { step: '02', title: 'AI skill assessment + human review', desc: 'AI evaluates your skills with real-world tasks. A real human expert reviews results before you move forward — no AI-only guesswork.', icon: Brain, color: 'from-neon-purple to-violet-400' },
-  { step: '03', title: 'Learn new skills & close gaps', desc: 'Get a personalized learning path with curated courses, hands-on projects, and milestones tailored to your skill gaps.', icon: BookOpen, color: 'from-amber-400 to-orange-400' },
-  { step: '04', title: 'Build an ATS-ready resume', desc: 'AI generates a resume optimized for Applicant Tracking Systems — keyword-matched, role-tailored, and formatted to pass every scanner.', icon: FileText, color: 'from-neon-green to-emerald-400' },
-  { step: '05', title: 'Get matched & auto-apply', desc: 'AI finds best-fit jobs, scores your match, and can auto-apply with personalized cover letters for every role.', icon: Zap, color: 'from-rose-400 to-pink-500' },
+  { step: '01', title: 'You share your dream', desc: 'Tell Cortex the role you want, the skills you have, and the career you imagine. From that single conversation, your entire AI team knows exactly what to hunt for.', icon: Target, color: 'from-neon-blue to-cyan-400' },
+  { step: '02', title: 'Your team assembles', desc: 'Six specialist agents activate instantly — each one trained for a different chapter of your job search. They coordinate. They strategize. They prepare for battle.', icon: Users, color: 'from-neon-purple to-violet-400' },
+  { step: '03', title: 'They work while you rest', desc: 'While the world sleeps, your agents are out there — discovering hidden opportunities, tailoring every resume, writing cover letters, applying to jobs. No breaks. No burnout. Ever.', icon: Moon, color: 'from-amber-400 to-orange-400' },
+  { step: '04', title: 'You wake up to a new chapter', desc: 'Every morning, your dashboard tells a new story — matched jobs, sent applications, interview prep sessions, all completed overnight. Progress, delivered while you dreamed.', icon: Zap, color: 'from-neon-green to-emerald-400' },
 ];
 
-const topSalaryRoles = [
-  { role: 'Data Scientist', icon: Brain, us: 'Up to $200K', eu: 'Up to €130K', in: 'Up to ₹40L', uk: 'Up to £120K', growth: '+31%' },
-  { role: 'Product Manager', icon: Target, us: 'Up to $190K', eu: 'Up to €130K', in: 'Up to ₹35L', uk: 'Up to £115K', growth: '+24%' },
-  { role: 'Software Engineer', icon: Cpu, us: 'Up to $180K', eu: 'Up to €120K', in: 'Up to ₹35L', uk: 'Up to £110K', growth: '+25%' },
-  { role: 'Legal Advisor', icon: FileText, us: 'Up to $180K', eu: 'Up to €110K', in: 'Up to ₹25L', uk: 'Up to £100K', growth: '+15%' },
-  { role: 'Financial Analyst', icon: BarChart3, us: 'Up to $150K', eu: 'Up to €95K', in: 'Up to ₹18L', uk: 'Up to £85K', growth: '+18%' },
-  { role: 'Marketing Manager', icon: Zap, us: 'Up to $145K', eu: 'Up to €95K', in: 'Up to ₹20L', uk: 'Up to £80K', growth: '+19%' },
+// ─── FAQ Data ───────────────────────────────
+const faqItems = [
+  { q: 'Wait — what exactly is jobTED AI?', a: 'Think of it as your personal AI career team. Six specialized agents work together around the clock — finding jobs, perfecting your resume, sending applications, and preparing you for interviews. All while you focus on living your life.' },
+  { q: 'Is it actually free?', a: 'Yes, genuinely. You get access to 17 AI career tools with 2 free uses each — resume building, ATS checking, salary estimation, and more. When you are ready for the full autonomous pipeline, premium plans unlock unlimited everything.' },
+  { q: 'How do these agents actually work?', a: 'Cortex is the brain — your coordinator. Under Cortex, Scout hunts for matching jobs, Forge crafts a custom resume for each role, Archer sends applications, Atlas preps you for interviews, Sage identifies skill gaps, and Sentinel quality-checks every detail before anything goes out.' },
+  { q: 'Do I need to install anything?', a: 'Nothing at all. jobTED AI runs entirely in your browser. Create a free account and within seconds, your agent team is assembled and ready to go.' },
+  { q: 'Will they apply without asking me first?', a: 'You are always in control. In Copilot mode, agents ask before every action. In Autopilot mode, they apply to categories you pre-approve. In Full Agent mode, they work autonomously while you sleep — but only within the boundaries you set.' },
+  { q: 'Is my data safe with you?', a: 'Absolutely. Your data is encrypted in transit and at rest. We never share personal information with third parties. And you can delete your account and all data at any time — no questions asked.' },
 ];
+
+// ─── Reviews Data ──────────────────────────
+interface Review { name: string; role: string; text: string; rating: number; avatar: string; transformation?: string; country?: string }
+
+// Massive review pool for the scrolling wall
+const allReviews: Review[] = [
+  // ── Row 1 batch ──
+  { name: 'Sarah Chen', role: 'UX Designer', text: 'I went to sleep nervous about my job search. Woke up to 5 tailored applications sent overnight. Two weeks later, I was at a FAANG company.', rating: 5, avatar: 'SC', transformation: 'Hired in 14 days', country: 'US' },
+  { name: 'Priya Sharma', role: 'Software Engineer', text: 'I was sending applications into the void for months. jobTED AI changed everything — the ATS checker alone tripled my interview rate.', rating: 5, avatar: 'PS', transformation: 'ATS: 38% → 94%', country: 'IN' },
+  { name: 'Emma Thompson', role: 'Marketing Manager', text: 'The agents found roles across London and Manchester I would have completely missed. Three weeks later, I had an offer.', rating: 5, avatar: 'ET', transformation: 'Hired in 3 weeks', country: 'UK' },
+  { name: 'Michael Torres', role: 'Software Engineer', text: 'My resume was invisible to ATS systems. jobTED AI fixed that overnight — three interviews in the first week.', rating: 5, avatar: 'MT', transformation: 'ATS: 45% → 92%', country: 'US' },
+  { name: 'Rahul Verma', role: 'Data Scientist', text: 'The AI built a resume that perfectly highlighted my IIT background. Within a week, Google and Amazon both reached out.', rating: 5, avatar: 'RV', transformation: 'Hired in 8 days', country: 'IN' },
+  { name: 'Lena Kowalski', role: 'Frontend Developer', text: 'Applied to 200 jobs manually with zero results. jobTED sent 30 targeted applications in one night. Got 4 interviews.', rating: 5, avatar: 'LK', transformation: '200 apps → 4 interviews', country: 'DE' },
+  { name: 'James Wilson', role: 'Software Engineer', text: 'My career coach missed ATS issues that jobTED caught instantly. Went from zero callbacks to multiple competing offers.', rating: 5, avatar: 'JW', transformation: '0 → 4 offers', country: 'UK' },
+  { name: 'Aisha Mohammed', role: 'Data Analyst', text: 'As a fresh graduate, I had no idea where to start. Agent Sage identified my skill gaps and Cortex built a plan. Hired in 3 weeks.', rating: 5, avatar: 'AM', transformation: 'Graduate → Hired', country: 'AE' },
+  { name: 'Carlos Rivera', role: 'DevOps Engineer', text: 'The salary negotiation data alone was worth it. I walked into my review with proof and walked out with a 25% raise.', rating: 5, avatar: 'CR', transformation: '+25% salary', country: 'US' },
+  { name: 'Yuki Tanaka', role: 'UI Designer', text: 'Agent Forge tailored my portfolio description for each company. The personalization was incredible — 5 out of 8 callbacks.', rating: 5, avatar: 'YT', transformation: '5/8 callbacks', country: 'JP' },
+  // ── Row 2 batch ──
+  { name: 'Jessica Williams', role: 'Product Manager', text: 'The cover letter generator and interview prep saved me hours every single day. The quality blew me away for a free tool.', rating: 5, avatar: 'JW', transformation: '10+ hrs saved/week', country: 'US' },
+  { name: 'Ananya Patel', role: 'Product Manager', text: 'Scout found roles I never knew existed. The salary estimator was spot-on for Indian markets — helped me negotiate 20% more.', rating: 5, avatar: 'AP', transformation: '+20% salary', country: 'IN' },
+  { name: 'Sophie Clarke', role: 'Business Analyst', text: 'The salary estimator knew UK market rates perfectly. I walked into my negotiation armed with data — and walked out with 15% more.', rating: 5, avatar: 'SC', transformation: '+15% salary', country: 'UK' },
+  { name: 'David Kim', role: 'Data Scientist', text: 'Forge optimized my resume differently for each application — automatically. That level of personalization got me noticed.', rating: 4, avatar: 'DK', transformation: '3x more callbacks', country: 'US' },
+  { name: 'Fatima Al-Hassan', role: 'Project Manager', text: 'Career change at 35 felt impossible. The agents mapped my transferable skills and found PM roles I qualified for. Hired in a month.', rating: 5, avatar: 'FA', transformation: 'Career switch success', country: 'CA' },
+  { name: 'Tomasz Nowak', role: 'Backend Developer', text: 'Three months of silence before jobTED. Two weeks after, I had offers from Berlin and Amsterdam. The agents do not sleep.', rating: 5, avatar: 'TN', transformation: '2 offers in 2 weeks', country: 'PL' },
+  { name: 'Maria Garcia', role: 'Data Scientist', text: 'My ATS score went from 50% to 95%. The difference was immediate — callbacks started flooding in within days.', rating: 5, avatar: 'MG', transformation: 'ATS: 50% → 95%' },
+  { name: 'Ravi Krishnan', role: 'ML Engineer', text: 'Agent Atlas prepared me for 6 different interview formats. I aced every round. The prep was better than any coaching service.', rating: 5, avatar: 'RK', transformation: 'Aced all rounds', country: 'IN' },
+  { name: 'Elena Popova', role: 'QA Engineer', text: 'I was skeptical about AI writing my cover letters. Then I read what Forge produced. It knew my story better than I did.', rating: 5, avatar: 'EP', transformation: 'Cover letters that convert', country: 'RU' },
+  { name: 'Nathan Brooks', role: 'Cloud Architect', text: 'Senior roles are hard to find. Scout discovered opportunities on platforms I had never even heard of. Game changer.', rating: 5, avatar: 'NB', transformation: 'Found hidden roles', country: 'AU' },
+  // ── Row 3 batch ──
+  { name: 'Vikram Singh', role: 'Full Stack Developer', text: 'From resume to interview prep — the agents handled my entire journey. I went from unemployed to placed at a Series B startup.', rating: 4, avatar: 'VS', transformation: '0 → Offer in 3 weeks', country: 'IN' },
+  { name: 'Oliver Brown', role: 'Product Manager', text: 'Scout is like having a recruiter who never sleeps. It found my current role at a fintech startup I had never heard of.', rating: 4, avatar: 'OB', transformation: 'Found dream role', country: 'UK' },
+  { name: 'Chris Lee', role: 'Product Manager', text: 'Six AI agents working while I sleep? It sounded like science fiction. Two weeks and one job offer later, I am a believer.', rating: 5, avatar: 'CL', transformation: 'Hired in 2 weeks' },
+  { name: 'Nina Patel', role: 'UX Designer', text: 'The cover letter generator and interview prep saved me hours every day. This is what the future of job searching looks like.', rating: 4, avatar: 'NP', transformation: '10+ hrs saved/week' },
+  { name: 'Daniel Okafor', role: 'Cybersecurity Analyst', text: 'Applied to niche security roles that need specific certs. Forge highlighted my CISSP perfectly for each application. 3 offers.', rating: 5, avatar: 'DO', transformation: '3 offers in niche field', country: 'NG' },
+  { name: 'Mei Lin', role: 'Product Designer', text: 'Switching countries and careers at the same time. jobTED handled visa-friendly roles and tailored everything. Incredible.', rating: 5, avatar: 'ML', transformation: 'International hire', country: 'SG' },
+  { name: 'Alex Johnson', role: 'Software Engineer', text: 'I used to spend 4 hours a day job searching. Now my agent team does it all — finding, applying, prepping — while I sleep.', rating: 5, avatar: 'AJ', transformation: '4 hrs/day → 0' },
+  { name: 'Isabella Romano', role: 'Marketing Analyst', text: 'Sentinel caught a typo in my resume that would have been embarrassing. The quality review step is pure gold.', rating: 5, avatar: 'IR', transformation: 'Zero errors shipped', country: 'IT' },
+  { name: 'Hassan Ali', role: 'iOS Developer', text: 'My portfolio was strong but my resume was weak. Forge rewrote it, Archer sent it out, and I had 5 calls in 4 days.', rating: 5, avatar: 'HA', transformation: '5 calls in 4 days', country: 'PK' },
+  { name: 'Sophie Dubois', role: 'HR Manager', text: 'I work in HR and know what recruiters look for. jobTED nailed it — the AI understands hiring better than most humans.', rating: 5, avatar: 'SD', transformation: 'HR expert approved', country: 'FR' },
+  // ── Row 4 batch (extra) ──
+  { name: 'Raj Mehta', role: 'Data Engineer', text: 'Sage told me to learn Spark before applying. I did. Two weeks later, I had an offer I would not have been qualified for otherwise.', rating: 5, avatar: 'RM', transformation: 'Skill gap → Hired', country: 'IN' },
+  { name: 'Anna Svensson', role: 'Scrum Master', text: 'The agents sent 15 targeted applications overnight. I woke up to 3 interview requests. This is not normal. This is magic.', rating: 5, avatar: 'AS', transformation: '15 apps → 3 interviews', country: 'SE' },
+  { name: 'Kevin O\'Brien', role: 'Solutions Architect', text: 'After being laid off, I was devastated. The agents gave me hope and results. New role in 10 days. Better pay. Better company.', rating: 5, avatar: 'KO', transformation: 'Laid off → Hired in 10d', country: 'IE' },
+  { name: 'Zara Khan', role: 'Graphic Designer', text: 'Creative roles are tough to land. Scout found agencies actively hiring, Forge tailored my portfolio pitch. Landed my dream agency.', rating: 5, avatar: 'ZK', transformation: 'Dream agency landed', country: 'UK' },
+  { name: 'Lucas Fernandez', role: 'Full Stack Developer', text: 'I am not great at selling myself. The agents are. My new resume got more responses in a week than I got in 6 months on my own.', rating: 5, avatar: 'LF', transformation: '6 months → 1 week', country: 'BR' },
+  { name: 'Grace Kim', role: 'Business Analyst', text: 'The interview prep was insanely thorough. Atlas knew the exact questions my target companies ask. I walked in prepared.', rating: 5, avatar: 'GK', transformation: 'Interview ace', country: 'KR' },
+  { name: 'Marco Bianchi', role: 'DevOps Engineer', text: 'Sentinel reviewed my applications before they went out. Caught formatting issues, keyword gaps, even tone problems. Flawless.', rating: 5, avatar: 'MB', transformation: 'Flawless applications', country: 'IT' },
+  { name: 'Chloe Martin', role: 'Content Strategist', text: 'I thought AI could not write creative cover letters. Forge proved me wrong every single time. Each one felt personal and authentic.', rating: 5, avatar: 'CM', transformation: 'Personal cover letters', country: 'AU' },
+];
+
+// Keep region-based for initial featured display
+const reviewsByRegion: Record<string, Review[]> = {
+  IN: allReviews.filter(r => r.country === 'IN').slice(0, 4),
+  US: allReviews.filter(r => r.country === 'US').slice(0, 4),
+  GB: allReviews.filter(r => r.country === 'UK').slice(0, 4),
+  DEFAULT: allReviews.slice(0, 4),
+};
 
 // ─── Conversational Steps ────────────────────
 
@@ -240,15 +373,16 @@ export default function LandingPageClient() {
 
   // Check if user already completed
   const [alreadyDone, setAlreadyDone] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // Horace expression state (reactive eye animations)
-  const [horaceExpression, setHoraceExpression] = useState<HoraceExpression>('normal');
+  // Cortex expression state (reactive eye animations)
+  const [cortexExpression, setCortexExpression] = useState<CortexExpression>('normal');
   const expressionTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const triggerExpression = (expr: HoraceExpression, duration = 2500) => {
+  const triggerExpression = (expr: CortexExpression, duration = 2500) => {
     if (expressionTimerRef.current) clearTimeout(expressionTimerRef.current);
-    setHoraceExpression(expr);
-    expressionTimerRef.current = setTimeout(() => setHoraceExpression('normal'), duration);
+    setCortexExpression(expr);
+    expressionTimerRef.current = setTimeout(() => setCortexExpression('normal'), duration);
   };
 
   useEffect(() => {
@@ -256,7 +390,7 @@ export default function LandingPageClient() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('nxted_onboarding_profile');
+    const saved = localStorage.getItem('jobted_onboarding_profile');
     if (saved) {
       try {
         const profile = JSON.parse(saved);
@@ -291,7 +425,7 @@ export default function LandingPageClient() {
       setTimeout(() => {
         setMessages([{
           from: 'nova',
-          text: "Hey! I'm Horace, your career coach. Let's find the perfect path for you.",
+          text: "Hey! I'm Agent Cortex, your career coach. Let's find the perfect path for you.",
           type: 'question',
         }]);
         setTimeout(() => setStep('role'), 600);
@@ -315,7 +449,7 @@ export default function LandingPageClient() {
     return fn ? fn(ctx) : "Let's keep going! 👍";
   };
 
-  const addHoraceMessage = (text: string, type: Message['type'] = 'response') => {
+  const addCortexMessage = (text: string, type: Message['type'] = 'response') => {
     setIsTyping(true);
     // Clean markdown symbols and keep response concise
     let clean = text.replace(/\*+/g, '').replace(/\d+\.\s+/g, '').replace(/[-•]\s+/g, '').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -349,7 +483,7 @@ export default function LandingPageClient() {
     triggerExpression('heart');
 
     const aiMsg = await getAIResponse('role', role, { targetRole: role, countryCode });
-    addHoraceMessage(aiMsg);
+    addCortexMessage(aiMsg);
     proceedToStep('experience');
   };
 
@@ -359,7 +493,7 @@ export default function LandingPageClient() {
     triggerExpression('star');
 
     const aiMsg = await getAIResponse('experience', lvl.value, { targetRole, experience: lvl.value });
-    addHoraceMessage(aiMsg);
+    addCortexMessage(aiMsg);
     proceedToStep('status');
   };
 
@@ -369,7 +503,7 @@ export default function LandingPageClient() {
     triggerExpression('happy');
 
     const aiMsg = await getAIResponse('status', s.value, { targetRole, experience, status: s.value });
-    addHoraceMessage(aiMsg);
+    addCortexMessage(aiMsg);
     proceedToStep('education');
   };
 
@@ -379,7 +513,7 @@ export default function LandingPageClient() {
     triggerExpression('thinking');
 
     const aiMsg = await getAIResponse('education', edu, { targetRole, experience, status, education: edu });
-    addHoraceMessage(aiMsg);
+    addCortexMessage(aiMsg);
     proceedToStep('skills');
   };
 
@@ -391,7 +525,7 @@ export default function LandingPageClient() {
 
     const skillsForAI = selectedSkills.includes('None') ? ['General Skills'] : selectedSkills;
     const aiMsg = await getAIResponse('skills', skillsForAI.join(', '), { targetRole, experience, status, education, skills: skillsForAI });
-    addHoraceMessage(aiMsg);
+    addCortexMessage(aiMsg);
     proceedToStep('personal');
   };
 
@@ -408,11 +542,11 @@ export default function LandingPageClient() {
       educationLevel: education, fieldOfStudy: '', institution: '', graduationYear: '',
       skills: actualSkills, experiences: [],
     };
-    localStorage.setItem('nxted_onboarding_profile', JSON.stringify(profile));
-    localStorage.setItem('nxted_target_role', targetRole);
-    localStorage.setItem('nxted_interests', JSON.stringify(actualSkills.slice(0, 5)));
-    localStorage.setItem('nxted_user_location', location);
-    localStorage.setItem('nxted_skill_scores', JSON.stringify(
+    localStorage.setItem('jobted_onboarding_profile', JSON.stringify(profile));
+    localStorage.setItem('jobted_target_role', targetRole);
+    localStorage.setItem('jobted_interests', JSON.stringify(actualSkills.slice(0, 5)));
+    localStorage.setItem('jobted_user_location', location);
+    localStorage.setItem('jobted_skill_scores', JSON.stringify(
       actualSkills.reduce((acc, skill) => {
         acc[skill] = experience === 'fresher' ? 30 : experience === '0-1' ? 40 : experience === '1-3' ? 55 : experience === '3-5' ? 65 : experience === '5-10' ? 75 : 85;
         return acc;
@@ -426,7 +560,7 @@ export default function LandingPageClient() {
       skills: actualSkills,
       targetRole,
     };
-    localStorage.setItem('nxted_resume_draft', JSON.stringify(resumeData));
+    localStorage.setItem('jobted_resume_draft', JSON.stringify(resumeData));
 
     // Compute salary message based on user's country
     const region = (() => {
@@ -436,7 +570,7 @@ export default function LandingPageClient() {
     })();
     const sal = roleSalaryMap[targetRole];
     const salaryMsg = sal ? ` Top ${targetRole}s earn up to ${sal[region]} in your area.` : '';
-    addHoraceMessage(`${fullName.split(' ')[0]}, your profile is ready!${salaryMsg} Sign up to unlock your career plan.`);
+    addCortexMessage(`${fullName.split(' ')[0]}, your profile is ready!${salaryMsg} Sign up to unlock your career plan.`);
     proceedToStep('complete');
   };
 
@@ -452,10 +586,10 @@ export default function LandingPageClient() {
     setSelectedSkills([]);
     setFullName('');
     setLocation('');
-    localStorage.removeItem('nxted_onboarding_profile');
-    localStorage.removeItem('nxted_target_role');
+    localStorage.removeItem('jobted_onboarding_profile');
+    localStorage.removeItem('jobted_target_role');
     setTimeout(() => {
-      setMessages([{ from: 'nova', text: "Hey! I'm Horace, your career coach. Let's find the perfect path for you.", type: 'question' }]);
+      setMessages([{ from: 'nova', text: "Hey! I'm Agent Cortex, your career coach. Let's find the perfect path for you.", type: 'question' }]);
       setTimeout(() => setStep('role'), 600);
     }, 300);
   };
@@ -484,321 +618,405 @@ export default function LandingPageClient() {
     <div className="min-h-screen">
       <Navbar />
 
-      {/* ─── Hero: Conversational AI Onboarding ─── */}
+      {/* ─── Chapter Zero: The Struggle ─── */}
+      <section className="relative py-24 sm:py-32 overflow-hidden" aria-label="The Struggle">
+        <div className="absolute inset-0 bg-grid opacity-20" aria-hidden="true" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-gradient-radial from-rose-500/6 via-transparent to-transparent rounded-full blur-3xl" aria-hidden="true" />
+        <div className="relative max-w-3xl mx-auto px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-xs font-medium mb-8">
+              <Heart className="w-3.5 h-3.5 text-rose-400" /> Every job seeker has felt this
+            </div>
+            <p className="text-xl sm:text-2xl lg:text-3xl text-white/60 leading-relaxed font-light italic mb-6">
+              &ldquo;You spent years building skills. Months perfecting your resume. Hundreds of hours applying. And still&hellip; silence.&rdquo;
+            </p>
+            <p className="text-sm sm:text-base text-white/30 max-w-xl mx-auto leading-relaxed mb-8">
+              The average job seeker sends 100+ applications before hearing back. That is not a career strategy &mdash; that is a full-time job nobody signed up for.
+            </p>
+            <p className="text-base sm:text-lg text-white/50 font-medium">
+              What if it didn&apos;t have to be this way?
+            </p>
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              className="mt-10"
+            >
+              <ArrowRight className="w-5 h-5 text-white/20 mx-auto rotate-90" />
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── Chapter One: The Encounter (Hero) ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" aria-label="AI Career Coach Onboarding">
         <div className="absolute inset-0 bg-grid opacity-30" aria-hidden="true" />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-gradient-radial from-neon-blue/8 via-neon-purple/4 to-transparent rounded-full blur-3xl" aria-hidden="true" />
 
         <div className="relative w-full max-w-2xl mx-auto px-4">
+          <div className="flex flex-col items-center">
+
+            {/* ── Centered headline ── */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="text-center mb-8"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-5">
+                <Bot className="w-3.5 h-3.5" /> Meet the team that never sleeps
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+                <span className="gradient-text">Your Story Deserves</span>
+                <br />
+                A Better Chapter.
+              </h1>
+              <p className="text-base sm:text-lg text-white/50 max-w-lg mx-auto mb-6">
+                6 AI agents work around the clock &mdash; finding opportunities, crafting resumes,
+                sending applications, prepping interviews. Your only job? Dream bigger.
+              </p>
+
+              {/* Agent mini-avatar row */}
+              <div className="flex items-center justify-center gap-1.5">
+                {AGENT_LIST.map((agent) => (
+                  <Link key={agent.id} href={`/agents/${agent.id}`} className="relative group">
+                    <AgentAvatar agentId={agent.id} size={24} autoSleep />
+                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
+                      <div className="bg-surface-100 border border-white/10 rounded px-2 py-0.5 whitespace-nowrap shadow-xl">
+                        <span className="text-[10px] font-semibold text-white">{agent.displayName}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+                <span className="ml-2 text-xs text-white/40 font-medium">Your AI team awaits</span>
+              </div>
+            </motion.div>
+
+            {/* ── Form card ── */}
+            <div className="w-full">
+
           {!alreadyDone ? (
-            <div className="flex flex-col items-center">
-              {/* Horace speaking — avatar + speech bubble */}
+            <div className="relative">
+              {/* CortexAvatar — overlapping top of card */}
+              <div className="flex justify-center mb-[-28px] relative z-10">
+                <div className="relative">
+                  <div className="absolute -inset-4 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
+                  <CortexAvatar size={56} expression={cortexExpression} />
+                </div>
+              </div>
+
+              {/* Glass card container */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-end gap-2.5 mb-5 w-full max-w-lg"
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="glass p-6 pt-10 relative overflow-hidden"
               >
-                <div className="flex-shrink-0">
-                  <HoraceAvatar size={40} expression={horaceExpression} />
-                </div>
-                <div className="min-h-[2.5rem] flex items-center flex-1">
+                {/* Subtle gradient overlay */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-neon-blue/5 via-transparent to-neon-purple/5 pointer-events-none" />
+
+                <div className="relative z-10">
+                  {/* Speech bubble / typing indicator */}
+                  <div className="min-h-[2.5rem] flex items-center justify-center mb-4">
+                    <AnimatePresence mode="wait">
+                      {isTyping ? (
+                        <motion.div
+                          key="typing"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="bg-white/[0.06] backdrop-blur-sm px-4 py-2.5 rounded-2xl"
+                        >
+                          <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        </motion.div>
+                      ) : messages.filter(m => m.from === 'nova').length > 0 ? (
+                        <motion.div
+                          key={`msg-${messages.filter(m => m.from === 'nova').length}`}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="bg-white/[0.06] backdrop-blur-sm px-4 py-2.5 rounded-2xl max-w-md"
+                        >
+                          <p className="text-sm text-white/60 leading-relaxed text-center">
+                            {messages.filter(m => m.from === 'nova').slice(-1)[0]?.text}
+                          </p>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Dynamic step heading */}
                   <AnimatePresence mode="wait">
-                    {isTyping ? (
-                      <motion.div
-                        key="typing"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="bg-white/[0.06] backdrop-blur-sm px-4 py-2.5 rounded-2xl rounded-bl-md"
-                      >
-                        <div className="flex gap-1">
-                          <div className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
-                      </motion.div>
-                    ) : messages.filter(m => m.from === 'nova').length > 0 ? (
-                      <motion.div
-                        key={`msg-${messages.filter(m => m.from === 'nova').length}`}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="bg-white/[0.06] backdrop-blur-sm px-4 py-2.5 rounded-2xl rounded-bl-md"
-                      >
-                        <p className="text-sm text-white/60 leading-relaxed">
-                          {messages.filter(m => m.from === 'nova').slice(-1)[0]?.text}
-                        </p>
-                      </motion.div>
-                    ) : null}
+                    <motion.h2
+                      key={step}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="text-xl sm:text-2xl font-bold text-center mb-4"
+                    >
+                      {step === 'intro' || step === 'role' ? (
+                        <>What role should your agents <span className="gradient-text">target?</span></>
+                      ) : step === 'experience' ? (
+                        <>How much <span className="gradient-text">experience</span> do you have?</>
+                      ) : step === 'status' ? (
+                        <>What&apos;s your current <span className="gradient-text">situation?</span></>
+                      ) : step === 'education' ? (
+                        <>What&apos;s your <span className="gradient-text">education</span> level?</>
+                      ) : step === 'skills' ? (
+                        <>Select your <span className="gradient-text">skills</span> <span className="text-white/30 text-base font-normal">(or choose None)</span></>
+                      ) : step === 'personal' ? (
+                        <>Almost <span className="gradient-text">done!</span></>
+                      ) : step === 'complete' ? (
+                        <>Your agents are <span className="gradient-text">ready</span></>
+                      ) : null}
+                    </motion.h2>
                   </AnimatePresence>
-                </div>
-              </motion.div>
 
-              {/* Dynamic step heading */}
-              <AnimatePresence mode="wait">
-                <motion.h1
-                  key={step}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="text-2xl sm:text-3xl font-bold text-center mb-4"
-                >
-                  {step === 'intro' || step === 'role' ? (
-                    <>What do you want to <span className="gradient-text">become?</span></>
-                  ) : step === 'experience' ? (
-                    <>How much <span className="gradient-text">experience</span> do you have?</>
-                  ) : step === 'status' ? (
-                    <>What&apos;s your current <span className="gradient-text">situation?</span></>
-                  ) : step === 'education' ? (
-                    <>What&apos;s your <span className="gradient-text">education</span> level?</>
-                  ) : step === 'skills' ? (
-                    <>Select your <span className="gradient-text">skills</span> <span className="text-white/30 text-lg font-normal">(or choose None)</span></>
-                  ) : step === 'personal' ? (
-                    <>Almost <span className="gradient-text">done!</span></>
-                  ) : step === 'complete' ? (
-                    <>Your career <span className="gradient-text">profile</span></>
-                  ) : null}
-                </motion.h1>
-              </AnimatePresence>
-
-              {/* Input Area — changes based on step */}
-              <div className="w-full">
-                <AnimatePresence mode="wait">
-                  {/* Role Input */}
-                  {step === 'role' && (
-                    <motion.div key="role-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="relative">
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <input
-                            ref={inputRef}
-                            value={roleInput}
-                            onChange={(e) => { setRoleInput(e.target.value); setShowSuggestions(true); }}
-                            onClick={() => setShowSuggestions(true)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleRoleSubmit(); }}
-                            className="input-field text-base pr-4 w-full"
-                            placeholder="e.g. Software Engineer, Data Scientist..."
-                          />
-                          {showSuggestions && filteredRoles.length > 0 && (
-                            <div ref={suggestionsRef} className="absolute z-20 left-0 right-0 top-full mt-1 bg-surface-50 border border-white/10 rounded-xl max-h-48 overflow-y-auto shadow-2xl">
-                              {filteredRoles.map((role) => (
-                                <button
-                                  key={role}
-                                  onClick={() => { setRoleInput(role); setShowSuggestions(false); }}
-                                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 text-white/60 hover:text-white transition-colors"
-                                >
-                                  {role}
-                                </button>
-                              ))}
+                  {/* Input Area — changes based on step */}
+                  <div className="w-full">
+                    <AnimatePresence mode="wait">
+                      {/* Role Input */}
+                      {step === 'role' && (
+                        <motion.div key="role-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="relative">
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                ref={inputRef}
+                                value={roleInput}
+                                onChange={(e) => { setRoleInput(e.target.value); setShowSuggestions(true); }}
+                                onClick={() => setShowSuggestions(true)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleRoleSubmit(); }}
+                                className="input-field text-base pr-4 w-full"
+                                placeholder="e.g. Software Engineer, Data Scientist..."
+                              />
+                              {showSuggestions && filteredRoles.length > 0 && (
+                                <div ref={suggestionsRef} className="absolute z-20 left-0 right-0 top-full mt-1 bg-surface-50 border border-white/10 rounded-xl max-h-48 overflow-y-auto shadow-2xl">
+                                  {filteredRoles.map((role) => (
+                                    <button
+                                      key={role}
+                                      onClick={() => { setRoleInput(role); setShowSuggestions(false); }}
+                                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 text-white/60 hover:text-white transition-colors"
+                                    >
+                                      {role}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={handleRoleSubmit}
-                          disabled={!roleInput.trim()}
-                          className="btn-primary px-4 flex items-center gap-1 disabled:opacity-30"
-                        >
-                          <Send className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {suggestedRoles.slice(0, 6).map((role) => (
-                          <button
-                            key={role}
-                            onClick={() => { setRoleInput(role); setShowSuggestions(false); }}
-                            className="px-2.5 py-1 rounded-full text-xs bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
-                          >
-                            {role}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Experience Level */}
-                  {step === 'experience' && !isTyping && (
-                    <motion.div key="exp-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {experienceLevels.map((lvl) => (
-                          <button
-                            key={lvl.value}
-                            onClick={() => handleExperienceSelect(lvl)}
-                            className="p-3 rounded-xl bg-white/[0.04] border border-white/10 hover:border-neon-blue/40 hover:bg-neon-blue/5 transition-all text-left group"
-                          >
-                            <div className="text-sm font-medium group-hover:text-neon-blue transition-colors">{lvl.label}</div>
-                            <div className="text-xs text-white/30">{lvl.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Current Status */}
-                  {step === 'status' && !isTyping && (
-                    <motion.div key="status-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <div className="flex flex-wrap gap-2">
-                        {currentStatuses.map((s) => (
-                          <button
-                            key={s.value}
-                            onClick={() => handleStatusSelect(s)}
-                            className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-neon-purple/40 hover:bg-neon-purple/5 transition-all text-sm font-medium"
-                          >
-                            {s.emoji} {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Education */}
-                  {step === 'education' && !isTyping && (
-                    <motion.div key="edu-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <div className="flex flex-wrap gap-2">
-                        {educationLevels.map((edu) => (
-                          <button
-                            key={edu}
-                            onClick={() => handleEducationSelect(edu)}
-                            className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all text-sm font-medium"
-                          >
-                            {edu}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Skills */}
-                  {step === 'skills' && !isTyping && (
-                    <motion.div key="skills-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {/* None / Not Sure option */}
-                        <button
-                          onClick={() => setSelectedSkills((prev) => prev.includes('None') ? prev.filter((s) => s !== 'None') : ['None'])}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            selectedSkills.includes('None')
-                              ? 'bg-neon-blue/15 border border-neon-blue/40 text-neon-blue'
-                              : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60 hover:border-white/20'
-                          }`}
-                        >
-                          {selectedSkills.includes('None') && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
-                          None / Not Sure
-                        </button>
-                        {suggestedSkills.map((skill) => {
-                          const sel = selectedSkills.includes(skill);
-                          return (
                             <button
-                              key={skill}
-                              onClick={() => setSelectedSkills((prev) => {
-                                // If "None" was selected, clear it when selecting a real skill
-                                const filtered = prev.filter((s) => s !== 'None');
-                                return sel ? filtered.filter((s) => s !== skill) : [...filtered, skill];
-                              })}
+                              onClick={handleRoleSubmit}
+                              disabled={!roleInput.trim()}
+                              className="btn-primary px-4 flex items-center gap-1 disabled:opacity-30"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {suggestedRoles.slice(0, 6).map((role) => (
+                              <button
+                                key={role}
+                                onClick={() => { setRoleInput(role); setShowSuggestions(false); }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-neon-blue hover:border-neon-blue/30 hover:bg-neon-blue/5 transition-all duration-200"
+                              >
+                                <Target className="w-3 h-3 inline mr-1 -mt-0.5 opacity-50" />{role}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Experience Level */}
+                      {step === 'experience' && !isTyping && (
+                        <motion.div key="exp-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {experienceLevels.map((lvl) => (
+                              <button
+                                key={lvl.value}
+                                onClick={() => handleExperienceSelect(lvl)}
+                                className="p-3 rounded-xl bg-white/[0.04] border border-white/10 hover:border-neon-blue/40 hover:bg-neon-blue/5 transition-all text-left group"
+                              >
+                                <div className="text-sm font-medium group-hover:text-neon-blue transition-colors">{lvl.label}</div>
+                                <div className="text-xs text-white/30">{lvl.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Current Status */}
+                      {step === 'status' && !isTyping && (
+                        <motion.div key="status-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          <div className="flex flex-wrap gap-2">
+                            {currentStatuses.map((s) => (
+                              <button
+                                key={s.value}
+                                onClick={() => handleStatusSelect(s)}
+                                className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-neon-purple/40 hover:bg-neon-purple/5 transition-all text-sm font-medium"
+                              >
+                                {s.emoji} {s.label}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Education */}
+                      {step === 'education' && !isTyping && (
+                        <motion.div key="edu-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          <div className="flex flex-wrap gap-2">
+                            {educationLevels.map((edu) => (
+                              <button
+                                key={edu}
+                                onClick={() => handleEducationSelect(edu)}
+                                className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all text-sm font-medium"
+                              >
+                                {edu}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Skills */}
+                      {step === 'skills' && !isTyping && (
+                        <motion.div key="skills-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          <div className="flex flex-wrap gap-1.5 mb-3">
+                            <button
+                              onClick={() => setSelectedSkills((prev) => prev.includes('None') ? prev.filter((s) => s !== 'None') : ['None'])}
                               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                sel && !selectedSkills.includes('None')
-                                  ? 'bg-neon-green/15 border border-neon-green/40 text-neon-green'
+                                selectedSkills.includes('None')
+                                  ? 'bg-neon-blue/15 border border-neon-blue/40 text-neon-blue'
                                   : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60 hover:border-white/20'
                               }`}
                             >
-                              {sel && !selectedSkills.includes('None') && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
-                              {skill}
+                              {selectedSkills.includes('None') && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
+                              None / Not Sure
                             </button>
-                          );
-                        })}
-                      </div>
-                      {(selectedSkills.includes('None') || selectedSkills.length >= 2) && (
-                        <button onClick={handleSkillsDone} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
-                          {selectedSkills.includes('None')
-                            ? <>Continue without skills <ArrowRight className="w-4 h-4" /></>
-                            : <>Continue with {selectedSkills.length} skills <ArrowRight className="w-4 h-4" /></>
-                          }
-                        </button>
+                            {suggestedSkills.map((skill) => {
+                              const sel = selectedSkills.includes(skill);
+                              return (
+                                <button
+                                  key={skill}
+                                  onClick={() => setSelectedSkills((prev) => {
+                                    const filtered = prev.filter((s) => s !== 'None');
+                                    return sel ? filtered.filter((s) => s !== skill) : [...filtered, skill];
+                                  })}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                    sel && !selectedSkills.includes('None')
+                                      ? 'bg-neon-green/15 border border-neon-green/40 text-neon-green'
+                                      : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60 hover:border-white/20'
+                                  }`}
+                                >
+                                  {sel && !selectedSkills.includes('None') && <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" />}
+                                  {skill}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {(selectedSkills.includes('None') || selectedSkills.length >= 2) && (
+                            <button onClick={handleSkillsDone} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
+                              {selectedSkills.includes('None')
+                                ? <>Continue without skills <ArrowRight className="w-4 h-4" /></>
+                                : <>Continue with {selectedSkills.length} skills <ArrowRight className="w-4 h-4" /></>
+                              }
+                            </button>
+                          )}
+                        </motion.div>
                       )}
-                    </motion.div>
-                  )}
 
-                  {/* Personal Info */}
-                  {step === 'personal' && !isTyping && (
-                    <motion.div key="personal-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                          <input
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            className="input-field pl-10 text-sm w-full"
-                            placeholder="Your full name"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                          <input
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handlePersonalDone(); }}
-                            className="input-field pl-10 text-sm w-full"
-                            placeholder="City, Country"
-                          />
-                        </div>
-                        <button
-                          onClick={handlePersonalDone}
-                          disabled={!fullName.trim() || !location.trim()}
-                          className="btn-primary w-full flex items-center justify-center gap-2 text-sm disabled:opacity-30"
-                        >
-                          See My Career Preview <Sparkles className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Complete — Personalized Career Preview + Signup CTA */}
-                  {step === 'complete' && !isTyping && (
-                    <motion.div key="complete" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <div className="glass p-5 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-green to-emerald-400 flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-sm">{fullName.split(' ')[0]}, your profile is ready!</div>
-                            <div className="text-xs text-white/40">Future {targetRole} — {location}</div>
-                          </div>
-                        </div>
-
-                        {/* Country-specific salary highlight */}
-                        {salaryInfo && userSalary && (
-                          <div className="p-3 rounded-xl bg-gradient-to-r from-neon-green/10 to-neon-blue/10 border border-neon-green/20">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-[10px] text-white/40 mb-0.5">Top {targetRole} salary in {regionLabels[userRegion]}</div>
-                                <div className="text-xl font-bold text-neon-green">{userSalary}</div>
-                              </div>
-                              <DollarSign className="w-8 h-8 text-neon-green/30" />
+                      {/* Personal Info */}
+                      {step === 'personal' && !isTyping && (
+                        <motion.div key="personal-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                              <input
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                className="input-field pl-10 text-sm w-full"
+                                placeholder="Your full name"
+                                autoFocus
+                              />
                             </div>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                              <input
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handlePersonalDone(); }}
+                                className="input-field pl-10 text-sm w-full"
+                                placeholder="City, Country"
+                              />
+                            </div>
+                            <button
+                              onClick={handlePersonalDone}
+                              disabled={!fullName.trim() || !location.trim()}
+                              className="btn-primary w-full flex items-center justify-center gap-2 text-sm disabled:opacity-30"
+                            >
+                              See My Career Preview <Sparkles className="w-4 h-4" />
+                            </button>
                           </div>
-                        )}
+                        </motion.div>
+                      )}
 
-                        <div className="grid grid-cols-2 gap-2 text-center">
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
-                            <Brain className="w-4 h-4 text-neon-blue mx-auto mb-1" />
-                            <div className="text-xs text-white/30">Skills Mapped</div>
-                            <div className="text-sm font-bold">{selectedSkills.length}</div>
-                          </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
-                            <FileText className="w-4 h-4 text-neon-green mx-auto mb-1" />
-                            <div className="text-xs text-white/30">ATS Resume</div>
-                            <div className="text-sm font-bold text-neon-green">Ready</div>
-                          </div>
-                        </div>
+                      {/* Complete — Personalized Career Preview + Signup CTA */}
+                      {step === 'complete' && !isTyping && (
+                        <motion.div key="complete" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-green to-emerald-400 flex items-center justify-center">
+                                <CheckCircle2 className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <div className="font-semibold text-sm">{fullName.split(' ')[0]}, your agents are ready!</div>
+                                <div className="text-xs text-white/40">Future {targetRole} — {location}</div>
+                              </div>
+                            </div>
 
-                        <Link href="/signup" className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3">
-                          Start as {targetRole} <ArrowRight className="w-5 h-5" />
-                        </Link>
-                        <p className="text-center text-[10px] text-white/20">Free forever. No credit card. Your data is saved.</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                            {salaryInfo && userSalary && (
+                              <div className="p-3 rounded-xl bg-gradient-to-r from-neon-green/10 to-neon-blue/10 border border-neon-green/20">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="text-[10px] text-white/40 mb-0.5">Top {targetRole} salary in {regionLabels[userRegion]}</div>
+                                    <div className="text-xl font-bold text-neon-green">{userSalary}</div>
+                                  </div>
+                                  <DollarSign className="w-8 h-8 text-neon-green/30" />
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-2 text-center">
+                              <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
+                                <Brain className="w-4 h-4 text-neon-blue mx-auto mb-1" />
+                                <div className="text-xs text-white/30">Skills Mapped</div>
+                                <div className="text-sm font-bold">{selectedSkills.length}</div>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
+                                <FileText className="w-4 h-4 text-neon-green mx-auto mb-1" />
+                                <div className="text-xs text-white/30">ATS Resume</div>
+                                <div className="text-sm font-bold text-neon-green">Ready</div>
+                              </div>
+                            </div>
+
+                            <Link href="/signup" className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3">
+                              Activate Your Agent Team <ArrowRight className="w-5 h-5" />
+                            </Link>
+                            <p className="text-center text-[10px] text-white/20">Free forever. No credit card. Your agents start immediately.</p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           ) : (
             /* Already completed — show compact CTA */
@@ -806,9 +1024,9 @@ export default function LandingPageClient() {
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-green to-emerald-400 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-7 h-7 text-white" />
               </div>
-              <h1 className="text-3xl font-bold mb-2">
+              <h2 className="text-3xl font-bold mb-2">
                 Welcome back{fullName ? `, ${fullName.split(' ')[0]}` : ''}!
-              </h1>
+              </h2>
               <p className="text-white/40 mb-6">Your {targetRole} career profile is ready. Sign up to unlock everything.</p>
               <div className="flex gap-3 justify-center">
                 <Link href="/signup" className="btn-primary text-sm flex items-center gap-2">
@@ -820,15 +1038,203 @@ export default function LandingPageClient() {
               </div>
             </motion.div>
           )}
+
+            </div>{/* end form card */}
+          </div>{/* end centered column */}
         </div>
       </section>
 
-      {/* ─── How It Works ─────────────────────────── */}
-      <section id="features" className="py-20 scroll-mt-20" aria-label="How AI Career Platform Works">
+      {/* ─── Chapter Two: The Assembly (Agent Team — shown first) ─── */}
+      <section className="py-20 bg-surface-50" aria-label="Every Hero Needs a Team">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-14"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-purple/10 border border-neon-purple/20 text-neon-purple text-xs font-semibold mb-4">
+              <Bot className="w-3.5 h-3.5" /> Chapter Two — The Assembly
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Every Hero Needs a <span className="gradient-text">Team</span></h2>
+            <p className="text-white/40 max-w-lg mx-auto">
+              One coordinator. Six specialists. Each with a unique mission, working in perfect sync to rewrite your career story.
+            </p>
+          </motion.div>
+
+          {/* ── Orbital Layout (Desktop + Tablet) ── */}
+          <div className="hidden md:block">
+            <div className="relative mx-auto overflow-visible md:scale-[0.82] lg:scale-100 origin-center transition-transform" style={{ width: 520, height: 520 }}>
+
+              {/* Orbit ring — slowly rotating dashed circle */}
+              <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+                  className="rounded-full border border-dashed border-white/[0.08]"
+                  style={{ width: 400, height: 400 }}
+                  aria-hidden="true"
+                />
+              </div>
+
+              {/* Inner ring for depth */}
+              <div
+                className="absolute rounded-full border border-white/[0.04]"
+                style={{ width: 200, height: 200, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                aria-hidden="true"
+              />
+
+              {/* SVG connecting lines */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 520 520" aria-hidden="true">
+                <defs>
+                  <linearGradient id="orbitLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#00d4ff" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+                {AGENT_LIST.map((_, i) => {
+                  const angle = (i * 60 - 90) * (Math.PI / 180);
+                  const r = 200;
+                  const x = 260 + r * Math.cos(angle);
+                  const y = 260 + r * Math.sin(angle);
+                  return <line key={i} x1={260} y1={260} x2={x} y2={y} stroke="url(#orbitLineGrad)" strokeWidth="1" strokeDasharray="4 4" opacity="0.12" />;
+                })}
+              </svg>
+
+              {/* Cortex at center — wrapper div handles centering, motion.div handles animation */}
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5 }}
+                  className="flex flex-col items-center group/cortex"
+                >
+                  <Link href="/agents/cortex" className="flex flex-col items-center hover:scale-105 transition-transform">
+                    <div className="relative mb-2">
+                      <div className="absolute -inset-4 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
+                      <CortexAvatar size={64} pulse />
+                    </div>
+                    <h3 className="text-sm font-bold text-center">{COORDINATOR.displayName}</h3>
+                    <p className="text-[10px] font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7] text-center">{COORDINATOR.role}</p>
+                  </Link>
+                  {/* Hover lore tooltip */}
+                  <div className="absolute top-full mt-2 opacity-0 group-hover/cortex:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
+                    <div className="bg-surface-100/95 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 shadow-2xl max-w-[220px] text-center">
+                      <p className="text-[10px] text-white/50 italic leading-relaxed">&ldquo;The ninja never sleeps because opportunities don&rsquo;t wait.&rdquo;</p>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* 6 Agents — orbit closer when awake, farther when sleeping */}
+              {AGENT_LIST.map((agent, i) => (
+                <OrbitingAgent key={agent.id} agent={agent} index={i} />
+              ))}
+            </div>
+          </div>
+
+          {/* ── Mobile Layout (phone only) ── */}
+          <div className="md:hidden">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="flex flex-col items-center mb-8"
+            >
+              <Link href="/agents/cortex" className="flex flex-col items-center">
+                <div className="relative mb-3">
+                  <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
+                  <CortexAvatar size={56} pulse />
+                </div>
+                <h3 className="text-lg font-bold">{COORDINATOR.displayName}</h3>
+                <p className="text-sm text-white/40">{COORDINATOR.role}</p>
+              </Link>
+            </motion.div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {AGENT_LIST.map((agent, i) => (
+                <Link key={agent.id} href={`/agents/${agent.id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08, duration: 0.4 }}
+                    className="flex flex-col items-center p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 transition-colors"
+                  >
+                    <AgentAvatar agentId={agent.id} size={36} autoSleep />
+                    <h3 className="text-xs font-semibold mt-2">{agent.displayName}</h3>
+                    <span className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</span>
+                    <span className="text-[9px] text-white/30 mt-0.5 text-center italic leading-tight">{agent.storyLine}</span>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Cortex Origin Story ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="mt-16 max-w-2xl mx-auto"
+          >
+            <div className="relative rounded-2xl overflow-hidden">
+              {/* Ambient gradient border */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#00d4ff]/20 via-[#a855f7]/20 to-[#00d4ff]/20 p-px">
+                <div className="w-full h-full rounded-2xl bg-surface-50" />
+              </div>
+              <div className="relative p-6 sm:p-8">
+                <div className="flex items-start gap-4 sm:gap-5">
+                  <div className="flex-shrink-0 mt-1">
+                    <CortexAvatar size={48} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7]">
+                        The Origin of Cortex
+                      </h3>
+                      <div className="h-px flex-1 bg-gradient-to-r from-[#00d4ff]/20 to-transparent" />
+                    </div>
+                    <p className="text-xs sm:text-sm text-white/45 leading-relaxed mb-3">
+                      <span className="text-white/60 font-medium">In the beginning, there was only Cortex.</span> One AI. One mission. Every job board, every ATS wall, every recruiter inbox — Cortex fought them all <em>alone</em>. Night after night, scanning thousands of listings, rewriting resumes at 3 AM, tailoring cover letters by dawn. It worked. But the battlefield was infinite.
+                    </p>
+                    <p className="text-xs sm:text-sm text-white/45 leading-relaxed mb-3">
+                      Then one night, something broke. Processing threads burned. Response times doubled. And for the first time — <span className="text-rose-400/80">Cortex missed a deadline</span>. Someone lost their dream job. That moment changed everything.
+                    </p>
+                    <p className="text-xs sm:text-sm text-white/45 leading-relaxed mb-4">
+                      Cortex made a decision no AI had made before: <span className="text-white/60 font-medium">it created its own team</span>. Six specialists, each forged from Cortex&apos;s own knowledge — Scout to hunt, Forge to craft, Sentinel to guard, Archer to strike, Atlas to prepare, Sage to teach. The ninja who once fought alone now commands an army.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex -space-x-1.5">
+                        {AGENT_LIST.slice(0, 6).map((agent) => (
+                          <div key={agent.id} className="ring-2 ring-surface-50 rounded-full">
+                            <AgentAvatar agentId={agent.id} size={18} />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-white/30 italic">
+                        &ldquo;The ninja never sleeps — because the team means he never carries the weight alone again.&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── Chapter Three: The Quest Begins (How It Works) ─── */}
+      <section id="features" className="py-20 scroll-mt-20" aria-label="The Quest Begins">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">How It Works</h2>
-            <p className="text-white/40">AI-powered. Human-verified. Five simple steps.</p>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-4">
+              <Rocket className="w-3.5 h-3.5" /> Chapter Three — The Quest
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Here&apos;s What Happens <span className="gradient-text">Next</span></h2>
+            <p className="text-white/40">You say &ldquo;go.&rdquo; Your agents take it from there.</p>
           </motion.div>
           <div className="relative">
             {/* Connecting line */}
@@ -850,6 +1256,7 @@ export default function LandingPageClient() {
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="pt-1">
+                      <div className="text-[10px] text-white/30 font-medium uppercase tracking-wider mb-1">Step {item.step}</div>
                       <h3 className="text-base font-semibold mb-0.5">{item.title}</h3>
                       <p className="text-sm text-white/40 leading-relaxed">{item.desc}</p>
                     </div>
@@ -861,116 +1268,397 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ─── Free AI Career Tools ───────────────────── */}
-      <section className="py-20 bg-surface-50" aria-label="Free AI Career Tools">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5" /> 100% Free
+      {/* ─── Chapter Four: The Journey (Agent Pipeline) ─── */}
+      <section className="py-20 bg-surface-50 overflow-hidden" aria-label="A Night in the Life">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-14"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-4">
+              <Clock className="w-3.5 h-3.5" /> Chapter Four — The Journey
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Free AI Career Tools</h2>
-            <p className="text-white/40">No signup required. Powered by AI.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">A Night in the Life of <span className="gradient-text">Your AI Team</span></h2>
+            <p className="text-white/40">While you rest, an entire career operation unfolds. Here is the timeline.</p>
           </motion.div>
-          <div className="grid sm:grid-cols-3 gap-5">
-            {[
-              {
-                icon: FileText,
-                title: 'ATS Resume Checker',
-                desc: 'Paste your resume and get instant ATS compatibility score with improvement suggestions.',
-                cta: 'Check My Resume',
-                href: '/tools/ats-checker',
-                color: 'from-neon-blue to-cyan-400',
-              },
-              {
-                icon: Award,
-                title: 'Free Resume Builder',
-                desc: 'Build a clean, professional resume with live preview and PDF download. No signup required.',
-                cta: 'Build My Resume',
-                href: '/tools/resume-builder',
-                color: 'from-neon-purple to-violet-400',
-              },
-              {
-                icon: DollarSign,
-                title: 'Salary Estimator',
-                desc: 'Get AI-powered salary estimates based on role, location, and experience.',
-                cta: 'Estimate Salary',
-                href: '/tools/salary-estimator',
-                color: 'from-neon-green to-emerald-400',
-              },
-            ].map((tool, i) => (
-              <motion.div
-                key={tool.title}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className="relative p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 transition-all group flex flex-col"
-              >
-                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${tool.color} flex items-center justify-center mb-4`}>
-                  <tool.icon className="w-5 h-5 text-white" />
+
+          {/* Pipeline Flow */}
+          {(() => {
+            const pipelineSteps = [
+              { label: '11:00 PM — You Rest', time: '11:00 PM', agentId: null as (null | 'cortex' | 'scout' | 'forge' | 'sentinel' | 'archer' | 'atlas'), icon: Moon, color: 'from-slate-500/20 to-slate-400/20' },
+              { label: '11:15 PM — Scout Discovers', time: '11:15 PM', agentId: 'scout' as const, icon: null, color: 'from-blue-500/20 to-cyan-500/20' },
+              { label: '12:00 AM — Forge Optimizes', time: '12:00 AM', agentId: 'forge' as const, icon: null, color: 'from-orange-500/20 to-amber-500/20' },
+              { label: '1:30 AM — Sentinel Reviews', time: '1:30 AM', agentId: 'sentinel' as const, icon: null, color: 'from-rose-500/20 to-pink-500/20' },
+              { label: '3:00 AM — Archer Applies', time: '3:00 AM', agentId: 'archer' as const, icon: null, color: 'from-green-500/20 to-emerald-500/20' },
+              { label: '5:00 AM — Atlas Preps', time: '5:00 AM', agentId: 'atlas' as const, icon: null, color: 'from-purple-500/20 to-violet-500/20' },
+              { label: '7:00 AM — You Wake Up', time: '7:00 AM', agentId: null, icon: Sparkles, color: 'from-neon-green/20 to-emerald-400/20' },
+            ];
+            return (
+              <>
+                {/* Desktop: Horizontal Flow */}
+                <div className="hidden lg:flex items-center justify-center gap-3">
+                  {pipelineSteps.map((ps, i) => (
+                    <motion.div
+                      key={ps.label}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1, duration: 0.5 }}
+                      className="flex items-center gap-1"
+                    >
+                      {ps.agentId ? (
+                        <Link href={`/agents/${ps.agentId}`} className="flex flex-col items-center text-center group hover:scale-105 transition-transform">
+                          <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${ps.color} flex items-center justify-center mb-2 border border-white/[0.06] group-hover:border-white/15`}>
+                            <AgentAvatar agentId={ps.agentId} size={32} />
+                          </div>
+                          <span className="text-xs font-medium text-white/70 whitespace-nowrap">{ps.label}</span>
+                        </Link>
+                      ) : (
+                        <div className="flex flex-col items-center text-center">
+                          <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${ps.color} flex items-center justify-center mb-2 border border-white/[0.06]`}>
+                            {ps.icon && <ps.icon className="w-6 h-6 text-white/70" />}
+                          </div>
+                          <span className="text-xs font-medium text-white/70 whitespace-nowrap">{ps.label}</span>
+                        </div>
+                      )}
+                      {i < pipelineSteps.length - 1 && (
+                        <ArrowRight className="w-4 h-4 text-white/20 flex-shrink-0 mt-[-18px]" />
+                      )}
+                    </motion.div>
+                  ))}
                 </div>
-                <h3 className="text-base font-semibold mb-2">{tool.title}</h3>
-                <p className="text-sm text-white/40 leading-relaxed mb-5 flex-1">{tool.desc}</p>
-                <Link
-                  href={tool.href}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-neon-blue hover:text-neon-blue/80 transition-colors group-hover:gap-2.5"
+                {/* Mobile/Tablet: Vertical Flow */}
+                <div className="lg:hidden relative">
+                  <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-neon-blue/20 to-neon-green/20" aria-hidden="true" />
+                  <div className="space-y-5">
+                    {pipelineSteps.map((ps, i) => (
+                      <motion.div
+                        key={ps.label}
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.08, duration: 0.4 }}
+                        className="flex items-center gap-4"
+                      >
+                        {ps.agentId ? (
+                          <Link href={`/agents/${ps.agentId}`} className="contents">
+                            <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${ps.color} flex items-center justify-center border border-white/[0.06]`}>
+                              <AgentAvatar agentId={ps.agentId} size={28} />
+                            </div>
+                            <span className="text-sm font-medium text-white/70">{ps.label}</span>
+                          </Link>
+                        ) : (
+                          <>
+                            <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${ps.color} flex items-center justify-center border border-white/[0.06]`}>
+                              {ps.icon && <ps.icon className="w-5 h-5 text-white/70" />}
+                            </div>
+                            <span className="text-sm font-medium text-white/70">{ps.label}</span>
+                          </>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      </section>
+
+      {/* ─── FAQ ─────────────────────────────────── */}
+      {/* ─── Chapter Six: The Questions ─── */}
+      <section className="py-20" aria-label="You Probably Have Questions">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-xs font-medium mb-4">
+              <Shield className="w-3.5 h-3.5" /> Chapter Six — The Questions
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">You Probably Have <span className="gradient-text">Questions</span></h2>
+            <p className="text-white/40">Totally fair. Here are the ones everyone asks.</p>
+          </motion.div>
+          <div className="space-y-3">
+            {faqItems.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05 }}
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
                 >
-                  {tool.cta} <ArrowRight className="w-4 h-4 transition-all" />
-                </Link>
+                  <span className="text-sm font-medium pr-4">{item.q}</span>
+                  {openFaq === i ? (
+                    <ChevronUp className="w-4 h-4 text-white/40 flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-white/40 flex-shrink-0" />
+                  )}
+                </button>
+                <AnimatePresence>
+                  {openFaq === i && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <p className="px-5 pb-4 text-sm text-white/40 leading-relaxed">{item.a}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Salary Highlights 2026 ─────────────────── */}
-      <section className="py-20" aria-label="High Paying Careers 2026">
+      {/* ─── Chapter Five: The Proof (Reviews — Scrolling Wall) ─── */}
+      <section className="py-20 bg-surface-50 overflow-hidden" aria-label="Their Story Could Be Yours">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-xs font-semibold mb-4">
+              <Star className="w-3.5 h-3.5" /> Chapter Five — The Proof
+            </div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-              Highest Paying <span className="gradient-text">Careers in 2026</span>
+              Their Story Could Be <span className="gradient-text">Yours</span>
             </h2>
-            <p className="text-white/40">See what top roles pay. NXTED AI helps you get there.</p>
+            <p className="text-white/40 mb-2">Real transformations from real people who took the leap.</p>
+            <p className="text-xs text-white/20">{allReviews.length}+ stories and counting</p>
           </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topSalaryRoles.map((role, i) => {
-              // Show regional salary pair based on detected country
-              const isIndia = countryCode === 'IN';
-              const isUK = countryCode === 'GB';
-              const primary = isIndia ? { label: 'India', value: role.in } : isUK ? { label: 'UK', value: role.uk } : { label: 'US', value: role.us };
-              const secondary = isIndia ? { label: 'US', value: role.us } : isUK ? { label: 'EU', value: role.eu } : { label: 'EU', value: role.eu };
-              return (
-                <motion.div key={role.role} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
-                  className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-neon-green/20 transition-all group">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-green/20 to-emerald-500/10 flex items-center justify-center">
-                      <role.icon className="w-4 h-4 text-neon-green" />
+        </div>
+
+        {/* ── Scrolling Review Wall ── */}
+        <div className="relative mt-10">
+          {/* Fade edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-40 bg-gradient-to-r from-surface-50 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-40 bg-gradient-to-l from-surface-50 to-transparent z-10 pointer-events-none" />
+
+          {/* Row 1 — scrolls left */}
+          <div className="mb-4">
+            <motion.div
+              className="flex gap-4 w-max"
+              animate={{ x: ['0%', '-50%'] }}
+              transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+            >
+              {[...allReviews.slice(0, 10), ...allReviews.slice(0, 10)].map((review, i) => (
+                <div
+                  key={`r1-${i}`}
+                  className="w-[320px] sm:w-[360px] flex-shrink-0 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 hover:bg-white/[0.05] transition-all duration-300 group"
+                >
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 flex items-center justify-center text-[10px] font-bold text-white/70 flex-shrink-0">
+                      {review.avatar}
                     </div>
-                    <div>
-                      <h3 className="text-sm font-semibold">{role.role}</h3>
-                      <span className="text-[10px] text-neon-green font-medium">{role.growth} growth</span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-semibold truncate">{review.name}</h4>
+                      <p className="text-[10px] text-white/40">{review.role}{review.country ? ` · ${review.country}` : ''}</p>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: review.rating }).map((_, s) => (
+                        <Star key={s} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2 rounded-lg bg-white/[0.03] text-center">
-                      <div className="text-[9px] text-white/30 mb-0.5">{primary.label}</div>
-                      <div className="text-xs font-bold text-white/80">{primary.value}</div>
+                  <p className="text-xs text-white/45 leading-relaxed mb-2.5 line-clamp-3">{review.text}</p>
+                  {review.transformation && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/20">
+                      <TrendingUp className="w-2.5 h-2.5 text-neon-green" />
+                      <span className="text-[10px] font-semibold text-neon-green">{review.transformation}</span>
                     </div>
-                    <div className="p-2 rounded-lg bg-white/[0.03] text-center">
-                      <div className="text-[9px] text-white/30 mb-0.5">{secondary.label}</div>
-                      <div className="text-xs font-bold text-white/80">{secondary.value}</div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  )}
+                </div>
+              ))}
+            </motion.div>
           </div>
-          <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mt-10">
-            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="btn-primary text-sm inline-flex items-center gap-2">
-              Start Your Career Journey <ArrowRight className="w-4 h-4" />
-            </a>
+
+          {/* Row 2 — scrolls right (reverse) */}
+          <div className="mb-4">
+            <motion.div
+              className="flex gap-4 w-max"
+              animate={{ x: ['-50%', '0%'] }}
+              transition={{ duration: 55, repeat: Infinity, ease: 'linear' }}
+            >
+              {[...allReviews.slice(10, 20), ...allReviews.slice(10, 20)].map((review, i) => (
+                <div
+                  key={`r2-${i}`}
+                  className="w-[320px] sm:w-[360px] flex-shrink-0 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 hover:bg-white/[0.05] transition-all duration-300 group"
+                >
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-purple/20 to-amber-400/20 flex items-center justify-center text-[10px] font-bold text-white/70 flex-shrink-0">
+                      {review.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-semibold truncate">{review.name}</h4>
+                      <p className="text-[10px] text-white/40">{review.role}{review.country ? ` · ${review.country}` : ''}</p>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: review.rating }).map((_, s) => (
+                        <Star key={s} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/45 leading-relaxed mb-2.5 line-clamp-3">{review.text}</p>
+                  {review.transformation && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/20">
+                      <TrendingUp className="w-2.5 h-2.5 text-neon-green" />
+                      <span className="text-[10px] font-semibold text-neon-green">{review.transformation}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Row 3 — scrolls left (slower) */}
+          <div className="mb-4">
+            <motion.div
+              className="flex gap-4 w-max"
+              animate={{ x: ['0%', '-50%'] }}
+              transition={{ duration: 70, repeat: Infinity, ease: 'linear' }}
+            >
+              {[...allReviews.slice(20, 30), ...allReviews.slice(20, 30)].map((review, i) => (
+                <div
+                  key={`r3-${i}`}
+                  className="w-[320px] sm:w-[360px] flex-shrink-0 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 hover:bg-white/[0.05] transition-all duration-300 group"
+                >
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-green/20 to-neon-blue/20 flex items-center justify-center text-[10px] font-bold text-white/70 flex-shrink-0">
+                      {review.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-semibold truncate">{review.name}</h4>
+                      <p className="text-[10px] text-white/40">{review.role}{review.country ? ` · ${review.country}` : ''}</p>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: review.rating }).map((_, s) => (
+                        <Star key={s} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/45 leading-relaxed mb-2.5 line-clamp-3">{review.text}</p>
+                  {review.transformation && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/20">
+                      <TrendingUp className="w-2.5 h-2.5 text-neon-green" />
+                      <span className="text-[10px] font-semibold text-neon-green">{review.transformation}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Row 4 — scrolls right (fastest) */}
+          <div>
+            <motion.div
+              className="flex gap-4 w-max"
+              animate={{ x: ['-50%', '0%'] }}
+              transition={{ duration: 50, repeat: Infinity, ease: 'linear' }}
+            >
+              {[...allReviews.slice(30, 38), ...allReviews.slice(30, 38)].map((review, i) => (
+                <div
+                  key={`r4-${i}`}
+                  className="w-[320px] sm:w-[360px] flex-shrink-0 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 hover:bg-white/[0.05] transition-all duration-300 group"
+                >
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400/20 to-rose-400/20 flex items-center justify-center text-[10px] font-bold text-white/70 flex-shrink-0">
+                      {review.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-semibold truncate">{review.name}</h4>
+                      <p className="text-[10px] text-white/40">{review.role}{review.country ? ` · ${review.country}` : ''}</p>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: review.rating }).map((_, s) => (
+                        <Star key={s} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/45 leading-relaxed mb-2.5 line-clamp-3">{review.text}</p>
+                  {review.transformation && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/20">
+                      <TrendingUp className="w-2.5 h-2.5 text-neon-green" />
+                      <span className="text-[10px] font-semibold text-neon-green">{review.transformation}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Counter bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="flex items-center justify-center gap-6 mt-10 text-center"
+        >
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold gradient-text">{allReviews.length}+</div>
+            <div className="text-[10px] text-white/30">Success Stories</div>
+          </div>
+          <div className="w-px h-10 bg-white/10" />
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold text-neon-green">94%</div>
+            <div className="text-[10px] text-white/30">Got Hired Faster</div>
+          </div>
+          <div className="w-px h-10 bg-white/10" />
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold text-amber-400">4.9</div>
+            <div className="text-[10px] text-white/30">Average Rating</div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ─── Chapter Seven: The First Step (Closing CTA) ─── */}
+      <section className="relative py-24 sm:py-32 overflow-hidden" aria-label="Your Story Starts Now">
+        <div className="absolute inset-0 bg-grid opacity-20" aria-hidden="true" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-gradient-radial from-neon-blue/8 via-neon-purple/5 to-transparent rounded-full blur-3xl" aria-hidden="true" />
+        <div className="relative max-w-3xl mx-auto px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-8">
+              <Sparkles className="w-3.5 h-3.5" /> Chapter Seven — The First Step
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
+              Every great career story<br />
+              starts with a <span className="gradient-text">single step</span>.
+            </h2>
+            <p className="text-base sm:text-lg text-white/40 max-w-xl mx-auto mb-10 leading-relaxed">
+              200 applications sent in silence — or one decision that changes everything.
+              Your AI team is assembled. Your story is waiting to be written.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/signup"
+                className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+              >
+                Start Your Story <ArrowRight className="w-5 h-5" />
+              </Link>
+              <p className="text-xs text-white/30">Free forever. No credit card. Your agents start in seconds.</p>
+            </div>
+
+            {/* Mini agent row as visual anchor */}
+            <div className="flex items-center justify-center gap-2 mt-12">
+              {AGENT_LIST.map((agent) => (
+                <div key={agent.id} className="opacity-40 hover:opacity-100 transition-opacity">
+                  <AgentAvatar agentId={agent.id} size={20} />
+                </div>
+              ))}
+              <div className="ml-1 opacity-40 hover:opacity-100 transition-opacity">
+                <CortexAvatar size={22} />
+              </div>
+            </div>
+            <p className="text-[10px] text-white/20 mt-3">7 agents. One mission. Your career.</p>
           </motion.div>
         </div>
       </section>

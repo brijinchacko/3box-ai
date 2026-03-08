@@ -87,7 +87,7 @@ const sections = [
     icon: Baby,
     title: "Children's Privacy",
     content: [
-      { text: 'NXTED AI is not intended for users under 16 years of age.' },
+      { text: 'jobTED AI is not intended for users under 16 years of age.' },
       { text: 'We do not knowingly collect data from children under 16.' },
       { text: 'If we discover such data has been collected, it will be deleted promptly.' },
     ],

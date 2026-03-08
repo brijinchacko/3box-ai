@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import ToolsPageClient from './ToolsPageClient';
 
 export const metadata: Metadata = {
-  title: 'Free AI Career Tools | NXTED AI',
+  title: 'Free AI Career Tools | jobTED AI',
   description:
-    'Use free AI-powered career tools including ATS resume checker and salary estimator. No signup required.',
+    '17 free AI-powered career tools: resume builder, LinkedIn optimizer, cover letter generator, interview prep, and more. No signup required.',
 };
 
 export default function ToolsPage() {

@@ -12,8 +12,8 @@ export default function TermsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxted.ai' },
-            { name: 'Terms of Service', url: 'https://nxted.ai/terms' },
+            { name: 'Home', url: 'https://jobted.ai' },
+            { name: 'Terms of Service', url: 'https://jobted.ai/terms' },
           ])),
         }}
       />

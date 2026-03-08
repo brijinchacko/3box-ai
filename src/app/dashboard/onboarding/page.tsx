@@ -230,11 +230,11 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error('Failed to save');
 
       // Save to localStorage for resume builder and dashboard
-      localStorage.setItem('nxted_target_role', data.targetRole);
-      localStorage.setItem('nxted_interests', JSON.stringify(data.skills.slice(0, 5)));
-      localStorage.setItem('nxted_onboarding_profile', JSON.stringify(data));
-      localStorage.setItem('nxted_user_location', data.location);
-      localStorage.setItem('nxted_skill_scores', JSON.stringify(
+      localStorage.setItem('jobted_target_role', data.targetRole);
+      localStorage.setItem('jobted_interests', JSON.stringify(data.skills.slice(0, 5)));
+      localStorage.setItem('jobted_onboarding_profile', JSON.stringify(data));
+      localStorage.setItem('jobted_user_location', data.location);
+      localStorage.setItem('jobted_skill_scores', JSON.stringify(
         data.skills.reduce((acc, skill) => {
           acc[skill] = data.experienceLevel === 'fresher' ? 30 : data.experienceLevel === '0-1' ? 40 : data.experienceLevel === '1-3' ? 55 : data.experienceLevel === '3-5' ? 65 : data.experienceLevel === '5-10' ? 75 : 85;
           return acc;
@@ -250,7 +250,7 @@ export default function OnboardingPage() {
         skills: data.skills,
         targetRole: data.targetRole,
       };
-      localStorage.setItem('nxted_resume_draft', JSON.stringify(resumeData));
+      localStorage.setItem('jobted_resume_draft', JSON.stringify(resumeData));
 
       router.push('/dashboard');
     } catch {
@@ -274,7 +274,7 @@ export default function OnboardingPage() {
       <div className="relative w-full max-w-2xl">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
-          <h1 className="text-2xl font-bold mb-1">Welcome to <span className="gradient-text">NXTED AI</span></h1>
+          <h1 className="text-2xl font-bold mb-1">Welcome to <span className="gradient-text">jobTED AI</span></h1>
           <p className="text-white/40 text-sm">Tell us about yourself so we can personalize your experience</p>
         </motion.div>
 

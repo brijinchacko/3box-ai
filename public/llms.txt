@@ -1,10 +1,10 @@
-# NXTED AI
+# jobTED AI
 
-> NXTED AI is an AI-powered career operating system by OFORO AI. It provides free AI resume building, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching.
+> jobTED AI is an AI-powered career operating system by OFORO AI. It provides free AI resume building, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching.
 
 ## Product Overview
 
-NXTED AI takes users through a complete career pipeline: Skill Assessment → Personalized Career Plan → Adaptive Learning → Resume & Portfolio Building → Verified Credentials → AI Job Matching → Automated Applications.
+jobTED AI takes users through a complete career pipeline: Skill Assessment → Personalized Career Plan → Adaptive Learning → Resume & Portfolio Building → Verified Credentials → AI Job Matching → Automated Applications.
 
 ## Key Features
 
@@ -35,13 +35,13 @@ Built with Next.js 14, TypeScript, Tailwind CSS, PostgreSQL, Prisma ORM, NextAut
 
 ## Company
 
-NXTED AI is a product of OFORO AI (https://oforo.ai).
+jobTED AI is a product of OFORO AI (https://oforo.ai).
 
 ## Links
 
-- Website: https://nxted.ai
-- Pricing: https://nxted.ai/pricing
-- About: https://nxted.ai/about
-- Security: https://nxted.ai/security
-- Login: https://nxted.ai/login
-- Sign Up: https://nxted.ai/signup
+- Website: https://jobted.ai
+- Pricing: https://jobted.ai/pricing
+- About: https://jobted.ai/about
+- Security: https://jobted.ai/security
+- Login: https://jobted.ai/login
+- Sign Up: https://jobted.ai/signup

@@ -150,12 +150,12 @@ const faqs = [
   {
     question: 'How do I pass ATS as a nurse?',
     answer:
-      'Hospital ATS systems like Taleo, Workday, and iCIMS search for specific nursing terms. Include your exact license type (RN, LPN, NP), specialty certifications, EMR systems you have used, clinical procedures, and unit types (ICU, ER, Med-Surg, L&D). NXTED AI auto-detects missing nursing keywords and suggests additions.',
+      'Hospital ATS systems like Taleo, Workday, and iCIMS search for specific nursing terms. Include your exact license type (RN, LPN, NP), specialty certifications, EMR systems you have used, clinical procedures, and unit types (ICU, ER, Med-Surg, L&D). jobTED AI auto-detects missing nursing keywords and suggests additions.',
   },
   {
     question: 'Should I use AI to write my nursing resume?',
     answer:
-      'Yes. AI resume builders like NXTED AI understand healthcare terminology, HIPAA compliance language, and what nursing recruiters look for. The AI helps you articulate patient outcomes, leadership experience, and clinical skills in a way that passes ATS filters used by hospital systems and staffing agencies.',
+      'Yes. AI resume builders like jobTED AI understand healthcare terminology, HIPAA compliance language, and what nursing recruiters look for. The AI helps you articulate patient outcomes, leadership experience, and clinical skills in a way that passes ATS filters used by hospital systems and staffing agencies.',
   },
   {
     question: 'How do I highlight certifications on a nursing resume?',
@@ -462,11 +462,11 @@ export default function NurseClient() {
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Join 10,000+ Nurses Using{' '}
-              <span className="gradient-text">NXTED AI</span>
+              <span className="gradient-text">jobTED AI</span>
             </h2>
             <p className="text-white/50 max-w-2xl mx-auto mb-8">
               Nurses at HCA Healthcare, Kaiser Permanente, Mayo Clinic, and travel
-              nursing agencies trust NXTED AI to build resumes that showcase their
+              nursing agencies trust jobTED AI to build resumes that showcase their
               clinical expertise and pass hospital ATS filters.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

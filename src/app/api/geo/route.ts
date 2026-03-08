@@ -1,5 +1,5 @@
 // =============================================================================
-// NXTED AI — GET /api/geo
+// jobTED AI — GET /api/geo
 // =============================================================================
 // Client-side endpoint for geo detection.
 // Returns the detected region, currency, pricing, and tagline.

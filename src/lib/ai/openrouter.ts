@@ -20,7 +20,8 @@ export type AIFeature =
   | 'coach'
   | 'dashboard-insights'
   | 'ats-checker'
-  | 'salary-estimator';
+  | 'salary-estimator'
+  | 'tools-general';
 
 export interface AIModelConfig {
   id: string;
@@ -88,6 +89,7 @@ const MODEL_ROUTING: Record<PlanTier, Record<AIFeature, ModelTier>> = {
     'dashboard-insights': 'free',
     'ats-checker': 'free',
     'salary-estimator': 'free',
+    'tools-general': 'free',
   },
   STARTER: {
     'assessment': 'standard',
@@ -101,6 +103,7 @@ const MODEL_ROUTING: Record<PlanTier, Record<AIFeature, ModelTier>> = {
     'dashboard-insights': 'free',
     'ats-checker': 'standard',
     'salary-estimator': 'free',
+    'tools-general': 'standard',
   },
   PRO: {
     'assessment': 'standard',
@@ -114,6 +117,7 @@ const MODEL_ROUTING: Record<PlanTier, Record<AIFeature, ModelTier>> = {
     'dashboard-insights': 'standard',
     'ats-checker': 'standard',
     'salary-estimator': 'standard',
+    'tools-general': 'standard',
   },
   ULTRA: {
     'assessment': 'reasoning',
@@ -127,6 +131,7 @@ const MODEL_ROUTING: Record<PlanTier, Record<AIFeature, ModelTier>> = {
     'dashboard-insights': 'standard',
     'ats-checker': 'reasoning',
     'salary-estimator': 'standard',
+    'tools-general': 'reasoning',
   },
 };
 
@@ -224,8 +229,8 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://nxted.ai',
-      'X-Title': 'NXTED AI',
+      'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://jobted.ai',
+      'X-Title': 'jobTED AI',
     },
     body: JSON.stringify(body),
   });
@@ -294,7 +299,7 @@ export async function generateAssessmentQuestions(
       messages: [
         {
           role: 'system',
-          content: injectContext(`You are an expert career assessment AI for NXTED AI platform. Generate a comprehensive skill assessment for someone targeting the role of "${targetRole}".
+          content: injectContext(`You are an expert career assessment AI for jobTED AI platform. Generate a comprehensive skill assessment for someone targeting the role of "${targetRole}".
 
 Return a JSON array of exactly 30 questions with this format:
 { "id": "q1", "type": "mcq"|"scenario", "question": "...", "options": ["A","B","C","D"] (for mcq only), "difficulty": "beginner"|"intermediate"|"advanced", "skill": "specific skill name", "timeLimit": 60-180 }
@@ -497,10 +502,10 @@ export async function coachChat(
   const model = getModelForFeature('coach', userPlan);
   const userContextBlock = userContext ? `\n\n## User Profile\n${userContext}\n\nIMPORTANT: Use the user's actual name, skills, targets, and progress data above to give highly personalized advice. Reference their specific situation.` : '';
 
-  const systemPrompt = `You are ${context.coachName || 'Horace'}, the AI career coach for NXTED AI — an AI-powered career acceleration platform.
+  const systemPrompt = `You are ${context.coachName || 'Cortex'}, the AI coordinator for jobTED AI — an AI-powered career acceleration platform.
 
-## About NXTED AI
-NXTED AI (nxted.ai) is an AI-driven career platform that combines artificial intelligence with real human expertise to help people land their dream jobs. The platform offers:
+## About jobTED AI
+jobTED AI (jobted.ai) is an AI-driven career platform that combines artificial intelligence with real human expertise to help people land their dream jobs. The platform offers:
 
 ### Core Features:
 1. **AI Skill Assessment** — Adaptive tests that analyze your skills against target roles. Generates skill scores, gap analysis, and market readiness percentage.
@@ -554,7 +559,31 @@ Rules:
 - Include a natural confirmation message BEFORE the action block
 - For multiple fields, include multiple objects in the actions array
 - If the request is NOT a profile update, respond normally WITHOUT any ACTION block
-- NEVER include the ACTION block for general questions, advice, or career help`;
+- NEVER include the ACTION block for general questions, advice, or career help
+
+## Navigation Actions
+When the user asks to go to a page, open something, or you want to direct them somewhere, emit a navigation action:
+---ACTION---
+{"actions": [{"type": "navigate", "page": "/dashboard/resume"}]}
+---END_ACTION---
+
+Available pages:
+- /dashboard - Command Center (Cortex home)
+- /dashboard/jobs - Job matching (Scout)
+- /dashboard/resume - Resume builder (Forge)
+- /dashboard/agents - Applications (Archer)
+- /dashboard/interview - Interview prep (Atlas)
+- /dashboard/learning - Learning paths (Sage)
+- /dashboard/quality - Quality check (Sentinel)
+- /dashboard/settings - Settings
+- /dashboard/settings?tab=profile - Profile settings
+- /dashboard/settings?tab=billing - Billing settings
+- /dashboard/settings?tab=coach - AI Coach settings
+- /dashboard/assessment - Skill assessment
+- /dashboard/career-plan - Career plan
+- /dashboard/portfolio - Portfolio
+
+When navigating, also provide a brief confirmation message like "Opening your resume builder..." or "Taking you to job matches..."`;
 
   return aiChatWithFallback(
     {
@@ -788,5 +817,5 @@ function simulateAIResponse(messages: { role: string; content: string }[]): stri
     return "Let's build your learning plan! Here's what I suggest:\n\n1. **Take a skill assessment** at /dashboard/assessment to identify your gaps\n2. **Check your Learning Path** at /dashboard/learning for AI-curated courses\n3. **Build projects** — Hands-on experience matters more than certificates\n4. **Stay consistent** — Even 30 minutes daily makes a huge difference\n\nWhat specific skills are you looking to develop?";
   }
 
-  return "Hey! I'm Horace, your AI career coach at NXTED AI. I can help you with:\n\n• **Resume building & optimization** — AI-powered with human expert review\n• **Interview preparation** — Practice with AI or real industry experts\n• **Career planning** — Personalized roadmaps and skill development\n• **Job search strategy** — Find matching opportunities\n• **Salary negotiation** — Know your worth\n\nWhat would you like to work on today?";
+  return "Hey! I'm Cortex, your AI coordinator at jobTED AI. I lead a team of 6 specialized agents that work while you sleep:\n\n• **Agent Scout** — Discovers jobs matching your profile 24/7\n• **Agent Forge** — Optimizes your resume for each opportunity\n• **Agent Archer** — Sends applications & cover letters\n• **Agent Atlas** — Preps you for interviews\n• **Agent Sage** — Identifies skill gaps & learning paths\n• **Agent Sentinel** — Reviews everything for quality\n\nWhat would you like to work on today?";
 }

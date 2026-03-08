@@ -12,8 +12,8 @@ export default function GDPRPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxted.ai' },
-            { name: 'GDPR Compliance', url: 'https://nxted.ai/gdpr' },
+            { name: 'Home', url: 'https://jobted.ai' },
+            { name: 'GDPR Compliance', url: 'https://jobted.ai/gdpr' },
           ])),
         }}
       />

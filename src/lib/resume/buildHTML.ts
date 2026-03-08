@@ -60,7 +60,7 @@ function printBar(accent: string): string {
 
 function watermark(show: boolean): string {
   if (!show) return '';
-  return `<div class="watermark">Created with nxtED AI &mdash; nxted.ai</div>`;
+  return `<div class="watermark">Created with jobTED AI &mdash; jobted.ai</div>`;
 }
 
 function docHead(title: string, css: string): string {

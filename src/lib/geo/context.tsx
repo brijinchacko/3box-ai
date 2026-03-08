@@ -1,7 +1,7 @@
 'use client';
 
 // =============================================================================
-// NXTED AI — Region Context Provider
+// jobTED AI — Region Context Provider
 // =============================================================================
 // Provides region, currency, pricing, and formatting utilities to all client
 // components via React Context. Auto-detects geo on mount; allows manual
@@ -67,8 +67,8 @@ interface RegionContextValue {
 // Storage Key
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'nxted-region';
-const COUNTRY_STORAGE_KEY = 'nxted-country-code';
+const STORAGE_KEY = 'jobted-region';
+const COUNTRY_STORAGE_KEY = 'jobted-country-code';
 
 // ---------------------------------------------------------------------------
 // Context
@@ -163,7 +163,7 @@ export function RegionProvider({ children, initialCountryCode }: RegionProviderP
       try {
         const cookieMatch = document.cookie
           .split(';')
-          .find((c) => c.trim().startsWith('nxted-region='));
+          .find((c) => c.trim().startsWith('jobted-region='));
         if (cookieMatch) {
           const code = cookieMatch.split('=')[1]?.trim();
           if (code && !cancelled) {

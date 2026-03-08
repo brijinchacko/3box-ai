@@ -4,6 +4,8 @@
  */
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
+import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
+import { detectScamSignals, type ScamSignals } from '@/lib/jobs/scamDetector';
 
 interface QualityReview {
   approved: boolean;
@@ -26,6 +28,7 @@ export async function reviewApplication(
     resumeSummary: string;
     candidateSkills: string[];
   },
+  ctx?: AgentContext,
 ): Promise<QualityReview> {
   const prompt = `You are Sentinel, a Quality Review AI agent. Your job is to ensure job applications are high quality, accurate, and professional before they are sent.
 
@@ -58,8 +61,74 @@ Respond in JSON:
 }`;
 
   try {
+    // ── Pre-flight scam check (zero AI cost) ──
+    const scamCheck = detectScamSignals({
+      title: application.jobTitle,
+      company: application.company,
+      description: application.jobDescription,
+      salary: null,
+    });
+
+    if (scamCheck.verdict === 'likely_scam') {
+      const result: QualityReview = {
+        approved: false,
+        qualityScore: 0,
+        issues: [
+          { severity: 'critical', message: `Job flagged as likely scam (score: ${scamCheck.score}/100)` },
+          ...scamCheck.signals.slice(0, 3).map(s => ({ severity: 'critical' as const, message: s })),
+        ],
+        coverLetterFeedback: 'Application blocked — this job listing has multiple scam indicators.',
+        overallAssessment: `Auto-rejected: ${scamCheck.signals.length} scam signals detected. Do not apply.`,
+      };
+
+      await prisma.agentActivity.create({
+        data: {
+          userId,
+          agent: 'sentinel',
+          action: 'blocked_scam',
+          summary: `Blocked scam job "${application.jobTitle}" at ${application.company} — ${scamCheck.signals.length} signals`,
+          details: { company: application.company, jobTitle: application.jobTitle, scamScore: scamCheck.score, signals: scamCheck.signals },
+        },
+      });
+
+      if (ctx) {
+        logActivity(ctx, 'sentinel', 'blocked_scam', `Blocked scam: "${application.jobTitle}" at ${application.company} — ${scamCheck.signals.join(', ')}`);
+      }
+
+      return result;
+    }
+
+    const contextBlock = ctx ? `\n\nTEAM CONTEXT:\n${getContextSummary(ctx)}` : '';
+    const handoffBlock = ctx ? `\n\nHANDOFF DATA:\n${getAgentHandoff(ctx, 'forge', 'sentinel')}` : '';
+    const scamWarning = scamCheck.verdict === 'suspicious'
+      ? `\n\nSCAM WARNING: This job has ${scamCheck.signals.length} suspicious signals: ${scamCheck.signals.join('; ')}. Factor this into your review.`
+      : '';
+
     const response = await aiChatWithFallback({ messages: [
-      { role: 'system', content: 'You are Sentinel, a Quality Review AI agent. Be strict but fair. Always respond in valid JSON.' },
+      { role: 'system', content: `You are Sentinel, the Quality Reviewer in jobTED's AI agent team.
+${contextBlock}
+${handoffBlock}
+${scamWarning}
+
+YOUR ROLE: Review job applications before submission to ensure accuracy, quality, and professionalism. You are the last line of defense before an application reaches an employer.
+
+THINK STEP BY STEP:
+1. Compare the cover letter claims against the candidate's actual resume and skills
+2. Check for fabricated or exaggerated qualifications
+3. Evaluate personalization — is this clearly written for this specific job and company?
+4. Assess professional tone, grammar, and formatting
+5. Flag any spam-like or mass-application signals
+6. Make an approve/reject decision and explain your reasoning
+
+IMPORTANT:
+- Never fabricate company names, job details, or qualifications
+- Only use facts from the user's verified profile
+- Include confidence score (0-100) for each decision
+- Explain reasoning transparently for audit trail
+- Be strict on fabrication but fair on presentation quality
+- Reject applications that claim skills the candidate does not possess
+
+OUTPUT FORMAT: Valid JSON with a "reasoning" field explaining your decisions.` },
       { role: 'user', content: prompt },
     ] }, 'free');
 
@@ -88,6 +157,11 @@ Respond in JSON:
         },
       },
     });
+
+    // Log to shared agent context
+    if (ctx) {
+      logActivity(ctx, 'sentinel', result.approved ? 'approved_application' : 'rejected_application', `${result.approved ? 'Approved' : 'Rejected'} "${application.jobTitle}" at ${application.company} — Quality: ${result.qualityScore}%, ${result.issues.length} issues found`);
+    }
 
     return result;
   } catch (err) {

@@ -6,64 +6,64 @@ import StructuredData, {
 } from '@/components/seo/StructuredData';
 import ComparePageClient, { type ComparisonData } from '../ComparePageClient';
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nxted.ai';
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jobted.ai';
 
 export const metadata: Metadata = {
-  title: 'NXTED AI vs Jobscan — The Better Jobscan Alternative (2026)',
+  title: 'jobTED AI vs Jobscan — The Better Jobscan Alternative (2026)',
   description:
-    'Looking for a Jobscan alternative? NXTED AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one at $12/mo vs Jobscan $49.95/mo. Compare features side by side.',
+    'Looking for a Jobscan alternative? jobTED AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one at $12/mo vs Jobscan $49.95/mo. Compare features side by side.',
   keywords:
-    'Jobscan alternative, NXTED AI vs Jobscan, Jobscan competitor, best ATS resume checker, AI resume builder vs Jobscan, Jobscan pricing alternative, cheaper Jobscan alternative 2026',
+    'Jobscan alternative, jobTED AI vs Jobscan, Jobscan competitor, best ATS resume checker, AI resume builder vs Jobscan, Jobscan pricing alternative, cheaper Jobscan alternative 2026',
   alternates: {
     canonical: `${SITE_URL}/compare/jobscan`,
   },
   openGraph: {
     type: 'website',
     url: `${SITE_URL}/compare/jobscan`,
-    title: 'NXTED AI vs Jobscan — The Better Jobscan Alternative',
+    title: 'jobTED AI vs Jobscan — The Better Jobscan Alternative',
     description:
       'All-in-one AI career platform at $12/mo vs Jobscan $49.95/mo. Resume builder, ATS checker, career coaching, and more.',
-    siteName: 'NXTED AI',
+    siteName: 'jobTED AI',
     images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NXTED AI vs Jobscan — The Better Alternative',
+    title: 'jobTED AI vs Jobscan — The Better Alternative',
     description: 'All-in-one AI career platform at $12/mo vs Jobscan $49.95/mo.',
-    creator: '@nxtedai',
+    creator: '@jobtedai',
   },
 };
 
 const data: ComparisonData = {
   competitorName: 'Jobscan',
   competitorSlug: 'jobscan',
-  heroTitle: 'NXTED AI vs Jobscan — The Better Alternative',
+  heroTitle: 'jobTED AI vs Jobscan — The Better Alternative',
   heroSubtitle:
-    'Jobscan focuses narrowly on ATS keyword matching. NXTED AI gives you the complete career toolkit — resume building, career coaching, skills assessment, salary insights, and job matching — at a fraction of the price.',
-  verdict: 'NXTED AI wins on value, features, and price.',
+    'Jobscan focuses narrowly on ATS keyword matching. jobTED AI gives you the complete career toolkit — resume building, career coaching, skills assessment, salary insights, and job matching — at a fraction of the price.',
+  verdict: 'jobTED AI wins on value, features, and price.',
   verdictDetail:
-    'While Jobscan is a solid ATS keyword scanner, it only covers one part of the job search. NXTED AI provides 8+ career tools in a single platform at $12/mo compared to Jobscan\'s $49.95/mo for just resume scanning and LinkedIn optimization.',
+    'While Jobscan is a solid ATS keyword scanner, it only covers one part of the job search. jobTED AI provides 8+ career tools in a single platform at $12/mo compared to Jobscan\'s $49.95/mo for just resume scanning and LinkedIn optimization.',
   features: [
-    { feature: 'AI Resume Builder', nxted: true, competitor: false },
-    { feature: 'ATS Resume Checker', nxted: true, competitor: true },
-    { feature: 'AI Career Coach', nxted: true, competitor: false },
-    { feature: 'Salary Estimator', nxted: true, competitor: false },
-    { feature: 'Skills Assessment', nxted: true, competitor: false },
-    { feature: 'Portfolio Builder', nxted: true, competitor: false },
-    { feature: 'AI Job Matching', nxted: true, competitor: false },
-    { feature: 'Interview Prep', nxted: true, competitor: false },
-    { feature: 'LinkedIn Optimization', nxted: true, competitor: true },
-    { feature: 'Cover Letter Builder', nxted: true, competitor: 'Basic' },
-    { feature: 'Job Tracking', nxted: true, competitor: true },
-    { feature: 'Keyword Optimization', nxted: true, competitor: true },
+    { feature: 'AI Resume Builder', jobted: true, competitor: false },
+    { feature: 'ATS Resume Checker', jobted: true, competitor: true },
+    { feature: 'AI Career Coach', jobted: true, competitor: false },
+    { feature: 'Salary Estimator', jobted: true, competitor: false },
+    { feature: 'Skills Assessment', jobted: true, competitor: false },
+    { feature: 'Portfolio Builder', jobted: true, competitor: false },
+    { feature: 'AI Job Matching', jobted: true, competitor: false },
+    { feature: 'Interview Prep', jobted: true, competitor: false },
+    { feature: 'LinkedIn Optimization', jobted: true, competitor: true },
+    { feature: 'Cover Letter Builder', jobted: true, competitor: 'Basic' },
+    { feature: 'Job Tracking', jobted: true, competitor: true },
+    { feature: 'Keyword Optimization', jobted: true, competitor: true },
   ],
-  nxtedPrice: '$12/mo',
+  jobtedPrice: '$12/mo',
   competitorPrice: '$49.95/mo',
-  nxtedFreeTier: 'Yes — AI resume builder, 2 assessments, 50 AI credits',
+  jobtedFreeTier: 'Yes — AI resume builder, 2 assessments, 50 AI credits',
   competitorFreeTier: 'Limited — 5 scans/mo',
-  nxtedRating: '4.8',
+  jobtedRating: '4.8',
   competitorRating: '4.4',
-  nxtedReviewCount: '2,847',
+  jobtedReviewCount: '2,847',
   competitorReviewCount: '1,200+',
   advantages: [
     {
@@ -76,7 +76,7 @@ const data: ComparisonData = {
       icon: 'zap',
       title: 'All-in-One Platform',
       description:
-        'NXTED AI replaces Jobscan, a separate resume builder, career coach, salary tool, and more. One login, one subscription, complete coverage.',
+        'jobTED AI replaces Jobscan, a separate resume builder, career coach, salary tool, and more. One login, one subscription, complete coverage.',
     },
     {
       icon: 'trophy',
@@ -88,34 +88,34 @@ const data: ComparisonData = {
       icon: 'shield',
       title: 'Skills-First Approach',
       description:
-        'NXTED AI assesses your actual skills, builds a learning path, and connects you to matching jobs. Jobscan focuses only on resume keywords.',
+        'jobTED AI assesses your actual skills, builds a learning path, and connects you to matching jobs. Jobscan focuses only on resume keywords.',
     },
   ],
   faqs: [
     {
-      question: 'Is NXTED AI a good Jobscan alternative?',
+      question: 'Is jobTED AI a good Jobscan alternative?',
       answer:
-        'Yes. NXTED AI offers everything Jobscan does (ATS checking, keyword optimization) plus a full AI resume builder, career coaching, salary estimator, skills assessment, portfolio builder, and job matching — all at $12/mo vs Jobscan\'s $49.95/mo.',
+        'Yes. jobTED AI offers everything Jobscan does (ATS checking, keyword optimization) plus a full AI resume builder, career coaching, salary estimator, skills assessment, portfolio builder, and job matching — all at $12/mo vs Jobscan\'s $49.95/mo.',
     },
     {
-      question: 'Does NXTED AI have ATS scanning like Jobscan?',
+      question: 'Does jobTED AI have ATS scanning like Jobscan?',
       answer:
-        'Yes. NXTED AI includes a built-in ATS resume checker that analyzes your resume against job descriptions for keyword match, formatting compatibility, and ATS readiness score — similar to Jobscan\'s core feature.',
+        'Yes. jobTED AI includes a built-in ATS resume checker that analyzes your resume against job descriptions for keyword match, formatting compatibility, and ATS readiness score — similar to Jobscan\'s core feature.',
     },
     {
-      question: 'Why is NXTED AI cheaper than Jobscan?',
+      question: 'Why is jobTED AI cheaper than Jobscan?',
       answer:
-        'NXTED AI is built as an integrated AI-native platform from the ground up, which allows us to offer more features at a lower cost. Jobscan was built as a standalone ATS checker and charges premium pricing for that single capability.',
+        'jobTED AI is built as an integrated AI-native platform from the ground up, which allows us to offer more features at a lower cost. Jobscan was built as a standalone ATS checker and charges premium pricing for that single capability.',
     },
     {
-      question: 'Can I switch from Jobscan to NXTED AI easily?',
+      question: 'Can I switch from Jobscan to jobTED AI easily?',
       answer:
-        'Yes. Sign up for NXTED AI free, upload your existing resume, and you\'ll immediately have access to ATS checking plus all the additional career tools. No migration needed.',
+        'Yes. Sign up for jobTED AI free, upload your existing resume, and you\'ll immediately have access to ATS checking plus all the additional career tools. No migration needed.',
     },
     {
-      question: 'Does NXTED AI work for all industries?',
+      question: 'Does jobTED AI work for all industries?',
       answer:
-        'Yes. NXTED AI supports all industries and roles — from tech and finance to healthcare and education. Our AI adapts to your specific career field for tailored resume optimization and career guidance.',
+        'Yes. jobTED AI supports all industries and roles — from tech and finance to healthcare and education. Our AI adapts to your specific career field for tailored resume optimization and career guidance.',
     },
   ],
 };
@@ -127,13 +127,13 @@ export default function JobscanComparePage() {
         data={breadcrumbSchema([
           { name: 'Home', url: SITE_URL },
           { name: 'Compare', url: `${SITE_URL}/compare` },
-          { name: 'NXTED AI vs Jobscan', url: `${SITE_URL}/compare/jobscan` },
+          { name: 'jobTED AI vs Jobscan', url: `${SITE_URL}/compare/jobscan` },
         ])}
       />
       <StructuredData data={faqPageSchema(data.faqs)} />
       <StructuredData
         data={comparisonPageSchema({
-          title: 'NXTED AI vs Jobscan — The Better Jobscan Alternative',
+          title: 'jobTED AI vs Jobscan — The Better Jobscan Alternative',
           description: metadata.description as string,
           url: `${SITE_URL}/compare/jobscan`,
           competitors: ['Jobscan'],

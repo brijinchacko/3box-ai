@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ExternalLink, Github, Code, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import PersonalizedStory from '@/components/dashboard/PersonalizedStory';
 
 interface Project {
   id: string;
@@ -36,6 +37,7 @@ interface UserData {
 interface PortfolioPublicClientProps {
   portfolio: PortfolioData;
   user: UserData;
+  story?: string | null;
 }
 
 // Helper: ensure URLs have protocol prefix
@@ -65,7 +67,7 @@ const itemVariants = {
   },
 };
 
-export default function PortfolioPublicClient({ portfolio, user }: PortfolioPublicClientProps) {
+export default function PortfolioPublicClient({ portfolio, user, story }: PortfolioPublicClientProps) {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       {/* Background gradient effects */}
@@ -120,6 +122,18 @@ export default function PortfolioPublicClient({ portfolio, user }: PortfolioPubl
             </p>
           )}
         </motion.div>
+
+        {/* Story Section */}
+        {story && (
+          <motion.div variants={itemVariants} className="mb-16">
+            <PersonalizedStory
+              userName={user.name || undefined}
+              userImage={user.image}
+              story={story}
+              readOnly
+            />
+          </motion.div>
+        )}
 
         {/* Skills Section */}
         {portfolio.skills && portfolio.skills.length > 0 && (
@@ -224,7 +238,7 @@ export default function PortfolioPublicClient({ portfolio, user }: PortfolioPubl
               href="/"
               className="text-[#00d4ff]/50 hover:text-[#00d4ff] transition-colors"
             >
-              NXTED AI
+              jobTED AI
             </Link>
           </p>
         </motion.footer>

@@ -561,7 +561,7 @@ export default function ATSCheckerPage() {
               {/* CTA */}
               <div className="card text-center bg-gradient-to-br from-neon-blue/5 to-neon-purple/5">
                 <Sparkles className="w-8 h-8 text-neon-blue mx-auto mb-4" />
-                <h2 className="text-xl font-bold mb-2">Build a perfect ATS resume with NXTED AI</h2>
+                <h2 className="text-xl font-bold mb-2">Build a perfect ATS resume with jobTED AI</h2>
                 <p className="text-white/40 text-sm mb-6 max-w-md mx-auto">
                   Our AI resume builder creates ATS-optimized resumes tailored to your target role.
                 </p>

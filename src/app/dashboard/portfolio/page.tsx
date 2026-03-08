@@ -256,7 +256,7 @@ export default function PortfolioPage() {
       } catch (err) {
         console.error('Failed to load portfolio:', err);
         // Fallback: try localStorage for migration
-        const stored = localStorage.getItem('nxted_portfolio_projects');
+        const stored = localStorage.getItem('jobted_portfolio_projects');
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
@@ -292,7 +292,7 @@ export default function PortfolioPage() {
     : '';
 
   const shareUrl = publicUrl || (userName
-    ? `https://nxted.ai/p/${userName.toLowerCase().replace(/\s+/g, '-')}`
+    ? `https://jobted.ai/p/${userName.toLowerCase().replace(/\s+/g, '-')}`
     : '');
 
   const showComingSoon = (feature: string) => {
@@ -689,7 +689,7 @@ export default function PortfolioPage() {
 
               {/* Footer */}
               <div className={`mt-12 pt-6 border-t ${theme.divider} text-center`}>
-                <p className={`text-[10px] ${theme.textMuted}`} style={{ opacity: 0.4 }}>Built with NXTED AI</p>
+                <p className={`text-[10px] ${theme.textMuted}`} style={{ opacity: 0.4 }}>Built with jobTED AI</p>
               </div>
             </div>
           </div>

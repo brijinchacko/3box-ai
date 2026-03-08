@@ -4,9 +4,9 @@ import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
 
-const { prisma } = require('@/lib/db/prisma');
+import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
 
-const BASIC_FREE_USES = 3;
+const { prisma } = require('@/lib/db/prisma');
 
 const SECTION_PROMPTS: Record<string, (targetJob?: string) => string> = {
   summary: (targetJob) =>
@@ -34,15 +34,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check plan limits: BASIC users get limited free uses
-    if (user.plan === 'BASIC' && user.aiCreditsUsed >= BASIC_FREE_USES) {
+    // Check token balance
+    const cost = TOKEN_COSTS.resume_enhance;
+    if (!canAfford(user.aiCreditsUsed, user.aiCreditsLimit, cost)) {
       return NextResponse.json(
-        {
-          error:
-            'Free resume enhancement limit reached. Upgrade your plan for unlimited access.',
-          code: 'PLAN_LIMIT_REACHED',
-        },
-        { status: 403 },
+        { error: 'Insufficient tokens', code: 'INSUFFICIENT_TOKENS', required: cost, remaining: Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed) },
+        { status: 402 },
       );
     }
 
@@ -148,10 +145,10 @@ export async function POST(req: Request) {
       result.suggestions.unshift('[Demo Mode] AI enhancement is running with sample suggestions. Configure OpenRouter API key for full AI-powered optimization.');
     }
 
-    // Increment AI credits used
+    // Deduct tokens
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { aiCreditsUsed: { increment: 1 } },
+      data: { aiCreditsUsed: { increment: cost } },
     });
 
     // Check for low credit alert (non-blocking)

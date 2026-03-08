@@ -10,6 +10,11 @@ import {
   Loader2, RotateCcw, ChevronDown, ChevronUp, Lightbulb,
   BarChart3, Star, Zap, MessageSquare, Send, Timer, Users
 } from 'lucide-react';
+import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
+import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
+import AgentLoader from '@/components/brand/AgentLoader';
+import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -56,22 +61,13 @@ const difficultyColors: Record<string, string> = {
 };
 
 function LoadingSkeleton() {
-  return (
-    <div className="space-y-4 animate-pulse">
-      <div className="h-6 bg-white/5 rounded w-3/4" />
-      <div className="h-4 bg-white/5 rounded w-1/2" />
-      <div className="space-y-3 mt-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-16 bg-white/5 rounded-xl" />
-        ))}
-      </div>
-    </div>
-  );
+  return <AgentLoader agentId="atlas" message="Agent Atlas is preparing your session" />;
 }
 
 export default function InterviewPrepPage() {
   const { data: session } = useSession();
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const atlasLocked = !isAgentAvailable('atlas', userPlan);
   const isPro = userPlan === 'PRO';
   const isUltra = userPlan === 'ULTRA';
   const hasExpertAccess = isPro || isUltra;
@@ -139,7 +135,7 @@ export default function InterviewPrepPage() {
   // Auto-fill targetRole from localStorage on mount
   useEffect(() => {
     try {
-      const savedRole = localStorage.getItem('nxted_target_role');
+      const savedRole = localStorage.getItem('jobted_target_role');
       if (savedRole) {
         setTargetRole(savedRole);
       }
@@ -203,6 +199,7 @@ export default function InterviewPrepPage() {
           setTimerActive(true);
           startTimeRef.current = Date.now();
           setTimeout(() => textareaRef.current?.focus(), 100);
+          notifyAgentCompleted('atlas', `Atlas prepared ${data.questions.length} interview questions`, '/dashboard/interview');
         }
       } else {
         setGenError('Failed to generate questions. Please try again.');
@@ -317,8 +314,11 @@ export default function InterviewPrepPage() {
   const currentQuestion = questions[currentIndex];
   const progress = questions.length > 0 ? ((results.length) / questions.length) * 100 : 0;
 
+  if (atlasLocked) return <AgentLockedPage agentId="atlas" />;
+
   return (
     <div className="max-w-4xl mx-auto">
+      <AgentPageHeader agentId="atlas" />
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">

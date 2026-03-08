@@ -15,11 +15,13 @@ import {
 // Force dynamic rendering — required for webhook handling
 export const dynamic = 'force-dynamic';
 
-// Credit limits per plan tier
+// Token limits per plan tier (monthly allocation)
+import { PLAN_TOKEN_LIMITS } from '@/lib/tokens/pricing';
+
 const PLAN_CREDIT_LIMITS: Record<string, number> = {
-  STARTER: 100,
-  PRO: 500,
-  ULTRA: -1, // unlimited
+  STARTER: PLAN_TOKEN_LIMITS.STARTER,  // 200
+  PRO: PLAN_TOKEN_LIMITS.PRO,          // 600
+  ULTRA: PLAN_TOKEN_LIMITS.ULTRA,      // 2000
 };
 
 // ─── Webhook Signature Verification ──────────────
@@ -79,7 +81,7 @@ async function handleSubscriptionCheckout(
   }
 
   const { plan, interval } = planInfo;
-  const creditLimit = PLAN_CREDIT_LIMITS[plan] ?? 10;
+  const creditLimit = PLAN_CREDIT_LIMITS[plan] ?? PLAN_TOKEN_LIMITS.BASIC;
   const customerId = session.customer as string;
 
   // Create Subscription record
@@ -199,7 +201,7 @@ async function handleSubscriptionUpdated(
   }
 
   const { plan, interval } = planInfo;
-  const creditLimit = PLAN_CREDIT_LIMITS[plan] ?? 10;
+  const creditLimit = PLAN_CREDIT_LIMITS[plan] ?? PLAN_TOKEN_LIMITS.BASIC;
 
   // Map Stripe status to our enum
   const statusMap: Record<string, string> = {
@@ -280,7 +282,7 @@ async function handleSubscriptionDeleted(
       plan: 'BASIC',
       stripeSubId: null,
       stripePriceId: null,
-      aiCreditsLimit: 10,
+      aiCreditsLimit: PLAN_TOKEN_LIMITS.BASIC, // 15
       aiCreditsUsed: 0,
     },
   });

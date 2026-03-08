@@ -90,8 +90,11 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+      }
+      // Always refresh plan/credits from DB so coupon upgrades, Stripe changes, etc. take effect immediately
+      if (token.id) {
         const prisma = getPrisma();
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
         if (dbUser) {
           token.plan = dbUser.plan;
           token.isOforoInternal = dbUser.isOforoInternal;

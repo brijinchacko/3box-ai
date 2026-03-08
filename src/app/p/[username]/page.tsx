@@ -24,19 +24,32 @@ async function getPortfolio(slug: string) {
   return portfolio;
 }
 
+async function getUserStory(userId: string): Promise<string | null> {
+  try {
+    const careerTwin = await prisma.careerTwin.findUnique({
+      where: { userId },
+      select: { skillSnapshot: true },
+    });
+    const snap = (careerTwin?.skillSnapshot as any) || {};
+    return snap._story?.text || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { username } = await params;
   const portfolio = await getPortfolio(username);
 
   if (!portfolio) {
-    return { title: 'Portfolio Not Found | NXTED AI' };
+    return { title: 'Portfolio Not Found | jobTED AI' };
   }
 
   const description = portfolio.bio
     || `${portfolio.user.name}'s professional portfolio showcasing projects and skills.`;
 
   return {
-    title: `${portfolio.title} | ${portfolio.user.name} - NXTED AI`,
+    title: `${portfolio.title} | ${portfolio.user.name} - jobTED AI`,
     description,
     openGraph: {
       title: `${portfolio.title} | ${portfolio.user.name}`,
@@ -59,6 +72,9 @@ export default async function PublicPortfolioPage({ params }: PageProps) {
   if (!portfolio) {
     notFound();
   }
+
+  // Fetch the user's story from CareerTwin
+  const story = await getUserStory(portfolio.user.id);
 
   // Serialize dates for the client component
   const portfolioData = {
@@ -87,5 +103,5 @@ export default async function PublicPortfolioPage({ params }: PageProps) {
     image: portfolio.user.image,
   };
 
-  return <PortfolioPublicClient portfolio={portfolioData} user={userData} />;
+  return <PortfolioPublicClient portfolio={portfolioData} user={userData} story={story} />;
 }

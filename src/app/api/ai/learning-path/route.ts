@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { generateLearningPath, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
+import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -13,7 +14,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { plan: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { plan: true, aiCreditsUsed: true, aiCreditsLimit: true },
+    });
+
+    // Token check
+    const cost = TOKEN_COSTS.skill_gap_analysis;
+    if (!canAfford(user?.aiCreditsUsed ?? 0, user?.aiCreditsLimit ?? 0, cost)) {
+      return NextResponse.json(
+        { error: 'Insufficient tokens', code: 'INSUFFICIENT_TOKENS', required: cost, remaining: Math.max(0, (user?.aiCreditsLimit ?? 0) - (user?.aiCreditsUsed ?? 0)) },
+        { status: 402 }
+      );
+    }
 
     const body = await req.json();
     const { targetRole, gaps } = body;
@@ -75,6 +88,12 @@ export async function POST(req: Request) {
         progress: learningPathData.progress || {},
         adaptive: true,
       },
+    });
+
+    // Deduct tokens
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { aiCreditsUsed: { increment: cost } },
     });
 
     return NextResponse.json({

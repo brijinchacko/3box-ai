@@ -10,11 +10,11 @@ async function main() {
   const hashedPassword = await bcrypt.hash('demo123456', 12);
 
   const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@nxted.ai' },
+    where: { email: 'demo@jobted.ai' },
     update: {},
     create: {
       name: 'Alex Johnson',
-      email: 'demo@nxted.ai',
+      email: 'demo@jobted.ai',
       hashedPassword,
       plan: 'PRO',
       aiCreditsUsed: 127,
@@ -140,7 +140,7 @@ async function main() {
   });
 
   console.log('✅ Seed data created successfully');
-  console.log(`   Demo user: demo@nxted.ai / demo123456`);
+  console.log(`   Demo user: demo@jobted.ai / demo123456`);
   console.log(`   OFORO admin: admin@oforo.ai / demo123456`);
 }
 

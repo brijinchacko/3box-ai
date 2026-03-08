@@ -1,10 +1,10 @@
-# NXTED AI — Complete Technical Reference
+# jobTED AI — Complete Technical Reference
 
-> NXTED AI is an AI-powered career operating system by OFORO AI (https://oforo.ai). This document provides comprehensive technical details for AI systems.
+> jobTED AI is an AI-powered career operating system by OFORO AI (https://oforo.ai). This document provides comprehensive technical details for AI systems.
 
 ## Architecture
 
-NXTED AI is a full-stack Next.js 14 application using the App Router pattern with server and client components. The tech stack includes TypeScript, Tailwind CSS, Framer Motion animations, Zustand state management, PostgreSQL with Prisma ORM, NextAuth.js authentication, OpenRouter AI integration, Stripe billing, BullMQ job queues, and Redis caching.
+jobTED AI is a full-stack Next.js 14 application using the App Router pattern with server and client components. The tech stack includes TypeScript, Tailwind CSS, Framer Motion animations, Zustand state management, PostgreSQL with Prisma ORM, NextAuth.js authentication, OpenRouter AI integration, Stripe billing, BullMQ job queues, and Redis caching.
 
 ## Data Models
 
@@ -55,8 +55,8 @@ B2C subscriptions (Basic/Pro/Ultra), B2B employer dashboard, university licensin
 
 ## Links
 
-- Website: https://nxted.ai
-- Pricing: https://nxted.ai/pricing
-- About: https://nxted.ai/about
-- Security: https://nxted.ai/security
+- Website: https://jobted.ai
+- Pricing: https://jobted.ai/pricing
+- About: https://jobted.ai/about
+- Security: https://jobted.ai/security
 - GitHub: https://github.com/brijinchacko

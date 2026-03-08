@@ -150,12 +150,12 @@ const faqs = [
   {
     question: 'How do I pass ATS as a teacher?',
     answer:
-      'School district ATS systems like Frontline Education, AppliTrack, and TalentEd search for specific education terms. Include your exact certification type, subject endorsements, grade levels, teaching methods (differentiated instruction, project-based learning), and ed-tech tools. NXTED AI identifies missing education keywords and suggests additions.',
+      'School district ATS systems like Frontline Education, AppliTrack, and TalentEd search for specific education terms. Include your exact certification type, subject endorsements, grade levels, teaching methods (differentiated instruction, project-based learning), and ed-tech tools. jobTED AI identifies missing education keywords and suggests additions.',
   },
   {
     question: 'Should I use AI to write my teacher resume?',
     answer:
-      'Yes. AI resume builders like NXTED AI understand education terminology, state certification requirements, and what hiring principals look for. The AI helps you articulate student outcomes, curriculum innovations, and classroom management strategies in a way that passes district ATS filters and impresses interview committees.',
+      'Yes. AI resume builders like jobTED AI understand education terminology, state certification requirements, and what hiring principals look for. The AI helps you articulate student outcomes, curriculum innovations, and classroom management strategies in a way that passes district ATS filters and impresses interview committees.',
   },
   {
     question: 'How do I quantify teaching achievements on a resume?',
@@ -463,11 +463,11 @@ export default function TeacherClient() {
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Join 10,000+ Educators Using{' '}
-              <span className="gradient-text">NXTED AI</span>
+              <span className="gradient-text">jobTED AI</span>
             </h2>
             <p className="text-white/50 max-w-2xl mx-auto mb-8">
               Teachers across public schools, private academies, charter networks, and
-              international schools trust NXTED AI to build resumes that showcase their
+              international schools trust jobTED AI to build resumes that showcase their
               classroom impact and pass district ATS filters.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

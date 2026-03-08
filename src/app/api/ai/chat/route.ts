@@ -76,6 +76,9 @@ function parseActions(reply: string) {
           if (a.type === 'update_profile' && VALID_PROFILE_FIELDS.includes(a.field) && a.value) {
             actions.push({ type: a.type, field: a.field, value: String(a.value), success: false });
           }
+          if (a.type === 'navigate' && a.page) {
+            actions.push({ type: 'navigate', field: 'page', value: String(a.page), success: true });
+          }
         }
       }
     } catch {
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
 
     // Build context with defaults
     const chatContext: ChatContext = {
-      coachName: context?.coachName || 'Horace',
+      coachName: context?.coachName || 'Cortex',
       personality: context?.personality || 'friendly',
       targetRole: context?.targetRole || 'not set',
       progress: context?.progress ?? 0,
@@ -120,15 +123,17 @@ export async function POST(req: Request) {
     // Parse actions from AI reply
     const { cleanReply, actions } = parseActions(reply);
 
-    // Execute any profile update actions
+    // Execute any profile update actions (navigate actions are passed through to the client)
     for (const action of actions) {
-      try {
-        const updatePayload: Record<string, string> = { [action.field]: action.value };
-        await executeProfileUpdate(session.user.id, updatePayload);
-        action.success = true;
-      } catch (err) {
-        console.error('[AI Chat] Action execution error:', err);
-        action.success = false;
+      if (action.type === 'update_profile') {
+        try {
+          const updatePayload: Record<string, string> = { [action.field]: action.value };
+          await executeProfileUpdate(session.user.id, updatePayload);
+          action.success = true;
+        } catch (err) {
+          console.error('[AI Chat] Action execution error:', err);
+          action.success = false;
+        }
       }
     }
 

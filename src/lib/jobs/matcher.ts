@@ -1,7 +1,9 @@
 /**
  * Job Match Scoring Algorithm
- * Scores jobs 0-100 based on relevance to user's profile
+ * Scores jobs 0-100 based on relevance to user's profile.
+ * Integrates scam detection penalty for suspicious listings.
  */
+import { detectScamSignals } from './scamDetector';
 
 interface UserProfile {
   targetRole: string;
@@ -15,6 +17,7 @@ interface JobToScore {
   location: string;
   salary: string | null;
   remote: boolean;
+  company?: string;
 }
 
 /**
@@ -109,7 +112,21 @@ export function calculateMatchScore(job: JobToScore, profile: UserProfile): numb
   const isJuniorJob = juniorTerms.some(t => jobTitle.includes(t));
   if (!isSeniorJob && !isJuniorJob) score += 2; // Mid-level tends to match more people
 
-  return Math.min(100, Math.round(score));
+  // ── Scam Penalty (0 to -30) ──
+  // Suspicious jobs get penalized so they rank lower even if keywords match
+  const scam = detectScamSignals({
+    title: job.title,
+    company: job.company || '',
+    description: job.description,
+    salary: job.salary,
+  });
+  if (scam.verdict === 'suspicious') {
+    score -= 15;
+  } else if (scam.verdict === 'likely_scam') {
+    score -= 30;
+  }
+
+  return Math.min(100, Math.max(0, Math.round(score)));
 }
 
 /**

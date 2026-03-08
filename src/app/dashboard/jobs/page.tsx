@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase,
@@ -9,30 +10,40 @@ import {
   Clock,
   ExternalLink,
   Bookmark,
-  Filter,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
   Loader2,
   Sparkles,
   Send,
-  Zap,
   Crown,
-  Settings,
   Play,
-  Pause,
-  Eye,
-  CheckCircle2,
   XCircle,
   BarChart3,
   Wifi,
   Lock,
-  Brain,
-  BookOpen,
   X,
+  Radar,
+  LayoutGrid,
+  List,
+  History,
+  Shield,
+  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
+import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
+import AgentLoader from '@/components/brand/AgentLoader';
+import AgentAvatar from '@/components/brand/AgentAvatar';
+import ScoutMissionModal, { type ScoutMissionResult } from '@/components/dashboard/ScoutMissionModal';
+import ScoutJobCard from '@/components/dashboard/ScoutJobCard';
+import ScoutJobGridCard from '@/components/dashboard/ScoutJobGridCard';
+import ScoutReportHeader from '@/components/dashboard/ScoutReportHeader';
+import { useScoutStatus } from '@/hooks/useScoutStatus';
+import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { detectScamSignals, type ScamSignals } from '@/lib/jobs/scamDetector';
+import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
 // ── Types ──────────────────────────────────────────────
 interface Job {
@@ -57,6 +68,15 @@ interface JobsResponse {
   page: number;
   isDemo: boolean;
   error?: string;
+}
+
+interface ScoutRunHistoryEntry {
+  runId: string;
+  status: string;
+  jobsFound: number;
+  summary: string | null;
+  startedAt: string;
+  completedAt: string | null;
 }
 
 // ── Skeleton Loader ────────────────────────────────────
@@ -103,16 +123,213 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 30)} month(s) ago`;
 }
 
-const SAVED_JOBS_KEY = 'nxted_saved_jobs';
+const SAVED_JOBS_KEY = 'jobted_saved_jobs';
+
+// ── Job Detail Overlay for Grid View ───────────────────
+function JobDetailOverlay({
+  job,
+  userPlan,
+  isSaved,
+  onSave,
+  onClose,
+}: {
+  job: Job;
+  userPlan: PlanTier;
+  isSaved: boolean;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const [scamCheck, setScamCheck] = useState<ScamSignals | null>(null);
+  const sentinelAvailable = isAgentAvailable('sentinel', userPlan);
+  const forgeAvailable = isAgentAvailable('forge', userPlan);
+
+  const handleVerify = () => {
+    const result = detectScamSignals({
+      title: job.title,
+      company: job.company,
+      description: job.description,
+      salary: job.salary,
+      url: job.url,
+      location: job.location,
+    });
+    setScamCheck(result);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl glass border border-white/10 rounded-2xl overflow-hidden max-h-[80vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between p-4 border-b border-white/5">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-white">{job.title}</h3>
+              {typeof job.matchScore === 'number' && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
+                  job.matchScore >= 70 ? 'bg-neon-green/10 text-neon-green border-neon-green/20' :
+                  job.matchScore >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                  'bg-white/5 text-white/40 border-white/10'
+                }`}>
+                  {job.matchScore}%
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-white/50 mt-0.5">{job.company}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-white/40">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Meta */}
+          <div className="flex items-center gap-3 text-xs text-white/30 flex-wrap">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> {job.location}
+              {job.remote && <span className="text-neon-green/60 ml-1">(Remote)</span>}
+            </span>
+            {job.salary && <span className="text-neon-green/60">{job.salary}</span>}
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
+            </span>
+            {job.source && (
+              <span className="px-2 py-0.5 rounded-full bg-white/5 text-white/30 text-[10px]">{job.source}</span>
+            )}
+          </div>
+
+          {/* Description */}
+          <p className="text-xs text-white/40 leading-relaxed">{job.description}</p>
+
+          {/* Scam check result */}
+          {scamCheck && (
+            <div className={`p-3 rounded-xl text-xs border ${
+              scamCheck.verdict === 'safe'
+                ? 'bg-neon-green/5 border-neon-green/10 text-neon-green/80'
+                : scamCheck.verdict === 'suspicious'
+                  ? 'bg-amber-500/5 border-amber-500/10 text-amber-400/80'
+                  : 'bg-red-500/5 border-red-500/10 text-red-400/80'
+            }`}>
+              <div className="flex items-center gap-2 mb-1 font-semibold">
+                <Shield className="w-3.5 h-3.5" />
+                Sentinel Verdict: {scamCheck.verdict === 'safe' ? 'Safe' : scamCheck.verdict === 'suspicious' ? 'Suspicious' : 'Likely Scam'}
+                <span className="text-[10px] font-normal opacity-60">Score: {scamCheck.score}/100</span>
+              </div>
+              {scamCheck.signals.length > 0 && (
+                <ul className="space-y-0.5 ml-5">
+                  {scamCheck.signals.map((r, i) => (
+                    <li key={i} className="flex items-start gap-1">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* Agent action bar */}
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-white/5">
+            <span className="text-[10px] text-white/25">Scout found this match. What&apos;s next?</span>
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              {!scamCheck && (
+                <button
+                  onClick={handleVerify}
+                  disabled={!sentinelAvailable}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 transition-all disabled:opacity-40"
+                  title={!sentinelAvailable ? 'Sentinel requires Ultra plan' : ''}
+                >
+                  <AgentAvatar agentId="sentinel" size={16} sleeping={!sentinelAvailable} />
+                  Verify Listing
+                </button>
+              )}
+              <a
+                href={forgeAvailable ? `/dashboard/resume?optimizeFor=${encodeURIComponent(job.title)}` : '#'}
+                onClick={(e) => { if (!forgeAvailable) e.preventDefault(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 transition-all"
+                title={!forgeAvailable ? 'Forge requires Starter plan' : ''}
+                style={!forgeAvailable ? { opacity: 0.4, pointerEvents: 'none' } : {}}
+              >
+                <AgentAvatar agentId="forge" size={16} sleeping={!forgeAvailable} />
+                Tailor Resume
+              </a>
+              <button
+                onClick={onSave}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                  isSaved
+                    ? 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20'
+                    : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70'
+                }`}
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+                {isSaved ? 'Saved' : 'Save'}
+              </button>
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue transition-all"
+              >
+                Apply <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 // ── Main Page ──────────────────────────────────────────
 export default function JobsPage() {
   const { data: session } = useSession();
-  const [tab, setTab] = useState<'discover' | 'saved' | 'applications'>('discover');
+  const searchParams = useSearchParams();
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const agentLocked = !isAgentAvailable('scout', userPlan);
+  const initialTab = (searchParams.get('tab') as 'scout-report' | 'discover' | 'saved' | 'applications') || 'scout-report';
+  const [tab, setTab] = useState<'scout-report' | 'discover' | 'saved' | 'applications'>(initialTab);
 
   // Upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+
+  // Scout Mission Modal — auto-open if ?deploy=scout
+  const [showMissionModal, setShowMissionModal] = useState(searchParams.get('deploy') === 'scout');
+
+  // Scout Report state
+  const [scoutJobs, setScoutJobs] = useState<any[]>([]);
+  const [scoutSummary, setScoutSummary] = useState<{
+    totalFound: number;
+    totalFiltered: number;
+    scamJobsFiltered: number;
+    sources: string[];
+  } | null>(null);
+  const [scoutRunId, setScoutRunId] = useState<string | null>(null);
+  const [scoutCompletedAt, setScoutCompletedAt] = useState<string | undefined>();
+
+  // View mode for Scout Report
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Grid card detail overlay
+  const [detailJob, setDetailJob] = useState<Job | null>(null);
+
+  // Scout run history
+  const [runHistory, setRunHistory] = useState<ScoutRunHistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Background mode watcher
+  const [backgroundRunId, setBackgroundRunId] = useState<string | null>(null);
+  const { status: scoutStatus } = useScoutStatus(true);
+  const prevScoutStatusRef = useRef<string>('idle');
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,7 +347,6 @@ export default function JobsPage() {
   // Saved jobs
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
 
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
   const isUltra = userPlan === 'ULTRA';
 
   useEffect(() => {
@@ -139,6 +355,68 @@ export default function JobsPage() {
       if (stored) setSavedJobs(JSON.parse(stored));
     } catch {}
   }, []);
+
+  // Fetch latest scout results on mount (persists across navigation)
+  useEffect(() => {
+    fetch('/api/agents/scout/results')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.jobs?.length) {
+          setScoutJobs(data.jobs);
+          setScoutSummary(data.summary);
+          setScoutRunId(data.runId);
+          setScoutCompletedAt(data.completedAt);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch run history
+  useEffect(() => {
+    fetch('/api/agents/scout/history')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.runs) setRunHistory(data.runs);
+      })
+      .catch(() => {});
+  }, [scoutRunId]);
+
+  // Background completion watcher
+  useEffect(() => {
+    if (prevScoutStatusRef.current === 'running' && scoutStatus === 'completed' && backgroundRunId) {
+      fetch('/api/agents/scout/results')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.jobs?.length) {
+            setScoutJobs(data.jobs);
+            setScoutSummary(data.summary);
+            setScoutRunId(data.runId);
+            setScoutCompletedAt(data.completedAt);
+            setTab('scout-report');
+            notifyAgentCompleted('scout', `Found ${data.jobs.length} matching jobs!`, '/dashboard/jobs?tab=scout-report');
+          }
+        })
+        .catch(() => {});
+      setBackgroundRunId(null);
+    }
+    prevScoutStatusRef.current = scoutStatus;
+  }, [scoutStatus, backgroundRunId]);
+
+  // Handle Scout mission complete
+  const handleScoutComplete = (result: ScoutMissionResult) => {
+    setScoutJobs(result.jobs);
+    setScoutSummary(result.summary);
+    setScoutRunId(result.runId);
+    setScoutCompletedAt(new Date().toISOString());
+    setShowMissionModal(false);
+    setTab('scout-report');
+    notifyAgentCompleted('scout', `Scout found ${result.jobs.length} jobs matching your criteria.`, '/dashboard/jobs?tab=scout-report');
+  };
+
+  // Handle background mode
+  const handleBackground = () => {
+    setBackgroundRunId('pending');
+  };
 
   // Handle "View Job" click: ULTRA users go directly, others see upgrade modal
   const handleViewJob = (job: Job) => {
@@ -188,7 +466,6 @@ export default function JobsPage() {
       const data: JobsResponse = await res.json();
 
       if (data.error) {
-        // Soft error (e.g., rate limit) -- still show jobs if available
         setError(data.error);
       }
 
@@ -204,8 +481,8 @@ export default function JobsPage() {
 
   // Initial load with user's target role and location from localStorage
   useEffect(() => {
-    const savedRole = localStorage.getItem('nxted_target_role');
-    const savedLocation = localStorage.getItem('nxted_user_location');
+    const savedRole = localStorage.getItem('jobted_target_role');
+    const savedLocation = localStorage.getItem('jobted_user_location');
     if (savedRole && !searchQuery) {
       setSearchQuery(savedRole);
     }
@@ -231,9 +508,35 @@ export default function JobsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Normal Job Search UI (no assessment gate) ─────────────
+  // ── Locked agent check ─────────────
+  if (agentLocked) return <AgentLockedPage agentId="scout" />;
+
+  // ── Normal Job Search UI ─────────────
   return (
     <div className="max-w-5xl mx-auto">
+      <AgentPageHeader agentId="scout" onRunNow={() => setShowMissionModal(true)} />
+
+      {/* Scout Mission Modal */}
+      <ScoutMissionModal
+        open={showMissionModal}
+        onClose={() => setShowMissionModal(false)}
+        onComplete={handleScoutComplete}
+        onBackground={handleBackground}
+      />
+
+      {/* Grid card detail overlay */}
+      <AnimatePresence>
+        {detailJob && (
+          <JobDetailOverlay
+            job={detailJob}
+            userPlan={userPlan}
+            isSaved={isJobSaved(detailJob.id)}
+            onSave={() => toggleSaveJob(detailJob)}
+            onClose={() => setDetailJob(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Upgrade Modal for non-ULTRA users */}
       <AnimatePresence>
         {showUpgradeModal && selectedJob && (
@@ -298,9 +601,10 @@ export default function JobsPage() {
         <p className="text-white/40">Find and track job opportunities powered by real-time data.</p>
       </motion.div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      {/* Tabs — Scout Report first */}
+      <div className="flex gap-2 mb-6 overflow-x-auto">
         {[
+          { id: 'scout-report' as const, label: `Scout Report${scoutJobs.length ? ` (${scoutJobs.length})` : ''}`, icon: Radar },
           { id: 'discover' as const, label: 'Discover Jobs', icon: Search },
           { id: 'saved' as const, label: 'Saved Jobs', icon: Bookmark },
           { id: 'applications' as const, label: 'Applications', icon: Send },
@@ -308,7 +612,7 @@ export default function JobsPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
               tab === t.id ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'
             }`}
           >
@@ -317,6 +621,176 @@ export default function JobsPage() {
           </button>
         ))}
       </div>
+
+      {/* ── Scout Report Tab ──────────────────────────── */}
+      {tab === 'scout-report' && (
+        scoutJobs.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="card text-center py-16"
+          >
+            <Radar className="w-12 h-12 text-white/20 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-1">No Scout Report Yet</h3>
+            <p className="text-sm text-white/40 mb-4">Deploy Agent Scout to hunt for jobs across 6+ platforms.</p>
+            <button
+              onClick={() => setShowMissionModal(true)}
+              className="btn-primary text-sm px-5 py-2 inline-flex items-center gap-2"
+            >
+              <Play className="w-4 h-4" /> Deploy Scout
+            </button>
+
+            {/* Run History */}
+            {runHistory.length > 0 && (
+              <div className="mt-8 text-left max-w-md mx-auto">
+                <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5" /> Previous Runs
+                </h4>
+                <div className="space-y-2">
+                  {runHistory.slice(0, 5).map(run => (
+                    <div key={run.runId} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/50 truncate">{run.summary?.split(' — ')[0] || 'Scout mission'}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] flex-shrink-0 ${
+                          run.status === 'completed' ? 'bg-neon-green/10 text-neon-green' :
+                          run.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
+                          'bg-amber-500/10 text-amber-400'
+                        }`}>
+                          {run.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-white/25">
+                        <span>{run.jobsFound} jobs found</span>
+                        <span>{new Date(run.startedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <>
+            {scoutSummary && (
+              <ScoutReportHeader
+                totalFound={scoutSummary.totalFound}
+                totalFiltered={scoutSummary.totalFiltered}
+                scamJobsFiltered={scoutSummary.scamJobsFiltered}
+                sources={scoutSummary.sources}
+                topMatchScore={scoutJobs[0]?.matchScore}
+                completedAt={scoutCompletedAt}
+              />
+            )}
+
+            {/* View toggle + actions */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-all ${
+                    viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+                  }`}
+                  title="Grid view"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-all ${
+                    viewMode === 'list' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+                  }`}
+                  title="List view"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {runHistory.length > 0 && (
+                  <button
+                    onClick={() => setShowHistory(!showHistory)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 transition-all"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    History ({runHistory.length})
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowMissionModal(true)}
+                  className="btn-secondary text-xs px-4 py-1.5 inline-flex items-center gap-1.5"
+                >
+                  <Radar className="w-3.5 h-3.5" /> New Mission
+                </button>
+              </div>
+            </div>
+
+            {/* Run History panel */}
+            <AnimatePresence>
+              {showHistory && runHistory.length > 0 && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="mb-4 overflow-hidden"
+                >
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+                    <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-2">Run History</h4>
+                    {runHistory.map(run => (
+                      <div key={run.runId} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] text-xs">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-white/50 truncate block">{run.summary?.replace(/\[Cancelled by user\]/, '').trim() || 'Scout mission'}</span>
+                          <span className="text-white/25">{new Date(run.startedAt).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-white/30">{run.jobsFound} jobs</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                            run.status === 'completed' ? 'bg-neon-green/10 text-neon-green' :
+                            run.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
+                            'bg-amber-500/10 text-amber-400'
+                          }`}>
+                            {run.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Grid View */}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {scoutJobs.map((job, i) => (
+                  <ScoutJobGridCard
+                    key={job.id}
+                    job={job}
+                    index={i}
+                    isSaved={isJobSaved(job.id)}
+                    onSave={() => toggleSaveJob(job)}
+                    onClick={() => setDetailJob(job)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* List View */}
+            {viewMode === 'list' && (
+              <div className="space-y-2">
+                {scoutJobs.map((job, i) => (
+                  <ScoutJobCard
+                    key={job.id}
+                    job={job}
+                    index={i}
+                    userPlan={userPlan}
+                    isSaved={isJobSaved(job.id)}
+                    onSave={() => toggleSaveJob(job)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )
+      )}
 
       {/* ── Discover Jobs Tab ─────────────────────────── */}
       {tab === 'discover' && (
@@ -403,13 +877,9 @@ export default function JobsPage() {
             )}
           </AnimatePresence>
 
-          {/* Loading Skeletons */}
+          {/* Loading */}
           {loading && (
-            <div className="space-y-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <JobCardSkeleton key={i} />
-              ))}
-            </div>
+            <AgentLoader agentId="scout" message="Agent Scout is hunting for jobs" />
           )}
 
           {/* Empty State */}
@@ -438,7 +908,6 @@ export default function JobsPage() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      {/* Title row */}
                       <div className="flex items-center gap-3 mb-1.5 flex-wrap">
                         <h3 className="font-semibold text-white truncate">{job.title}</h3>
                         {typeof job.matchScore === 'number' && (
@@ -459,8 +928,6 @@ export default function JobsPage() {
                           {job.type}
                         </span>
                       </div>
-
-                      {/* Meta row */}
                       <div className="flex items-center gap-4 text-sm text-white/40 flex-wrap mb-2">
                         <span className="font-medium text-white/60">{job.company}</span>
                         <span className="flex items-center gap-1">
@@ -473,20 +940,14 @@ export default function JobsPage() {
                           <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
                         </span>
                       </div>
-
-                      {/* Description */}
                       <p className="text-sm text-white/30 line-clamp-2 leading-relaxed">
                         {job.description}
                       </p>
-
-                      {/* AI Match Score placeholder */}
                       <div className="mt-3 flex items-center gap-2 text-xs text-white/20">
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>AI Match Score -- Coming soon</span>
                       </div>
                     </div>
-
-                    {/* Actions */}
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
                         onClick={(e) => {
@@ -531,7 +992,6 @@ export default function JobsPage() {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                 let pageNum: number;
                 if (totalPages <= 5) {
@@ -557,7 +1017,6 @@ export default function JobsPage() {
                   </button>
                 );
               })}
-
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages}
@@ -572,7 +1031,6 @@ export default function JobsPage() {
             </div>
           )}
 
-          {/* Result count */}
           {!loading && jobs.length > 0 && (
             <p className="text-center text-xs text-white/20 mt-3">
               Showing {jobs.length} of {total} results {isDemo && '(demo data)'}

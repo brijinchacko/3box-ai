@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
+import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -93,13 +94,24 @@ export async function GET() {
       careerPlans.length > 0 ||
       resumes.length > 0;
 
-    // If no data yet, return onboarding insights
+    // If no data yet, return onboarding insights (no token cost)
     if (!hasData) {
       return NextResponse.json({
         insights: GENERIC_ONBOARDING_INSIGHTS,
         careerScore: 0,
         weeklyTip:
           'Start by completing a skills assessment to unlock personalized career insights and recommendations.',
+      });
+    }
+
+    // Token check for AI-powered insights
+    const insightCost = TOKEN_COSTS.ai_insights;
+    if (!canAfford(user.aiCreditsUsed ?? 0, user.aiCreditsLimit ?? 0, insightCost)) {
+      // Not enough tokens — return static fallback instead of erroring
+      return NextResponse.json({
+        insights: [{ type: 'action' as const, title: 'Token Limit Reached', description: 'Buy more tokens to unlock AI-powered career insights.', action: '/pricing', priority: 'high' as const }],
+        careerScore: 0,
+        weeklyTip: 'Purchase additional tokens to continue receiving personalized career insights.',
       });
     }
 
@@ -139,7 +151,7 @@ export async function GET() {
     // Build rich user context for AI personalization
     const userContext = await getUserContextString(userId);
 
-    const systemPrompt = `You are a career analytics AI for the NXTED platform. Analyze the user's career data and generate personalized insights. Return JSON with:
+    const systemPrompt = `You are a career analytics AI for the jobTED platform. Analyze the user's career data and generate personalized insights. Return JSON with:
 {
   "insights": [
     {
@@ -195,6 +207,12 @@ Generate 3-5 relevant insights. Prioritize actionable items. Be encouraging but 
           'Consistency is key. Spend 15 minutes each day working on your career development goals.',
       };
     }
+
+    // Deduct tokens
+    await prisma.user.update({
+      where: { id: userId },
+      data: { aiCreditsUsed: { increment: insightCost } },
+    });
 
     return NextResponse.json({
       insights: insightsData.insights || [],

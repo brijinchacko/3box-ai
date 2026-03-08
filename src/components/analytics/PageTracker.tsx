@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation';
 
 function getSessionId(): string {
   if (typeof window === 'undefined') return '';
-  let sid = sessionStorage.getItem('nxted_sid');
+  let sid = sessionStorage.getItem('jobted_sid');
   if (!sid) {
     sid = `s_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    sessionStorage.setItem('nxted_sid', sid);
+    sessionStorage.setItem('jobted_sid', sid);
   }
   return sid;
 }

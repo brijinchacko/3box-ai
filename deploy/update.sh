@@ -1,13 +1,13 @@
 #!/bin/bash
 # ─────────────────────────────────────────────
-# NXTED AI — Update Script (zero-downtime)
+# jobTED AI — Update Script (zero-downtime)
 # Run this to deploy new changes from GitHub
 # ─────────────────────────────────────────────
 
 set -e
 
-echo "🔄 NXTED AI — Updating..."
-cd /var/www/nxtedai
+echo "🔄 jobTED AI — Updating..."
+cd /var/www/jobtedai
 
 # Pull latest changes
 echo "📦 Pulling latest changes..."
@@ -28,8 +28,8 @@ npx prisma db push
 
 # Restart app (zero-downtime with PM2)
 echo "🚀 Restarting..."
-pm2 reload nxted-ai
+pm2 reload jobted-ai
 
 echo "✅ Update complete!"
 echo "   Check status: pm2 status"
-echo "   View logs: pm2 logs nxted-ai"
+echo "   View logs: pm2 logs jobted-ai"

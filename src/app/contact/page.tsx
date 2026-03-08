@@ -12,8 +12,8 @@ export default function ContactPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxted.ai' },
-            { name: 'Contact', url: 'https://nxted.ai/contact' },
+            { name: 'Home', url: 'https://jobted.ai' },
+            { name: 'Contact', url: 'https://jobted.ai/contact' },
           ])),
         }}
       />

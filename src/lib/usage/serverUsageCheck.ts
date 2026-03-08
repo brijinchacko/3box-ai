@@ -7,15 +7,17 @@
  * Check whether a free usage attempt is allowed.
  * Compares cookie-stored count against the client-reported count,
  * takes the higher value as the real count (prevents tampering),
- * and allows usage only if realCount < 1.
+ * and allows usage only if realCount < maxFreeUses.
  *
  * @param cookieValue - The raw cookie value string (may be undefined if no cookie set)
  * @param clientCount - The count reported by the client (from localStorage)
+ * @param maxFreeUses - Maximum number of free uses allowed (default: 1, tools use 2)
  * @returns Object with `allowed` boolean and the `realCount`
  */
 export function checkFreeUsage(
   cookieValue: string | undefined,
-  clientCount: number
+  clientCount: number,
+  maxFreeUses: number = 1
 ): { allowed: boolean; realCount: number } {
   let cookieCount = 0;
 
@@ -31,7 +33,7 @@ export function checkFreeUsage(
   const realCount = Math.max(cookieCount, safeClientCount);
 
   return {
-    allowed: realCount < 1,
+    allowed: realCount < maxFreeUses,
     realCount,
   };
 }
@@ -39,7 +41,7 @@ export function checkFreeUsage(
 /**
  * Build a Set-Cookie header string for tracking usage.
  *
- * @param cookieName - The name of the cookie (e.g., "nxted-free-ats")
+ * @param cookieName - The name of the cookie (e.g., "jobted-free-ats")
  * @param newCount - The updated usage count to store
  * @param maxAgeDays - How many days the cookie should persist (default: 30)
  * @returns A fully formatted cookie string ready for Set-Cookie header

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
+import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -23,10 +24,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (user.aiCreditsLimit !== -1 && user.aiCreditsUsed >= user.aiCreditsLimit) {
+    const cost = TOKEN_COSTS.resume_generate;
+    if (!canAfford(user.aiCreditsUsed, user.aiCreditsLimit, cost)) {
       return NextResponse.json(
-        { error: 'AI credit limit reached. Upgrade your plan for more.', code: 'PLAN_LIMIT_REACHED' },
-        { status: 403 }
+        { error: 'Insufficient tokens', code: 'INSUFFICIENT_TOKENS', required: cost, remaining: Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed) },
+        { status: 402 }
       );
     }
 
@@ -139,13 +141,11 @@ Use my real profile information where available. Fill in realistic content for a
       return NextResponse.json({ error: 'AI generated invalid response. Please try again.' }, { status: 500 });
     }
 
-    // Increment credit usage
-    if (user.aiCreditsLimit !== -1) {
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { aiCreditsUsed: { increment: 1 } },
-      });
-    }
+    // Deduct tokens
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { aiCreditsUsed: { increment: cost } },
+    });
 
     return NextResponse.json({ resume: resumeData });
   } catch (error) {

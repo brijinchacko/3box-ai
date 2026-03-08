@@ -19,13 +19,13 @@ const brandColors = [
 const pressReleases = [
   {
     date: 'March 3, 2026',
-    title: 'NXTED AI Launches AI Career Operating System',
+    title: 'jobTED AI Launches AI Career Operating System',
     description:
-      'OFORO AI introduces NXTED AI, a comprehensive AI-powered platform that transforms career development from skill assessment to job placement.',
+      'OFORO AI introduces jobTED AI, a comprehensive AI-powered platform that transforms career development from skill assessment to job placement.',
   },
   {
     date: 'February 2026',
-    title: 'OFORO AI Announces NXTED AI Development',
+    title: 'OFORO AI Announces jobTED AI Development',
     description:
       'OFORO AI begins development of its flagship career AI platform, designed to unify the fragmented career development tool landscape.',
   },
@@ -62,16 +62,16 @@ export default function PressPageClient() {
             </p>
           </motion.div>
 
-          {/* About NXTED AI */}
+          {/* About jobTED AI */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="card mb-12"
           >
-            <h2 className="text-2xl font-bold mb-4">About NXTED AI</h2>
+            <h2 className="text-2xl font-bold mb-4">About jobTED AI</h2>
             <p className="text-white/50 text-sm leading-relaxed mb-6">
-              NXTED AI is the AI-powered career operating system built by OFORO AI. We help job
+              jobTED AI is the AI-powered career operating system built by OFORO AI. We help job
               seekers transform their careers with AI-driven skill assessments, personalized career
               plans, ATS-optimized resume building, portfolio creation, and intelligent job matching.
             </p>
@@ -79,7 +79,7 @@ export default function PressPageClient() {
               {[
                 { label: 'Founded', value: '2025' },
                 { label: 'Product', value: 'AI Career Platform' },
-                { label: 'Website', value: 'nxted.ai' },
+                { label: 'Website', value: 'jobted.ai' },
                 { label: 'Parent Company', value: 'OFORO AI' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2 text-white/40">
@@ -123,7 +123,7 @@ export default function PressPageClient() {
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-white mb-2">Logo Usage</h3>
               <p className="text-sm text-white/40 leading-relaxed">
-                The NXTED AI logo should be used on dark backgrounds. Maintain clear space around
+                The jobTED AI logo should be used on dark backgrounds. Maintain clear space around
                 the logo equal to the height of the &apos;n&apos; character.
               </p>
             </div>

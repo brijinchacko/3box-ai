@@ -1,8 +1,8 @@
 {
-  "name": "nxted-ai",
-  "version": "1.0.0",
+  "name": "jobted-ai",
+  "version": "1.6.0",
   "private": true,
-  "description": "NXTED AI — Full Career Operating System by OFORO AI",
+  "description": "jobTED AI — Full Career Operating System by OFORO AI",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

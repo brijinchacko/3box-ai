@@ -143,7 +143,7 @@ const KPI_DATA = [
 const CONTENT_CALENDAR = [
   // Week 1
   { title: 'How AI is Revolutionizing Career Planning in 2026', targetKeyword: 'AI career planning', keywordDifficulty: 35, category: 'blog', scheduledDate: new Date('2026-03-03') },
-  { title: 'NXTED AI vs LinkedIn Career Explorer: Complete Comparison', targetKeyword: 'LinkedIn career explorer alternative', keywordDifficulty: 25, category: 'comparison', scheduledDate: new Date('2026-03-04') },
+  { title: 'jobTED AI vs LinkedIn Career Explorer: Complete Comparison', targetKeyword: 'LinkedIn career explorer alternative', keywordDifficulty: 25, category: 'comparison', scheduledDate: new Date('2026-03-04') },
   { title: 'The Ultimate Guide to Career Assessments in 2026', targetKeyword: 'career assessment guide', keywordDifficulty: 40, category: 'blog', scheduledDate: new Date('2026-03-05') },
   // Week 2
   { title: '10 Best AI Resume Builders Compared', targetKeyword: 'best AI resume builder', keywordDifficulty: 55, category: 'comparison', scheduledDate: new Date('2026-03-10') },
@@ -152,14 +152,14 @@ const CONTENT_CALENDAR = [
   // Week 3
   { title: 'AI Career Coach vs Human Career Coach: Pros & Cons', targetKeyword: 'AI career coach vs human', keywordDifficulty: 20, category: 'blog', scheduledDate: new Date('2026-03-17') },
   { title: 'How to Build a Portfolio That Gets You Hired', targetKeyword: 'portfolio tips get hired', keywordDifficulty: 38, category: 'blog', scheduledDate: new Date('2026-03-18') },
-  { title: 'NXTED AI vs Jobscan: Which ATS Tool Wins?', targetKeyword: 'Jobscan alternative', keywordDifficulty: 30, category: 'comparison', scheduledDate: new Date('2026-03-19') },
+  { title: 'jobTED AI vs Jobscan: Which ATS Tool Wins?', targetKeyword: 'Jobscan alternative', keywordDifficulty: 30, category: 'comparison', scheduledDate: new Date('2026-03-19') },
   // Week 4
   { title: 'Top 15 In-Demand Tech Skills for 2026', targetKeyword: 'in-demand tech skills 2026', keywordDifficulty: 50, category: 'blog', scheduledDate: new Date('2026-03-24') },
   { title: 'How to Use AI to Prepare for Job Interviews', targetKeyword: 'AI interview preparation', keywordDifficulty: 35, category: 'blog', scheduledDate: new Date('2026-03-25') },
   { title: 'Career Planning for Fresh Graduates: A Complete Roadmap', targetKeyword: 'career planning fresh graduates', keywordDifficulty: 42, category: 'blog', scheduledDate: new Date('2026-03-26') },
   // Month 2 - Week 5
   { title: 'Remote Work Career Guide: Best Roles in 2026', targetKeyword: 'remote work careers 2026', keywordDifficulty: 48, category: 'blog', scheduledDate: new Date('2026-04-01') },
-  { title: 'NXTED AI vs Careerflow: Feature-by-Feature Comparison', targetKeyword: 'Careerflow alternative', keywordDifficulty: 15, category: 'comparison', scheduledDate: new Date('2026-04-02') },
+  { title: 'jobTED AI vs Careerflow: Feature-by-Feature Comparison', targetKeyword: 'Careerflow alternative', keywordDifficulty: 15, category: 'comparison', scheduledDate: new Date('2026-04-02') },
   { title: 'How to Negotiate Salary with AI-Powered Insights', targetKeyword: 'salary negotiation AI', keywordDifficulty: 25, category: 'blog', scheduledDate: new Date('2026-04-03') },
   // Month 2 - Week 6
   { title: 'The Complete Guide to ATS-Friendly Resumes', targetKeyword: 'ATS friendly resume guide', keywordDifficulty: 55, category: 'blog', scheduledDate: new Date('2026-04-08') },
@@ -168,11 +168,11 @@ const CONTENT_CALENDAR = [
   // Month 2 - Week 7
   { title: 'How to Create a Personal Brand for Job Search', targetKeyword: 'personal brand job search', keywordDifficulty: 40, category: 'blog', scheduledDate: new Date('2026-04-15') },
   { title: 'Best Career Planning Tools: 2026 Roundup', targetKeyword: 'best career planning tools', keywordDifficulty: 45, category: 'comparison', scheduledDate: new Date('2026-04-16') },
-  { title: 'Video: How to Use NXTED AI Career Twin Feature', targetKeyword: 'NXTED AI tutorial', keywordDifficulty: 5, category: 'video', scheduledDate: new Date('2026-04-17') },
+  { title: 'Video: How to Use jobTED AI Career Twin Feature', targetKeyword: 'jobTED AI tutorial', keywordDifficulty: 5, category: 'video', scheduledDate: new Date('2026-04-17') },
   // Month 2 - Week 8
   { title: 'Data Science Career Path: From Beginner to Senior', targetKeyword: 'data science career path', keywordDifficulty: 52, category: 'blog', scheduledDate: new Date('2026-04-22') },
   { title: 'Product Management Career Guide with AI Coaching', targetKeyword: 'product management career guide', keywordDifficulty: 48, category: 'blog', scheduledDate: new Date('2026-04-23') },
-  { title: 'NXTED AI vs Teal HQ: Which Career Tool is Better?', targetKeyword: 'Teal HQ alternative', keywordDifficulty: 20, category: 'comparison', scheduledDate: new Date('2026-04-24') },
+  { title: 'jobTED AI vs Teal HQ: Which Career Tool is Better?', targetKeyword: 'Teal HQ alternative', keywordDifficulty: 20, category: 'comparison', scheduledDate: new Date('2026-04-24') },
   // Month 3 - Week 9
   { title: 'UX Design Career Roadmap: Skills, Salary, Growth', targetKeyword: 'UX design career roadmap', keywordDifficulty: 45, category: 'blog', scheduledDate: new Date('2026-04-29') },
   { title: 'How AI Is Changing Recruitment: A Job Seekers Guide', targetKeyword: 'AI recruitment job seeker', keywordDifficulty: 30, category: 'blog', scheduledDate: new Date('2026-04-30') },
@@ -184,7 +184,7 @@ const CONTENT_CALENDAR = [
   // Month 3 - Week 11
   { title: 'Software Engineer Career Ladder: Junior to Principal', targetKeyword: 'software engineer career ladder', keywordDifficulty: 42, category: 'blog', scheduledDate: new Date('2026-05-13') },
   { title: 'Career Gap Explanation: Templates and AI-Powered Tips', targetKeyword: 'career gap explanation', keywordDifficulty: 38, category: 'blog', scheduledDate: new Date('2026-05-14') },
-  { title: 'NXTED AI vs Kickresume: Resume Builder Comparison', targetKeyword: 'Kickresume alternative', keywordDifficulty: 22, category: 'comparison', scheduledDate: new Date('2026-05-15') },
+  { title: 'jobTED AI vs Kickresume: Resume Builder Comparison', targetKeyword: 'Kickresume alternative', keywordDifficulty: 22, category: 'comparison', scheduledDate: new Date('2026-05-15') },
   // Month 3 - Week 12
   { title: 'How to Build a Tech Portfolio from Scratch', targetKeyword: 'tech portfolio from scratch', keywordDifficulty: 35, category: 'blog', scheduledDate: new Date('2026-05-20') },
   { title: 'AI-Powered Job Application Tracker: Why You Need One', targetKeyword: 'AI job application tracker', keywordDifficulty: 28, category: 'blog', scheduledDate: new Date('2026-05-21') },
@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
           category: item.category,
           status: 'planned',
           scheduledDate: item.scheduledDate,
-          author: 'NXTED AI Team',
+          author: 'jobTED AI Team',
         },
       });
     }

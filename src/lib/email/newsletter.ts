@@ -5,7 +5,7 @@
 import { sendEmail } from '@/lib/email';
 
 const getPrisma = () => require('@/lib/db/prisma').prisma;
-const APP_URL = process.env.NEXTAUTH_URL || 'https://nxted.ai';
+const APP_URL = process.env.NEXTAUTH_URL || 'https://jobted.ai';
 
 function newsletterTemplate(content: string, unsubscribeEmail: string): string {
   return `
@@ -30,7 +30,7 @@ function newsletterTemplate(content: string, unsubscribeEmail: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">NXTED AI</div>
+      <div class="logo">jobTED AI</div>
       <p class="text-muted">AI Career Operating System</p>
     </div>
     <div class="content">
@@ -38,7 +38,7 @@ function newsletterTemplate(content: string, unsubscribeEmail: string): string {
     </div>
     <div class="footer">
       <p class="text-muted">
-        NXTED AI by OFORO AI<br>
+        jobTED AI by OFORO AI<br>
         <a href="${APP_URL}/api/newsletter/unsubscribe?email=${encodeURIComponent(unsubscribeEmail)}">Unsubscribe</a> &bull;
         <a href="${APP_URL}/security">Privacy Policy</a>
       </p>

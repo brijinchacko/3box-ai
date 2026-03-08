@@ -136,7 +136,7 @@ export default function BlogListClient() {
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl sm:text-5xl font-extrabold mb-4"
           >
-            NXTED AI <span className="gradient-text">Blog</span>
+            jobTED AI <span className="gradient-text">Blog</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -218,7 +218,7 @@ export default function BlogListClient() {
                           className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <span className="text-3xl opacity-30">NXTED</span>
+                        <span className="text-3xl opacity-30">jobTED</span>
                       )}
                     </div>
 

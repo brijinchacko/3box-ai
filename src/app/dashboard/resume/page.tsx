@@ -11,8 +11,13 @@ import {
   Crown, Lock, X, Loader2, Users,
 } from 'lucide-react';
 import TemplatePreview from '@/components/resume/TemplatePreview';
+import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
+import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
+import AgentLoader from '@/components/brand/AgentLoader';
+import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
-const RESUME_STORAGE_KEY = 'nxted_resume_data';
+const RESUME_STORAGE_KEY = 'jobted_resume_data';
 
 // Empty resume template
 const emptyResume = {
@@ -43,7 +48,7 @@ const templates = [
 ];
 
 const AI_FREE_LIMIT = 3;
-const AI_USES_KEY = 'nxted_ai_uses';
+const AI_USES_KEY = 'jobted_ai_uses';
 
 function getAIUses(): number {
   if (typeof window === 'undefined') return 0;
@@ -139,6 +144,8 @@ function HumanExpertBanner({ userPlan }: { userPlan: string }) {
 
 export default function ResumePage() {
   const { data: session } = useSession();
+  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const forgeLocked = !isAgentAvailable('forge', userPlan);
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [resume, setResume] = useState(emptyResume);
   const [activeSection, setActiveSection] = useState('contact');
@@ -219,14 +226,13 @@ export default function ResumePage() {
   // Pre-fill wizard targetRole from localStorage
   useEffect(() => {
     try {
-      const savedRole = localStorage.getItem('nxted_target_role');
+      const savedRole = localStorage.getItem('jobted_target_role');
       if (savedRole) {
         setWizardForm(prev => ({ ...prev, targetRole: savedRole }));
       }
     } catch {}
   }, []);
 
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase();
   const isBasic = userPlan === 'BASIC';
   const isStarter = userPlan === 'STARTER';
 
@@ -239,7 +245,7 @@ export default function ResumePage() {
     if (!isBasic) return true;
     const uses = getAIUses();
     if (uses >= AI_FREE_LIMIT) {
-      showToast(`Free AI limit reached (${AI_FREE_LIMIT}/${AI_FREE_LIMIT}). Upgrade to continue.`, 'error');
+      showToast(`Free Forge limit reached (${AI_FREE_LIMIT}/${AI_FREE_LIMIT}). Upgrade to continue.`, 'error');
       return false;
     }
     return true;
@@ -265,7 +271,7 @@ export default function ResumePage() {
       if (!summaryRes.ok) {
         const errData = await summaryRes.json().catch(() => null);
         if (errData?.code === 'PLAN_LIMIT_REACHED') {
-          showToast('Free AI limit reached. Upgrade to continue.', 'error');
+          showToast('Free Forge limit reached. Upgrade to continue.', 'error');
           return;
         }
         throw new Error('Failed to enhance summary');
@@ -302,10 +308,11 @@ export default function ResumePage() {
       }));
 
       if (isBasic) incrementAIUses();
-      showToast('Resume enhanced by AI successfully!', 'success');
+      showToast('Resume enhanced by Forge!', 'success');
+      notifyAgentCompleted('forge', 'Forge enhanced your resume', '/dashboard/resume');
     } catch (error) {
       console.error('AI Enhance error:', error);
-      showToast('AI enhancement failed. Please try again.', 'error');
+      showToast('Forge enhancement failed. Please try again.', 'error');
     } finally {
       setGenerating(false);
       setAiLoading(null);
@@ -330,7 +337,7 @@ export default function ResumePage() {
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
         if (errData?.code === 'PLAN_LIMIT_REACHED') {
-          showToast('Free AI limit reached. Upgrade to continue.', 'error');
+          showToast('Free Forge limit reached. Upgrade to continue.', 'error');
           return;
         }
         throw new Error('Failed to generate summary');
@@ -339,10 +346,11 @@ export default function ResumePage() {
 
       setResume((prev) => ({ ...prev, summary: data.enhanced || prev.summary }));
       if (isBasic) incrementAIUses();
-      showToast('AI-generated summary applied!', 'success');
+      showToast('Forge-generated summary applied!', 'success');
+      notifyAgentCompleted('forge', 'Forge wrote your professional summary', '/dashboard/resume');
     } catch (error) {
       console.error('AI Write Summary error:', error);
-      showToast('Failed to generate summary. Try again.', 'error');
+      showToast('Forge failed to generate summary. Try again.', 'error');
     } finally {
       setAiLoading(null);
     }
@@ -379,7 +387,7 @@ export default function ResumePage() {
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
         if (errData?.code === 'PLAN_LIMIT_REACHED') {
-          showToast('Free AI limit reached. Upgrade to continue.', 'error');
+          showToast('Free Forge limit reached. Upgrade to continue.', 'error');
           return;
         }
         throw new Error('Failed to tailor resume');
@@ -547,7 +555,7 @@ export default function ResumePage() {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         if (errData?.code === 'PLAN_LIMIT_REACHED') {
-          setWizardError('AI credit limit reached. Upgrade your plan for more.');
+          setWizardError('Token limit reached. Upgrade your plan for more.');
           setWizardStep(1);
           return;
         }
@@ -589,11 +597,14 @@ export default function ResumePage() {
     setWizardOpen(false);
     setWizardStep(1);
     setWizardResult(null);
-    showToast('AI-generated resume applied! Review and edit as needed.', 'success');
+    showToast('Forge-generated resume applied! Review and edit as needed.', 'success');
   };
+
+  if (forgeLocked) return <AgentLockedPage agentId="forge" />;
 
   return (
     <div className="max-w-6xl mx-auto">
+      <AgentPageHeader agentId="forge" onRunNow={() => { setWizardOpen(true); setWizardStep(1); setWizardError(''); }} />
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -641,7 +652,7 @@ export default function ResumePage() {
                     {coverLetterLoading && !coverLetterJobDesc.trim() ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        AI is writing your generic cover letter...
+                        Forge is writing your generic cover letter...
                       </>
                     ) : (
                       <>
@@ -674,7 +685,7 @@ export default function ResumePage() {
                     {coverLetterLoading && coverLetterJobDesc.trim() ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        AI is writing your tailored cover letter...
+                        Forge is writing your tailored cover letter...
                       </>
                     ) : (
                       <>
@@ -705,7 +716,7 @@ export default function ResumePage() {
 
               {isBasic && (
                 <p className="text-xs text-white/30 mt-4">
-                  Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} AI uses remaining
+                  Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} Forge uses remaining
                 </p>
               )}
             </motion.div>
@@ -734,7 +745,7 @@ export default function ResumePage() {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-neon-purple" />
-                  AI Resume Writer
+                  Forge Resume Writer
                 </h3>
                 {!wizardGenerating && (
                   <button onClick={() => { setWizardOpen(false); setWizardStep(1); setWizardError(''); }} className="p-1.5 rounded-lg hover:bg-white/5">
@@ -824,36 +835,23 @@ export default function ResumePage() {
                     onClick={handleWizardGenerate}
                     className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold"
                   >
-                    <Sparkles className="w-4 h-4" /> Generate My Resume
+                    <Sparkles className="w-4 h-4" /> Deploy Forge
                   </button>
 
                   <p className="text-xs text-white/20 text-center">
-                    AI will use your profile data to create a personalized, ATS-optimized resume
+                    Forge will use your profile data to craft a personalized, ATS-optimized resume
                   </p>
                 </div>
               )}
 
               {/* Step 2: Generating */}
               {wizardStep === 2 && (
-                <div className="text-center py-12">
-                  <div className="relative w-20 h-20 mx-auto mb-6">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                      className="absolute inset-0 rounded-full border-2 border-transparent border-t-neon-purple border-r-neon-blue"
-                    />
-                    <div className="absolute inset-2 rounded-full bg-gradient-to-br from-neon-purple/10 to-neon-blue/10 flex items-center justify-center">
-                      <Wand2 className="w-8 h-8 text-neon-purple" />
-                    </div>
-                  </div>
-                  <h3 className="text-lg font-bold mb-2">AI is writing your resume</h3>
-                  <p className="text-sm text-white/40 mb-4">
-                    Crafting a professional {wizardForm.targetRole} resume...
-                  </p>
+                <div className="py-6">
+                  <AgentLoader agentId="forge" message={`Agent Forge is crafting your ${wizardForm.targetRole} resume`} size="lg" />
                   <motion.div
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="text-xs text-neon-purple"
+                    className="text-xs text-neon-purple text-center mt-2"
                   >
                     This usually takes 10-20 seconds
                   </motion.div>
@@ -968,7 +966,7 @@ export default function ResumePage() {
             <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
               <FileText className="w-7 h-7 text-neon-blue" /> Resume Builder
             </h1>
-            <p className="text-white/40">ATS-optimized resumes powered by AI</p>
+            <p className="text-white/40">ATS-optimized resumes crafted by Forge</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -976,7 +974,7 @@ export default function ResumePage() {
               className="btn-primary text-sm flex items-center gap-2 bg-gradient-to-r from-neon-purple to-neon-blue"
             >
               <Sparkles className="w-4 h-4" />
-              AI Write Resume
+              Write with Forge
             </button>
             <button
               onClick={handleAIEnhance}
@@ -986,12 +984,12 @@ export default function ResumePage() {
               {aiLoading === 'enhance' ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  AI is enhancing...
+                  Forge is enhancing...
                 </>
               ) : (
                 <>
                   <Wand2 className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-                  AI Enhance
+                  Enhance with Forge
                 </>
               )}
             </button>
@@ -1026,7 +1024,7 @@ export default function ResumePage() {
 
               {isStarter && (
                 <span className="text-xs text-white/40 hidden sm:inline">
-                  Exported with nxtED AI watermark
+                  Exported with jobTED AI watermark
                 </span>
               )}
             </div>
@@ -1085,7 +1083,7 @@ export default function ResumePage() {
                   <div className="mt-4 pt-3 border-t border-white/5">
                     <p className="text-xs text-white/30 flex items-center gap-1">
                       <Sparkles className="w-3 h-3" />
-                      AI uses: {getAIUses()}/{AI_FREE_LIMIT} free
+                      Forge uses: {getAIUses()}/{AI_FREE_LIMIT} free
                     </p>
                   </div>
                 )}
@@ -1138,11 +1136,11 @@ export default function ResumePage() {
                       {aiLoading === 'summary' ? (
                         <>
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          AI is writing...
+                          Forge is writing...
                         </>
                       ) : (
                         <>
-                          <Wand2 className="w-3 h-3" /> AI Write
+                          <Wand2 className="w-3 h-3" /> Write with Forge
                         </>
                       )}
                     </button>
@@ -1179,7 +1177,7 @@ export default function ResumePage() {
                                 if (!res.ok) {
                                   const errData = await res.json().catch(() => null);
                                   if (errData?.code === 'PLAN_LIMIT_REACHED') {
-                                    showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                                    showToast('Free Forge limit reached. Upgrade to continue.', 'error');
                                     return;
                                   }
                                   throw new Error('Enhance failed');
@@ -1206,7 +1204,7 @@ export default function ResumePage() {
                             }}
                             disabled={aiLoading !== null}
                             className="p-1.5 rounded-lg hover:bg-white/5 text-neon-blue/60 hover:text-neon-blue transition-colors"
-                            title="AI Enhance bullets"
+                            title="Enhance with Forge"
                           >
                             {aiLoading === `exp-${exp.id}` ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1269,7 +1267,7 @@ export default function ResumePage() {
               {activeSection === 'tailor' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
                   <h3 className="font-semibold mb-2">Tailor to Job Description</h3>
-                  <p className="text-sm text-white/40 mb-4">Paste a job description and AI will optimize your resume for it.</p>
+                  <p className="text-sm text-white/40 mb-4">Paste a job description and Forge will optimize your resume for it.</p>
                   <textarea
                     value={tailorJobDesc}
                     onChange={(e) => setTailorJobDesc(e.target.value)}
@@ -1284,17 +1282,17 @@ export default function ResumePage() {
                     {tailoring ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        AI is tailoring your resume...
+                        Forge is tailoring your resume...
                       </>
                     ) : (
                       <>
-                        <Wand2 className="w-4 h-4" /> Optimize Resume
+                        <Wand2 className="w-4 h-4" /> Optimize with Forge
                       </>
                     )}
                   </button>
                   {isBasic && (
                     <p className="text-xs text-white/30 mt-3">
-                      Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} AI uses remaining
+                      Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} Forge uses remaining
                     </p>
                   )}
                 </motion.div>
@@ -1407,16 +1405,16 @@ export default function ResumePage() {
                         if (!res.ok) {
                           const errData = await res.json().catch(() => null);
                           if (errData?.code === 'PLAN_LIMIT_REACHED') {
-                            showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                            showToast('Free Forge limit reached. Upgrade to continue.', 'error');
                             return;
                           }
                           throw new Error('Generation failed');
                         }
                         if (isBasic) incrementAIUses();
-                        showToast('AI generated education content!', 'success');
+                        showToast('Forge generated education content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
-                        showToast('AI generation failed. Try again.', 'error');
+                        showToast('Forge generation failed. Try again.', 'error');
                       } finally {
                         setAiLoading(null);
                       }
@@ -1425,9 +1423,9 @@ export default function ResumePage() {
                     className="btn-secondary text-sm flex items-center gap-2"
                   >
                     {aiLoading === 'education' ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> AI is generating...</>
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Forge is generating...</>
                     ) : (
-                      <><Wand2 className="w-4 h-4" /> AI Generate Education</>
+                      <><Wand2 className="w-4 h-4" /> Generate with Forge</>
                     )}
                   </button>
                 </motion.div>
@@ -1512,16 +1510,16 @@ export default function ResumePage() {
                         if (!res.ok) {
                           const errData = await res.json().catch(() => null);
                           if (errData?.code === 'PLAN_LIMIT_REACHED') {
-                            showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                            showToast('Free Forge limit reached. Upgrade to continue.', 'error');
                             return;
                           }
                           throw new Error('Generation failed');
                         }
                         if (isBasic) incrementAIUses();
-                        showToast('AI generated certification content!', 'success');
+                        showToast('Forge generated certification content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
-                        showToast('AI generation failed. Try again.', 'error');
+                        showToast('Forge generation failed. Try again.', 'error');
                       } finally {
                         setAiLoading(null);
                       }
@@ -1530,9 +1528,9 @@ export default function ResumePage() {
                     className="btn-secondary text-sm flex items-center gap-2"
                   >
                     {aiLoading === 'certifications' ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> AI is generating...</>
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Forge is generating...</>
                     ) : (
-                      <><Wand2 className="w-4 h-4" /> AI Generate Certifications</>
+                      <><Wand2 className="w-4 h-4" /> Generate with Forge</>
                     )}
                   </button>
                 </motion.div>
@@ -1626,16 +1624,16 @@ export default function ResumePage() {
                         if (!res.ok) {
                           const errData = await res.json().catch(() => null);
                           if (errData?.code === 'PLAN_LIMIT_REACHED') {
-                            showToast('Free AI limit reached. Upgrade to continue.', 'error');
+                            showToast('Free Forge limit reached. Upgrade to continue.', 'error');
                             return;
                           }
                           throw new Error('Generation failed');
                         }
                         if (isBasic) incrementAIUses();
-                        showToast('AI generated projects content!', 'success');
+                        showToast('Forge generated projects content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
-                        showToast('AI generation failed. Try again.', 'error');
+                        showToast('Forge generation failed. Try again.', 'error');
                       } finally {
                         setAiLoading(null);
                       }
@@ -1644,9 +1642,9 @@ export default function ResumePage() {
                     className="btn-secondary text-sm flex items-center gap-2"
                   >
                     {aiLoading === 'projects' ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> AI is generating...</>
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Forge is generating...</>
                     ) : (
-                      <><Wand2 className="w-4 h-4" /> AI Generate Projects</>
+                      <><Wand2 className="w-4 h-4" /> Generate with Forge</>
                     )}
                   </button>
                 </motion.div>

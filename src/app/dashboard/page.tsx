@@ -1,743 +1,430 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Brain, Target, BookOpen, FileText, Briefcase, TrendingUp,
-  ArrowRight, BarChart3, Zap, Award, Clock, CheckCircle2,
-  AlertCircle, Star, Sparkles, Lightbulb, Rocket, RefreshCw,
-  Mic, UserCheck, Send, MessageSquare, Trophy, Bot
+  Play, Lock, ArrowRight, Clock, Loader2,
+  Shield, Target, TrendingUp, Zap, CheckCircle2,
+  Brain, FileText, Send, MessageSquare, Trophy, ChevronRight, ChevronDown, Rocket,
 } from 'lucide-react';
+import AgentAvatar from '@/components/brand/AgentAvatar';
+import CortexAvatar from '@/components/brand/CortexAvatar';
+import PersonalizedStory from '@/components/dashboard/PersonalizedStory';
+import { type JourneyProgress } from '@/components/dashboard/CareerJourneyBar';
+import { type AgentId } from '@/lib/agents/registry';
+import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.5 } }),
-};
-
-interface InsightItem {
-  type: string;
-  title: string;
-  description: string;
-  action?: string;
-  priority: string;
-  // Legacy fields from POST-based format
-  message?: string;
-  impact?: string;
-}
-
-interface AIInsightsData {
-  insights: InsightItem[];
-  careerScore: number;
-  weeklyTip: string | { title: string; description: string; category: string };
-  marketReadiness?: number;
-  trendingSkills?: string[];
-}
-
-interface JourneyProgress {
-  onboarding: boolean;
-  assessment: boolean;
-  careerPlan: boolean;
-  resume: boolean;
-  applied: boolean;
-  interview: boolean;
-  offer: boolean;
-}
-
-interface UserProfile {
-  name: string;
-  email: string;
-  targetRole: string;
-  plan: string;
-  credits: number;
-  onboardingDone: boolean;
-  journey?: JourneyProgress;
-  careerTwin?: {
-    marketReadiness?: number;
-    hireProbability?: number;
-    topSkills?: { name: string; score: number; color: string }[];
-  };
-}
-
-const quickActions = [
-  { icon: Brain, label: 'Take Assessment', href: '/dashboard/assessment', color: 'from-blue-500 to-cyan-400' },
-  { icon: Target, label: 'View Career Plan', href: '/dashboard/career-plan', color: 'from-purple-500 to-pink-400' },
-  { icon: FileText, label: 'Build Resume', href: '/dashboard/resume', color: 'from-green-500 to-emerald-400' },
-  { icon: Briefcase, label: 'Find Jobs', href: '/dashboard/jobs', color: 'from-orange-500 to-yellow-400' },
-  { icon: Mic, label: 'Interview Prep', href: '/dashboard/interview', color: 'from-rose-500 to-red-400' },
-  { icon: Bot, label: 'AI Agents', href: '/dashboard/agents', color: 'from-indigo-500 to-purple-400' },
+const NEXT_STEPS: { key: keyof JourneyProgress; label: string; description: string; href: string; icon: any; agentId?: AgentId }[] = [
+  { key: 'assessment', label: 'Take AI Skill Assessment', description: 'Discover your strengths and find skill gaps for your target role.', href: '/dashboard/assessment', icon: Brain },
+  { key: 'careerPlan', label: 'Generate Career Plan', description: 'Get a personalized roadmap with milestones to reach your goals.', href: '/dashboard/career-plan', icon: Target },
+  { key: 'resume', label: 'Build Your Resume', description: 'Agent Forge will craft an ATS-optimized resume tailored to your target role.', href: '/dashboard/resume', icon: FileText, agentId: 'forge' },
+  { key: 'applied', label: 'Find & Apply to Jobs', description: 'Agent Scout finds matches, Agent Archer fires off applications.', href: '/dashboard/jobs', icon: Send, agentId: 'scout' },
+  { key: 'interview', label: 'Prep for Interviews', description: 'Agent Atlas runs mock interviews tailored to each company.', href: '/dashboard/interview', icon: MessageSquare, agentId: 'atlas' },
 ];
-
-const insightTypeIcons: Record<string, typeof Brain> = {
-  strength: Star,
-  improvement: TrendingUp,
-  opportunity: Rocket,
-  action: Zap,
-  resume: FileText,
-  jobs: Briefcase,
-  skills: Brain,
-};
-
-const insightTypeColors: Record<string, string> = {
-  strength: 'text-neon-green bg-neon-green/10',
-  improvement: 'text-yellow-400 bg-yellow-400/10',
-  opportunity: 'text-neon-blue bg-neon-blue/10',
-  action: 'text-neon-purple bg-neon-purple/10',
-  high: 'text-red-400 bg-red-400/10',
-  medium: 'text-yellow-400 bg-yellow-400/10',
-  low: 'text-neon-green bg-neon-green/10',
-};
-
-// --- Loading skeleton components ---
-function SkeletonCard({ className = '' }: { className?: string }) {
-  return (
-    <div className={`card animate-pulse ${className}`}>
-      <div className="h-4 bg-white/5 rounded w-1/3 mb-4" />
-      <div className="space-y-3">
-        <div className="h-3 bg-white/5 rounded w-full" />
-        <div className="h-3 bg-white/5 rounded w-2/3" />
-        <div className="h-3 bg-white/5 rounded w-1/2" />
-      </div>
-    </div>
-  );
-}
-
-function SkeletonCircle() {
-  return (
-    <div className="card animate-pulse">
-      <div className="h-4 bg-white/5 rounded w-1/2 mx-auto mb-4" />
-      <div className="w-32 h-32 rounded-full bg-white/5 mx-auto mb-4" />
-      <div className="h-3 bg-white/5 rounded w-1/3 mx-auto" />
-    </div>
-  );
-}
-
-function MetricSkeleton() {
-  return (
-    <div className="card text-center animate-pulse">
-      <div className="h-8 bg-white/5 rounded w-12 mx-auto mb-2" />
-      <div className="h-3 bg-white/5 rounded w-16 mx-auto" />
-    </div>
-  );
-}
-
-// --- Career Journey Steps ---
-const journeySteps = [
-  { key: 'onboarding', label: 'Onboarding', icon: UserCheck, href: '/dashboard/onboarding', color: 'from-blue-500 to-cyan-400' },
-  { key: 'assessment', label: 'Assessment', icon: Brain, href: '/dashboard/assessment', color: 'from-purple-500 to-pink-400' },
-  { key: 'careerPlan', label: 'Career Plan', icon: Target, href: '/dashboard/career-plan', color: 'from-indigo-500 to-blue-400' },
-  { key: 'resume', label: 'Resume', icon: FileText, href: '/dashboard/resume', color: 'from-green-500 to-emerald-400' },
-  { key: 'applied', label: 'Applied', icon: Send, href: '/dashboard/jobs', color: 'from-orange-500 to-yellow-400' },
-  { key: 'interview', label: 'Interview', icon: MessageSquare, href: '/dashboard/interview', color: 'from-rose-500 to-red-400' },
-  { key: 'offer', label: 'Job Landed', icon: Trophy, href: '/dashboard/jobs', color: 'from-yellow-400 to-amber-500' },
-];
-
-function CareerJourney({ journey, loading }: { journey?: JourneyProgress; loading: boolean }) {
-  if (loading) {
-    return (
-      <div className="card animate-pulse">
-        <div className="h-4 bg-white/5 rounded w-40 mb-4" />
-        <div className="flex items-center gap-2">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="flex items-center gap-2 flex-1">
-              <div className="w-8 h-8 rounded-full bg-white/5 flex-shrink-0" />
-              {i < 6 && <div className="flex-1 h-0.5 bg-white/5" />}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const completedSteps = journey
-    ? journeySteps.filter((s) => journey[s.key as keyof JourneyProgress]).length
-    : 0;
-  const progressPercent = Math.round((completedSteps / journeySteps.length) * 100);
-
-  // Find the current (first incomplete) step
-  const currentStepIndex = journey
-    ? journeySteps.findIndex((s) => !journey[s.key as keyof JourneyProgress])
-    : 0;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 }}
-      className="card border border-white/5 overflow-hidden"
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Rocket className="w-4 h-4 text-neon-blue" />
-          <h3 className="text-sm font-semibold text-white/60">Your Career Journey</h3>
-        </div>
-        <span className="text-xs text-white/30">
-          {completedSteps}/{journeySteps.length} steps &middot; {progressPercent}%
-        </span>
-      </div>
-
-      {/* Progress bar */}
-      <div className="skill-bar h-1 mb-5">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${progressPercent}%` }}
-          transition={{ duration: 1, delay: 0.3 }}
-          className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
-        />
-      </div>
-
-      {/* Steps */}
-      <div className="flex items-start">
-        {journeySteps.map((step, i) => {
-          const done = journey?.[step.key as keyof JourneyProgress] ?? false;
-          const isCurrent = i === currentStepIndex;
-          const Icon = step.icon;
-
-          return (
-            <div key={step.key} className="flex items-center flex-1 min-w-0">
-              {/* Step dot + label */}
-              <Link
-                href={step.href}
-                className={`flex flex-col items-center gap-1.5 group flex-shrink-0 ${
-                  done ? 'cursor-pointer' : isCurrent ? 'cursor-pointer' : 'cursor-default'
-                }`}
-              >
-                <div
-                  className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                    done
-                      ? `bg-gradient-to-br ${step.color} shadow-lg shadow-neon-blue/10`
-                      : isCurrent
-                        ? 'bg-white/10 border-2 border-neon-blue ring-2 ring-neon-blue/20'
-                        : 'bg-white/5 border border-white/10'
-                  }`}
-                >
-                  {done ? (
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                  ) : (
-                    <Icon className={`w-4 h-4 ${isCurrent ? 'text-neon-blue' : 'text-white/20'}`} />
-                  )}
-                  {isCurrent && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-neon-blue rounded-full animate-pulse" />
-                  )}
-                </div>
-                <span
-                  className={`text-[10px] font-medium text-center leading-tight ${
-                    done ? 'text-white/70' : isCurrent ? 'text-neon-blue' : 'text-white/20'
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </Link>
-
-              {/* Connector line */}
-              {i < journeySteps.length - 1 && (
-                <div className="flex-1 mx-1 mt-[-12px]">
-                  <div
-                    className={`h-0.5 rounded-full ${
-                      done && journey?.[journeySteps[i + 1].key as keyof JourneyProgress]
-                        ? 'bg-gradient-to-r from-neon-blue to-neon-purple'
-                        : done
-                          ? 'bg-gradient-to-r from-neon-blue/40 to-white/10'
-                          : 'bg-white/5'
-                    }`}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
-}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [insightsLoading, setInsightsLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [aiInsights, setAiInsights] = useState<AIInsightsData | null>(null);
-  const [recentActivity, setRecentActivity] = useState<{ icon: typeof CheckCircle2; text: string; time: string; color: string }[]>([]);
-  const [assessmentDone, setAssessmentDone] = useState(true);
-
-  // Fetch user profile
-  const fetchProfile = useCallback(async () => {
-    try {
-      const res = await fetch('/api/user/profile');
-      if (res.ok) {
-        const data = await res.json();
-        setUserProfile(data);
-        setAssessmentDone(!!data.careerTwin);
-        return data;
-      }
-    } catch (err) {
-      console.error('Failed to fetch profile:', err);
-    }
-    return null;
-  }, []);
-
-  // Fetch AI insights (GET endpoint)
-  const fetchInsights = useCallback(async () => {
-    setInsightsLoading(true);
-    try {
-      const res = await fetch('/api/ai/dashboard-insights');
-      if (res.ok) {
-        const data = await res.json();
-        setAiInsights(data);
-      } else {
-        // Set fallback insights if API fails
-        setAiInsights(getFallbackInsights());
-      }
-    } catch (err) {
-      console.error('Failed to fetch insights:', err);
-      setAiInsights(getFallbackInsights());
-    } finally {
-      setInsightsLoading(false);
-    }
-  }, []);
-
-  // Build recent activity from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('nxted_recent_activity');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setRecentActivity(parsed.map((a: any) => ({
-          ...a,
-          icon: a.iconName === 'Star' ? Star : a.iconName === 'TrendingUp' ? TrendingUp : a.iconName === 'FileText' ? FileText : CheckCircle2,
-        })));
-      } catch { /* ignore parse errors */ }
-    }
-    if (!stored) {
-      setRecentActivity([
-        { icon: CheckCircle2, text: 'Started your career journey with NXTED AI', time: 'Just now', color: 'text-neon-green' },
-        { icon: Star, text: 'Complete your first assessment to unlock insights', time: 'Tip', color: 'text-yellow-400' },
-      ]);
-    }
-  }, []);
-
-  // Load all data on mount
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      await Promise.all([fetchProfile(), fetchInsights()]);
-      setLoading(false);
-    }
-    loadData();
-  }, [fetchProfile, fetchInsights]);
-
-  const userName = userProfile?.name || 'there';
-  const targetRole = userProfile?.targetRole || 'your dream role';
-  const journey = userProfile?.journey;
-  const careerTwin = userProfile?.careerTwin;
-  const marketReadiness = careerTwin?.marketReadiness ?? aiInsights?.marketReadiness ?? 0;
-  const hireProbability = careerTwin?.hireProbability ?? (marketReadiness * 0.9) / 100;
-  const careerScore = aiInsights?.careerScore ?? 0;
-  const skillsAssessed = careerTwin?.topSkills?.length ?? 0;
-  const aiCredits = userProfile?.credits ?? 0;
-
-  const topSkills = careerTwin?.topSkills || [];
-
-  // Milestones from localStorage or defaults
-  const [milestones] = useState(() => {
-    if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem('nxted_milestones');
-    if (stored) {
-      try { return JSON.parse(stored); } catch { /* ignore */ }
-    }
-    return [
-      { title: 'Complete Skill Assessment', progress: 0, status: 'in-progress' },
-      { title: 'Build Your Resume', progress: 0, status: 'upcoming' },
-      { title: 'Create Portfolio Project', progress: 0, status: 'upcoming' },
-      { title: 'Practice Interviews', progress: 0, status: 'upcoming' },
-    ];
+  const [userName, setUserName] = useState('');
+  const [userImage, setUserImage] = useState<string | null>(null);
+  const [plan, setPlan] = useState<PlanTier>('STARTER');
+  const [runningAll, setRunningAll] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [journey, setJourney] = useState<JourneyProgress | null>(null);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [pipelineStats, setPipelineStats] = useState({
+    weeklyApps: 0,
+    scamBlocked: 0,
+    avgQuality: 0,
+    interviewCallbacks: 0,
   });
 
-  // Parse weekly tip - handle both string and object formats
-  const weeklyTip = (() => {
-    if (!aiInsights?.weeklyTip) return null;
-    if (typeof aiInsights.weeklyTip === 'string') {
-      return { title: 'Weekly AI Tip', description: aiInsights.weeklyTip, category: 'general' };
-    }
-    return aiInsights.weeklyTip;
-  })();
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/user/profile').then(r => r.ok ? r.json() : null),
+      fetch('/api/agents/activity?limit=5').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/api/agents/pipeline-stats').then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([profile, actData, stats]) => {
+      if (profile) {
+        setUserName(profile.name || '');
+        setUserImage(profile.image || null);
+        setPlan((profile.plan as PlanTier) || 'STARTER');
+        if (profile.journey) setJourney(profile.journey);
+      }
+      if (actData) {
+        const list = Array.isArray(actData) ? actData : actData.activities ?? [];
+        setActivities(list.slice(0, 5));
+      }
+      if (stats) {
+        setPipelineStats({
+          weeklyApps: stats.weeklyApps ?? 0,
+          scamBlocked: stats.scamBlocked ?? 0,
+          avgQuality: stats.avgQuality ?? 0,
+          interviewCallbacks: stats.interviewCallbacks ?? 0,
+        });
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const agents = getAgentsWithStatus(plan);
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
+
+  const handleRunAll = async () => {
+    setRunningAll(true);
+    try {
+      await fetch('/api/agents/run', { method: 'POST' });
+    } catch {}
+    setTimeout(() => setRunningAll(false), 3000);
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1">
-          Welcome back,{' '}
-          {loading
-            ? <span className="inline-block w-24 h-7 bg-white/5 rounded animate-pulse align-middle" />
-            : userName}
-        </h1>
-        <p className="text-white/40">
-          Your career journey to{' '}
-          <span className="text-neon-blue font-medium">{loading ? '...' : targetRole}</span>{' '}
-          — here&apos;s where you stand.
-        </p>
+    <div className="max-w-5xl mx-auto space-y-8">
+
+      {/* ───── HERO HEADER ───── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-4 pt-4"
+      >
+        <CortexAvatar size={52} pulse />
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">
+            {loading ? (
+              <span className="inline-block w-24 h-7 bg-white/5 rounded animate-pulse align-middle" />
+            ) : (
+              <>{greeting}, {userName || 'there'}</>
+            )}
+          </h1>
+          <p className="text-white/40 text-sm mt-0.5">
+            {agents.filter(a => !a.locked).length} of {agents.length} agents hired
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleRunAll}
+            disabled={runningAll}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl
+                       bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold text-sm
+                       shadow-lg shadow-neon-blue/20 hover:shadow-neon-blue/40
+                       transition-all disabled:opacity-50"
+          >
+            {runningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            <span className="hidden sm:inline">{runningAll ? 'Running...' : 'Run All'}</span>
+          </button>
+          <Link
+            href="/pricing"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 text-sm font-medium transition-all"
+          >
+            Hire Agents <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </motion.div>
 
-      {/* Career Journey Tracker */}
-      <CareerJourney journey={journey} loading={loading} />
-
-      {/* Assessment CTA - Show if user hasn't completed assessment */}
-      <AnimatePresence>
-        {!loading && !assessmentDone && (
+      {/* ───── NEXT STEP PROMPT ───── */}
+      {!loading && journey && (() => {
+        const nextStep = NEXT_STEPS.find(s => !journey[s.key]);
+        if (!nextStep) return null; // All done
+        const allDone = NEXT_STEPS.every(s => journey[s.key]) && journey.offer;
+        if (allDone) return (
           <motion.div
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-neon-green/20 bg-gradient-to-r from-neon-green/[0.06] to-neon-blue/[0.04] p-5 flex items-center gap-4"
           >
-            <Link href="/dashboard/assessment" className="block">
-              <div className="card border border-neon-blue/30 bg-gradient-to-r from-neon-blue/5 to-neon-purple/5 hover:from-neon-blue/10 hover:to-neon-purple/10 transition-all cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">
-                    <Rocket className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">Start Your Career Assessment</h3>
-                    <p className="text-sm text-white/50">
-                      Take a 10-minute AI-powered assessment to get personalized insights, skill scores,
-                      and a tailored career plan for your target role.
-                    </p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-neon-blue flex-shrink-0" />
+            <Trophy className="w-8 h-8 text-neon-green flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-neon-green">Mission Complete!</h3>
+              <p className="text-xs text-white/50 mt-0.5">You&apos;ve completed every step. Your agents are working for you.</p>
+            </div>
+          </motion.div>
+        );
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <Link
+              href={nextStep.href}
+              className="group block rounded-2xl border border-neon-blue/20 bg-gradient-to-r from-neon-blue/[0.06] to-neon-purple/[0.04] p-4 sm:p-5 hover:border-neon-blue/40 transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center flex-shrink-0">
+                  {nextStep.agentId ? (
+                    <AgentAvatar agentId={nextStep.agentId} size={28} />
+                  ) : (
+                    <nextStep.icon className="w-5 h-5 text-neon-blue" />
+                  )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-neon-blue uppercase tracking-wider">Next Step</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mt-0.5">{nextStep.label}</h3>
+                  <p className="text-xs text-white/40 mt-0.5 line-clamp-1">{nextStep.description}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all flex-shrink-0" />
               </div>
             </Link>
           </motion.div>
-        )}
-      </AnimatePresence>
+        );
+      })()}
 
-      {/* Career Metrics Row */}
-      {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <MetricSkeleton key={i} />)}
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-neon-blue">{careerScore}</div>
-            <div className="text-xs text-white/40 mt-1">Career Score</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-neon-purple">{skillsAssessed}</div>
-            <div className="text-xs text-white/40 mt-1">Skills Assessed</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-neon-green">{Math.round(marketReadiness)}%</div>
-            <div className="text-xs text-white/40 mt-1">Market Readiness</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-yellow-400">{aiCredits}</div>
-            <div className="text-xs text-white/40 mt-1">AI Credits</div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Career Twin Overview */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Market Readiness */}
-        {loading ? (
-          <SkeletonCircle />
-        ) : (
-          <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="card col-span-1">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-white/60">Market Readiness</h3>
-              <BarChart3 className="w-4 h-4 text-neon-blue" />
-            </div>
-            <div className="relative w-32 h-32 mx-auto mb-4">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
-                <circle cx="60" cy="60" r="50" fill="none" stroke="url(#grad)" strokeWidth="10"
-                  strokeDasharray={`${marketReadiness * 3.14} ${314 - marketReadiness * 3.14}`}
-                  strokeLinecap="round" />
-                <defs>
-                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%">
-                    <stop offset="0%" stopColor="#00d4ff" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold">{Math.round(marketReadiness)}%</span>
-                <span className="text-[10px] text-white/40">READY</span>
+      {/* ───── METRICS/ACTIVITY + STORY (side-by-side) ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Left: Metrics + Activity (2/5 width) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Quality Metrics */}
+          {!loading && plan !== 'BASIC' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <h2 className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Pipeline</h2>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    <Target className="w-3.5 h-3.5 text-neon-blue" />
+                  </div>
+                  <div className="text-xl font-bold text-neon-blue">{pipelineStats.weeklyApps}</div>
+                  <div className="text-[9px] text-white/30">Apps This Week</div>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    <Shield className="w-3.5 h-3.5 text-neon-green" />
+                  </div>
+                  <div className="text-xl font-bold text-neon-green">{pipelineStats.scamBlocked}</div>
+                  <div className="text-[9px] text-white/30">Scams Blocked</div>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-neon-purple" />
+                  </div>
+                  <div className="text-xl font-bold text-neon-purple">{pipelineStats.avgQuality}%</div>
+                  <div className="text-[9px] text-white/30">Avg Quality</div>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                  </div>
+                  <div className="text-xl font-bold text-yellow-400">{pipelineStats.interviewCallbacks}</div>
+                  <div className="text-[9px] text-white/30">Callbacks</div>
+                </div>
               </div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm text-white/40">Hire Probability</div>
-              <div className="text-lg font-bold text-neon-green">{Math.round(hireProbability * 100)}%</div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        {/* Skill Snapshot */}
-        {loading ? (
-          <SkeletonCard className="col-span-1 lg:col-span-2" />
-        ) : (
-          <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible" className="card col-span-1 lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-semibold text-white/60">Skill Snapshot — Career Twin</h3>
-              <Link href="/dashboard/assessment" className="text-xs text-neon-blue hover:underline flex items-center gap-1">
-                {assessmentDone ? 'Reassess' : 'Take Assessment'} <ArrowRight className="w-3 h-3" />
+          {/* Recent Activity */}
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">Recent Activity</h3>
+              <Link href="/dashboard/agents" className="text-[10px] text-neon-blue hover:underline flex items-center gap-1">
+                All <ArrowRight className="w-2.5 h-2.5" />
               </Link>
             </div>
-            {assessmentDone && topSkills.length > 0 ? (
-              <div className="space-y-4">
-                {topSkills.map((skill) => (
-                  <div key={skill.name}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium">{skill.name}</span>
-                      <span className="text-sm text-white/40">{skill.score}%</span>
-                    </div>
-                    <div className="skill-bar">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${skill.score}%` }}
-                        transition={{ duration: 1, delay: 0.5 }}
-                        className={`skill-bar-fill ${skill.color || 'bg-neon-blue'}`}
-                      />
-                    </div>
+
+            {loading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center gap-2 animate-pulse">
+                    <div className="w-6 h-6 rounded-lg bg-white/5" />
+                    <div className="flex-1"><div className="h-2.5 bg-white/5 rounded w-3/4" /></div>
+                  </div>
+                ))}
+              </div>
+            ) : activities.length > 0 ? (
+              <div className="space-y-2">
+                {activities.map((item: any, i: number) => (
+                  <div key={item.id || i} className="flex items-center gap-2 text-xs">
+                    {item.agentId ? (
+                      <AgentAvatar agentId={item.agentId as AgentId} size={20} />
+                    ) : (
+                      <div className="w-5 h-5 rounded bg-white/5" />
+                    )}
+                    <span className="text-white/60 flex-1 truncate">
+                      {item.agentName && <span className="font-medium text-white/80">{item.agentName}</span>}{' '}
+                      {item.action}
+                    </span>
+                    <span className="text-[9px] text-white/20 flex-shrink-0">
+                      {item.timestamp ? timeAgo(item.timestamp) : ''}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Brain className="w-12 h-12 text-white/10 mb-3" />
-                <p className="text-sm text-white/40 mb-3">No skills assessed yet</p>
-                <Link href="/dashboard/assessment" className="btn-primary text-sm">
-                  Take Assessment
-                </Link>
+              <div className="text-center py-6 text-white/25">
+                <Clock className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
+                <p className="text-[11px]">No activity yet. Run your agents to get started.</p>
               </div>
             )}
-
-            {/* Trending Skills */}
-            {aiInsights?.trendingSkills && aiInsights.trendingSkills.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-white/5">
-                <div className="text-xs text-white/40 mb-2 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> Trending in your field
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {aiInsights.trendingSkills.map((skill) => (
-                    <span key={skill} className="text-xs px-2.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue border border-neon-blue/20">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </div>
-
-      {/* AI Insights Card */}
-      {insightsLoading ? (
-        <SkeletonCard />
-      ) : aiInsights && aiInsights.insights.length > 0 && (
-        <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="card">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-neon-purple" /> AI Insights
-            </h3>
-            <button
-              onClick={() => fetchInsights()}
-              className="text-xs text-white/30 hover:text-white/60 flex items-center gap-1 transition-colors"
-            >
-              <RefreshCw className="w-3 h-3" /> Refresh
-            </button>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {aiInsights.insights.slice(0, 6).map((insight, i) => {
-              const Icon = insightTypeIcons[insight.type] || Sparkles;
-              const colorKey = insight.priority || insight.impact || 'medium';
-              const typeColorKey = insight.type;
-              const color = insightTypeColors[typeColorKey] || insightTypeColors[colorKey] || insightTypeColors.medium;
-              const displayText = insight.description || insight.message || '';
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color}`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    {insight.title && (
-                      <span className="text-xs font-medium text-white/70 truncate">{insight.title}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-white/50 mb-2">{displayText}</p>
-                  {insight.action && insight.action.startsWith('/') && (
-                    <Link href={insight.action} className="text-xs text-neon-blue hover:underline flex items-center gap-1">
-                      Take action <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Weekly AI Tip */}
-      {insightsLoading ? (
-        <SkeletonCard />
-      ) : weeklyTip && (
-        <motion.div custom={3} variants={fadeUp} initial="hidden" animate="visible">
-          <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center flex-shrink-0">
-                <Lightbulb className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-sm font-semibold">Weekly AI Tip</h3>
-                  {weeklyTip.category && weeklyTip.category !== 'general' && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40">
-                      {weeklyTip.category}
-                    </span>
-                  )}
-                </div>
-                {weeklyTip.title !== 'Weekly AI Tip' && (
-                  <h4 className="font-medium text-white/90 mb-1">{weeklyTip.title}</h4>
-                )}
-                <p className="text-sm text-white/50">{weeklyTip.description}</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {quickActions.map((action, i) => (
-          <motion.div key={action.label} custom={i + 4} variants={fadeUp} initial="hidden" animate="visible">
-            <Link href={action.href} className="card-interactive flex flex-col items-center text-center py-6">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3`}>
-                <action.icon className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-sm font-medium">{action.label}</span>
-            </Link>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* ── Agent Report Card ── */}
-      <motion.div custom={3.5} variants={fadeUp} initial="hidden" animate="visible">
-        <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold">Cortex Agent Team</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-medium">Active</span>
-              </div>
-              <p className="text-sm text-white/40 mb-3">
-                Your AI agents are ready to hunt for jobs, optimize resumes, and send applications automatically.
-              </p>
-              <Link
-                href="/dashboard/agents"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neon-purple/20 text-neon-purple text-sm font-medium hover:bg-neon-purple/30 transition-colors"
-              >
-                <Rocket className="w-4 h-4" /> Go to Agent Dashboard
-              </Link>
-            </div>
           </div>
         </div>
-      </motion.div>
 
-      {/* Bottom Grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Milestones */}
-        {loading ? (
-          <SkeletonCard />
-        ) : (
-          <motion.div custom={9} variants={fadeUp} initial="hidden" animate="visible" className="card">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-semibold text-white/60">Current Milestones</h3>
-              <Link href="/dashboard/career-plan" className="text-xs text-neon-blue hover:underline">View all</Link>
-            </div>
-            <div className="space-y-4">
-              {milestones.map((m: any) => (
-                <div key={m.title} className="flex items-center gap-4">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    m.status === 'completed' ? 'bg-neon-green/10' : m.status === 'in-progress' ? 'bg-neon-blue/10' : 'bg-white/5'
-                  }`}>
-                    {m.status === 'completed' ? (
-                      <CheckCircle2 className="w-4 h-4 text-neon-green" />
-                    ) : m.status === 'in-progress' ? (
-                      <Clock className="w-4 h-4 text-neon-blue" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-white/20" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{m.title}</div>
-                    <div className="mt-1.5 skill-bar h-1.5">
-                      <div
-                        className={`skill-bar-fill ${m.status === 'completed' ? 'bg-neon-green' : 'bg-neon-blue'}`}
-                        style={{ width: `${m.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-xs text-white/30 flex-shrink-0">{m.progress}%</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+        {/* Right: Story (3/5 width) */}
+        <div className="lg:col-span-3">
+          <PersonalizedStory userName={userName} userImage={userImage} />
+        </div>
+      </div>
 
-        {/* Recent Activity */}
-        {loading ? (
-          <SkeletonCard />
-        ) : (
-          <motion.div custom={10} variants={fadeUp} initial="hidden" animate="visible" className="card">
-            <h3 className="text-sm font-semibold text-white/60 mb-6">Recent Activity</h3>
-            <div className="space-y-4">
-              {recentActivity.length > 0 ? (
-                recentActivity.map((activity, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <activity.icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${activity.color}`} />
-                    <div>
-                      <div className="text-sm">{activity.text}</div>
-                      <div className="text-xs text-white/30 mt-0.5">{activity.time}</div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-white/30">
-                  <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No recent activity yet</p>
-                  <p className="text-xs mt-1">Start by taking an assessment</p>
-                </div>
-              )}
+      {/* ───── DEPLOY SCOUT QUICK ACTION ───── */}
+      {!loading && !agents.find(a => a.id === 'scout')?.locked && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Link
+            href="/dashboard/jobs?deploy=scout"
+            className="group block rounded-2xl border border-neon-blue/15 bg-gradient-to-r from-neon-blue/[0.06] to-cyan-500/[0.04] p-4 hover:border-neon-blue/30 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <AgentAvatar agentId="scout" size={40} pulse />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-white">Deploy Scout</h3>
+                <p className="text-xs text-white/40 mt-0.5">Search 6+ platforms for matching jobs right now</p>
+              </div>
+              <div className="flex items-center gap-2 text-neon-blue">
+                <Rocket className="w-4 h-4" />
+                <span className="text-xs font-semibold hidden sm:inline">Launch Mission</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
-          </motion.div>
-        )}
+          </Link>
+        </motion.div>
+      )}
+
+      {/* ───── 6 AGENT CARDS (expand in-place) ───── */}
+      <div>
+        <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4 text-center">Your Agent Team</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {agents.map((agent, i) => {
+            const isExpanded = expandedAgent === agent.id;
+            return (
+              <motion.div
+                key={agent.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * i }}
+              >
+                {agent.locked ? (
+                  <div
+                    onClick={() => setExpandedAgent(isExpanded ? null : agent.id)}
+                    className="rounded-xl border border-white/5 bg-white/[0.015] p-4 opacity-50 hover:opacity-70 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <AgentAvatar agentId={agent.id} size={36} sleeping />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">{agent.displayName}</span>
+                          <Lock className="w-3 h-3 text-white/30" />
+                        </div>
+                        <p className="text-xs text-white/30">{agent.role}</p>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-white/20 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 pt-3 border-t border-white/5">
+                            <p className="text-xs text-white/40 mb-2">{agent.description}</p>
+                            <p className="text-[10px] text-white/25 mb-2 uppercase tracking-wider">Capabilities</p>
+                            <div className="space-y-1 mb-3">
+                              {agent.capabilities.map((cap: string) => (
+                                <div key={cap} className="flex items-center gap-1.5 text-[11px] text-white/35">
+                                  <CheckCircle2 className="w-3 h-3 text-white/20 flex-shrink-0" />
+                                  {cap}
+                                </div>
+                              ))}
+                            </div>
+                            <Link
+                              href="/pricing"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-xs text-neon-purple hover:underline font-medium"
+                            >
+                              Upgrade to {agent.minPlan} <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setExpandedAgent(isExpanded ? null : agent.id)}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer group ${
+                      isExpanded
+                        ? 'border-white/15 bg-white/[0.04]'
+                        : 'border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <AgentAvatar agentId={agent.id} size={36} pulse />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">{agent.displayName}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
+                        </div>
+                        <p className="text-xs text-white/40">{agent.role}</p>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-white/20 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                    <p className="text-xs text-white/25 mt-2 pl-12">{agent.shortDescription}</p>
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 pt-3 border-t border-white/5">
+                            <p className="text-xs text-white/40 mb-3">{agent.description}</p>
+                            <p className="text-[10px] text-white/25 mb-2 uppercase tracking-wider">Capabilities</p>
+                            <div className="space-y-1 mb-3">
+                              {agent.capabilities.map((cap: string) => (
+                                <div key={cap} className="flex items-center gap-1.5 text-[11px] text-white/50">
+                                  <CheckCircle2 className="w-3 h-3 text-neon-green flex-shrink-0" />
+                                  {cap}
+                                </div>
+                              ))}
+                            </div>
+                            <Link
+                              href={agent.linkedPage}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neon-blue/10 text-neon-blue text-xs font-medium hover:bg-neon-blue/20 transition-colors"
+                            >
+                              Open {agent.displayName.split(' ')[1]} <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function getFallbackInsights(): AIInsightsData {
-  return {
-    insights: [
-      { type: 'action', title: 'Complete Your Skills Assessment', description: 'Take a quick assessment to discover your strengths and identify skill gaps for your target role.', action: '/dashboard/assessment', priority: 'high' },
-      { type: 'opportunity', title: 'Upload Your Resume', description: 'Upload or build your resume to get ATS optimization tips and tailored job matches.', action: '/dashboard/resume', priority: 'medium' },
-      { type: 'improvement', title: 'Explore Learning Paths', description: 'Browse curated learning paths designed to help you skill up for in-demand roles.', action: '/dashboard/learning', priority: 'low' },
-    ],
-    careerScore: 0,
-    weeklyTip: 'Start by completing a skills assessment to unlock personalized career insights and recommendations.',
-  };
+function timeAgo(ts: string): string {
+  try {
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  } catch { return ''; }
 }

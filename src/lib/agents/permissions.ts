@@ -21,7 +21,9 @@ const MIN_PLAN_LEVEL: Record<string, number> = {
 export function isAgentAvailable(agentId: AgentId, plan: PlanTier): boolean {
   const agent = AGENTS[agentId];
   if (!agent) return false;
-  return PLAN_HIERARCHY[plan] >= MIN_PLAN_LEVEL[agent.minPlan];
+  const userLevel = PLAN_HIERARCHY[plan] ?? 0;
+  const requiredLevel = PLAN_HIERARCHY[agent.minPlan as PlanTier] ?? 3;
+  return userLevel >= requiredLevel;
 }
 
 /**

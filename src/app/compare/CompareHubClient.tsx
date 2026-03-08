@@ -11,28 +11,28 @@ const competitors = [
     name: 'Jobscan',
     slug: 'jobscan',
     tagline: 'ATS checker & keyword optimization',
-    nxtedEdge: 'Full career platform at 76% less cost',
+    jobtedEdge: 'Full career platform at 76% less cost',
     badge: 'Most Popular',
   },
   {
     name: 'Teal',
     slug: 'teal',
     tagline: 'Job tracking & resume builder',
-    nxtedEdge: 'Salary tools, skills assessment, portfolio builder',
+    jobtedEdge: 'Salary tools, skills assessment, portfolio builder',
     badge: null,
   },
   {
     name: 'Rezi',
     slug: 'rezi',
     tagline: 'AI resume builder',
-    nxtedEdge: 'Career coaching, salary estimator, job matching',
+    jobtedEdge: 'Career coaching, salary estimator, job matching',
     badge: null,
   },
   {
     name: 'All Competitors',
     slug: 'all',
     tagline: 'Jobscan vs Teal vs Rezi vs Kickresume vs Careerflow vs Hiration',
-    nxtedEdge: 'NXTED AI is the only all-in-one platform',
+    jobtedEdge: 'jobTED AI is the only all-in-one platform',
     badge: 'Comprehensive',
   },
 ];
@@ -58,11 +58,11 @@ export default function CompareHubClient() {
           <motion.div {...fadeUp}>
             <span className="badge-purple text-sm mb-4 inline-block">Comparisons</span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
-              NXTED AI vs Competitors{' '}
+              jobTED AI vs Competitors{' '}
               <span className="gradient-text">See How We Compare</span>
             </h1>
             <p className="text-lg text-white/50 max-w-2xl mx-auto mb-8">
-              NXTED AI is the only all-in-one AI career platform with resume builder, career
+              jobTED AI is the only all-in-one AI career platform with resume builder, career
               coaching, salary estimator, skills assessment, portfolio builder, and job matching
               — all starting at $12/mo.
             </p>
@@ -96,7 +96,7 @@ export default function CompareHubClient() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h2 className="text-xl font-bold group-hover:text-neon-blue transition-colors">
-                        NXTED AI vs {comp.name}
+                        jobTED AI vs {comp.name}
                       </h2>
                       <p className="text-sm text-white/40 mt-1">{comp.tagline}</p>
                     </div>
@@ -107,7 +107,7 @@ export default function CompareHubClient() {
 
                   <div className="flex items-center gap-2 mb-4">
                     <Trophy className="w-4 h-4 text-neon-green shrink-0" />
-                    <span className="text-sm text-neon-green">{comp.nxtedEdge}</span>
+                    <span className="text-sm text-neon-green">{comp.jobtedEdge}</span>
                   </div>
 
                   <div className="flex items-center gap-1 text-sm text-white/30 group-hover:text-neon-blue/60 transition-colors">
@@ -132,7 +132,7 @@ export default function CompareHubClient() {
               <span className="gradient-text">everything</span>?
             </h2>
             <p className="text-white/50 mb-8 max-w-lg mx-auto">
-              NXTED AI replaces 5+ career tools. Resume builder, ATS checker, career coach,
+              jobTED AI replaces 5+ career tools. Resume builder, ATS checker, career coach,
               salary estimator, skills assessment, portfolio builder, and job matching — all in one.
             </p>
             <Link href="/signup" className="btn-primary inline-flex items-center gap-2">

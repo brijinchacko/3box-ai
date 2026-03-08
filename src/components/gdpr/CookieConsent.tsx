@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield } from 'lucide-react';
 
-const COOKIE_CONSENT_KEY = 'nxted_cookie_consent';
+const COOKIE_CONSENT_KEY = 'jobted_cookie_consent';
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);

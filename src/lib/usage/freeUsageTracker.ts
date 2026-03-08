@@ -4,9 +4,31 @@
  * Wrapped in try/catch for SSR safety (no window/localStorage on server).
  */
 
-export type FreeService = 'ats_checker' | 'resume_builder' | 'salary_estimator';
+export type FreeService =
+  // Existing
+  | 'ats_checker'
+  | 'resume_builder'
+  | 'salary_estimator'
+  // Resume Tools
+  | 'resume_generator'
+  | 'resume_score'
+  | 'resume_summary'
+  // LinkedIn Tools
+  | 'linkedin_hashtags'
+  | 'linkedin_post'
+  | 'linkedin_headline'
+  | 'linkedin_recommendation'
+  // Job Search Tools
+  | 'cover_letter'
+  | 'jd_analyzer'
+  | 'skills_gap'
+  | 'cold_email'
+  // Interview Tools
+  | 'interview_prep'
+  | 'thank_you_email'
+  | 'elevator_pitch';
 
-const STORAGE_KEY_PREFIX = 'nxted-free-use-';
+const STORAGE_KEY_PREFIX = 'jobted-free-use-';
 
 /**
  * Get the current usage count for a free service.
@@ -41,9 +63,9 @@ export function incrementFreeUse(service: FreeService): number {
 }
 
 /**
- * Check if the user still has a free trial available for the given service.
- * Returns true if the usage count is less than 1 (i.e., never used).
+ * Check if the user still has free uses available for the given service.
+ * Returns true if usage count is below the max free uses (default 2).
  */
-export function hasFreeTrial(service: FreeService): boolean {
-  return getFreeUseCount(service) < 1;
+export function hasFreeTrial(service: FreeService, maxFreeUses: number = 2): boolean {
+  return getFreeUseCount(service) < maxFreeUses;
 }

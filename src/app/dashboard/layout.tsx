@@ -1,41 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
-import {
-  LayoutDashboard, Brain, Target, BookOpen, FileText,
-  Briefcase, Mic, FolderOpen, Settings, Menu, X, ChevronLeft,
-  Crown, Zap, Star, Gift, AlertTriangle, MapPin, LogOut, Bot
-} from 'lucide-react';
-import { signOut } from 'next-auth/react';
-import FloatingCoach from '@/components/ai-coach/FloatingCoach';
+import { Menu, X, ChevronLeft, Crown, Zap, Star, Lock } from 'lucide-react';
+import UserMenu from '@/components/dashboard/UserMenu';
+import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
+import AutomationModeSelector from '@/components/dashboard/AutomationModeSelector';
+import TokenCounter from '@/components/dashboard/TokenCounter';
+import NotificationCenter from '@/components/dashboard/NotificationCenter';
+import BackgroundTaskBanner from '@/components/dashboard/BackgroundTaskBanner';
+import CareerJourneyBar, { type JourneyProgress } from '@/components/dashboard/CareerJourneyBar';
+import CortexLoader from '@/components/brand/CortexLoader';
 import Logo from '@/components/brand/Logo';
-import CareerJourneyBar, { JourneyProgress } from '@/components/dashboard/CareerJourneyBar';
-import RoleSwitcher from '@/components/dashboard/RoleSwitcher';
-import { getInitials, getCreditUsagePercent } from '@/lib/utils';
+import AgentAvatar from '@/components/brand/AgentAvatar';
+import CortexAvatar from '@/components/brand/CortexAvatar';
+import { AGENTS, AGENT_LIST, type AgentId } from '@/lib/agents/registry';
+import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
+import { useLiveAgentStatus } from '@/hooks/useLiveAgentStatus';
+import { getInitials } from '@/lib/utils';
 
-const sidebarLinks = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/dashboard/assessment', icon: Brain, label: 'Assessment' },
-  { href: '/dashboard/career-plan', icon: Target, label: 'Career Plan' },
-  { href: '/dashboard/learning', icon: BookOpen, label: 'Learning Path' },
-  { href: '/dashboard/resume', icon: FileText, label: 'Resume Builder' },
-  { href: '/dashboard/agents', icon: Bot, label: 'Agents' },
-  { href: '/dashboard/jobs', icon: Briefcase, label: 'Jobs' },
-  { href: '/dashboard/interview', icon: Mic, label: 'Interview Prep' },
-  { href: '/dashboard/portfolio', icon: FolderOpen, label: 'Portfolio' },
-  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
-  { href: '/dashboard/settings?tab=referral', icon: Gift, label: 'Refer & Earn' },
+/* ── Agent-based sidebar links ── */
+const sidebarAgents: { agentId: AgentId | 'cortex'; href: string; label: string; sublabel: string }[] = [
+  { agentId: 'cortex',   href: '/dashboard',           label: 'Cortex',   sublabel: 'Command Center' },
+  { agentId: 'scout',    href: '/dashboard/jobs',      label: 'Scout',    sublabel: 'Job Hunter' },
+  { agentId: 'forge',    href: '/dashboard/resume',    label: 'Forge',    sublabel: 'Resume Builder' },
+  { agentId: 'archer',   href: '/dashboard/jobs?tab=applications', label: 'Archer',   sublabel: 'Applications' },
+  { agentId: 'atlas',    href: '/dashboard/interview', label: 'Atlas',    sublabel: 'Interview Prep' },
+  { agentId: 'sage',     href: '/dashboard/learning',  label: 'Sage',     sublabel: 'Skill Trainer' },
+  { agentId: 'sentinel', href: '/dashboard/quality',   label: 'Sentinel', sublabel: 'Quality Check' },
 ];
 
-const planBadges: Record<string, { label: string; color: string; icon: typeof Star }> = {
-  BASIC: { label: 'Basic', color: 'text-white/40 bg-white/5', icon: Star },
-  STARTER: { label: 'Starter', color: 'text-neon-green bg-neon-green/10', icon: Star },
-  PRO: { label: 'Pro', color: 'text-neon-blue bg-neon-blue/10', icon: Zap },
-  ULTRA: { label: 'Ultra', color: 'text-neon-purple bg-neon-purple/10', icon: Crown },
+const planBadges: Record<string, { label: string; color: string }> = {
+  BASIC:   { label: 'Free',    color: 'text-white/40 bg-white/5' },
+  STARTER: { label: 'Starter', color: 'text-neon-green bg-neon-green/10' },
+  PRO:     { label: 'Pro',     color: 'text-neon-blue bg-neon-blue/10' },
+  ULTRA:   { label: 'Ultra',   color: 'text-neon-purple bg-neon-purple/10' },
 };
 
 interface UserData {
@@ -48,19 +50,18 @@ interface UserData {
   targetRole?: string;
   location?: string;
   image?: string | null;
-  journey?: JourneyProgress;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [showUpgradeNudge, setShowUpgradeNudge] = useState(true);
+  const [journey, setJourney] = useState<JourneyProgress | null>(null);
 
-  // Fetch user data and auto-save onboarding from localStorage if available
   useEffect(() => {
     if (status === 'authenticated') {
       fetch('/api/user/profile')
@@ -68,10 +69,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then(async (data) => {
           if (data) {
             setUserData(data);
-
-            // If onboarding not done but localStorage has data, auto-save it
+            if (data.journey) setJourney(data.journey);
             if (!data.onboardingDone) {
-              const profileStr = localStorage.getItem('nxted_onboarding_profile');
+              const profileStr = localStorage.getItem('jobted_onboarding_profile');
               if (profileStr) {
                 try {
                   const profile = JSON.parse(profileStr);
@@ -99,13 +99,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         },
                       }),
                     });
-                    // Refresh to show updated data
                     window.location.reload();
                     return;
                   }
                 } catch {}
               }
-              // No localStorage data — redirect to onboarding
               if (pathname !== '/dashboard/onboarding') {
                 router.push('/dashboard/onboarding');
               }
@@ -116,33 +114,81 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [status, pathname, router]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
+    if (status === 'unauthenticated') router.push('/login');
   }, [status, router]);
 
-  const userPlan = userData?.plan || (session?.user as any)?.plan || 'BASIC';
+  const userPlan = (userData?.plan || (session?.user as any)?.plan || 'BASIC') as PlanTier;
   const userName = userData?.name || session?.user?.name || 'User';
-  const userEmail = userData?.email || session?.user?.email || '';
-  const creditsUsed = userData?.aiCreditsUsed || 0;
-  const creditsLimit = userData?.aiCreditsLimit || 10;
-  const creditPercent = getCreditUsagePercent(creditsUsed, creditsLimit);
   const initials = getInitials(userName);
-
   const badge = planBadges[userPlan] || planBadges.BASIC;
 
+  // Determine which agents are locked
+  const agentStatus = useMemo(() => {
+    const statusMap = new Map<string, boolean>();
+    const agents = getAgentsWithStatus(userPlan);
+    agents.forEach(a => statusMap.set(a.id, a.locked));
+    return statusMap;
+  }, [userPlan]);
+
+  const isAgentLocked = (agentId: AgentId | 'cortex') => {
+    if (agentId === 'cortex') return false; // Cortex is always free
+    return agentStatus.get(agentId) ?? true;
+  };
+
+  // Agent operational status (working / idle / sleeping)
+  const agentOpStatus = useLiveAgentStatus(userPlan);
+
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <Logo size="lg" />
-          <div className="text-white/40 text-sm">Loading...</div>
-        </div>
-      </div>
-    );
+    return <CortexLoader fullScreen message="Waking up your agents" size="lg" />;
   }
+
+  const renderAgentLink = (item: typeof sidebarAgents[0], onClick?: () => void) => {
+    const [hrefPath, hrefQuery] = item.href.split('?');
+    const active = hrefPath === '/dashboard'
+      ? pathname === '/dashboard'
+      : hrefQuery
+        ? pathname.startsWith(hrefPath) && searchParams.get('tab') === new URLSearchParams(hrefQuery).get('tab')
+        : pathname.startsWith(hrefPath) && !searchParams.get('tab');
+    const locked = isAgentLocked(item.agentId);
+    const isCortex = item.agentId === 'cortex';
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onClick}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+          active
+            ? 'bg-gradient-to-r from-neon-blue/10 to-neon-purple/10 text-white border border-white/10'
+            : locked
+              ? 'text-white/25 hover:text-white/40 hover:bg-white/[0.02]'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+        }`}
+      >
+        {isCortex ? (
+          <CortexAvatar size={sidebarOpen ? 28 : 32} />
+        ) : (
+          <AgentAvatar agentId={item.agentId as AgentId} size={sidebarOpen ? 28 : 32} sleeping={locked} />
+        )}
+        {sidebarOpen && (
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate">{item.label}</span>
+              {!isCortex && (
+                <AgentStatusBadge
+                  status={agentOpStatus[item.agentId as AgentId] || 'sleeping'}
+                  size="sm"
+                  showLabel={false}
+                />
+              )}
+            </div>
+            <div className="text-[10px] text-white/25 truncate">{item.sublabel}</div>
+          </div>
+        )}
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-surface flex">
@@ -155,68 +201,62 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
           <Link href="/dashboard" className="flex items-center gap-2">
-            {sidebarOpen ? (
-              <Logo size="sm" />
-            ) : (
-              <Logo size="sm" showText={false} />
-            )}
+            {sidebarOpen ? <Logo size="sm" /> : <Logo size="sm" showText={false} />}
           </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
             <ChevronLeft className={`w-4 h-4 transition-transform ${!sidebarOpen ? 'rotate-180' : ''}`} />
           </button>
         </div>
 
-        {/* Nav Links */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {sidebarLinks.map((link) => {
-            const active = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href.split('?')[0]) && link.href !== '/dashboard/settings?tab=referral');
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-gradient-to-r from-neon-blue/10 to-neon-purple/10 text-white border border-white/10'
-                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-                }`}
-              >
-                <link.icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-neon-blue' : ''}`} />
-                {sidebarOpen && <span>{link.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Agent Nav — grouped by active / available */}
+        <nav className="flex-1 py-4 px-3 overflow-y-auto">
+          {/* Cortex is always first */}
+          {renderAgentLink(sidebarAgents[0])}
 
-        {/* User — Minimal */}
-        <div className="p-3 border-t border-white/5">
-          <div className="flex items-center gap-2.5">
-            {userData?.image ? (
-              <img src={userData.image} alt={userName} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-[11px] font-bold flex-shrink-0">
-                {initials}
-              </div>
-            )}
-            {sidebarOpen && (
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium truncate">{userName}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${badge.color}`}>
-                    {badge.label}
-                  </span>
+          {/* Active Agents */}
+          {(() => {
+            const active = sidebarAgents.filter(i => i.agentId !== 'cortex' && !isAgentLocked(i.agentId));
+            if (!active.length) return null;
+            return (
+              <div className="mt-4">
+                {sidebarOpen && (
+                  <div className="text-[10px] uppercase tracking-wider text-white/20 px-3 mb-2 font-semibold">Active Agents</div>
+                )}
+                <div className="space-y-1">
+                  {active.map(item => renderAgentLink(item))}
                 </div>
               </div>
-            )}
-            {sidebarOpen && (
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-white/5 transition-colors flex-shrink-0"
-                title="Sign out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+            );
+          })()}
+
+        </nav>
+
+        {/* Sleeping / Not-yet-hired Agents — pinned above profile */}
+        {(() => {
+          const locked = sidebarAgents.filter(i => i.agentId !== 'cortex' && isAgentLocked(i.agentId));
+          if (!locked.length) return null;
+          return (
+            <div className="px-3 py-2 border-t border-white/5">
+              {sidebarOpen && (
+                <div className="text-[10px] uppercase tracking-wider text-white/15 px-3 mb-2 font-semibold">Available to Hire</div>
+              )}
+              <div className="space-y-1 opacity-50">
+                {locked.map(item => renderAgentLink(item))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Bottom: User Menu */}
+        <div className="p-3 border-t border-white/5">
+          <UserMenu
+            userName={userName}
+            userEmail={userData?.email}
+            userImage={userData?.image}
+            initials={initials}
+            planBadge={badge}
+            collapsed={!sidebarOpen}
+          />
         </div>
       </aside>
 
@@ -225,15 +265,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-white/5">
           <Menu className="w-5 h-5" />
         </button>
-        <Link href="/dashboard">
-          <Logo size="sm" />
-        </Link>
+        <Link href="/dashboard"><Logo size="sm" /></Link>
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center text-xs font-bold">
           {initials}
         </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -249,20 +287,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <div className="h-14 flex items-center justify-between px-4 border-b border-white/5">
                 <Logo size="sm" />
-                <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-white/5"><X className="w-5 h-5" /></button>
+                <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-white/5">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <nav className="py-4 px-3 space-y-1">
-                {sidebarLinks.map((link) => {
-                  const active = pathname === link.href;
+              <nav className="py-4 px-3">
+                {renderAgentLink(sidebarAgents[0], () => setMobileOpen(false))}
+                {(() => {
+                  const active = sidebarAgents.filter(i => i.agentId !== 'cortex' && !isAgentLocked(i.agentId));
+                  if (!active.length) return null;
                   return (
-                    <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${active ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70 hover:bg-white/5'}`}>
-                      <link.icon className={`w-5 h-5 ${active ? 'text-neon-blue' : ''}`} />
-                      <span>{link.label}</span>
-                    </Link>
+                    <div className="mt-4">
+                      <div className="text-[10px] uppercase tracking-wider text-white/20 px-3 mb-2 font-semibold">Active Agents</div>
+                      <div className="space-y-1">
+                        {active.map(item => renderAgentLink(item, () => setMobileOpen(false)))}
+                      </div>
+                    </div>
                   );
-                })}
+                })()}
               </nav>
+              {/* Sleeping agents — pinned above profile */}
+              {(() => {
+                const locked = sidebarAgents.filter(i => i.agentId !== 'cortex' && isAgentLocked(i.agentId));
+                if (!locked.length) return null;
+                return (
+                  <div className="px-3 py-2 border-t border-white/5">
+                    <div className="text-[10px] uppercase tracking-wider text-white/15 px-3 mb-2 font-semibold">Available to Hire</div>
+                    <div className="space-y-1 opacity-50">
+                      {locked.map(item => renderAgentLink(item, () => setMobileOpen(false)))}
+                    </div>
+                  </div>
+                );
+              })()}
+              {/* Mobile User Menu */}
+              <div className="mt-auto p-3 border-t border-white/5">
+                <UserMenu
+                  userName={userName}
+                  userEmail={userData?.email}
+                  userImage={userData?.image}
+                  initials={initials}
+                  planBadge={badge}
+                  collapsed={false}
+                />
+              </div>
             </motion.aside>
           </>
         )}
@@ -270,35 +337,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'} pt-14 lg:pt-0`}>
-        {/* Sticky Career Journey Bar (shown on all pages except main dashboard) */}
-        {pathname !== '/dashboard' && (
-          <CareerJourneyBar journey={userData?.journey} loading={!userData} />
-        )}
+        {/* Top Bar — Mode Selector */}
+        <div className="flex items-center justify-end gap-3 px-4 sm:px-6 lg:px-8 pt-3 pb-1">
+          <TokenCounter />
+          <NotificationCenter />
+          <AutomationModeSelector />
+        </div>
 
-        {/* Upgrade nudge for Basic users */}
-        {userPlan === 'BASIC' && showUpgradeNudge && (
-          <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 rounded-xl bg-gradient-to-r from-neon-blue/10 to-neon-purple/10 border border-neon-blue/20 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-neon-blue flex-shrink-0" />
-              <p className="text-sm text-white/70">
-                You&apos;re on the free plan with limited features.{' '}
-                <Link href="/pricing" className="text-neon-blue hover:underline font-medium">Upgrade now</Link>
-                {' '}to unlock your full career potential.
-              </p>
-            </div>
-            <button onClick={() => setShowUpgradeNudge(false)} className="text-white/30 hover:text-white/60 flex-shrink-0 ml-2">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        <BackgroundTaskBanner />
 
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>
 
-      {/* Floating AI Coach */}
-      <FloatingCoach />
     </div>
   );
 }

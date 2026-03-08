@@ -7,6 +7,7 @@ import {
   Brain, Search, ArrowRight, ArrowLeft, Clock, CheckCircle2,
   BarChart3, Target, Lightbulb, Zap, Star, TrendingUp, Loader2, Lock
 } from 'lucide-react';
+import AgentLoader from '@/components/brand/AgentLoader';
 
 type Step = 'role-select' | 'profile' | 'generating' | 'assessment' | 'evaluating' | 'results';
 
@@ -120,7 +121,7 @@ export default function AssessmentPage() {
 
   const selectRole = (role: string) => {
     setTargetRole(role);
-    localStorage.setItem('nxted_target_role', role);
+    localStorage.setItem('jobted_target_role', role);
     setStep('profile');
   };
 
@@ -272,7 +273,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
           // Save to localStorage
           const scoreMap: Record<string, number> = {};
           aiResults.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
-          localStorage.setItem('nxted_skill_scores', JSON.stringify(scoreMap));
+          localStorage.setItem('jobted_skill_scores', JSON.stringify(scoreMap));
 
           // Save to database
           try {
@@ -311,7 +312,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
     const fallback = { ...defaultResults, targetRole };
     const scoreMap: Record<string, number> = {};
     fallback.skillScores.forEach(s => { scoreMap[s.skill] = s.score; });
-    localStorage.setItem('nxted_skill_scores', JSON.stringify(scoreMap));
+    localStorage.setItem('jobted_skill_scores', JSON.stringify(scoreMap));
     setResults(fallback);
     setStep('results');
   };
@@ -442,12 +443,8 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
         {/* Step 2.5: Generating Questions */}
         {step === 'generating' && (
           <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
-            <Brain className="w-16 h-16 text-neon-blue mx-auto mb-6 animate-pulse" />
-            <h2 className="text-2xl font-bold mb-2">Creating Your Assessment</h2>
-            <p className="text-white/40 mb-6">
-              AI is generating 30 personalized questions for <span className="text-neon-blue">{targetRole}</span>...
-            </p>
-            <div className="max-w-xs mx-auto">
+            <AgentLoader agentId="cortex" message={`Cortex is creating your assessment for ${targetRole}`} />
+            <div className="max-w-xs mx-auto mt-4">
               <div className="skill-bar h-2 mb-2">
                 <motion.div
                   className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
@@ -520,10 +517,8 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
 
         {/* Step 3.5: Evaluating */}
         {step === 'evaluating' && (
-          <motion.div key="evaluating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
-            <Loader2 className="w-12 h-12 text-neon-blue mx-auto mb-6 animate-spin" />
-            <h2 className="text-2xl font-bold mb-2">Analyzing Your Responses</h2>
-            <p className="text-white/40">Our AI is evaluating your {questions.length} answers and generating personalized insights...</p>
+          <motion.div key="evaluating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-10">
+            <AgentLoader agentId="cortex" message={`Cortex is analyzing your ${questions.length} responses`} size="lg" />
           </motion.div>
         )}
 

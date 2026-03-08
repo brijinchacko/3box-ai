@@ -12,8 +12,8 @@ export default function CareersPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd(SCHEMA_ORG.breadcrumb([
-            { name: 'Home', url: 'https://nxted.ai' },
-            { name: 'Careers', url: 'https://nxted.ai/careers' },
+            { name: 'Home', url: 'https://jobted.ai' },
+            { name: 'Careers', url: 'https://jobted.ai/careers' },
           ])),
         }}
       />

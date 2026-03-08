@@ -1,8 +1,8 @@
-# NXTED AI — Your AI Career Operating System
+# jobTED AI — Your AI Career Operating System
 
 > An [OFORO AI](https://oforo.ai) Product
 
-NXTED AI is a full-stack, AI-powered career platform that takes users from **skill assessment → personalized career plan → adaptive learning → resume + portfolio → verified credentials → job matching → automated applications**.
+jobTED AI is a full-stack, AI-powered career platform that takes users from **skill assessment → personalized career plan → adaptive learning → resume + portfolio → verified credentials → job matching → automated applications**.
 
 ## Quick Start
 
@@ -27,7 +27,7 @@ npm run dev
 ```
 
 **Demo credentials:**
-- User: `demo@nxted.ai` / `demo123456`
+- User: `demo@jobted.ai` / `demo123456`
 - OFORO Admin: `admin@oforo.ai` / `demo123456` (auto-ULTRA access)
 
 ## Architecture

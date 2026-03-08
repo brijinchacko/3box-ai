@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db/prisma';
 const VALID_PERSONALITIES = ['friendly', 'professional', 'casual', 'motivational'] as const;
 
 const DEFAULTS = {
-  name: 'Horace',
+  name: 'Cortex',
   personality: 'friendly',
   enabled: true,
 };

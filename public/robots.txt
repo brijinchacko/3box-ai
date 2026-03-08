@@ -1,5 +1,5 @@
-# NXTED AI — AI Career Operating System
-# https://nxted.ai
+# jobTED AI — AI Career Operating System
+# https://jobted.ai
 
 User-agent: *
 Allow: /
@@ -29,4 +29,4 @@ Allow: /
 User-agent: Bytespider
 Disallow: /
 
-Sitemap: https://nxted.ai/sitemap.xml
+Sitemap: https://jobted.ai/sitemap.xml

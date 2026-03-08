@@ -1,7 +1,7 @@
 /**
  * Stripe Setup Script
  *
- * Creates all required Stripe products and prices for NXTED AI,
+ * Creates all required Stripe products and prices for jobTED AI,
  * then updates the .env file with the generated price IDs.
  *
  * Prerequisites:
@@ -44,21 +44,21 @@ interface PlanConfig {
 
 const PLANS: Record<string, PlanConfig> = {
   STARTER: {
-    name: 'NXTED AI Starter',
+    name: 'jobTED AI Starter',
     description: 'Perfect for getting started with AI-powered career tools',
     monthlyPrice: 1200, // $12
     yearlyPrice: 9600,  // $96/yr ($8/mo)
     features: ['5 assessments/mo', '100 AI credits/mo', '3 resume templates', 'Full career plan', 'AI coach access'],
   },
   PRO: {
-    name: 'NXTED AI Pro',
+    name: 'jobTED AI Pro',
     description: 'Advanced career tools with human expert support',
     monthlyPrice: 2900, // $29
     yearlyPrice: 23200, // $232/yr (~$19.33/mo)
     features: ['Unlimited assessments', '500 AI credits/mo', 'All templates', 'Job matching', 'Human mock interviews', 'Human resume review'],
   },
   ULTRA: {
-    name: 'NXTED AI Ultra',
+    name: 'jobTED AI Ultra',
     description: 'The complete career acceleration package',
     monthlyPrice: 5900, // $59
     yearlyPrice: 47200, // $472/yr (~$39.33/mo)
@@ -67,7 +67,7 @@ const PLANS: Record<string, PlanConfig> = {
 };
 
 async function main() {
-  console.log('\n🚀 Setting up Stripe products and prices for NXTED AI...\n');
+  console.log('\n🚀 Setting up Stripe products and prices for jobTED AI...\n');
 
   const envPath = path.join(process.cwd(), '.env');
   let envContent = fs.readFileSync(envPath, 'utf-8');
@@ -81,7 +81,7 @@ async function main() {
     const product = await stripe.products.create({
       name: config.name,
       description: config.description,
-      metadata: { plan: planKey, app: 'nxted-ai' },
+      metadata: { plan: planKey, app: 'jobted-ai' },
     });
 
     // Monthly price
@@ -120,9 +120,9 @@ async function main() {
 
   for (const pack of creditPacks) {
     const product = await stripe.products.create({
-      name: `NXTED AI - ${pack.name}`,
+      name: `jobTED AI - ${pack.name}`,
       description: `One-time purchase of ${pack.credits} AI credits`,
-      metadata: { type: 'credit-pack', credits: pack.credits.toString(), app: 'nxted-ai' },
+      metadata: { type: 'credit-pack', credits: pack.credits.toString(), app: 'jobted-ai' },
     });
 
     const price = await stripe.prices.create({

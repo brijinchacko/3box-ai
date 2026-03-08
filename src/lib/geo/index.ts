@@ -1,5 +1,5 @@
 // =============================================================================
-// NXTED AI — Geo Module Barrel Export
+// jobTED AI — Geo Module Barrel Export
 // =============================================================================
 
 // Region configuration & pricing

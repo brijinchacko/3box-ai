@@ -96,7 +96,6 @@ export default function SettingsPage() {
   const [linkCopied, setLinkCopied] = useState(false);
 
   // ----- Coach state -----
-  const [coachName, setCoachName] = useState('Horace');
   const [coachPersonality, setCoachPersonality] = useState('friendly');
   const [coachSaved, setCoachSaved] = useState(false);
 
@@ -148,10 +147,9 @@ export default function SettingsPage() {
   // Load coach settings from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('nxted_coach_settings');
+      const stored = localStorage.getItem('jobted_coach_settings');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.name) setCoachName(parsed.name);
         if (parsed.personality) setCoachPersonality(parsed.personality);
       }
     } catch { /* ignore */ }
@@ -160,7 +158,7 @@ export default function SettingsPage() {
   // Load notification preferences from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('nxted_notification_prefs');
+      const stored = localStorage.getItem('jobted_notification_prefs');
       if (stored) {
         setNotifications(JSON.parse(stored));
       } else {
@@ -355,7 +353,7 @@ export default function SettingsPage() {
   };
 
   const saveCoachSettings = () => {
-    localStorage.setItem('nxted_coach_settings', JSON.stringify({ name: coachName, personality: coachPersonality }));
+    localStorage.setItem('jobted_coach_settings', JSON.stringify({ name: 'Cortex', personality: coachPersonality }));
     setCoachSaved(true);
     setTimeout(() => setCoachSaved(false), 2000);
   };
@@ -363,7 +361,7 @@ export default function SettingsPage() {
   const toggleNotification = (label: string) => {
     const updated = { ...notifications, [label]: !notifications[label] };
     setNotifications(updated);
-    localStorage.setItem('nxted_notification_prefs', JSON.stringify(updated));
+    localStorage.setItem('jobted_notification_prefs', JSON.stringify(updated));
   };
 
   const showComingSoon = (feature: string) => {
@@ -387,6 +385,42 @@ export default function SettingsPage() {
     STARTER: 'Starter',
     PRO: 'Pro',
     ULTRA: 'Ultra',
+  };
+
+  const planFeatures: Record<string, string[]> = {
+    BASIC: [
+      '10 AI credits / month',
+      '1 skill assessment / month',
+      '1 resume (watermarked)',
+      'Basic career plan',
+      'AI coach (limited)',
+    ],
+    STARTER: [
+      '100 AI credits / month',
+      '5 skill assessments / month',
+      '3 resume templates',
+      '5 PDF exports / month',
+      'AI coach (full access)',
+      'Scout & Forge agents',
+    ],
+    PRO: [
+      '500 AI credits / month',
+      'Unlimited assessments',
+      'All resume templates',
+      'Unlimited PDF exports',
+      'Job matching + fit reports',
+      'Interview prep + mock interviews',
+      'Scout, Forge, Archer & Atlas agents',
+    ],
+    ULTRA: [
+      'Unlimited AI credits',
+      'All 6 agents (full autopilot)',
+      'Priority AI processing',
+      'Skill gap analysis + learning',
+      'Quality assurance + verification',
+      'Dedicated career mentor',
+      'Everything in Pro',
+    ],
   };
 
   /* ---------------------------------------------------------------- */
@@ -596,10 +630,10 @@ export default function SettingsPage() {
                         {userPlan === 'BASIC'
                           ? 'Free forever'
                           : userPlan === 'STARTER'
-                            ? '$9/month'
+                            ? '$12/month'
                             : userPlan === 'PRO'
-                              ? '$19/month'
-                              : '$39/month'}
+                              ? '$29/month'
+                              : '$59/month'}
                       </div>
                     </div>
                   </div>
@@ -610,6 +644,7 @@ export default function SettingsPage() {
                   )}
                 </div>
 
+                {/* AI Credits */}
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-white/40">AI Credits Used</span>
@@ -625,6 +660,19 @@ export default function SettingsPage() {
                       />
                     </div>
                   )}
+                </div>
+
+                {/* Plan Features */}
+                <div className="mb-6">
+                  <h4 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Plan Includes</h4>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {(planFeatures[userPlan] || planFeatures.BASIC).map((feat) => (
+                      <div key={feat} className="flex items-center gap-2 text-xs text-white/50">
+                        <div className="w-1 h-1 rounded-full bg-neon-green flex-shrink-0" />
+                        {feat}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {userPlan !== 'BASIC' && (
@@ -805,15 +853,6 @@ export default function SettingsPage() {
                 <h3 className="font-semibold mb-6">AI Coach Customization</h3>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm text-white/60 mb-1.5">Coach Name</label>
-                    <input
-                      className="input-field"
-                      value={coachName}
-                      onChange={(e) => setCoachName(e.target.value)}
-                      placeholder="Name your AI coach"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-sm text-white/60 mb-3">Personality</label>
                     <div className="grid sm:grid-cols-2 gap-3">
                       {[
@@ -967,7 +1006,7 @@ export default function SettingsPage() {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `nxted-data-export-${new Date().toISOString().split('T')[0]}.json`;
+                        a.download = `jobted-data-export-${new Date().toISOString().split('T')[0]}.json`;
                         a.click();
                         URL.revokeObjectURL(url);
                       }

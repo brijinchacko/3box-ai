@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
+import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -13,7 +14,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { plan: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { plan: true, aiCreditsUsed: true, aiCreditsLimit: true },
+    });
     const userPlan = user?.plan || 'BASIC';
     const model = getModelForFeature('interview', userPlan);
 
@@ -24,6 +28,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'action and targetRole are required' },
         { status: 400 }
+      );
+    }
+
+    // Token cost depends on action
+    const cost = action === 'generate' ? TOKEN_COSTS.interview_prep : TOKEN_COSTS.interview_evaluate;
+    if (!canAfford(user?.aiCreditsUsed ?? 0, user?.aiCreditsLimit ?? 0, cost)) {
+      return NextResponse.json(
+        { error: 'Insufficient tokens', code: 'INSUFFICIENT_TOKENS', required: cost, remaining: Math.max(0, (user?.aiCreditsLimit ?? 0) - (user?.aiCreditsUsed ?? 0)) },
+        { status: 402 }
       );
     }
 
@@ -78,6 +91,12 @@ Return a valid JSON array with format:
         keyPoints: q.keyPoints || ['Clarity', 'Relevance', 'Depth'],
       }));
 
+      // Deduct tokens
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { aiCreditsUsed: { increment: cost } },
+      });
+
       return NextResponse.json({ questions });
     }
 
@@ -119,6 +138,12 @@ Return valid JSON:
       } catch {
         evaluation = generateFallbackEvaluation();
       }
+
+      // Deduct tokens
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { aiCreditsUsed: { increment: cost } },
+      });
 
       return NextResponse.json({
         score: evaluation.score || 6,
