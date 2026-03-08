@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="208" height="48" viewBox="0 0 208 48" fill="none">
+  <defs>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@800&amp;display=swap');</style>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect x="14" y="2" width="26" height="20" rx="1" fill="url(#g)"/>
+  <rect x="1" y="13" width="20" height="17" rx="1" fill="url(#g)"/>
+  <rect x="14" y="27" width="17" height="19" rx="1" fill="url(#g)"/>
+  <text x="50" y="35" font-family="'Orbitron', 'Consolas', monospace" font-size="28" font-weight="800" letter-spacing="3" fill="#111111">3BOX</text>
+  <text x="163" y="35" font-family="'Orbitron', 'Consolas', monospace" font-size="28" font-weight="800" letter-spacing="3" fill="url(#g)">AI</text>
+</svg>

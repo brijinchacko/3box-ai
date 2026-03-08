@@ -1220,61 +1220,101 @@ export default function LandingPageClient() {
             </p>
           </motion.div>
 
-          {/* ── Cortex (Coordinator) — Full Width Top ── */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="flex justify-center mb-6"
-          >
-            <Link href="/agents/cortex" className="group">
-              <div className="glass p-5 sm:p-6 flex items-center gap-4 hover:border-white/15 transition-all duration-300 max-w-md">
-                <div className="relative flex-shrink-0">
-                  <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
-                  <CortexAvatar size={52} pulse />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-base font-bold group-hover:text-neon-blue transition-colors">{COORDINATOR.displayName}</h3>
-                  <p className="text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7]">{COORDINATOR.role}</p>
-                  <p className="text-[10px] text-white/35 mt-1 italic leading-tight">Coordinates all agents. Manages your career strategy.</p>
-                </div>
-              </div>
-            </Link>
-          </motion.div>
+          {/* ── Desktop: Orbital Constellation ── */}
+          <div className="hidden md:flex justify-center mb-8">
+            <div className="relative" style={{ width: 520, height: 520 }}>
+              {/* Rotating dashed orbit circle */}
+              <motion.div
+                className="absolute inset-[40px] rounded-full border border-dashed border-white/[0.06]"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+              />
 
-          {/* ── Connecting Lines from Cortex (Desktop) ── */}
-          <div className="hidden sm:flex justify-center mb-4" aria-hidden="true">
-            <div className="w-px h-6 bg-gradient-to-b from-neon-purple/30 to-white/10" />
-          </div>
-          <div className="hidden sm:flex justify-center mb-6" aria-hidden="true">
-            <div className="flex items-center gap-0">
-              <div className="w-[120px] lg:w-[180px] h-px bg-gradient-to-r from-transparent to-white/15" />
-              <div className="w-px h-3 bg-white/15" />
-              <div className="w-[60px] lg:w-[90px] h-px bg-white/15" />
-              <div className="w-px h-3 bg-white/15" />
-              <div className="w-[120px] lg:w-[180px] h-px bg-gradient-to-l from-transparent to-white/15" />
+              {/* SVG connecting lines from center to each agent */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+                {AGENT_LIST.map((_, i) => {
+                  const a = (i * 60 - 90) * (Math.PI / 180);
+                  const r = 160;
+                  return (
+                    <line
+                      key={i}
+                      x1="50%" y1="50%"
+                      x2={260 + r * Math.cos(a)} y2={260 + r * Math.sin(a)}
+                      stroke="url(#orbital-line-grad)"
+                      strokeWidth="1"
+                      strokeDasharray="4 4"
+                      opacity="0.15"
+                    />
+                  );
+                })}
+                <defs>
+                  <linearGradient id="orbital-line-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#00d4ff" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+
+              {/* Cortex at center */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                <Link href="/agents/cortex" className="group/cortex relative block">
+                  <div className="absolute -inset-4 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
+                  <CortexAvatar size={56} pulse />
+                  <div className="absolute left-1/2 -translate-x-1/2 -bottom-16 opacity-0 group-hover/cortex:opacity-100 transition-opacity duration-200 pointer-events-none z-30">
+                    <div className="bg-surface-100/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-2xl text-center min-w-[140px]">
+                      <div className="text-xs font-semibold text-white">{COORDINATOR.displayName}</div>
+                      <div className="text-[10px] font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7]">{COORDINATOR.role}</div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+
+              {/* 6 Orbiting Agents */}
+              {AGENT_LIST.map((agent, i) => (
+                <OrbitingAgent key={agent.id} agent={agent} index={i} />
+              ))}
             </div>
           </div>
 
-          {/* ── 6 Agent Cards — 3-column grid ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-            {AGENT_LIST.map((agent, i) => (
-              <Link key={agent.id} href={`/agents/${agent.id}`}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08, duration: 0.4 }}
-                  className="glass p-4 flex flex-col items-center text-center hover:border-white/15 transition-all duration-300 group h-full"
-                >
-                  <AgentAvatar agentId={agent.id} size={40} autoSleep />
-                  <h3 className="text-xs font-semibold mt-2.5 group-hover:text-white transition-colors">{agent.displayName}</h3>
-                  <span className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</span>
-                  <span className="text-[9px] text-white/30 mt-1 leading-tight italic">{agent.storyLine}</span>
-                </motion.div>
+          {/* ── Mobile: Cortex + Grid ── */}
+          <div className="md:hidden">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="flex justify-center mb-6"
+            >
+              <Link href="/agents/cortex" className="group">
+                <div className="glass p-5 flex items-center gap-4 hover:border-white/15 transition-all duration-300">
+                  <div className="relative flex-shrink-0">
+                    <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 blur-xl animate-pulse" />
+                    <CortexAvatar size={48} pulse />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold group-hover:text-neon-blue transition-colors">{COORDINATOR.displayName}</h3>
+                    <p className="text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#a855f7]">{COORDINATOR.role}</p>
+                  </div>
+                </div>
               </Link>
-            ))}
+            </motion.div>
+            <div className="grid grid-cols-2 gap-3">
+              {AGENT_LIST.map((agent, i) => (
+                <Link key={agent.id} href={`/agents/${agent.id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08, duration: 0.4 }}
+                    className="glass p-4 flex flex-col items-center text-center hover:border-white/15 transition-all duration-300 group h-full"
+                  >
+                    <AgentAvatar agentId={agent.id} size={40} autoSleep />
+                    <h3 className="text-xs font-semibold mt-2.5 group-hover:text-white transition-colors">{agent.displayName}</h3>
+                    <span className={`text-[10px] font-medium ${agent.color}`}>{agent.role}</span>
+                    <span className="text-[9px] text-white/30 mt-1 leading-tight italic">{agent.storyLine}</span>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
           </div>
 
           {/* ── Cortex Origin Story ── */}

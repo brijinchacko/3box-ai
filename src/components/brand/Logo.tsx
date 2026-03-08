@@ -42,7 +42,7 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
   // ── 3BOX AI — sharp edge geometric logo ──
   if (size === 'lg') {
     return (
-      <svg width={220} height={48} viewBox="0 0 220 48" fill="none" className={className}>
+      <svg width={208} height={48} viewBox="0 0 208 48" fill="none" className={className}>
         <defs>
           <linearGradient id="logoFullGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#00d4ff" />
@@ -56,14 +56,14 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
         {/* 3BOX — Orbitron sharp edge */}
         <text x="50" y="35" fontFamily={fontStack} fontSize="28" fontWeight="800" letterSpacing="3" fill="white">3BOX</text>
         {/* AI — gradient */}
-        <text x="170" y="35" fontFamily={fontStack} fontSize="28" fontWeight="800" letterSpacing="3" fill="url(#logoFullGrad)">AI</text>
+        <text x="163" y="35" fontFamily={fontStack} fontSize="28" fontWeight="800" letterSpacing="3" fill="url(#logoFullGrad)">AI</text>
       </svg>
     );
   }
 
   if (size === 'md') {
     return (
-      <svg width={172} height={36} viewBox="0 0 172 36" fill="none" className={className}>
+      <svg width={163} height={36} viewBox="0 0 163 36" fill="none" className={className}>
         <defs>
           <linearGradient id="logoFullGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#00d4ff" />
@@ -74,14 +74,14 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
         <rect x="1" y="10" width="15" height="13" rx="1" fill="url(#logoFullGrad)" />
         <rect x="11" y="20" width="13" height="15" rx="1" fill="url(#logoFullGrad)" />
         <text x="38" y="27" fontFamily={fontStack} fontSize="22" fontWeight="800" letterSpacing="2.5" fill="white">3BOX</text>
-        <text x="134" y="27" fontFamily={fontStack} fontSize="22" fontWeight="800" letterSpacing="2.5" fill="url(#logoFullGrad)">AI</text>
+        <text x="128" y="27" fontFamily={fontStack} fontSize="22" fontWeight="800" letterSpacing="2.5" fill="url(#logoFullGrad)">AI</text>
       </svg>
     );
   }
 
   // sm
   return (
-    <svg width={128} height={28} viewBox="0 0 128 28" fill="none" className={className}>
+    <svg width={122} height={28} viewBox="0 0 122 28" fill="none" className={className}>
       <defs>
         <linearGradient id="logoFullGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#00d4ff" />
@@ -92,7 +92,7 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
       <rect x="1" y="7" width="11" height="10" rx="1" fill="url(#logoFullGrad)" />
       <rect x="7" y="14" width="10" height="13" rx="1" fill="url(#logoFullGrad)" />
       <text x="26" y="21" fontFamily={fontStack} fontSize="16" fontWeight="800" letterSpacing="2" fill="white">3BOX</text>
-      <text x="100" y="21" fontFamily={fontStack} fontSize="16" fontWeight="800" letterSpacing="2" fill="url(#logoFullGrad)">AI</text>
+      <text x="94" y="21" fontFamily={fontStack} fontSize="16" fontWeight="800" letterSpacing="2" fill="url(#logoFullGrad)">AI</text>
     </svg>
   );
 }
