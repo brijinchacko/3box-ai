@@ -283,35 +283,35 @@ function AgentEmblem({ agentId, bodyShape, filterId, colors }: {
   const cx = bx + bw / 2;   // 8
   const cy = by + bh / 2;   // 16
 
-  // Darker version of agent color fills the body rect
+  // Dark shade behind white emblem for contrast
   const backdrop = (
     <rect
       x={bx} y={by} width={bw} height={bh} rx="3"
-      fill={colors.start} opacity="0.25"
+      fill="#0a0a1a" opacity="0.45"
     />
   );
 
   switch (agentId) {
     case 'scout':
-      // Magnifying glass — fills body rect
+      // Magnifying glass — centered in body rect
       return (
         <g filter={`url(#${filterId})`}>
           {backdrop}
           <g transform={`translate(${cx}, ${cy})`}>
-            <circle cx="-0.8" cy="-1" r="3.2" stroke="white" strokeWidth="1.3" fill="rgba(255,255,255,0.08)" />
-            <line x1="1.5" y1="1.2" x2="4.2" y2="3.8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-            <circle cx="-1.8" cy="-2" r="0.7" fill="white" opacity="0.6" />
+            <circle cx="0" cy="0" r="3.2" stroke="white" strokeWidth="1.3" fill="rgba(255,255,255,0.08)" />
+            <line x1="2.2" y1="2.2" x2="4.5" y2="4.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+            <circle cx="-1" cy="-1" r="0.7" fill="white" opacity="0.6" />
           </g>
         </g>
       );
     case 'forge':
-      // Hammer — fills body rect
+      // Hammer — centered in body rect
       return (
         <g filter={`url(#${filterId})`}>
           {backdrop}
           <g transform={`translate(${cx}, ${cy})`}>
-            <rect x="-3" y="-4.5" width="6" height="2.8" rx="0.7" fill="white" />
-            <line x1="0" y1="-1.7" x2="0" y2="4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            <rect x="-3" y="-3.5" width="6" height="2.8" rx="0.7" fill="white" />
+            <line x1="0" y1="-0.7" x2="0" y2="4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
           </g>
         </g>
       );
@@ -345,29 +345,29 @@ function AgentEmblem({ agentId, bodyShape, filterId, colors }: {
         </g>
       );
     case 'sage':
-      // Open book — fills body rect
+      // Open book — centered in body rect
       return (
         <g filter={`url(#${filterId})`}>
           {backdrop}
-          <g transform={`translate(${cx}, ${cy})`}>
-            <path d="M-4.8,0.5 L0,-1.8 L4.8,0.5 L4.8,4 L0,2 L-4.8,4Z" stroke="white" strokeWidth="1" fill="rgba(255,255,255,0.08)" />
-            <line x1="0" y1="-1.8" x2="0" y2="2" stroke="white" strokeWidth="0.8" />
-            <line x1="-3.8" y1="1.5" x2="-0.5" y2="0" stroke="white" strokeWidth="0.5" />
-            <line x1="-3.8" y1="2.5" x2="-0.5" y2="1" stroke="white" strokeWidth="0.5" />
-            <line x1="0.5" y1="0" x2="3.8" y2="1.5" stroke="white" strokeWidth="0.5" />
-            <line x1="0.5" y1="1" x2="3.8" y2="2.5" stroke="white" strokeWidth="0.5" />
+          <g transform={`translate(${cx}, ${cy - 0.5})`}>
+            <path d="M-4.8,0 L0,-2.3 L4.8,0 L4.8,3.5 L0,1.5 L-4.8,3.5Z" stroke="white" strokeWidth="1" fill="rgba(255,255,255,0.08)" />
+            <line x1="0" y1="-2.3" x2="0" y2="1.5" stroke="white" strokeWidth="0.8" />
+            <line x1="-3.8" y1="1" x2="-0.5" y2="-0.5" stroke="white" strokeWidth="0.5" />
+            <line x1="-3.8" y1="2" x2="-0.5" y2="0.5" stroke="white" strokeWidth="0.5" />
+            <line x1="0.5" y1="-0.5" x2="3.8" y2="1" stroke="white" strokeWidth="0.5" />
+            <line x1="0.5" y1="0.5" x2="3.8" y2="2" stroke="white" strokeWidth="0.5" />
           </g>
         </g>
       );
     case 'sentinel':
-      // Shield — fills body rect
+      // Shield — centered in body rect
       return (
         <g filter={`url(#${filterId})`}>
           {backdrop}
-          <g transform={`translate(${cx}, ${cy})`}>
-            <path d="M0,-4.2 L4,-1.6 L4,1 C4,3.3 0,4.8 0,4.8 C0,4.8 -4,3.3 -4,1 L-4,-1.6Z" stroke="white" strokeWidth="1" fill="rgba(255,255,255,0.08)" />
-            <line x1="0" y1="-2" x2="0" y2="2.8" stroke="white" strokeWidth="1.1" strokeLinecap="round" />
-            <line x1="-2" y1="0.3" x2="2" y2="0.3" stroke="white" strokeWidth="1.1" strokeLinecap="round" />
+          <g transform={`translate(${cx}, ${cy + 0.3})`}>
+            <path d="M0,-4.5 L4,-1.9 L4,0.7 C4,3 0,4.5 0,4.5 C0,4.5 -4,3 -4,0.7 L-4,-1.9Z" stroke="white" strokeWidth="1" fill="rgba(255,255,255,0.08)" />
+            <line x1="0" y1="-2.2" x2="0" y2="2.5" stroke="white" strokeWidth="1.1" strokeLinecap="round" />
+            <line x1="-2" y1="0" x2="2" y2="0" stroke="white" strokeWidth="1.1" strokeLinecap="round" />
           </g>
         </g>
       );
@@ -477,9 +477,9 @@ export default function AgentAvatar({
             <stop offset="0%" stopColor={colors.start} />
             <stop offset="100%" stopColor={colors.end} />
           </linearGradient>
-          {/* Drop shadow + glow filter for emblem visibility */}
+          {/* Drop shadow for emblem visibility */}
           <filter id={`${uid}-glow`} x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0.5" stdDeviation="0.8" floodColor="black" floodOpacity="0.6" />
+            <feDropShadow dx="0" dy="0.5" stdDeviation="1.2" floodColor="black" floodOpacity="0.7" />
           </filter>
         </defs>
 

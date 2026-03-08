@@ -211,92 +211,6 @@ export default function CortexAvatar({ size = 48, expression = 'normal', mirrore
         />
       )}
 
-      {/* ─── DUAL ORBITING SHURIKEN ─── */}
-      {/* Shuriken 1 — top orbit, clockwise */}
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ width: '100%', height: '100%', top: 0, left: 0 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-      >
-        <motion.div
-          className="absolute"
-          style={{
-            width: size * 0.28,
-            height: size * 0.28,
-            top: -size * 0.16,
-            left: '50%',
-            marginLeft: -size * 0.14,
-          }}
-          animate={{ rotate: -360 }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-        >
-          <svg viewBox="0 0 12 12" fill="none" width="100%" height="100%">
-            <path d="M6,0.5 L7,4.5 L6,3.5 L5,4.5Z" fill="#00d4ff" opacity="0.8" />
-            <path d="M11.5,6 L7.5,7 L8.5,6 L7.5,5Z" fill="#00d4ff" opacity="0.8" />
-            <path d="M6,11.5 L5,7.5 L6,8.5 L7,7.5Z" fill="#00d4ff" opacity="0.8" />
-            <path d="M0.5,6 L4.5,5 L3.5,6 L4.5,7Z" fill="#00d4ff" opacity="0.8" />
-            <circle cx="6" cy="6" r="1.2" fill="#00d4ff" />
-          </svg>
-        </motion.div>
-      </motion.div>
-
-      {/* Shuriken 2 — bottom orbit, counter-clockwise */}
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ width: '100%', height: '100%', top: 0, left: 0 }}
-        animate={{ rotate: -360 }}
-        transition={{ duration: 5.5, repeat: Infinity, ease: 'linear' }}
-      >
-        <motion.div
-          className="absolute"
-          style={{
-            width: size * 0.22,
-            height: size * 0.22,
-            bottom: -size * 0.12,
-            left: '50%',
-            marginLeft: -size * 0.11,
-          }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        >
-          <svg viewBox="0 0 12 12" fill="none" width="100%" height="100%">
-            <path d="M6,0.5 L7,4.5 L6,3.5 L5,4.5Z" fill="#a855f7" opacity="0.7" />
-            <path d="M11.5,6 L7.5,7 L8.5,6 L7.5,5Z" fill="#a855f7" opacity="0.7" />
-            <path d="M6,11.5 L5,7.5 L6,8.5 L7,7.5Z" fill="#a855f7" opacity="0.7" />
-            <path d="M0.5,6 L4.5,5 L3.5,6 L4.5,7Z" fill="#a855f7" opacity="0.7" />
-            <circle cx="6" cy="6" r="1" fill="#a855f7" opacity="0.9" />
-          </svg>
-        </motion.div>
-      </motion.div>
-
-      {/* ─── CHAKRA ENERGY WISPS (5 rising) ─── */}
-      <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'visible' }}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <motion.div
-            key={i}
-            className="absolute"
-            style={{
-              width: i % 2 === 0 ? 3 : 2,
-              height: size * (0.12 + i * 0.02),
-              borderRadius: 2,
-              background: i % 2 === 0
-                ? 'linear-gradient(to top, rgba(0,212,255,0.6), transparent)'
-                : 'linear-gradient(to top, rgba(168,85,247,0.5), transparent)',
-              bottom: 0,
-              left: `${10 + i * 18}%`,
-            }}
-            animate={{ y: [0, -size * 0.5], opacity: [0.7, 0], scaleX: [1, 0.2] }}
-            transition={{
-              duration: 1.3 + i * 0.25,
-              repeat: Infinity,
-              delay: i * 0.35,
-              ease: 'easeOut',
-            }}
-          />
-        ))}
-      </div>
-
       {/* ─── FLOATING ENERGY PARTICLES ─── */}
       <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'visible' }}>
         {[0, 1, 2, 3, 4, 5].map((i) => {
@@ -338,12 +252,8 @@ export default function CortexAvatar({ size = 48, expression = 'normal', mirrore
             <stop offset="0%" stopColor="#00d4ff" />
             <stop offset="100%" stopColor="#a855f7" />
           </linearGradient>
-          <filter id={`cGlow-${size}`}>
-            <feGaussianBlur stdDeviation="0.8" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+          <filter id={`cGlow-${size}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0.5" stdDeviation="1.2" floodColor="black" floodOpacity="0.7" />
           </filter>
           <filter id={`cGlowStrong-${size}`}>
             <feGaussianBlur stdDeviation="1.5" result="b" />
@@ -456,10 +366,10 @@ export default function CortexAvatar({ size = 48, expression = 'normal', mirrore
           />
         </motion.g>
 
-        {/* ─── EMBLEM on body — fills body rect with colored bg + white icon ─── */}
+        {/* ─── EMBLEM on body — dark backdrop + white icon ─── */}
         <g filter={`url(#cGlow-${size})`}>
-          {/* Colored fill on body rect (1,10,14,12) */}
-          <rect x="1" y="10" width="14" height="12" rx="3" fill="#00d4ff" opacity="0.25" />
+          {/* Dark shade behind white emblem for contrast */}
+          <rect x="1" y="10" width="14" height="12" rx="3" fill="#0a0a1a" opacity="0.45" />
           {/* Brain / neural icon — white, fills the rect */}
           <g transform="translate(8, 16)">
             <circle cx="0" cy="0" r="3.8" stroke="white" strokeWidth="1" fill="rgba(255,255,255,0.08)" />
