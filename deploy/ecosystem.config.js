@@ -6,7 +6,7 @@ module.exports = {
     {
       name: 'jobted-ai',
       script: 'node_modules/.bin/next',
-      args: 'start -p 3001',
+      args: 'start -p 3003',
       cwd: '/var/www/jobtedai',
       instances: 1,
       exec_mode: 'fork',
@@ -15,11 +15,11 @@ module.exports = {
       max_memory_restart: '512M',
       env: {
         NODE_ENV: 'production',
-        PORT: 3001,
+        PORT: 3003,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3001,
+        PORT: 3003,
       },
       // Logging
       error_file: '/var/log/pm2/jobted-ai-error.log',
