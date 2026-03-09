@@ -113,10 +113,27 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
   }
 
   const resumeContent = activeResume.content as any;
-  const targetRoles = (autoConfig.targetRoles as string[]) || [];
-  const targetLocations = (autoConfig.targetLocations as string[]) || [];
+  let targetRoles = (autoConfig.targetRoles as string[]) || [];
+  let targetLocations = (autoConfig.targetLocations as string[]) || [];
   const excludeCompanies = (autoConfig.excludeCompanies as string[]) || [];
   const excludeKeywords = (autoConfig.excludeKeywords as string[]) || [];
+
+  // Fall back to CareerTwin targetRoles/location if AutoApplyConfig has none
+  if (targetRoles.length === 0 || targetLocations.length === 0) {
+    const twin = await prisma.careerTwin.findUnique({
+      where: { userId },
+      select: { targetRoles: true, skillSnapshot: true },
+    });
+    if (targetRoles.length === 0 && twin?.targetRoles && Array.isArray(twin.targetRoles)) {
+      targetRoles = twin.targetRoles
+        .map((r: any) => (typeof r === 'string' ? r : r?.title || ''))
+        .filter(Boolean);
+    }
+    if (targetLocations.length === 0 && twin?.skillSnapshot) {
+      const loc = (twin.skillSnapshot as any)?._profile?.location;
+      if (loc) targetLocations = [loc];
+    }
+  }
 
   // Create the run record
   const run = await prisma.autoApplyRun.create({
@@ -497,9 +514,9 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
 
         if (!approved) { jobsSkipped++; continue; }
 
-        // Autopilot: only approved categories
+        // Autopilot: only approved categories — Archer auto-applies to matching jobs
         if (automationMode === 'autopilot') {
-          const jobMatchesApprovedCategory = targetRoles.some(
+          const jobMatchesApprovedCategory = targetRoles.length === 0 || targetRoles.some(
             (role) => job.title?.toLowerCase().includes(role.toLowerCase()),
           );
           if (!jobMatchesApprovedCategory) {
@@ -507,9 +524,9 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             jobsSkipped++;
             continue;
           }
-        }
-
-        if (!archerAutoApply) {
+          // Job matches approved category — proceed to apply
+        } else if (!archerAutoApply) {
+          // Copilot mode — provide suggestion only, don't auto-apply
           logActivity(ctx, 'archer', 'suggestion', `Ready to apply to ${job.title} at ${job.company} — waiting for user approval (${automationMode} mode)`);
           jobsSkipped++;
           continue;

@@ -58,8 +58,22 @@ export async function PUT(request: NextRequest) {
         data: updateData,
       });
 
-      // Signal Archer: update AutoApplyConfig.resumeId
+      // Signal Archer: update AutoApplyConfig.resumeId + populate targetRoles from CareerTwin
       if (updateType === 'resume' || updateType === 'both') {
+        // Get target roles and location from CareerTwin for Archer config
+        const twin = await prisma.careerTwin.findUnique({
+          where: { userId },
+          select: { targetRoles: true, skillSnapshot: true },
+        });
+
+        const twinRoles = Array.isArray(twin?.targetRoles) ? twin.targetRoles : [];
+        const targetRolesForConfig = twinRoles
+          .map((r: any) => (typeof r === 'string' ? r : r?.title || ''))
+          .filter(Boolean);
+        const twinLocation = (twin?.skillSnapshot as any)?._profile?.location || '';
+        const targetLocationsForConfig = twinLocation ? [twinLocation] : [];
+
+        // Create config with full data, or just update resumeId if it exists
         await prisma.autoApplyConfig.upsert({
           where: { userId },
           update: { resumeId },
@@ -68,8 +82,31 @@ export async function PUT(request: NextRequest) {
             resumeId,
             enabled: false,
             automationMode: 'autopilot',
+            targetRoles: targetRolesForConfig,
+            targetLocations: targetLocationsForConfig,
           },
         });
+
+        // If config exists but targetRoles/targetLocations are empty, populate from CareerTwin
+        const existingConfig = await prisma.autoApplyConfig.findUnique({
+          where: { userId },
+          select: { targetRoles: true, targetLocations: true },
+        });
+        const existingRoles = Array.isArray(existingConfig?.targetRoles) ? existingConfig.targetRoles : [];
+        const existingLocs = Array.isArray(existingConfig?.targetLocations) ? existingConfig.targetLocations : [];
+        const needsUpdate: Record<string, any> = {};
+        if (existingRoles.length === 0 && targetRolesForConfig.length > 0) {
+          needsUpdate.targetRoles = targetRolesForConfig;
+        }
+        if (existingLocs.length === 0 && targetLocationsForConfig.length > 0) {
+          needsUpdate.targetLocations = targetLocationsForConfig;
+        }
+        if (Object.keys(needsUpdate).length > 0) {
+          await prisma.autoApplyConfig.update({
+            where: { userId },
+            data: needsUpdate,
+          });
+        }
       }
 
       // Log activity
