@@ -67,6 +67,30 @@ export interface NetworkingSuggestionSummary {
   priority: 'high' | 'medium' | 'low';
 }
 
+// ─── Resume verification types ─────────────────────────────────────────────
+
+export interface ResumeReadinessReport {
+  passed: boolean;
+  completenessScore: number;       // 0-100
+  averageAtsScore: number;         // avg ATS score across target jobs
+  skillCoveragePercent: number;    // % of required skills covered
+  issues: { field: string; severity: 'critical' | 'warning'; message: string }[];
+  gaps: string[];                  // skills missing across target jobs
+  recommendations: string[];
+  checkedAt: Date;
+}
+
+export interface JobAlignmentResult {
+  jobTitle: string;
+  company: string;
+  alignmentScore: number;          // 0-100
+  matchedSkills: string[];
+  missingSkills: string[];
+  experienceMatch: 'strong' | 'partial' | 'weak';
+  approved: boolean;               // true if alignment >= threshold
+  reason: string;
+}
+
 export interface AgentContext {
   userId: string;
   runId: string;
@@ -88,6 +112,9 @@ export interface AgentContext {
   scamJobsFiltered: number;
   qualityScores: QualityScoreSummary[];
   networkingSuggestions: NetworkingSuggestionSummary[];
+  // Resume verification gate (v1.7.0)
+  resumeReadiness: ResumeReadinessReport | null;
+  jobAlignments: JobAlignmentResult[];
   // Activity log
   activityLog: AgentActivityEntry[];
 }
@@ -114,6 +141,8 @@ export function createAgentContext(
     scamJobsFiltered: 0,
     qualityScores: [],
     networkingSuggestions: [],
+    resumeReadiness: null,
+    jobAlignments: [],
     activityLog: [],
   };
 }
@@ -252,6 +281,26 @@ export function getContextSummary(ctx: AgentContext): string {
     const skip = ctx.qualityScores.filter(q => q.recommendation === 'skip').length;
     const avgQuality = Math.round(ctx.qualityScores.reduce((s, q) => s + q.overall, 0) / ctx.qualityScores.length);
     lines.push(`- Quality Gate: ${ctx.qualityScores.length} jobs scored (${applyNow} apply_now, ${skip} skip | avg: ${avgQuality}%)`);
+  }
+
+  // Resume readiness (Forge verification gate)
+  if (ctx.resumeReadiness) {
+    const r = ctx.resumeReadiness;
+    lines.push(`- Forge Resume Check: ${r.passed ? 'PASSED' : 'FAILED'} (completeness: ${r.completenessScore}%, avg ATS: ${r.averageAtsScore}%, skill coverage: ${r.skillCoveragePercent}%)`);
+    if (r.issues.length > 0) {
+      const critical = r.issues.filter(i => i.severity === 'critical');
+      lines.push(`  Issues: ${critical.length} critical, ${r.issues.length - critical.length} warnings`);
+    }
+    if (r.gaps.length > 0) {
+      lines.push(`  Skill gaps: ${r.gaps.slice(0, 5).join(', ')}`);
+    }
+  }
+
+  // Job alignment (Sentinel JD-resume check)
+  if (ctx.jobAlignments.length > 0) {
+    const approved = ctx.jobAlignments.filter(a => a.approved).length;
+    const avgAlign = Math.round(ctx.jobAlignments.reduce((s, a) => s + a.alignmentScore, 0) / ctx.jobAlignments.length);
+    lines.push(`- Sentinel Alignment: ${ctx.jobAlignments.length} jobs checked (${approved} approved, avg alignment: ${avgAlign}%)`);
   }
 
   // Networking suggestions

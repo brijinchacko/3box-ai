@@ -4,7 +4,7 @@
  */
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
-import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
+import { type AgentContext, getContextSummary, getAgentHandoff, logActivity, type JobAlignmentResult } from './context';
 import { detectScamSignals, type ScamSignals } from '@/lib/jobs/scamDetector';
 
 interface QualityReview {
@@ -175,4 +175,146 @@ OUTPUT FORMAT: Valid JSON with a "reasoning" field explaining your decisions.` }
       overallAssessment: 'Auto-approved due to review system error.',
     };
   }
+}
+
+// ─── JD-Resume Alignment Verification ──────────────────────────────────────
+
+/**
+ * Verify alignment between job descriptions and resume.
+ * Processes jobs in batches of 3 per AI call.
+ * Returns per-job alignment score + matched/missing skills.
+ *
+ * Jobs scoring below the threshold are marked as not approved.
+ */
+export async function verifyJobAlignment(
+  userId: string,
+  jobs: { title: string; company: string; description: string }[],
+  resume: {
+    summary: string;
+    skills: string[];
+    experience: { title: string; company: string; bullets: string[] }[];
+  },
+  alignmentThreshold: number = 40,
+  ctx?: AgentContext,
+): Promise<JobAlignmentResult[]> {
+  const results: JobAlignmentResult[] = [];
+
+  // Process in batches of 3 to reduce AI calls
+  const BATCH_SIZE = 3;
+  for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
+    const batch = jobs.slice(i, i + BATCH_SIZE);
+
+    const jobBlock = batch.map((j, idx) =>
+      `JOB ${idx + 1}:\nTitle: ${j.title}\nCompany: ${j.company}\nDescription: ${j.description.slice(0, 800)}`
+    ).join('\n\n');
+
+    try {
+      const contextBlock = ctx ? `\nTEAM CONTEXT:\n${getContextSummary(ctx)}` : '';
+
+      const response = await aiChatWithFallback({ messages: [
+        { role: 'system', content: `You are Sentinel, the Quality Reviewer. Compare each job's requirements against the candidate's resume to determine alignment.${contextBlock}
+
+IMPORTANT: Be honest about skill gaps. Do not inflate alignment scores.
+OUTPUT FORMAT: Valid JSON array.` },
+        { role: 'user', content: `CANDIDATE RESUME:
+Summary: ${resume.summary || 'Not provided'}
+Skills: ${(resume.skills || []).join(', ') || 'None listed'}
+Experience: ${(resume.experience || []).map(e => `${e.title} at ${e.company}: ${(e.bullets || []).slice(0, 3).join('; ')}`).join('\n') || 'No experience listed'}
+
+${jobBlock}
+
+For EACH job, respond with a JSON array:
+[{
+  "jobIndex": <0-based index>,
+  "alignmentScore": <0-100, how well resume matches this job's requirements>,
+  "matchedSkills": [<skills from resume that match job requirements>],
+  "missingSkills": [<required skills from JD not found in resume>],
+  "experienceMatch": "strong|partial|weak",
+  "reason": "<1 sentence explaining the alignment assessment>"
+}]` },
+      ] }, 'free');
+
+      const parsed = JSON.parse(extractJSON(response));
+      const alignments = Array.isArray(parsed) ? parsed : [];
+
+      for (const alignment of alignments) {
+        const jobIdx = Number(alignment.jobIndex);
+        const job = batch[jobIdx];
+        if (!job) continue;
+
+        const score = Math.min(100, Math.max(0, Number(alignment.alignmentScore) || 0));
+        results.push({
+          jobTitle: job.title,
+          company: job.company,
+          alignmentScore: score,
+          matchedSkills: Array.isArray(alignment.matchedSkills) ? alignment.matchedSkills.slice(0, 10) : [],
+          missingSkills: Array.isArray(alignment.missingSkills) ? alignment.missingSkills.slice(0, 10) : [],
+          experienceMatch: ['strong', 'partial', 'weak'].includes(alignment.experienceMatch) ? alignment.experienceMatch : 'partial',
+          approved: score >= alignmentThreshold,
+          reason: typeof alignment.reason === 'string' ? alignment.reason : 'Alignment check completed.',
+        });
+      }
+
+      // Handle jobs that AI didn't return results for
+      for (let j = 0; j < batch.length; j++) {
+        const hasResult = results.some(r => r.jobTitle === batch[j].title && r.company === batch[j].company);
+        if (!hasResult) {
+          results.push({
+            jobTitle: batch[j].title,
+            company: batch[j].company,
+            alignmentScore: 50,
+            matchedSkills: [],
+            missingSkills: [],
+            experienceMatch: 'partial',
+            approved: true,
+            reason: 'Alignment check incomplete — approved by default.',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[Sentinel] Job alignment batch failed:', err);
+      // On failure, default-approve this batch
+      for (const job of batch) {
+        results.push({
+          jobTitle: job.title,
+          company: job.company,
+          alignmentScore: 50,
+          matchedSkills: [],
+          missingSkills: [],
+          experienceMatch: 'partial',
+          approved: true,
+          reason: 'Alignment check failed — approved by default.',
+        });
+      }
+    }
+  }
+
+  // Log to AgentActivity DB
+  const approvedCount = results.filter(r => r.approved).length;
+  const avgAlignment = results.length > 0
+    ? Math.round(results.reduce((s, r) => s + r.alignmentScore, 0) / results.length)
+    : 0;
+
+  await prisma.agentActivity.create({
+    data: {
+      userId,
+      agent: 'sentinel',
+      action: 'verified_job_alignment',
+      summary: `Checked alignment for ${results.length} jobs: ${approvedCount} approved, ${results.length - approvedCount} rejected (threshold: ${alignmentThreshold}%)`,
+      details: {
+        totalChecked: results.length,
+        approved: approvedCount,
+        rejected: results.length - approvedCount,
+        threshold: alignmentThreshold,
+        avgAlignment,
+      },
+    },
+  });
+
+  if (ctx) {
+    logActivity(ctx, 'sentinel', 'verified_job_alignment',
+      `Alignment check: ${approvedCount}/${results.length} jobs approved (avg: ${avgAlignment}%)`);
+  }
+
+  return results;
 }

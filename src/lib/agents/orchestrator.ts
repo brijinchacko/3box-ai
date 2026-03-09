@@ -7,11 +7,11 @@
 import { prisma } from '@/lib/db/prisma';
 import { isAgentAvailable } from './permissions';
 import { runScout } from './scout';
-import { analyzeResumeForJob, generateOptimizedResume } from './forge';
+import { analyzeResumeForJob, generateOptimizedResume, verifyResumeReadiness } from './forge';
 import { applyToJob, applyToJobsBatch } from './archer';
 import { prepareInterview } from './atlas';
 import { analyzeSkillGaps } from './sage';
-import { reviewApplication } from './sentinel';
+import { reviewApplication, verifyJobAlignment } from './sentinel';
 import { generateNetworkingSuggestions } from './networkSuggester';
 import { calculateApplicationQuality } from '@/lib/jobs/qualityScore';
 import { detectScamSignals } from '@/lib/jobs/scamDetector';
@@ -33,12 +33,19 @@ interface PipelineConfig {
 
 interface PipelineResult {
   runId: string;
-  status: 'completed' | 'failed' | 'partial';
+  status: 'completed' | 'failed' | 'partial' | 'blocked';
   jobsFound: number;
   jobsApplied: number;
   jobsSkipped: number;
   creditsUsed: number;
   summary: string;
+  resumeVerification?: {
+    passed: boolean;
+    completenessScore: number;
+    averageAtsScore: number;
+    issues: { field: string; severity: string; message: string }[];
+    recommendations: string[];
+  };
 }
 
 /**
@@ -235,6 +242,119 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
       logActivity(ctx, 'forge', 'suggestion', `Forge available but waiting for user approval (${automationMode} mode)`);
     }
 
+    // ── Step 2.5: Forge Resume Verification Gate ──
+    // Verify resume readiness before Archer can apply.
+    let resumeVerificationPassed = true;
+
+    if (isAgentAvailable('forge', plan)) {
+      try {
+        logActivity(ctx, 'forge', 'verifying_resume', 'Verifying resume readiness before applications...');
+
+        const readinessResult = await verifyResumeReadiness(
+          userId,
+          resumeContent,
+          jobsToProcess.slice(0, 10).map((j: any) => ({
+            title: j.title,
+            description: j.description,
+            company: j.company,
+          })),
+          ctx,
+        );
+
+        // Store in context
+        ctx.resumeReadiness = {
+          ...readinessResult,
+          checkedAt: new Date(),
+        };
+
+        resumeVerificationPassed = readinessResult.passed;
+
+        if (!readinessResult.passed) {
+          logActivity(ctx, 'forge', 'resume_blocked',
+            `Resume verification FAILED — Archer will NOT apply. Issues: ${readinessResult.issues.filter(i => i.severity === 'critical').map(i => i.message).join('; ')}`);
+
+          await prisma.agentActivity.create({
+            data: {
+              userId,
+              agent: 'forge',
+              action: 'resume_blocked_applications',
+              summary: `Applications blocked: Resume failed verification (completeness: ${readinessResult.completenessScore}%, ATS: ${readinessResult.averageAtsScore}%). Fix issues and re-run.`,
+              details: {
+                completenessScore: readinessResult.completenessScore,
+                averageAtsScore: readinessResult.averageAtsScore,
+                skillCoveragePercent: readinessResult.skillCoveragePercent,
+                issues: readinessResult.issues,
+                gaps: readinessResult.gaps,
+                recommendations: readinessResult.recommendations,
+              },
+            },
+          });
+        } else {
+          logActivity(ctx, 'forge', 'resume_approved',
+            `Resume verified: completeness ${readinessResult.completenessScore}%, ATS ${readinessResult.averageAtsScore}%, skill coverage ${readinessResult.skillCoveragePercent}%`);
+        }
+      } catch (err) {
+        console.error('[Orchestrator] Resume verification failed:', err);
+        logActivity(ctx, 'forge', 'verification_error', `Resume verification error: ${(err as Error).message}. Proceeding with caution.`);
+        // On error, allow pipeline to continue
+      }
+    }
+
+    // If resume verification failed, skip Archer entirely
+    if (!resumeVerificationPassed) {
+      jobsSkipped = jobsToProcess.length;
+
+      const summary = `Resume verification failed. ${jobsFound} jobs found but applications blocked. Please update your resume and re-run.`;
+
+      await prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'completed',
+          jobsFound,
+          jobsApplied: 0,
+          jobsSkipped,
+          creditsUsed,
+          summary,
+          completedAt: new Date(),
+          details: {
+            resumeVerification: ctx.resumeReadiness ? JSON.parse(JSON.stringify(ctx.resumeReadiness)) : null,
+            processedJobs: jobsToProcess.map((j: any) => ({ title: j.title, company: j.company, score: j.matchScore })),
+            automationMode,
+            pipelineContext: {
+              discoveredJobs: ctx.discoveredJobs.length,
+              optimizedResumes: ctx.optimizedResumes.length,
+              reviewResults: 0,
+              applicationsSent: 0,
+              interviewPreps: 0,
+              skillGaps: 0,
+              scamJobsFiltered: ctx.scamJobsFiltered,
+              qualityScores: ctx.qualityScores.length,
+              networkingSuggestions: 0,
+              activityLog: ctx.activityLog.length,
+              hadErrors: pipelineHadErrors,
+            },
+          },
+        },
+      });
+
+      return {
+        runId: run.id,
+        status: 'blocked',
+        jobsFound,
+        jobsApplied: 0,
+        jobsSkipped,
+        creditsUsed,
+        summary,
+        resumeVerification: {
+          passed: false,
+          completenessScore: ctx.resumeReadiness?.completenessScore ?? 0,
+          averageAtsScore: ctx.resumeReadiness?.averageAtsScore ?? 0,
+          issues: ctx.resumeReadiness?.issues ?? [],
+          recommendations: ctx.resumeReadiness?.recommendations ?? [],
+        },
+      };
+    }
+
     // ── Step 3: Quality Gate + Sentinel review + Archer batch application (PRO+) ──
     if (isAgentAvailable('archer', plan)) {
       const archerAutoApply = shouldAutoRun('archer', automationMode);
@@ -242,11 +362,62 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
       // Pre-filter jobs: quality gate, sentinel review, autopilot category check
       const approvedJobs: typeof jobsToProcess = [];
 
+      // ── Step 3.0: Sentinel batch JD-resume alignment check ──
+      if (isAgentAvailable('sentinel', plan) && shouldAutoRun('sentinel', automationMode)) {
+        try {
+          logActivity(ctx, 'sentinel', 'alignment_start', `Checking JD-resume alignment for ${jobsToProcess.length} jobs...`);
+
+          const alignmentResults = await verifyJobAlignment(
+            userId,
+            jobsToProcess.map((j: any) => ({
+              title: j.title,
+              company: j.company,
+              description: j.description,
+            })),
+            {
+              summary: resumeContent.summary || '',
+              skills: resumeContent.skills || [],
+              experience: resumeContent.experience || [],
+            },
+            40, // alignment threshold
+            ctx,
+          );
+
+          // Store results in context
+          addToContext(ctx, 'jobAlignments', alignmentResults);
+
+          // Annotate jobs with alignment data
+          for (const alignment of alignmentResults) {
+            const job = jobsToProcess.find(
+              (j: any) => j.title === alignment.jobTitle && j.company === alignment.company
+            );
+            if (job) {
+              job._alignmentScore = alignment.alignmentScore;
+              job._alignmentApproved = alignment.approved;
+            }
+          }
+        } catch (err) {
+          console.error('[Orchestrator] Sentinel alignment check failed:', err);
+          logActivity(ctx, 'sentinel', 'alignment_error', `Job alignment check failed: ${(err as Error).message}. Proceeding without alignment filter.`);
+        }
+      }
+
       for (const job of jobsToProcess) {
         // Quality gate: skip low-quality jobs
         const qualityRec = job._qualityRecommendation as string | undefined;
         if (qualityRec === 'skip') {
           logActivity(ctx, 'archer', 'quality_skip', `Skipped "${job.title}" at ${job.company} — quality too low (score: ${job._qualityScore ?? 0})`);
+          jobsSkipped++;
+          continue;
+        }
+
+        // JD-Resume alignment filter (from Sentinel batch check)
+        if (job._alignmentApproved === false) {
+          const alignment = ctx.jobAlignments.find(
+            a => a.jobTitle === job.title && a.company === job.company
+          );
+          logActivity(ctx, 'sentinel', 'alignment_skip',
+            `Skipped "${job.title}" at ${job.company} — alignment too low (${job._alignmentScore ?? 0}%): ${alignment?.reason ?? 'Poor fit'}`);
           jobsSkipped++;
           continue;
         }

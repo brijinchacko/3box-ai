@@ -52,6 +52,21 @@ export function notifyAgentError(agent: AgentId, message: string) {
   });
 }
 
+export function notifyResumeBlocked(agent: AgentId, issues: string[], recommendation: string) {
+  const label = AGENT_LABELS[agent] || agent;
+  const issueCount = issues.length;
+  toast.error(`${label}: Resume blocked — ${issueCount} critical issue${issueCount !== 1 ? 's' : ''} found`, {
+    duration: 10000,
+  });
+  useNotificationStore.getState().addNotification({
+    type: 'error',
+    title: `${label}: Resume Not Ready`,
+    message: `${issueCount} issue${issueCount !== 1 ? 's' : ''} found: ${issues.slice(0, 3).join(', ')}${issues.length > 3 ? '...' : ''}. ${recommendation}`,
+    agent,
+    action: '/dashboard/resume',
+  });
+}
+
 export function notifyInfo(title: string, message: string) {
   toast(message, {
     icon: 'ℹ️',

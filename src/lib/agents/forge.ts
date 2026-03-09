@@ -234,6 +234,185 @@ Rules:
   }
 }
 
+// ─── Resume Readiness Verification ─────────────────────────────────────────
+
+export interface ResumeReadinessResult {
+  passed: boolean;
+  completenessScore: number;
+  averageAtsScore: number;
+  skillCoveragePercent: number;
+  issues: { field: string; severity: 'critical' | 'warning'; message: string }[];
+  gaps: string[];
+  recommendations: string[];
+}
+
+/**
+ * Verify that a resume is ready for applications.
+ * Two-phase check:
+ *   Phase 1 — Local completeness (zero AI cost)
+ *   Phase 2 — ATS + skill coverage analysis against target jobs (1 AI call)
+ *
+ * Blocks Archer if: critical issues exist, completeness < 70%, or avg ATS < 30%.
+ */
+export async function verifyResumeReadiness(
+  userId: string,
+  resume: ResumeContent,
+  targetJobs: { title: string; description: string; company: string }[],
+  ctx?: AgentContext,
+): Promise<ResumeReadinessResult> {
+  const issues: ResumeReadinessResult['issues'] = [];
+
+  // ── Phase 1: Local completeness checks (zero AI cost) ──
+
+  // Contact fields
+  if (!resume.contact?.name?.trim()) {
+    issues.push({ field: 'contact.name', severity: 'critical', message: 'Name is missing from resume' });
+  }
+  if (!resume.contact?.email?.trim()) {
+    issues.push({ field: 'contact.email', severity: 'critical', message: 'Email is missing from resume' });
+  }
+  if (!resume.contact?.phone?.trim()) {
+    issues.push({ field: 'contact.phone', severity: 'warning', message: 'Phone number is missing' });
+  }
+  if (!resume.contact?.location?.trim()) {
+    issues.push({ field: 'contact.location', severity: 'warning', message: 'Location is missing' });
+  }
+
+  // Summary
+  if (!resume.summary?.trim() || resume.summary.trim().length < 20) {
+    issues.push({ field: 'summary', severity: 'critical', message: 'Professional summary is empty or too short (min 20 chars)' });
+  }
+
+  // Experience
+  if (!resume.experience || resume.experience.length === 0) {
+    issues.push({ field: 'experience', severity: 'critical', message: 'No work experience entries found' });
+  } else {
+    const emptyBullets = resume.experience.filter(e => !e.bullets || e.bullets.length === 0);
+    if (emptyBullets.length > 0) {
+      issues.push({ field: 'experience.bullets', severity: 'warning', message: `${emptyBullets.length} experience entries have no bullet points` });
+    }
+    const missingTitles = resume.experience.filter(e => !e.title?.trim());
+    if (missingTitles.length > 0) {
+      issues.push({ field: 'experience.title', severity: 'critical', message: `${missingTitles.length} experience entries missing job title` });
+    }
+  }
+
+  // Skills
+  if (!resume.skills || resume.skills.length === 0) {
+    issues.push({ field: 'skills', severity: 'critical', message: 'No skills listed on resume' });
+  } else if (resume.skills.length < 3) {
+    issues.push({ field: 'skills', severity: 'warning', message: 'Very few skills listed (recommend at least 5)' });
+  }
+
+  // Education
+  if (!resume.education || resume.education.length === 0) {
+    issues.push({ field: 'education', severity: 'warning', message: 'No education entries found' });
+  }
+
+  // Weighted completeness score
+  const fieldChecks = [
+    { filled: !!resume.contact?.name?.trim(), weight: 15 },
+    { filled: !!resume.contact?.email?.trim(), weight: 15 },
+    { filled: !!resume.contact?.phone?.trim(), weight: 5 },
+    { filled: !!resume.contact?.location?.trim(), weight: 5 },
+    { filled: !!resume.summary?.trim() && resume.summary.trim().length >= 20, weight: 15 },
+    { filled: (resume.experience?.length ?? 0) > 0, weight: 20 },
+    { filled: (resume.skills?.length ?? 0) >= 3, weight: 15 },
+    { filled: (resume.education?.length ?? 0) > 0, weight: 10 },
+  ];
+  const completenessScore = fieldChecks.reduce(
+    (sum, check) => sum + (check.filled ? check.weight : 0), 0
+  );
+
+  // ── Phase 2: ATS analysis against target jobs ──
+  let averageAtsScore = 0;
+  let skillCoveragePercent = 0;
+  const allGaps: string[] = [];
+  let aiRecommendations: string[] = [];
+
+  if (targetJobs.length > 0 && completenessScore >= 50) {
+    // Use quickATSScore for each job (local, no AI call)
+    const atsScores: number[] = [];
+    for (const job of targetJobs.slice(0, 10)) {
+      const score = await quickATSScore(resume, job.description);
+      atsScores.push(score);
+    }
+    averageAtsScore = Math.round(atsScores.reduce((s, v) => s + v, 0) / atsScores.length);
+
+    // Single AI call: batch skill coverage analysis
+    const jobSummaries = targetJobs.slice(0, 5).map(j =>
+      `${j.title} at ${j.company}: ${j.description.slice(0, 300)}`
+    ).join('\n\n');
+
+    try {
+      const response = await aiChatWithFallback({ messages: [
+        { role: 'system', content: 'You are Forge, the Resume Optimizer. Analyze whether this resume covers the skills needed for these target jobs. Output valid JSON only.' },
+        { role: 'user', content: `RESUME SKILLS: ${(resume.skills || []).join(', ')}
+RESUME EXPERIENCE: ${(resume.experience || []).map(e => `${e.title}: ${(e.bullets || []).slice(0, 2).join('; ')}`).join('\n')}
+
+TARGET JOBS:
+${jobSummaries}
+
+Respond in JSON:
+{
+  "skillCoveragePercent": <0-100, what % of required skills does this resume cover>,
+  "gaps": [<top 5 skill/keyword gaps across these jobs>],
+  "recommendations": [<3-5 specific actions to improve resume readiness>]
+}` },
+      ] }, 'free');
+
+      const parsed = JSON.parse(extractJSON(response));
+      skillCoveragePercent = Math.min(100, Math.max(0, Number(parsed.skillCoveragePercent) || 0));
+      if (Array.isArray(parsed.gaps)) allGaps.push(...parsed.gaps.slice(0, 8));
+      aiRecommendations = Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0, 5) : [];
+    } catch {
+      skillCoveragePercent = 50; // neutral default on AI failure
+      aiRecommendations = ['Unable to complete AI skill analysis. Please try again.'];
+    }
+  } else if (completenessScore < 50) {
+    aiRecommendations = ['Complete the missing resume fields before running AI analysis.'];
+  }
+
+  // ── Pass/Fail Decision ──
+  const hasCriticalIssues = issues.some(i => i.severity === 'critical');
+  const passed = !hasCriticalIssues && completenessScore >= 70 && averageAtsScore >= 30;
+
+  const result: ResumeReadinessResult = {
+    passed,
+    completenessScore,
+    averageAtsScore,
+    skillCoveragePercent,
+    issues,
+    gaps: allGaps,
+    recommendations: aiRecommendations,
+  };
+
+  // Log to AgentActivity DB
+  await prisma.agentActivity.create({
+    data: {
+      userId,
+      agent: 'forge',
+      action: passed ? 'resume_verified' : 'resume_verification_failed',
+      summary: `Resume verification ${passed ? 'PASSED' : 'FAILED'}: completeness ${completenessScore}%, avg ATS ${averageAtsScore}%, ${issues.length} issues found`,
+      details: {
+        completenessScore,
+        averageAtsScore,
+        skillCoveragePercent,
+        issueCount: issues.length,
+        criticalIssues: issues.filter(i => i.severity === 'critical').length,
+        gaps: allGaps,
+      },
+    },
+  });
+
+  if (ctx) {
+    logActivity(ctx, 'forge', passed ? 'resume_verified' : 'resume_verification_failed',
+      `Resume ${passed ? 'PASSED' : 'FAILED'} verification: completeness ${completenessScore}%, ATS ${averageAtsScore}%, ${issues.filter(i => i.severity === 'critical').length} critical issues`);
+  }
+
+  return result;
+}
+
 /**
  * Quick ATS score check without full optimization
  */
