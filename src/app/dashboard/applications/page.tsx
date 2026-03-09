@@ -70,6 +70,14 @@ interface ApplicationsResponse {
   };
 }
 
+interface PipelineStep {
+  agent: string;
+  agentName: string;
+  status: 'completed' | 'warning' | 'skipped' | 'error';
+  headline: string;
+  details: string[];
+}
+
 interface LastRun {
   id: string;
   status: string;
@@ -80,6 +88,12 @@ interface LastRun {
   summary: string | null;
   startedAt: string;
   completedAt: string | null;
+  details?: {
+    pipelineSteps?: PipelineStep[];
+    scoutSource?: 'reused' | 'fresh';
+    resumeVerification?: any;
+    [key: string]: any;
+  } | null;
 }
 
 interface PreflightData {
@@ -344,51 +358,106 @@ export default function ApplicationsPage() {
         </motion.div>
       )}
 
-      {/* ── Last Run Result Banner ── */}
+      {/* ── Last Run Result with Pipeline Step Breakdown ── */}
       {!running && runResult && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 rounded-2xl border border-white/10 bg-white/[0.02]">
-          <div className="flex items-start gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              runResult.jobsApplied > 0 ? 'bg-green-500/15' : 'bg-amber-500/15'
-            }`}>
-              {runResult.jobsApplied > 0 ? (
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-              )}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-3">
+          {/* Summary Header */}
+          <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02]">
+            <div className="flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                runResult.jobsApplied > 0 ? 'bg-green-500/15' : 'bg-amber-500/15'
+              }`}>
+                {runResult.jobsApplied > 0 ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-white mb-0.5">
+                  {runResult.jobsApplied > 0
+                    ? `Applied to ${runResult.jobsApplied} jobs`
+                    : runResult.jobsFound > 0
+                      ? `Found ${runResult.jobsFound} jobs but none applied`
+                      : 'No matching jobs found'}
+                </h3>
+                <p className="text-xs text-white/40 leading-relaxed">
+                  {runResult.summary || `Found ${runResult.jobsFound} jobs, applied to ${runResult.jobsApplied}, skipped ${runResult.jobsSkipped}.`}
+                </p>
+                {runResult.jobsFound === 0 && (
+                  <Link href="/dashboard/jobs" className="inline-flex items-center gap-1.5 mt-2 text-xs text-blue-400 hover:underline">
+                    <Search className="w-3 h-3" /> Go to Scout to find jobs first
+                  </Link>
+                )}
+              </div>
+              <button onClick={() => setRunResult(null)} className="text-white/20 hover:text-white/40">
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-white mb-0.5">
-                {runResult.jobsApplied > 0
-                  ? `Applied to ${runResult.jobsApplied} jobs`
-                  : runResult.jobsFound > 0
-                    ? `Found ${runResult.jobsFound} jobs but none applied`
-                    : 'No matching jobs found'}
-              </h3>
-              <p className="text-xs text-white/40 leading-relaxed">
-                {runResult.summary || `Found ${runResult.jobsFound} jobs, applied to ${runResult.jobsApplied}, skipped ${runResult.jobsSkipped}.`}
-              </p>
-              {runResult.jobsFound === 0 && (
-                <Link href="/dashboard/jobs" className="inline-flex items-center gap-1.5 mt-2 text-xs text-blue-400 hover:underline">
-                  <Search className="w-3 h-3" /> Go to Scout to find jobs first
-                </Link>
-              )}
-            </div>
-            <button onClick={() => setRunResult(null)} className="text-white/20 hover:text-white/40">
-              <XCircle className="w-3.5 h-3.5" />
-            </button>
           </div>
+
+          {/* Pipeline Step Breakdown */}
+          {runResult.details?.pipelineSteps && (runResult.details.pipelineSteps as PipelineStep[]).length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider px-1">Pipeline Breakdown</p>
+              {(runResult.details.pipelineSteps as PipelineStep[]).map((step) => (
+                <div key={step.agent} className={`p-2.5 rounded-xl border transition-all ${
+                  step.status === 'completed' ? 'border-green-500/15 bg-green-500/[0.02]' :
+                  step.status === 'warning' ? 'border-amber-500/15 bg-amber-500/[0.02]' :
+                  step.status === 'error' ? 'border-red-500/15 bg-red-500/[0.02]' :
+                  'border-white/5 bg-white/[0.01]'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <AgentAvatar agentId={step.agent as any} size={18} />
+                    <span className="text-[11px] font-semibold text-white">{step.agentName}</span>
+                    <span className="text-[10px] text-white/35 flex-1 truncate">{step.headline}</span>
+                    {step.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />}
+                    {step.status === 'warning' && <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+                    {step.status === 'error' && <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
+                    {step.status === 'skipped' && <span className="text-[9px] text-white/20 flex-shrink-0">skipped</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 
       {/* ── Last Run (from preflight) — shown if no new runResult ── */}
       {!running && !runResult && preflight?.lastRun && preflight.lastRun.status !== 'running' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-3">
-          <Clock className="w-4 h-4 text-white/30 flex-shrink-0" />
-          <p className="text-xs text-white/40 flex-1">
-            Last run: {preflight.lastRun.summary || `${preflight.lastRun.jobsFound} found, ${preflight.lastRun.jobsApplied} applied`}
-            <span className="text-white/20 ml-2">{timeAgo(preflight.lastRun.startedAt)}</span>
-          </p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 space-y-3">
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-3">
+            <Clock className="w-4 h-4 text-white/30 flex-shrink-0" />
+            <p className="text-xs text-white/40 flex-1">
+              Last run: {preflight.lastRun.summary || `${preflight.lastRun.jobsFound} found, ${preflight.lastRun.jobsApplied} applied`}
+              <span className="text-white/20 ml-2">{timeAgo(preflight.lastRun.startedAt)}</span>
+            </p>
+          </div>
+
+          {/* Show pipeline steps from last run if available */}
+          {preflight.lastRun.details?.pipelineSteps && (preflight.lastRun.details.pipelineSteps as PipelineStep[]).length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider px-1">Last Run Breakdown</p>
+              {(preflight.lastRun.details.pipelineSteps as PipelineStep[]).map((step) => (
+                <div key={step.agent} className={`p-2.5 rounded-xl border transition-all ${
+                  step.status === 'completed' ? 'border-green-500/10 bg-green-500/[0.01]' :
+                  step.status === 'warning' ? 'border-amber-500/10 bg-amber-500/[0.01]' :
+                  step.status === 'error' ? 'border-red-500/10 bg-red-500/[0.01]' :
+                  'border-white/5 bg-white/[0.01]'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <AgentAvatar agentId={step.agent as any} size={18} />
+                    <span className="text-[11px] font-semibold text-white/60">{step.agentName}</span>
+                    <span className="text-[10px] text-white/30 flex-1 truncate">{step.headline}</span>
+                    {step.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-green-400/60 flex-shrink-0" />}
+                    {step.status === 'warning' && <AlertTriangle className="w-3 h-3 text-amber-400/60 flex-shrink-0" />}
+                    {step.status === 'error' && <XCircle className="w-3 h-3 text-red-400/60 flex-shrink-0" />}
+                    {step.status === 'skipped' && <span className="text-[9px] text-white/15 flex-shrink-0">skipped</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 

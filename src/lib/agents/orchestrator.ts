@@ -24,7 +24,7 @@ import {
   getContextSummary,
   getAgentHandoff,
 } from './context';
-import type { AutomationMode } from './registry';
+import type { AutomationMode, AgentId } from './registry';
 
 interface PipelineConfig {
   userId: string;
@@ -70,6 +70,127 @@ function shouldAutoRun(
     default:
       return false;
   }
+}
+
+/**
+ * Look for recent Scout-only run results to reuse instead of running Scout again.
+ * Returns the jobs array from the most recent completed Scout run within maxAgeHours.
+ */
+async function findRecentScoutJobs(userId: string, maxAgeHours = 24): Promise<{
+  jobs: any[];
+  totalFound: number;
+  sources: string[];
+  runId: string;
+} | null> {
+  const cutoff = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
+
+  const recentScoutRun = await prisma.autoApplyRun.findFirst({
+    where: {
+      userId,
+      status: 'completed',
+      startedAt: { gte: cutoff },
+      summary: { startsWith: 'Scout found' }, // Scout-only runs have this prefix
+      jobsFound: { gt: 0 },
+    },
+    orderBy: { startedAt: 'desc' },
+    select: { id: true, details: true, jobsFound: true },
+  });
+
+  if (!recentScoutRun?.details) return null;
+
+  const details = recentScoutRun.details as any;
+  if (!details.jobs || !Array.isArray(details.jobs) || details.jobs.length === 0) return null;
+
+  return {
+    jobs: details.jobs,
+    totalFound: details.totalFound || details.jobs.length,
+    sources: details.sources || [],
+    runId: recentScoutRun.id,
+  };
+}
+
+/**
+ * Pipeline step data for dashboard display
+ */
+interface PipelineStep {
+  agent: string;
+  agentName: string;
+  status: 'completed' | 'warning' | 'skipped' | 'error';
+  headline: string;
+  details: string[];
+}
+
+/**
+ * Build structured pipeline steps from AgentContext for dashboard rendering
+ */
+function buildPipelineSteps(ctx: import('./context').AgentContext, scoutSource: 'reused' | 'fresh'): PipelineStep[] {
+  const steps: PipelineStep[] = [];
+
+  // Scout step
+  const scoutActivities = ctx.activityLog.filter(a => a.agent === 'scout' && a.action !== 'pipeline_start');
+  const scoutErrors = scoutActivities.filter(a => a.action === 'error');
+  steps.push({
+    agent: 'scout',
+    agentName: 'Scout',
+    status: scoutErrors.length > 0 ? 'error' : ctx.discoveredJobs.length > 0 ? 'completed' : 'skipped',
+    headline: ctx.discoveredJobs.length > 0
+      ? (scoutSource === 'reused'
+        ? `Reused ${ctx.discoveredJobs.length} jobs from previous Scout run`
+        : `Found ${ctx.discoveredJobs.length} jobs from ${new Set(ctx.discoveredJobs.map(j => j.source)).size} sources`)
+      : 'No jobs found',
+    details: scoutActivities.map(a => a.summary),
+  });
+
+  // Forge step
+  const forgeActivities = ctx.activityLog.filter(a => a.agent === 'forge');
+  const resumeStatus = ctx.resumeReadiness;
+  steps.push({
+    agent: 'forge',
+    agentName: 'Forge',
+    status: resumeStatus
+      ? (resumeStatus.passed && !resumeStatus.hasWarnings ? 'completed' : resumeStatus.passed ? 'warning' : 'error')
+      : forgeActivities.length > 0 ? 'completed' : 'skipped',
+    headline: resumeStatus
+      ? `Resume: ${resumeStatus.passed ? (resumeStatus.hasWarnings ? 'Passed with warnings' : 'Verified') : 'Blocked'} (completeness ${resumeStatus.completenessScore}%, ATS ${resumeStatus.averageAtsScore}%)`
+      : forgeActivities.length > 0 ? 'Resume optimization performed' : 'Resume check skipped',
+    details: forgeActivities.map(a => a.summary),
+  });
+
+  // Sentinel step
+  const sentinelActivities = ctx.activityLog.filter(a => a.agent === 'sentinel');
+  const approvedCount = ctx.jobAlignments.filter(a => a.approved).length;
+  const totalAligned = ctx.jobAlignments.length;
+  steps.push({
+    agent: 'sentinel',
+    agentName: 'Sentinel',
+    status: sentinelActivities.length > 0 ? 'completed' : 'skipped',
+    headline: totalAligned > 0
+      ? `Reviewed ${totalAligned} jobs (${approvedCount} approved, ${totalAligned - approvedCount} filtered)`
+      : ctx.reviewResults.length > 0
+        ? `Quality reviewed ${ctx.reviewResults.length} applications`
+        : 'No review performed',
+    details: sentinelActivities.map(a => a.summary),
+  });
+
+  // Archer step
+  const archerActivities = ctx.activityLog.filter(a => a.agent === 'archer');
+  const sentCount = ctx.applicationsSent.filter(a => a.status === 'sent').length;
+  const emailCount = ctx.applicationsSent.filter(a => a.method === 'email').length;
+  const atsCount = ctx.applicationsSent.filter(a => a.method === 'ats_api').length;
+  const portalCount = ctx.applicationsSent.filter(a => a.method === 'portal').length;
+  steps.push({
+    agent: 'archer',
+    agentName: 'Archer',
+    status: sentCount > 0 ? 'completed' : archerActivities.some(a => a.action === 'error') ? 'error' : 'skipped',
+    headline: sentCount > 0
+      ? `Applied to ${sentCount} jobs (${emailCount} email, ${atsCount} ATS, ${portalCount} portal)`
+      : archerActivities.length > 0
+        ? archerActivities[archerActivities.length - 1].summary
+        : 'No applications sent',
+    details: archerActivities.map(a => a.summary),
+  });
+
+  return steps;
 }
 
 export async function runAgentPipeline(config: PipelineConfig): Promise<PipelineResult> {
@@ -158,27 +279,58 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
   let jobsSkipped = 0;
   let creditsUsed = 0;
   let pipelineHadErrors = false;
+  let scoutSource: 'reused' | 'fresh' = 'fresh';
 
   try {
     // ── Step 1: Scout discovers jobs (STARTER+) ──
-    // Scout always auto-runs in every mode (it's the entry point)
+    // First check for recent Scout-only run results to reuse
+    // If none found, auto-trigger Scout fresh (dependency resolution)
     let discoveredJobs: any[] = [];
     if (isAgentAvailable('scout', plan)) {
-      try {
-        const scoutResult = await runScout({
-          userId,
-          targetRoles,
-          targetLocations,
-          preferRemote: autoConfig.preferRemote,
-          minMatchScore: autoConfig.minMatchScore,
-          excludeCompanies,
-          excludeKeywords,
-          limit: Math.max(autoConfig.maxAppliesPerRun, 100), // Discover enough for 100+ applications
-        });
-        discoveredJobs = scoutResult.jobs;
-        jobsFound = scoutResult.totalFound;
+      logActivity(ctx, 'scout', 'pipeline_start', `Pipeline initiated in ${automationMode} mode. Checking for recent Scout results...`);
 
-        // Write Scout results to shared context
+      // Phase 1: Try to reuse recent Scout results (from Scout-only runs)
+      const recentScout = await findRecentScoutJobs(userId);
+
+      if (recentScout && recentScout.jobs.length > 0) {
+        // Reuse existing Scout results — skip re-search
+        discoveredJobs = recentScout.jobs;
+        jobsFound = recentScout.totalFound;
+        scoutSource = 'reused';
+
+        logActivity(ctx, 'scout', 'reused_results',
+          `Reusing ${discoveredJobs.length} jobs from recent Scout run (${recentScout.sources.join(', ')})`);
+      } else {
+        // Phase 2: No recent results — auto-trigger Scout fresh
+        logActivity(ctx, 'scout', 'dependency_triggered',
+          'No recent Scout results found. Auto-triggering Scout to find jobs...');
+
+        try {
+          const scoutResult = await runScout({
+            userId,
+            targetRoles,
+            targetLocations,
+            preferRemote: autoConfig.preferRemote,
+            minMatchScore: autoConfig.minMatchScore,
+            excludeCompanies,
+            excludeKeywords,
+            limit: Math.max(autoConfig.maxAppliesPerRun, 100),
+          });
+          discoveredJobs = scoutResult.jobs;
+          jobsFound = scoutResult.totalFound;
+          scoutSource = 'fresh';
+
+          logActivity(ctx, 'scout', 'discovered_jobs',
+            `Found ${discoveredJobs.length} jobs from ${scoutResult.sources?.length ?? 0} sources (${jobsFound} total matches)`);
+        } catch (err) {
+          console.error('[Orchestrator] Scout failed:', err);
+          logActivity(ctx, 'scout', 'error', `Scout failed: ${(err as Error).message}`);
+          pipelineHadErrors = true;
+        }
+      }
+
+      // Write Scout results to shared context
+      if (discoveredJobs.length > 0) {
         addToContext(ctx, 'discoveredJobs', discoveredJobs.map((j: any) => ({
           title: j.title,
           company: j.company,
@@ -186,21 +338,23 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
           applyUrl: j.url,
           source: j.source,
         })));
-        logActivity(ctx, 'scout', 'discovered_jobs', `Found ${discoveredJobs.length} jobs from ${scoutResult.sources?.length ?? 0} sources (${jobsFound} total matches)`);
-      } catch (err) {
-        console.error('[Orchestrator] Scout failed:', err);
-        logActivity(ctx, 'scout', 'error', `Scout failed: ${(err as Error).message}`);
-        pipelineHadErrors = true;
-        // Continue pipeline — downstream agents can still produce suggestions
       }
     }
 
     if (discoveredJobs.length === 0) {
       logActivity(ctx, 'scout', 'no_results', 'No matching jobs found in this run');
       const summary = 'No matching jobs found in this run.';
+      const noJobSteps = buildPipelineSteps(ctx, scoutSource);
       await prisma.autoApplyRun.update({
         where: { id: run.id },
-        data: { status: 'completed', jobsFound: 0, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0, completedAt: new Date(), summary },
+        data: {
+          status: 'completed', jobsFound: 0, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0, completedAt: new Date(), summary,
+          details: JSON.parse(JSON.stringify({
+            automationMode, scoutSource,
+            pipelineSteps: noJobSteps,
+            activityLog: ctx.activityLog.map(e => ({ agent: e.agent, action: e.action, summary: e.summary, timestamp: e.timestamp.toISOString() })),
+          })),
+        },
       });
       return { runId: run.id, status: pipelineHadErrors ? 'partial' : 'completed', jobsFound: 0, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0, summary };
     }
@@ -362,59 +516,80 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
       }
     }
 
-    // If resume verification failed, skip Archer entirely
+    // If resume verification failed, check if it's a hard block or soft warning
     if (!resumeVerificationPassed) {
-      jobsSkipped = jobsToProcess.length;
+      // Check if hard block (name/email missing) — can't send applications without contact info
+      const isHardBlock = ctx.resumeReadiness?.issues.some(i =>
+        i.severity === 'critical' &&
+        (i.field === 'contact.name' || i.field === 'contact.email')
+      );
 
-      const summary = `Resume verification failed. ${jobsFound} jobs found but applications blocked. Please update your resume and re-run.`;
+      if (isHardBlock) {
+        // HARD BLOCK: name or email missing — can't send applications
+        jobsSkipped = jobsToProcess.length;
+        const missingFields = ctx.resumeReadiness?.issues
+          .filter(i => i.field === 'contact.name' || i.field === 'contact.email')
+          .map(i => i.message) || [];
 
-      await prisma.autoApplyRun.update({
-        where: { id: run.id },
-        data: {
-          status: 'completed',
+        const summary = `Applications blocked: ${missingFields.join('. ')}. Go to Forge to update your resume with the missing contact information.`;
+        const blockedSteps = buildPipelineSteps(ctx, scoutSource);
+
+        await prisma.autoApplyRun.update({
+          where: { id: run.id },
+          data: {
+            status: 'completed',
+            jobsFound,
+            jobsApplied: 0,
+            jobsSkipped,
+            creditsUsed,
+            summary,
+            completedAt: new Date(),
+            details: JSON.parse(JSON.stringify({
+              resumeVerification: ctx.resumeReadiness,
+              processedJobs: jobsToProcess.map((j: any) => ({ title: j.title, company: j.company, score: j.matchScore })),
+              automationMode,
+              scoutSource,
+              pipelineSteps: blockedSteps,
+              activityLog: ctx.activityLog.map(e => ({ agent: e.agent, action: e.action, summary: e.summary, timestamp: e.timestamp.toISOString() })),
+              pipelineContext: {
+                discoveredJobs: ctx.discoveredJobs.length,
+                optimizedResumes: ctx.optimizedResumes.length,
+                reviewResults: 0,
+                applicationsSent: 0,
+                interviewPreps: 0,
+                skillGaps: 0,
+                scamJobsFiltered: ctx.scamJobsFiltered,
+                qualityScores: ctx.qualityScores.length,
+                networkingSuggestions: 0,
+                activityLog: ctx.activityLog.length,
+                hadErrors: pipelineHadErrors,
+              },
+            })),
+          },
+        });
+
+        return {
+          runId: run.id,
+          status: 'blocked',
           jobsFound,
           jobsApplied: 0,
           jobsSkipped,
           creditsUsed,
           summary,
-          completedAt: new Date(),
-          details: {
-            resumeVerification: ctx.resumeReadiness ? JSON.parse(JSON.stringify(ctx.resumeReadiness)) : null,
-            processedJobs: jobsToProcess.map((j: any) => ({ title: j.title, company: j.company, score: j.matchScore })),
-            automationMode,
-            pipelineContext: {
-              discoveredJobs: ctx.discoveredJobs.length,
-              optimizedResumes: ctx.optimizedResumes.length,
-              reviewResults: 0,
-              applicationsSent: 0,
-              interviewPreps: 0,
-              skillGaps: 0,
-              scamJobsFiltered: ctx.scamJobsFiltered,
-              qualityScores: ctx.qualityScores.length,
-              networkingSuggestions: 0,
-              activityLog: ctx.activityLog.length,
-              hadErrors: pipelineHadErrors,
-            },
+          resumeVerification: {
+            passed: false,
+            completenessScore: ctx.resumeReadiness?.completenessScore ?? 0,
+            averageAtsScore: ctx.resumeReadiness?.averageAtsScore ?? 0,
+            issues: ctx.resumeReadiness?.issues ?? [],
+            recommendations: ctx.resumeReadiness?.recommendations ?? [],
           },
-        },
-      });
-
-      return {
-        runId: run.id,
-        status: 'blocked',
-        jobsFound,
-        jobsApplied: 0,
-        jobsSkipped,
-        creditsUsed,
-        summary,
-        resumeVerification: {
-          passed: false,
-          completenessScore: ctx.resumeReadiness?.completenessScore ?? 0,
-          averageAtsScore: ctx.resumeReadiness?.averageAtsScore ?? 0,
-          issues: ctx.resumeReadiness?.issues ?? [],
-          recommendations: ctx.resumeReadiness?.recommendations ?? [],
-        },
-      };
+        };
+      } else {
+        // SOFT WARNING: resume has issues but proceed with applications
+        logActivity(ctx, 'forge', 'resume_warning',
+          `Resume has issues (completeness: ${ctx.resumeReadiness?.completenessScore ?? 0}%, ATS: ${ctx.resumeReadiness?.averageAtsScore ?? 0}%) but proceeding with applications. Improving your resume will increase success rates.`);
+        // Fall through to Archer — don't block
+      }
     }
 
     // ── Step 3: Quality Gate + Sentinel review + Archer batch application (PRO+) ──
@@ -743,7 +918,8 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
 
     const finalStatus = pipelineHadErrors ? 'partial' : 'completed';
 
-    // Update run record
+    // Update run record with full pipeline data
+    const finalSteps = buildPipelineSteps(ctx, scoutSource);
     await prisma.autoApplyRun.update({
       where: { id: run.id },
       data: {
@@ -754,9 +930,13 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
         creditsUsed,
         summary,
         completedAt: new Date(),
-        details: {
+        details: JSON.parse(JSON.stringify({
           processedJobs: jobsToProcess.map((j: any) => ({ title: j.title, company: j.company, score: j.matchScore })),
           automationMode,
+          scoutSource,
+          pipelineSteps: finalSteps,
+          activityLog: ctx.activityLog.map(e => ({ agent: e.agent, action: e.action, summary: e.summary, timestamp: e.timestamp.toISOString() })),
+          resumeVerification: ctx.resumeReadiness,
           pipelineContext: {
             discoveredJobs: ctx.discoveredJobs.length,
             optimizedResumes: ctx.optimizedResumes.length,
@@ -770,7 +950,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             activityLog: ctx.activityLog.length,
             hadErrors: pipelineHadErrors,
           },
-        },
+        })),
       },
     });
 
@@ -782,6 +962,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
     console.error('[Orchestrator] Pipeline error:', err);
     logActivity(ctx, 'scout', 'pipeline_error', `Pipeline crashed: ${(err as Error).message}`);
     const failureContextSummary = getContextSummary(ctx);
+    const errorSteps = buildPipelineSteps(ctx, scoutSource);
     await prisma.autoApplyRun.update({
       where: { id: run.id },
       data: {
@@ -792,9 +973,13 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
         creditsUsed,
         completedAt: new Date(),
         summary: `Pipeline failed: ${(err as Error).message}`,
-        details: {
+        details: JSON.parse(JSON.stringify({
           automationMode,
+          scoutSource,
           failureContextSummary,
+          pipelineSteps: errorSteps,
+          activityLog: ctx.activityLog.map(e => ({ agent: e.agent, action: e.action, summary: e.summary, timestamp: e.timestamp.toISOString() })),
+          resumeVerification: ctx.resumeReadiness,
           pipelineContext: {
             discoveredJobs: ctx.discoveredJobs.length,
             optimizedResumes: ctx.optimizedResumes.length,
@@ -807,7 +992,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             networkingSuggestions: ctx.networkingSuggestions.length,
             activityLog: ctx.activityLog.length,
           },
-        },
+        })),
       },
     });
     return { runId: run.id, status: 'failed', jobsFound, jobsApplied, jobsSkipped, creditsUsed, summary: `Pipeline failed: ${(err as Error).message}` };

@@ -71,6 +71,7 @@ export interface NetworkingSuggestionSummary {
 
 export interface ResumeReadinessReport {
   passed: boolean;
+  hasWarnings: boolean;            // true if non-blocking issues exist
   completenessScore: number;       // 0-100
   averageAtsScore: number;         // avg ATS score across target jobs
   skillCoveragePercent: number;    // % of required skills covered

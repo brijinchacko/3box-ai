@@ -242,6 +242,7 @@ Rules:
 
 export interface ResumeReadinessResult {
   passed: boolean;
+  hasWarnings: boolean;
   completenessScore: number;
   averageAtsScore: number;
   skillCoveragePercent: number;
@@ -378,11 +379,23 @@ Respond in JSON:
   }
 
   // ── Pass/Fail Decision ──
-  const hasCriticalIssues = issues.some(i => i.severity === 'critical');
-  const passed = !hasCriticalIssues && completenessScore >= 70 && averageAtsScore >= 30;
+  // Only HARD block on truly essential missing fields (name + email)
+  // Everything else becomes a warning — Archer can still proceed
+  const hardBlockIssues = issues.filter(i =>
+    i.severity === 'critical' &&
+    (i.field === 'contact.name' || i.field === 'contact.email')
+  );
+  const passed = hardBlockIssues.length === 0;
+
+  // Track soft warnings for dashboard display
+  const hasSoftIssues = issues.some(i =>
+    i.severity === 'critical' && i.field !== 'contact.name' && i.field !== 'contact.email'
+  );
+  const hasWarnings = hasSoftIssues || completenessScore < 70 || averageAtsScore < 30 || issues.some(i => i.severity === 'warning');
 
   const result: ResumeReadinessResult = {
     passed,
+    hasWarnings,
     completenessScore,
     averageAtsScore,
     skillCoveragePercent,
