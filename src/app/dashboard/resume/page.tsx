@@ -359,6 +359,156 @@ export default function ResumePage() {
     }
   };
 
+  // ── Auto-fill Contact from Profile ──────────────
+  const handleAIRewriteContact = async () => {
+    try {
+      setAiLoading('contact');
+      // Try localStorage first
+      let profile: any = null;
+      try {
+        const stored = localStorage.getItem('3box_onboarding_profile');
+        if (stored) profile = JSON.parse(stored);
+      } catch {}
+
+      // Fallback: fetch from API
+      if (!profile) {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const data = await res.json();
+          const snap = data.careerTwin?.skillSnapshot as any;
+          profile = snap?._profile || {};
+          profile.fullName = data.name || profile.fullName || '';
+          profile.email = data.email || profile.email || '';
+        }
+      }
+
+      if (!profile) {
+        showToast('No profile data found. Complete onboarding first.', 'error');
+        return;
+      }
+
+      setResume((prev) => ({
+        ...prev,
+        contact: {
+          ...prev.contact,
+          name: profile.fullName || prev.contact.name,
+          email: profile.email || prev.contact.email,
+          phone: profile.phone || prev.contact.phone,
+          location: profile.location || prev.contact.location,
+          linkedin: profile.linkedin || prev.contact.linkedin,
+          portfolio: prev.contact.portfolio,
+        },
+      }));
+      showToast('Contact info auto-filled from your profile!', 'success');
+    } catch (error) {
+      console.error('Auto-fill contact error:', error);
+      showToast('Failed to auto-fill. Try again.', 'error');
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  // ── AI Enhance Education Entry ──────────────────
+  const handleAIEnhanceEducation = async (eduId: string) => {
+    if (!checkAILimit()) return;
+    setAiLoading(`edu-${eduId}`);
+
+    try {
+      const edu = resume.education.find(e => e.id === eduId);
+      if (!edu) return;
+
+      const content = `${edu.degree} ${edu.field ? `in ${edu.field}` : ''} at ${edu.institution}. ${edu.startDate} — ${edu.endDate}. ${edu.gpa ? `GPA: ${edu.gpa}` : ''}`;
+      const res = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section: 'education', content }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.code === 'PLAN_LIMIT_REACHED') {
+          showToast('Free Forge limit reached. Upgrade to continue.', 'error');
+          return;
+        }
+        throw new Error('Enhance failed');
+      }
+
+      const data = await res.json();
+      const enhanced = data.enhanced || '';
+
+      // Parse enhanced text to extract improved fields
+      if (enhanced) {
+        // Try to extract degree/field improvements from the AI response
+        const lines = enhanced.split('\n').filter(Boolean);
+        if (lines.length > 0) {
+          const improvedDegree = lines[0]?.replace(/^[-•*]\s*/, '').trim();
+          if (improvedDegree) {
+            setResume((prev) => ({
+              ...prev,
+              education: prev.education.map((e) =>
+                e.id === eduId ? { ...e, degree: improvedDegree } : e
+              ),
+            }));
+          }
+        }
+        if (isBasic) incrementAIUses();
+        showToast(`Enhanced education entry!`, 'success');
+      }
+    } catch (error) {
+      console.error('Enhance education error:', error);
+      showToast('Failed to enhance. Try again.', 'error');
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  // ── AI Suggest Skills ──────────────────────────
+  const handleAISuggestSkills = async () => {
+    if (!checkAILimit()) return;
+    setAiLoading('skills');
+
+    try {
+      const context = `Current skills: ${resume.skills.join(', ')}. Experience: ${resume.experience.map(e => `${e.role} at ${e.company}`).join('. ')}. Summary: ${resume.summary || ''}`;
+      const res = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section: 'skills', content: context }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.code === 'PLAN_LIMIT_REACHED') {
+          showToast('Free Forge limit reached. Upgrade to continue.', 'error');
+          return;
+        }
+        throw new Error('Suggest skills failed');
+      }
+
+      const data = await res.json();
+      const enhanced = data.enhanced || '';
+      const suggestedSkills = enhanced
+        .split(/[,\n]/)
+        .map((s: string) => s.replace(/^[-•*]\s*/, '').trim())
+        .filter((s: string) => s && !resume.skills.includes(s));
+
+      if (suggestedSkills.length > 0) {
+        setResume((prev) => ({
+          ...prev,
+          skills: [...prev.skills, ...suggestedSkills.slice(0, 10)],
+        }));
+        if (isBasic) incrementAIUses();
+        showToast(`Added ${Math.min(suggestedSkills.length, 10)} suggested skills!`, 'success');
+      } else {
+        showToast('No new skills suggested — your skill set looks comprehensive!', 'success');
+      }
+    } catch (error) {
+      console.error('Suggest skills error:', error);
+      showToast('Failed to suggest skills. Try again.', 'error');
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
   // ── Tailor to Job Description ──────────────────
   const handleTailorToJob = async () => {
     if (!tailorJobDesc.trim()) {
@@ -1118,7 +1268,25 @@ export default function ResumePage() {
             <div className="lg:col-span-2 space-y-6">
               {activeSection === 'contact' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
-                  <h3 className="font-semibold mb-4">Contact Information</h3>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold">Contact Information</h3>
+                    <button
+                      onClick={handleAIRewriteContact}
+                      disabled={aiLoading !== null}
+                      className="badge-neon text-xs flex items-center gap-1"
+                    >
+                      {aiLoading === 'contact' ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Filling...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-3 h-3" /> Auto-fill from Profile
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs text-white/40 mb-1">Full Name</label>
@@ -1258,7 +1426,25 @@ export default function ResumePage() {
 
               {activeSection === 'skills' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
-                  <h3 className="font-semibold mb-4">Skills</h3>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold">Skills</h3>
+                    <button
+                      onClick={handleAISuggestSkills}
+                      disabled={aiLoading !== null}
+                      className="badge-neon text-xs flex items-center gap-1"
+                    >
+                      {aiLoading === 'skills' ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Suggesting...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-3 h-3" /> Suggest with Forge
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {resume.skills.map((skill) => (
                       <span key={skill} className="badge bg-white/5 text-white/60 text-xs">
@@ -1334,6 +1520,18 @@ export default function ResumePage() {
                           <p className="text-xs text-white/30">{edu.startDate} — {edu.endDate}{edu.gpa && ` | GPA: ${edu.gpa}`}</p>
                         </div>
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAIEnhanceEducation(edu.id)}
+                            disabled={aiLoading !== null}
+                            className="p-1.5 rounded-lg hover:bg-white/5 text-orange-400/60 hover:text-orange-400 transition-colors"
+                            title="Enhance with Forge"
+                          >
+                            {aiLoading === `edu-${edu.id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Wand2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
                           <button
                             onClick={() => {
                               const updated = resume.education.filter(e => e.id !== edu.id);

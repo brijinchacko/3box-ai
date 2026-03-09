@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, FileText, CheckCircle2, X, Loader2,
   Coins, Shield, ArrowRight, RefreshCw, Edit3,
   Briefcase, Code, GraduationCap, User, MapPin,
   Phone, Mail, Linkedin, Copy, ChevronDown, ChevronUp,
-  Settings2, ToggleLeft, ToggleRight, AlertTriangle,
+  Settings2, ToggleLeft, ToggleRight, AlertTriangle, Eye,
 } from 'lucide-react';
 import AgentLoader from '@/components/brand/AgentLoader';
+import TemplatePreview from '@/components/resume/TemplatePreview';
+import { buildResumeHTML } from '@/lib/resume/buildHTML';
 
 interface ForgeStatus {
   dashboardState: 'no_resume' | 'pending_approval' | 'approved' | 'editing';
@@ -36,6 +38,8 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
   const [showCoverLetter, setShowCoverLetter] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'classic' | 'minimal' | 'creative'>('modern');
+  const [showPreview, setShowPreview] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -66,6 +70,9 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
     setGenerating(true);
     setGenProgress(0);
 
+    // Notify sidebar that Forge is working
+    window.dispatchEvent(new CustomEvent('forge:status', { detail: { working: true } }));
+
     // Simulate progress steps
     const progressInterval = setInterval(() => {
       setGenProgress(prev => {
@@ -85,7 +92,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
       const res = await fetch('/api/forge/auto-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile }),
+        body: JSON.stringify({ profile, template: selectedTemplate }),
       });
 
       clearInterval(progressInterval);
@@ -108,6 +115,8 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
     } finally {
       setGenerating(false);
       setGenProgress(0);
+      // Notify sidebar that Forge stopped working
+      window.dispatchEvent(new CustomEvent('forge:status', { detail: { working: false } }));
     }
   };
 
@@ -135,6 +144,8 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
 
       if (action === 'approve') {
         showToast('Resume approved! Archer can now use it for applications.', 'success');
+        // Refresh pipeline/GuidedWorkflow
+        window.dispatchEvent(new Event('journey:refresh'));
       } else {
         showToast('Resume rejected. You can regenerate or edit manually.', 'success');
       }
@@ -189,6 +200,42 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
   if (!status) return null;
 
   const { dashboardState, resume, settings, tokens } = status;
+
+  // Build actual template HTML for preview
+  const previewHtml = useMemo(() => {
+    if (!resume?.content) return '';
+    try {
+      return buildResumeHTML({
+        template: (resume.template as 'modern' | 'classic' | 'minimal' | 'creative') || 'modern',
+        contact: resume.content.contact || {},
+        summary: resume.content.summary || '',
+        experience: (resume.content.experience || []).map((exp: any) => ({
+          id: exp.id || String(Math.random()),
+          company: exp.company || '',
+          role: exp.title || exp.role || '',
+          location: exp.location || '',
+          startDate: exp.startDate || exp.duration?.split('-')[0]?.trim() || '',
+          endDate: exp.endDate || exp.duration?.split('-')[1]?.trim() || '',
+          current: exp.current || false,
+          bullets: exp.bullets || [],
+        })),
+        education: (resume.content.education || []).map((edu: any) => ({
+          id: edu.id || String(Math.random()),
+          institution: edu.institution || '',
+          degree: edu.degree || '',
+          field: edu.field || '',
+          startDate: edu.startDate || '',
+          endDate: edu.endDate || edu.year || '',
+          gpa: edu.gpa || '',
+        })),
+        skills: resume.content.skills || [],
+        certifications: resume.content.certifications || [],
+        showWatermark: false,
+      });
+    } catch {
+      return '';
+    }
+  }, [resume]);
 
   return (
     <>
@@ -256,7 +303,22 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
             </p>
 
             {status.hasProfile ? (
-              <div className="space-y-3">
+              <div className="space-y-5">
+                {/* Template Picker */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white/60 mb-3 text-center">Choose Your Template</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto justify-items-center">
+                    {(['modern', 'classic', 'minimal', 'creative'] as const).map((tpl) => (
+                      <TemplatePreview
+                        key={tpl}
+                        template={tpl}
+                        selected={selectedTemplate === tpl}
+                        onClick={() => setSelectedTemplate(tpl)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   onClick={handleAutoGenerate}
                   className="btn-primary px-8 py-3 text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 flex items-center gap-2 mx-auto"
@@ -270,7 +332,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
                   <span className="mx-1">•</span>
                   <span>{tokens.remaining} tokens remaining</span>
                 </div>
-                <div className="pt-2">
+                <div className="pt-1">
                   <button
                     onClick={onEnterEditor}
                     className="text-xs text-white/30 hover:text-white/50 underline underline-offset-2"
@@ -318,87 +380,65 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
             </div>
           </div>
 
-          {/* Resume Preview */}
+          {/* Resume Preview — Rendered Template */}
           <div className="card">
             <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-orange-400" /> Resume Preview
+              <Eye className="w-4 h-4 text-orange-400" /> Resume Preview
+              <span className="text-[10px] text-white/30 ml-auto">Template: {resume.template || 'modern'}</span>
             </h4>
-            <div className="space-y-3">
-              {/* Contact */}
-              {resume.content?.contact && (
-                <div className="p-3 rounded-xl bg-white/5">
-                  <h5 className="text-xs text-white/40 mb-1">Contact</h5>
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    {resume.content.contact.name && (
-                      <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-white/30" /> {resume.content.contact.name}</span>
-                    )}
-                    {resume.content.contact.email && (
-                      <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-white/30" /> {resume.content.contact.email}</span>
-                    )}
-                    {resume.content.contact.phone && (
-                      <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-white/30" /> {resume.content.contact.phone}</span>
-                    )}
-                    {resume.content.contact.location && (
-                      <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-white/30" /> {resume.content.contact.location}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Summary */}
-              {resume.content?.summary && (
-                <div className="p-3 rounded-xl bg-white/5">
-                  <h5 className="text-xs text-white/40 mb-1">Professional Summary</h5>
-                  <p className="text-sm text-white/70 leading-relaxed">{resume.content.summary}</p>
-                </div>
-              )}
-
-              {/* Experience */}
-              {resume.content?.experience?.length > 0 && (
-                <div className="p-3 rounded-xl bg-white/5">
-                  <h5 className="text-xs text-white/40 mb-2">Experience ({resume.content.experience.length} roles)</h5>
-                  {resume.content.experience.map((exp: any, i: number) => (
-                    <div key={i} className="mt-2 first:mt-0">
-                      <p className="text-sm font-medium">{exp.title} at {exp.company}</p>
-                      {exp.bullets?.length > 0 && (
-                        <ul className="mt-1 space-y-0.5">
-                          {exp.bullets.slice(0, 3).map((b: string, j: number) => (
-                            <li key={j} className="text-xs text-white/50 pl-3 relative before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-orange-400/40">
-                              {b}
-                            </li>
-                          ))}
-                          {exp.bullets.length > 3 && (
-                            <li className="text-xs text-white/30 pl-3">+{exp.bullets.length - 3} more</li>
-                          )}
-                        </ul>
+            {previewHtml ? (
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-white" style={{ maxHeight: '700px', overflow: 'auto' }}>
+                <iframe
+                  srcDoc={previewHtml}
+                  title="Resume Preview"
+                  className="w-full pointer-events-none"
+                  style={{ height: '900px', border: 'none' }}
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Fallback card-based preview */}
+                {resume.content?.contact && (
+                  <div className="p-3 rounded-xl bg-white/5">
+                    <h5 className="text-xs text-white/40 mb-1">Contact</h5>
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      {resume.content.contact.name && (
+                        <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-white/30" /> {resume.content.contact.name}</span>
+                      )}
+                      {resume.content.contact.email && (
+                        <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-white/30" /> {resume.content.contact.email}</span>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Skills */}
-              {resume.content?.skills?.length > 0 && (
-                <div className="p-3 rounded-xl bg-white/5">
-                  <h5 className="text-xs text-white/40 mb-2">Skills ({resume.content.skills.length})</h5>
-                  <div className="flex flex-wrap gap-1">
-                    {resume.content.skills.map((s: string, i: number) => (
-                      <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-orange-400/10 text-orange-300/80">{s}</span>
+                  </div>
+                )}
+                {resume.content?.summary && (
+                  <div className="p-3 rounded-xl bg-white/5">
+                    <h5 className="text-xs text-white/40 mb-1">Professional Summary</h5>
+                    <p className="text-sm text-white/70 leading-relaxed">{resume.content.summary}</p>
+                  </div>
+                )}
+                {resume.content?.experience?.length > 0 && (
+                  <div className="p-3 rounded-xl bg-white/5">
+                    <h5 className="text-xs text-white/40 mb-2">Experience ({resume.content.experience.length} roles)</h5>
+                    {resume.content.experience.map((exp: any, i: number) => (
+                      <div key={i} className="mt-2 first:mt-0">
+                        <p className="text-sm font-medium">{exp.title} at {exp.company}</p>
+                      </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Education */}
-              {resume.content?.education?.length > 0 && (
-                <div className="p-3 rounded-xl bg-white/5">
-                  <h5 className="text-xs text-white/40 mb-1">Education</h5>
-                  {resume.content.education.map((edu: any, i: number) => (
-                    <p key={i} className="text-sm">{edu.degree} — {edu.institution} {edu.year && `(${edu.year})`}</p>
-                  ))}
-                </div>
-              )}
-            </div>
+                )}
+                {resume.content?.skills?.length > 0 && (
+                  <div className="p-3 rounded-xl bg-white/5">
+                    <h5 className="text-xs text-white/40 mb-2">Skills</h5>
+                    <div className="flex flex-wrap gap-1">
+                      {resume.content.skills.map((s: string, i: number) => (
+                        <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-orange-400/10 text-orange-300/80">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Cover Letter Preview */}
@@ -507,6 +547,35 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
                 <Edit3 className="w-3.5 h-3.5" /> Edit Resume
               </button>
             </div>
+          </div>
+
+          {/* Resume Preview (Collapsible) */}
+          <div className="card">
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="w-full flex items-center justify-between"
+            >
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Eye className="w-4 h-4 text-orange-400" /> Resume Preview
+              </h4>
+              {showPreview ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+            </button>
+            {showPreview && previewHtml && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                className="mt-3"
+              >
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-white" style={{ maxHeight: '700px', overflow: 'auto' }}>
+                  <iframe
+                    srcDoc={previewHtml}
+                    title="Resume Preview"
+                    className="w-full pointer-events-none"
+                    style={{ height: '900px', border: 'none' }}
+                  />
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Per-Job Rewrite Settings */}

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.assessment.count({ where: { userId: session.user.id, status: 'COMPLETED' } }),
       prisma.careerPlan.count({ where: { userId: session.user.id } }),
-      prisma.resume.count({ where: { userId: session.user.id } }),
+      prisma.resume.count({ where: { userId: session.user.id, OR: [{ approvalStatus: 'approved' }, { isFinalized: true }] } }),
       prisma.jobApplication.count({ where: { userId: session.user.id } }),
       prisma.jobApplication.count({ where: { userId: session.user.id, status: 'INTERVIEW' } }),
       prisma.jobApplication.count({ where: { userId: session.user.id, status: 'OFFER' } }),

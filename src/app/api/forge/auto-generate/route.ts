@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId,
         title: `${profile.targetRole} Resume`,
-        template: 'modern',
+        template: body.template || 'modern',
         content: resume as any,
         targetJob: profile.targetRole,
         atsScore,

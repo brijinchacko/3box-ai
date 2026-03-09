@@ -129,6 +129,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [status, pathname, router]);
 
+  // Listen for journey:refresh events (e.g., after resume approval)
+  useEffect(() => {
+    const refreshJourney = () => {
+      fetch('/api/user/profile')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.journey) setJourney(data.journey);
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('journey:refresh', refreshJourney);
+    return () => window.removeEventListener('journey:refresh', refreshJourney);
+  }, []);
+
   useEffect(() => {
     if (status === 'loading') return;
     if (status === 'unauthenticated') router.push('/login');
