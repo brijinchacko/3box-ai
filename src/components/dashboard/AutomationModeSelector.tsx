@@ -49,6 +49,13 @@ export default function AutomationModeSelector() {
     localStorage.setItem(MODE_STORAGE_KEY, m);
     emitModeChange(m);
     setOpen(false);
+
+    // Persist to server so the pipeline can read it
+    fetch('/api/agents/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ automationMode: m }),
+    }).catch(() => {}); // Fire-and-forget; localStorage is the primary source for UI
   };
 
   const handleSelect = (m: AutomationMode) => {

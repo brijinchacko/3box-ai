@@ -3,8 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { runAgentPipeline } from '@/lib/agents/orchestrator';
+import type { AutomationMode } from '@/lib/agents/registry';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,9 +27,30 @@ export async function POST() {
       return NextResponse.json({ error: 'An agent run is already in progress' }, { status: 409 });
     }
 
+    // Read automationMode: prefer request body, fall back to DB config, then default 'autopilot'
+    let automationMode: AutomationMode = 'autopilot';
+    try {
+      const body = await request.json().catch(() => ({}));
+      if (body?.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(body.automationMode)) {
+        automationMode = body.automationMode as AutomationMode;
+      } else {
+        // Read from database config
+        const config = await prisma.autoApplyConfig.findUnique({
+          where: { userId: session.user.id },
+          select: { automationMode: true },
+        });
+        if (config?.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(config.automationMode)) {
+          automationMode = config.automationMode as AutomationMode;
+        }
+      }
+    } catch {
+      // Fall through with default 'autopilot'
+    }
+
     const result = await runAgentPipeline({
       userId: session.user.id,
       plan: user.plan as any,
+      automationMode,
     });
 
     return NextResponse.json(result);

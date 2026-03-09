@@ -51,9 +51,12 @@ export async function GET(request: NextRequest) {
       }
 
       try {
+        // Read automation mode from user's config (default: 'autopilot' for cron runs)
+        const automationMode = (config as any).automationMode || 'autopilot';
         const result = await runAgentPipeline({
           userId: config.userId,
           plan: config.user.plan as any,
+          automationMode: automationMode as any,
         });
         results.push({ userId: config.userId, status: result.status, jobsApplied: result.jobsApplied });
       } catch (err: any) {

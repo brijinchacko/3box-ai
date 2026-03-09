@@ -507,6 +507,7 @@ model AutoApplyConfig {
   userId           String    @unique
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   enabled          Boolean   @default(false)
+  automationMode   String    @default("autopilot") // copilot | autopilot | full-agent
   resumeId         String?
   targetRoles      Json      @default("[]")
   targetLocations  Json      @default("[]")

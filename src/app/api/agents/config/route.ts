@@ -13,6 +13,7 @@ export async function GET() {
     if (!config) {
       return NextResponse.json({
         enabled: false,
+        automationMode: 'autopilot',
         resumeId: null,
         targetRoles: [],
         targetLocations: [],
@@ -45,7 +46,7 @@ export async function PUT(request: NextRequest) {
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { enabled, resumeId, targetRoles, targetLocations, minMatchScore, maxAppliesPerRun, excludeCompanies, excludeKeywords, scheduleTime, preferRemote } = body;
+    const { enabled, automationMode, resumeId, targetRoles, targetLocations, minMatchScore, maxAppliesPerRun, excludeCompanies, excludeKeywords, scheduleTime, preferRemote } = body;
 
     // If enabling, check for finalized resume
     if (enabled) {
@@ -59,6 +60,9 @@ export async function PUT(request: NextRequest) {
 
     const data: any = {};
     if (typeof enabled === 'boolean') data.enabled = enabled;
+    if (typeof automationMode === 'string' && ['copilot', 'autopilot', 'full-agent'].includes(automationMode)) {
+      data.automationMode = automationMode;
+    }
     if (resumeId !== undefined) data.resumeId = resumeId;
     if (Array.isArray(targetRoles)) data.targetRoles = targetRoles;
     if (Array.isArray(targetLocations)) data.targetLocations = targetLocations;

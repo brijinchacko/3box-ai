@@ -84,11 +84,11 @@ export function getOptimalTimeWindow(targetTimezoneOffset = 5.5): {
   };
 }
 
-// ─── Rate Limiting ─────────────────────────────────────────────────
+// ─── Rate Limiting (Per-User) ─────────────────────────────────────
 
 const RATE_LIMITS = {
   perHour: 15,
-  perDay: 30,       // Matches DB-backed daily cap (DAILY_APP_LIMIT)
+  perDay: 100,       // In-memory safety net; real cap enforced by DB-backed dailyCap.ts
   perCompanyDomain: 5,
 };
 
@@ -100,53 +100,65 @@ interface RateLimitState {
   lastDayReset: number;
 }
 
-let rateLimitState: RateLimitState = {
-  hourlyCount: 0,
-  dailyCount: 0,
-  companyDomainCounts: new Map(),
-  lastHourReset: Date.now(),
-  lastDayReset: Date.now(),
-};
+/** Per-user rate limit states, keyed by userId */
+const userRateLimits = new Map<string, RateLimitState>();
+
+function getUserRateLimitState(userId: string): RateLimitState {
+  let state = userRateLimits.get(userId);
+  if (!state) {
+    state = {
+      hourlyCount: 0,
+      dailyCount: 0,
+      companyDomainCounts: new Map(),
+      lastHourReset: Date.now(),
+      lastDayReset: Date.now(),
+    };
+    userRateLimits.set(userId, state);
+  }
+  return state;
+}
 
 /**
- * Check if we can send another application
+ * Check if we can send another application for a specific user.
+ * Falls back to a global check if no userId is provided (backwards compatibility).
  */
-export function canSendApplication(companyDomain?: string): {
+export function canSendApplication(companyDomain?: string, userId?: string): {
   allowed: boolean;
   reason?: string;
   retryAfterMs?: number;
 } {
+  const state = getUserRateLimitState(userId || '__global__');
   const now = Date.now();
 
   // Reset hourly counter
-  if (now - rateLimitState.lastHourReset > 3600000) {
-    rateLimitState.hourlyCount = 0;
-    rateLimitState.lastHourReset = now;
+  if (now - state.lastHourReset > 3600000) {
+    state.hourlyCount = 0;
+    state.lastHourReset = now;
   }
 
   // Reset daily counter
-  if (now - rateLimitState.lastDayReset > 86400000) {
-    rateLimitState.dailyCount = 0;
-    rateLimitState.companyDomainCounts = new Map();
-    rateLimitState.lastDayReset = now;
+  if (now - state.lastDayReset > 86400000) {
+    state.dailyCount = 0;
+    state.companyDomainCounts = new Map();
+    state.lastDayReset = now;
   }
 
   // Check hourly limit
-  if (rateLimitState.hourlyCount >= RATE_LIMITS.perHour) {
-    const retryAfter = 3600000 - (now - rateLimitState.lastHourReset);
+  if (state.hourlyCount >= RATE_LIMITS.perHour) {
+    const retryAfter = 3600000 - (now - state.lastHourReset);
     return { allowed: false, reason: `Hourly limit reached (${RATE_LIMITS.perHour}/hr)`, retryAfterMs: retryAfter };
   }
 
   // Check daily limit
-  if (rateLimitState.dailyCount >= RATE_LIMITS.perDay) {
-    const retryAfter = 86400000 - (now - rateLimitState.lastDayReset);
+  if (state.dailyCount >= RATE_LIMITS.perDay) {
+    const retryAfter = 86400000 - (now - state.lastDayReset);
     return { allowed: false, reason: `Daily limit reached (${RATE_LIMITS.perDay}/day)`, retryAfterMs: retryAfter };
   }
 
   // Check per-company limit
   if (companyDomain) {
     const domain = normalizeCompanyDomain(companyDomain);
-    const count = rateLimitState.companyDomainCounts.get(domain) || 0;
+    const count = state.companyDomainCounts.get(domain) || 0;
     if (count >= RATE_LIMITS.perCompanyDomain) {
       return { allowed: false, reason: `Too many applications to ${domain} (max ${RATE_LIMITS.perCompanyDomain}/day)` };
     }
@@ -156,30 +168,29 @@ export function canSendApplication(companyDomain?: string): {
 }
 
 /**
- * Record that an application was sent
+ * Record that an application was sent for a specific user.
  */
-export function recordApplicationSent(companyDomain?: string): void {
-  rateLimitState.hourlyCount++;
-  rateLimitState.dailyCount++;
+export function recordApplicationSent(companyDomain?: string, userId?: string): void {
+  const state = getUserRateLimitState(userId || '__global__');
+  state.hourlyCount++;
+  state.dailyCount++;
 
   if (companyDomain) {
     const domain = normalizeCompanyDomain(companyDomain);
-    const current = rateLimitState.companyDomainCounts.get(domain) || 0;
-    rateLimitState.companyDomainCounts.set(domain, current + 1);
+    const current = state.companyDomainCounts.get(domain) || 0;
+    state.companyDomainCounts.set(domain, current + 1);
   }
 }
 
 /**
- * Reset rate limit state (useful for testing or new day)
+ * Reset rate limit state for a specific user (useful for testing or new day)
  */
-export function resetRateLimits(): void {
-  rateLimitState = {
-    hourlyCount: 0,
-    dailyCount: 0,
-    companyDomainCounts: new Map(),
-    lastHourReset: Date.now(),
-    lastDayReset: Date.now(),
-  };
+export function resetRateLimits(userId?: string): void {
+  if (userId) {
+    userRateLimits.delete(userId);
+  } else {
+    userRateLimits.clear();
+  }
 }
 
 // ─── Cover Letter Variation ────────────────────────────────────────

@@ -181,7 +181,7 @@ export async function applyToJob(
 
   // ── Rate limit check (skip in burst mode) ──
   if (!burstMode) {
-    const rateCheck = canSendApplication(job.company);
+    const rateCheck = canSendApplication(job.company, userId);
     if (!rateCheck.allowed) {
       if (ctx) logActivity(ctx, 'archer', 'rate_limited', `Rate limited: ${rateCheck.reason}`);
       return { success: false, method: 'none', channel: 'portal_queue', strategy: 'standard', details: `Rate limited: ${rateCheck.reason}` };
@@ -208,7 +208,7 @@ export async function applyToJob(
   coverLetter = uniquifyCoverLetter(coverLetter, job.id);
 
   // ── Record rate limit ──
-  recordApplicationSent(job.company);
+  recordApplicationSent(job.company, userId);
 
   // ── Execute based on routed channel ──
   let result: ApplicationResult;
@@ -529,12 +529,12 @@ export async function applyToJobsBatch(
 
       // Rate limit check (skip in burst mode)
       if (!burstMode) {
-        const rateCheck = canSendApplication(data.job.company);
+        const rateCheck = canSendApplication(data.job.company, userId);
         if (!rateCheck.allowed) {
           return { success: false, jobId: data.job.id, method: 'rate_limited', details: rateCheck.reason || 'Rate limited' };
         }
       }
-      recordApplicationSent(data.job.company);
+      recordApplicationSent(data.job.company, userId);
 
       // Execute based on channel
       let appResult: ApplicationResult;
