@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -61,6 +61,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [journey, setJourney] = useState<JourneyProgress | null>(null);
+  const [activeMode, setActiveMode] = useState<string>('copilot');
+
+  // Listen for automation mode changes from the selector
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('3box_automation_mode') : null;
+    if (saved) setActiveMode(saved);
+
+    const handler = (e: Event) => {
+      const mode = (e as CustomEvent).detail;
+      if (mode) setActiveMode(mode);
+    };
+    window.addEventListener('automation-mode-change', handler);
+    return () => window.removeEventListener('automation-mode-change', handler);
+  }, []);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -341,9 +355,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Top Bar — Mode Selector */}
         <div className="flex items-center justify-end gap-3 px-4 sm:px-6 lg:px-8 pt-3 pb-1">
           <TokenCounter />
-          <NotificationCenter />
           <AutomationModeSelector />
+          <NotificationCenter />
         </div>
+
+        {/* Mode accent line — subtle color strip that reflects the active automation mode */}
+        <div className={`h-[2px] mx-4 sm:mx-6 lg:mx-8 rounded-full transition-all duration-500 ${
+          activeMode === 'copilot'
+            ? 'bg-gradient-to-r from-blue-500/40 via-blue-400/20 to-transparent'
+            : activeMode === 'autopilot'
+              ? 'bg-gradient-to-r from-amber-500/40 via-amber-400/20 to-transparent'
+              : 'bg-gradient-to-r from-neon-green/40 via-neon-green/20 to-transparent'
+        }`} />
 
         <BackgroundTaskBanner />
 
