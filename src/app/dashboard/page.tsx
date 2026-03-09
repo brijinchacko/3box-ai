@@ -11,7 +11,6 @@ import {
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import CortexAvatar from '@/components/brand/CortexAvatar';
 import PersonalizedStory from '@/components/dashboard/PersonalizedStory';
-import GuidedWorkflow from '@/components/dashboard/GuidedWorkflow';
 import { type JourneyProgress } from '@/components/dashboard/CareerJourneyBar';
 import { type AgentId } from '@/lib/agents/registry';
 import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
@@ -81,21 +80,6 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-
-      {/* ───── GUIDED WORKFLOW (top bar) ───── */}
-      {!loading && journey && (
-        <div className="pt-3">
-          <GuidedWorkflow journey={{
-            onboarding: !!journey.onboarding,
-            assessment: !!journey.assessment,
-            careerPlan: !!journey.careerPlan,
-            resume: !!journey.resume,
-            applied: !!journey.applied,
-            interview: !!journey.interview,
-            offer: !!journey.offer,
-          }} />
-        </div>
-      )}
 
       {/* ───── HERO HEADER ───── */}
       <motion.div

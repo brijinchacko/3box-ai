@@ -12,6 +12,7 @@ import AutomationModeSelector from '@/components/dashboard/AutomationModeSelecto
 import TokenCounter from '@/components/dashboard/TokenCounter';
 import NotificationCenter from '@/components/dashboard/NotificationCenter';
 import BackgroundTaskBanner from '@/components/dashboard/BackgroundTaskBanner';
+import GuidedWorkflow from '@/components/dashboard/GuidedWorkflow';
 import CareerJourneyBar, { type JourneyProgress } from '@/components/dashboard/CareerJourneyBar';
 import CortexLoader from '@/components/brand/CortexLoader';
 import Logo from '@/components/brand/Logo';
@@ -352,8 +353,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'} pt-14 lg:pt-0`}>
+        {/* Guided Workflow — pinned at the very top */}
+        {journey && (
+          <div className="px-4 sm:px-6 lg:px-8 pt-3">
+            <GuidedWorkflow journey={{
+              onboarding: !!journey.onboarding,
+              assessment: !!journey.assessment,
+              careerPlan: !!journey.careerPlan,
+              resume: !!journey.resume,
+              applied: !!journey.applied,
+              interview: !!journey.interview,
+              offer: !!journey.offer,
+            }} />
+          </div>
+        )}
+
         {/* Top Bar — Mode Selector */}
-        <div className="flex items-center justify-end gap-3 px-4 sm:px-6 lg:px-8 pt-3 pb-1">
+        <div className="flex items-center justify-end gap-3 px-4 sm:px-6 lg:px-8 pt-2 pb-1">
           <TokenCounter />
           <AutomationModeSelector />
           <NotificationCenter />
