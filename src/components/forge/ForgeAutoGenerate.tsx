@@ -5,14 +5,97 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, FileText, CheckCircle2, X, Loader2,
   Coins, Shield, ArrowRight, RefreshCw, Edit3,
-  Briefcase, Code, GraduationCap, User, MapPin,
-  Phone, Mail, Linkedin, Copy, ChevronDown, ChevronUp,
+  Briefcase, User, Mail, Linkedin, Copy, ChevronDown, ChevronUp,
   Settings2, ToggleLeft, ToggleRight, AlertTriangle, Eye,
 } from 'lucide-react';
 import AgentLoader from '@/components/brand/AgentLoader';
 import TemplatePreview from '@/components/resume/TemplatePreview';
 import { buildResumeHTML } from '@/lib/resume/buildHTML';
 import { notifyAgentStarted, notifyAgentCompleted, notifyAgentError } from '@/lib/notifications/toast';
+
+// ── LinkedIn Profile Optimization Sub-Component ──
+function LinkedInSection({
+  content,
+  checklist,
+  isOpen,
+  onToggle,
+  onCopy,
+}: {
+  content: any;
+  checklist: string[];
+  isOpen: boolean;
+  onToggle: () => void;
+  onCopy: (text: string, label: string) => void;
+}) {
+  if (!content?.linkedinHeadline && !content?.linkedinBio) return null;
+  return (
+    <div className="card">
+      <button onClick={onToggle} className="w-full flex items-center justify-between">
+        <h4 className="text-sm font-semibold flex items-center gap-2">
+          <Linkedin className="w-4 h-4 text-blue-400" /> LinkedIn Profile Optimization
+        </h4>
+        {isOpen ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+      </button>
+      {isOpen && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          className="mt-3 space-y-3"
+        >
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-300/80">
+              Unfortunately LinkedIn hate the automation tools — so I can&apos;t check your LinkedIn page. Please update it manually using the suggestions below.
+            </p>
+          </div>
+          {content.linkedinHeadline && (
+            <div className="p-3 rounded-xl bg-white/5">
+              <div className="flex items-center justify-between mb-1">
+                <h5 className="text-xs text-white/40">Suggested Headline</h5>
+                <button onClick={() => onCopy(content.linkedinHeadline, 'LinkedIn headline')} className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1">
+                  <Copy className="w-3 h-3" /> Copy
+                </button>
+              </div>
+              <p className="text-sm text-white/80 font-medium">{content.linkedinHeadline}</p>
+            </div>
+          )}
+          {content.linkedinBio && (
+            <div className="p-3 rounded-xl bg-white/5">
+              <div className="flex items-center justify-between mb-1">
+                <h5 className="text-xs text-white/40">Suggested About Section</h5>
+                <button onClick={() => onCopy(content.linkedinBio, 'LinkedIn bio')} className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1">
+                  <Copy className="w-3 h-3" /> Copy
+                </button>
+              </div>
+              <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{content.linkedinBio}</p>
+            </div>
+          )}
+          {content.linkedinSuggestedSkills?.length > 0 && (
+            <div className="p-3 rounded-xl bg-white/5">
+              <h5 className="text-xs text-white/40 mb-2">Suggested LinkedIn Skills</h5>
+              <div className="flex flex-wrap gap-1.5">
+                {content.linkedinSuggestedSkills.map((skill: string, i: number) => (
+                  <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-blue-400/10 text-blue-300/80">{skill}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="p-3 rounded-xl bg-white/5">
+            <h5 className="text-xs text-white/40 mb-2">LinkedIn Profile Checklist</h5>
+            <div className="space-y-2">
+              {checklist.map((item: string, i: number) => (
+                <label key={i} className="flex items-start gap-2 text-sm text-white/60 cursor-pointer group">
+                  <input type="checkbox" className="mt-1 accent-blue-400 rounded" />
+                  <span className="group-hover:text-white/80">{item}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
 
 interface ForgeStatus {
   dashboardState: 'no_resume' | 'pending_approval' | 'approved' | 'editing';
@@ -504,91 +587,13 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
           )}
 
           {/* LinkedIn Profile Optimization */}
-          {(resume.content?.linkedinHeadline || resume.content?.linkedinBio) && (
-            <div className="card">
-              <button
-                onClick={() => setShowLinkedIn(!showLinkedIn)}
-                className="w-full flex items-center justify-between"
-              >
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Linkedin className="w-4 h-4 text-blue-400" /> LinkedIn Profile Optimization
-                </h4>
-                {showLinkedIn ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
-              </button>
-              {showLinkedIn && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  className="mt-3 space-y-3"
-                >
-                  {/* LinkedIn Disclaimer Banner */}
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-300/80">
-                      Unfortunately LinkedIn hate the automation tools — so I can&apos;t check your LinkedIn page. Please update it manually using the suggestions below.
-                    </p>
-                  </div>
-
-                  {/* LinkedIn Headline */}
-                  {resume.content.linkedinHeadline && (
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <div className="flex items-center justify-between mb-1">
-                        <h5 className="text-xs text-white/40">Suggested Headline</h5>
-                        <button
-                          onClick={() => handleCopyText(resume.content.linkedinHeadline, 'LinkedIn headline')}
-                          className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1"
-                        >
-                          <Copy className="w-3 h-3" /> Copy
-                        </button>
-                      </div>
-                      <p className="text-sm text-white/80 font-medium">{resume.content.linkedinHeadline}</p>
-                    </div>
-                  )}
-
-                  {/* LinkedIn Bio */}
-                  {resume.content.linkedinBio && (
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <div className="flex items-center justify-between mb-1">
-                        <h5 className="text-xs text-white/40">Suggested About Section</h5>
-                        <button
-                          onClick={() => handleCopyText(resume.content.linkedinBio, 'LinkedIn bio')}
-                          className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1"
-                        >
-                          <Copy className="w-3 h-3" /> Copy
-                        </button>
-                      </div>
-                      <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{resume.content.linkedinBio}</p>
-                    </div>
-                  )}
-
-                  {/* Suggested Skills */}
-                  {resume.content.linkedinSuggestedSkills?.length > 0 && (
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <h5 className="text-xs text-white/40 mb-2">Suggested LinkedIn Skills</h5>
-                      <div className="flex flex-wrap gap-1.5">
-                        {resume.content.linkedinSuggestedSkills.map((skill: string, i: number) => (
-                          <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-blue-400/10 text-blue-300/80">{skill}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Profile Checklist */}
-                  <div className="p-3 rounded-xl bg-white/5">
-                    <h5 className="text-xs text-white/40 mb-2">LinkedIn Profile Checklist</h5>
-                    <div className="space-y-2">
-                      {linkedinChecklist.map((item: string, i: number) => (
-                        <label key={i} className="flex items-start gap-2 text-sm text-white/60 cursor-pointer group">
-                          <input type="checkbox" className="mt-1 accent-blue-400 rounded" />
-                          <span className="group-hover:text-white/80">{item}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          )}
+          <LinkedInSection
+            content={resume.content}
+            checklist={linkedinChecklist}
+            isOpen={showLinkedIn}
+            onToggle={() => setShowLinkedIn(!showLinkedIn)}
+            onCopy={handleCopyText}
+          />
 
           {/* Approve / Reject Buttons */}
           <div className="flex gap-3">
@@ -696,91 +701,13 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
           </div>
 
           {/* LinkedIn Profile Optimization (Approved State) */}
-          {(resume.content?.linkedinHeadline || resume.content?.linkedinBio) && (
-            <div className="card">
-              <button
-                onClick={() => setShowLinkedInApproved(!showLinkedInApproved)}
-                className="w-full flex items-center justify-between"
-              >
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Linkedin className="w-4 h-4 text-blue-400" /> LinkedIn Profile Optimization
-                </h4>
-                {showLinkedInApproved ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
-              </button>
-              {showLinkedInApproved && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  className="mt-3 space-y-3"
-                >
-                  {/* LinkedIn Disclaimer Banner */}
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-300/80">
-                      Unfortunately LinkedIn hate the automation tools — so I can&apos;t check your LinkedIn page. Please update it manually using the suggestions below.
-                    </p>
-                  </div>
-
-                  {/* LinkedIn Headline */}
-                  {resume.content.linkedinHeadline && (
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <div className="flex items-center justify-between mb-1">
-                        <h5 className="text-xs text-white/40">Suggested Headline</h5>
-                        <button
-                          onClick={() => handleCopyText(resume.content.linkedinHeadline, 'LinkedIn headline')}
-                          className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1"
-                        >
-                          <Copy className="w-3 h-3" /> Copy
-                        </button>
-                      </div>
-                      <p className="text-sm text-white/80 font-medium">{resume.content.linkedinHeadline}</p>
-                    </div>
-                  )}
-
-                  {/* LinkedIn Bio */}
-                  {resume.content.linkedinBio && (
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <div className="flex items-center justify-between mb-1">
-                        <h5 className="text-xs text-white/40">Suggested About Section</h5>
-                        <button
-                          onClick={() => handleCopyText(resume.content.linkedinBio, 'LinkedIn bio')}
-                          className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1"
-                        >
-                          <Copy className="w-3 h-3" /> Copy
-                        </button>
-                      </div>
-                      <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{resume.content.linkedinBio}</p>
-                    </div>
-                  )}
-
-                  {/* Suggested Skills */}
-                  {resume.content.linkedinSuggestedSkills?.length > 0 && (
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <h5 className="text-xs text-white/40 mb-2">Suggested LinkedIn Skills</h5>
-                      <div className="flex flex-wrap gap-1.5">
-                        {resume.content.linkedinSuggestedSkills.map((skill: string, i: number) => (
-                          <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-blue-400/10 text-blue-300/80">{skill}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Profile Checklist */}
-                  <div className="p-3 rounded-xl bg-white/5">
-                    <h5 className="text-xs text-white/40 mb-2">LinkedIn Profile Checklist</h5>
-                    <div className="space-y-2">
-                      {linkedinChecklist.map((item: string, i: number) => (
-                        <label key={i} className="flex items-start gap-2 text-sm text-white/60 cursor-pointer group">
-                          <input type="checkbox" className="mt-1 accent-blue-400 rounded" />
-                          <span className="group-hover:text-white/80">{item}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          )}
+          <LinkedInSection
+            content={resume.content}
+            checklist={linkedinChecklist}
+            isOpen={showLinkedInApproved}
+            onToggle={() => setShowLinkedInApproved(!showLinkedInApproved)}
+            onCopy={handleCopyText}
+          />
 
           {/* Per-Job Rewrite Settings */}
           <div className="card">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/store/useStore';
 
@@ -9,15 +9,18 @@ export function useVisitorName() {
   const visitorName = useStore((s) => s.visitorName);
   const setVisitorName = useStore((s) => s.setVisitorName);
   const [hydrated, setHydrated] = useState(false);
+  const didHydrate = useRef(false);
 
-  // Hydrate visitor name from localStorage after mount
+  // Hydrate visitor name from localStorage once on mount
   useEffect(() => {
+    if (didHydrate.current) return;
+    didHydrate.current = true;
     if (!visitorName) {
       const stored = localStorage.getItem('3box_visitor_name');
       if (stored) setVisitorName(stored);
     }
     setHydrated(true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visitorName, setVisitorName]);
 
   // Before hydration, return null to match server render
   if (!hydrated) return { name: null, firstName: null };

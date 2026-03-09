@@ -73,10 +73,27 @@ export async function PUT(request: NextRequest) {
         const twinLocation = (twin?.skillSnapshot as any)?._profile?.location || '';
         const targetLocationsForConfig = twinLocation ? [twinLocation] : [];
 
-        // Create config with full data, or just update resumeId if it exists
+        // Upsert config: create with full data, or update resumeId on existing.
+        // Then populate empty targetRoles/targetLocations from CareerTwin in one step.
+        const existingConfig = await prisma.autoApplyConfig.findUnique({
+          where: { userId },
+          select: { targetRoles: true, targetLocations: true },
+        });
+        const existingRoles = Array.isArray(existingConfig?.targetRoles) ? existingConfig.targetRoles : [];
+        const existingLocs = Array.isArray(existingConfig?.targetLocations) ? existingConfig.targetLocations : [];
+
+        const updateData: Record<string, any> = { resumeId };
+        // Populate empty roles/locations from CareerTwin
+        if (existingRoles.length === 0 && targetRolesForConfig.length > 0) {
+          updateData.targetRoles = targetRolesForConfig;
+        }
+        if (existingLocs.length === 0 && targetLocationsForConfig.length > 0) {
+          updateData.targetLocations = targetLocationsForConfig;
+        }
+
         await prisma.autoApplyConfig.upsert({
           where: { userId },
-          update: { resumeId },
+          update: updateData,
           create: {
             userId,
             resumeId,
@@ -86,27 +103,6 @@ export async function PUT(request: NextRequest) {
             targetLocations: targetLocationsForConfig,
           },
         });
-
-        // If config exists but targetRoles/targetLocations are empty, populate from CareerTwin
-        const existingConfig = await prisma.autoApplyConfig.findUnique({
-          where: { userId },
-          select: { targetRoles: true, targetLocations: true },
-        });
-        const existingRoles = Array.isArray(existingConfig?.targetRoles) ? existingConfig.targetRoles : [];
-        const existingLocs = Array.isArray(existingConfig?.targetLocations) ? existingConfig.targetLocations : [];
-        const needsUpdate: Record<string, any> = {};
-        if (existingRoles.length === 0 && targetRolesForConfig.length > 0) {
-          needsUpdate.targetRoles = targetRolesForConfig;
-        }
-        if (existingLocs.length === 0 && targetLocationsForConfig.length > 0) {
-          needsUpdate.targetLocations = targetLocationsForConfig;
-        }
-        if (Object.keys(needsUpdate).length > 0) {
-          await prisma.autoApplyConfig.update({
-            where: { userId },
-            data: needsUpdate,
-          });
-        }
       }
 
       // Log activity

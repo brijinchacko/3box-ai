@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // ── Check token budget ──
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { aiCreditsUsed: true, aiCreditsLimit: true, plan: true, email: true },
+      select: { aiCreditsUsed: true, aiCreditsLimit: true, plan: true, email: true, name: true },
     });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -89,17 +89,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Also try to get user's name from the User model
+    // Use name/email from the already-fetched user record (no extra DB query)
     if (profile) {
-      const userData = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true, email: true },
-      });
-      if (userData?.name && (!profile.fullName || profile.fullName === userData.email?.split('@')[0])) {
-        profile.fullName = userData.name;
+      if (user.name && (!profile.fullName || profile.fullName === user.email?.split('@')[0])) {
+        profile.fullName = user.name;
       }
-      if (userData?.email && !profile.email) {
-        profile.email = userData.email;
+      if (user.email && !profile.email) {
+        profile.email = user.email;
       }
     }
 
