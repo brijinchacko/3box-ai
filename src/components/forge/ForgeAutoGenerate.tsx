@@ -189,19 +189,9 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
     showToast(`${label} copied to clipboard!`, 'success');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
-      </div>
-    );
-  }
-
-  if (!status) return null;
-
-  const { dashboardState, resume, settings, tokens } = status;
-
   // Build actual template HTML for preview
+  // NOTE: useMemo must be called before any conditional returns (React Rules of Hooks)
+  const resume = status?.resume;
   const previewHtml = useMemo(() => {
     if (!resume?.content) return '';
     try {
@@ -236,6 +226,18 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
       return '';
     }
   }, [resume]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+      </div>
+    );
+  }
+
+  if (!status) return null;
+
+  const { dashboardState, settings, tokens } = status;
 
   return (
     <>
