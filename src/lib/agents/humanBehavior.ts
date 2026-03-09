@@ -7,15 +7,25 @@
 // ─── Timing ────────────────────────────────────────────────────────
 
 /**
- * Calculate human-like delay between applications
- * Random 30-180 seconds with occasional longer pauses
+ * Calculate human-like delay between applications.
+ * Mode 'normal': 10-30s base with occasional pauses (for high-throughput 100/day).
+ * Mode 'stealth': 30-180s base with longer breaks (legacy conservative mode).
  */
-export function getApplicationDelay(): number {
-  const baseDelay = 30_000 + Math.random() * 150_000; // 30-180s
+export function getApplicationDelay(mode: 'normal' | 'stealth' = 'normal'): number {
+  if (mode === 'stealth') {
+    const baseDelay = 30_000 + Math.random() * 150_000; // 30-180s
+    if (Math.random() < 0.15) {
+      return baseDelay + 180_000 + Math.random() * 300_000; // +3-8 min
+    }
+    return Math.round(baseDelay);
+  }
 
-  // 15% chance of a "break" — longer pause (3-8 minutes)
-  if (Math.random() < 0.15) {
-    return baseDelay + 180_000 + Math.random() * 300_000; // +3-8 min
+  // Normal mode: 10-30s base delay between apps
+  const baseDelay = 10_000 + Math.random() * 20_000; // 10-30s
+
+  // 10% chance of a short "break" — 60-120s pause
+  if (Math.random() < 0.10) {
+    return baseDelay + 60_000 + Math.random() * 60_000;
   }
 
   return Math.round(baseDelay);
@@ -77,8 +87,8 @@ export function getOptimalTimeWindow(targetTimezoneOffset = 5.5): {
 // ─── Rate Limiting ─────────────────────────────────────────────────
 
 const RATE_LIMITS = {
-  perHour: 10,
-  perDay: 30,
+  perHour: 25,
+  perDay: 100,
   perCompanyDomain: 5,
 };
 

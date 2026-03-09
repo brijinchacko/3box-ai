@@ -456,28 +456,33 @@ enum ApplicationStatus {
 }
 
 model JobApplication {
-  id              String            @id @default(cuid())
-  userId          String
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle        String
-  company         String
-  location        String?
-  salaryRange     String?
-  matchScore      Float?
-  status          ApplicationStatus @default(QUEUED)
-  appliedAt       DateTime?
-  source          String?
-  auditTrail      Json?
-  resumeId        String?
-  coverLetter     String?           @db.Text
-  notes           String?           @db.Text
-  jobUrl          String?
-  autoApplyRunId  String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  followUps       FollowUp[]
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle          String
+  company           String
+  location          String?
+  salaryRange       String?
+  matchScore        Float?
+  status            ApplicationStatus @default(QUEUED)
+  appliedAt         DateTime?
+  source            String?
+  applicationMethod String?           // ats_api | cold_email | portal | manual
+  atsType           String?           // greenhouse | lever | workday | generic
+  emailSentTo       String?           // verified email used for cold outreach
+  emailConfidence   Int?              // Hunter.io confidence score (0-100)
+  auditTrail        Json?
+  resumeId          String?
+  coverLetter       String?           @db.Text
+  notes             String?           @db.Text
+  jobUrl            String?
+  autoApplyRunId    String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  followUps         FollowUp[]
 
   @@index([userId])
+  @@index([applicationMethod])
 }
 
 // ─── AI Coach Settings ─────────────────────────
@@ -503,7 +508,7 @@ model AutoApplyConfig {
   targetRoles      Json      @default("[]")
   targetLocations  Json      @default("[]")
   minMatchScore    Int       @default(60)
-  maxAppliesPerRun Int       @default(5)
+  maxAppliesPerRun Int       @default(100)
   excludeCompanies Json      @default("[]")
   excludeKeywords  Json      @default("[]")
   scheduleTime     String?

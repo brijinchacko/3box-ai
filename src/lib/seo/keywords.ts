@@ -69,7 +69,7 @@ export const PAGE_SEO = {
     description: 'Stop applying to jobs manually. Upload your resume, pick your target role, and AI finds 20 matching jobs and applies automatically. Free. Works with Naukri, LinkedIn, Indeed.',
     keywords: 'AI job application agent, automated job applications, AI resume builder, AI career platform, ATS resume builder, job search automation, AI apply to jobs, AI auto apply, free job applications AI, AI apply jobs India',
     canonical: '/',
-    h1: 'Stop Applying to Jobs. Let AI Do It For You.',
+    h1: 'Stop Applying to Jobs. Let AI Agents Do It For You.',
   },
   pricing: {
     title: '3BOX AI Pricing — Free AI Resume Builder & Career Tools | Plans from $0',

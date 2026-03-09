@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db/prisma';
 import { isAgentAvailable } from './permissions';
 import { runScout } from './scout';
 import { analyzeResumeForJob, generateOptimizedResume } from './forge';
-import { applyToJob } from './archer';
+import { applyToJob, applyToJobsBatch } from './archer';
 import { prepareInterview } from './atlas';
 import { analyzeSkillGaps } from './sage';
 import { reviewApplication } from './sentinel';
@@ -138,7 +138,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
           minMatchScore: autoConfig.minMatchScore,
           excludeCompanies,
           excludeKeywords,
-          limit: 30,
+          limit: Math.max(autoConfig.maxAppliesPerRun, 100), // Discover enough for 100+ applications
         });
         discoveredJobs = scoutResult.jobs;
         jobsFound = scoutResult.totalFound;
@@ -235,12 +235,15 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
       logActivity(ctx, 'forge', 'suggestion', `Forge available but waiting for user approval (${automationMode} mode)`);
     }
 
-    // ── Step 3: Quality Gate + Sentinel review + Archer application (PRO+) ──
+    // ── Step 3: Quality Gate + Sentinel review + Archer batch application (PRO+) ──
     if (isAgentAvailable('archer', plan)) {
       const archerAutoApply = shouldAutoRun('archer', automationMode);
 
+      // Pre-filter jobs: quality gate, sentinel review, autopilot category check
+      const approvedJobs: typeof jobsToProcess = [];
+
       for (const job of jobsToProcess) {
-        // Quality gate: skip low-quality jobs before spending AI credits
+        // Quality gate: skip low-quality jobs
         const qualityRec = job._qualityRecommendation as string | undefined;
         if (qualityRec === 'skip') {
           logActivity(ctx, 'archer', 'quality_skip', `Skipped "${job.title}" at ${job.company} — quality too low (score: ${job._qualityScore ?? 0})`);
@@ -248,20 +251,10 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
           continue;
         }
 
-        // Check credits before each application
-        const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { aiCreditsUsed: true, aiCreditsLimit: true } });
-        if (currentUser && currentUser.aiCreditsLimit >= 0 && currentUser.aiCreditsUsed >= currentUser.aiCreditsLimit) {
-          logActivity(ctx, 'archer', 'credits_exhausted', 'No AI credits remaining, stopping applications');
-          break;
-        }
-
-        try {
-          // Sentinel review if available (ULTRA)
-          let approved = true;
-          if (isAgentAvailable('sentinel', plan) && shouldAutoRun('sentinel', automationMode)) {
-            const _forgeToSentinelHandoff = getAgentHandoff(ctx, 'forge', 'sentinel');
-            const _scoutToSentinelHandoff = getAgentHandoff(ctx, 'scout', 'sentinel');
-
+        // Sentinel review if available (ULTRA)
+        let approved = true;
+        if (isAgentAvailable('sentinel', plan) && shouldAutoRun('sentinel', automationMode)) {
+          try {
             const review = await reviewApplication(userId, {
               jobTitle: job.title,
               company: job.company,
@@ -280,58 +273,87 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             }]);
             logActivity(ctx, 'sentinel', review.approved ? 'approved_application' : 'rejected_application',
               `${job.title} at ${job.company}: ${review.approved ? 'approved' : 'rejected'} (quality: ${review.qualityScore}%)`);
+          } catch (err) {
+            console.error(`[Orchestrator] Sentinel failed for ${job.title}:`, err);
+            // If sentinel fails, approve by default
           }
+        }
 
-          if (!approved) {
+        if (!approved) { jobsSkipped++; continue; }
+
+        // Autopilot: only approved categories
+        if (automationMode === 'autopilot') {
+          const jobMatchesApprovedCategory = targetRoles.some(
+            (role) => job.title?.toLowerCase().includes(role.toLowerCase()),
+          );
+          if (!jobMatchesApprovedCategory) {
+            logActivity(ctx, 'archer', 'skipped_unapproved', `Skipped ${job.title} — not in pre-approved categories (autopilot mode)`);
             jobsSkipped++;
             continue;
           }
+        }
 
-          // In autopilot mode, only apply to pre-approved categories
-          if (automationMode === 'autopilot') {
-            const jobMatchesApprovedCategory = targetRoles.some(
-              (role) => job.title?.toLowerCase().includes(role.toLowerCase()),
-            );
-            if (!jobMatchesApprovedCategory) {
-              logActivity(ctx, 'archer', 'skipped_unapproved', `Skipped ${job.title} — not in pre-approved categories (autopilot mode)`);
-              jobsSkipped++;
-              continue;
-            }
-          }
-
-          if (!archerAutoApply) {
-            logActivity(ctx, 'archer', 'suggestion', `Ready to apply to ${job.title} at ${job.company} — waiting for user approval (${automationMode} mode)`);
-            jobsSkipped++;
-            continue;
-          }
-
-          // Use optimized resume if available, otherwise base resume
-          const resumeToSend = job._optimizedResume || resumeContent;
-
-          const _sentinelToArcherHandoff = getAgentHandoff(ctx, 'sentinel', 'archer');
-          const result = await applyToJob(userId, job, resumeToSend, run.id);
-
-          addToContext(ctx, 'applicationsSent', [{
-            jobTitle: job.title,
-            company: job.company,
-            method: result.method === 'none' ? 'email' : result.method,
-            status: result.success ? 'sent' : 'failed',
-          }]);
-
-          if (result.success) {
-            jobsApplied++;
-            creditsUsed++;
-            logActivity(ctx, 'archer', 'sent_application', `Applied to ${job.title} at ${job.company} via ${result.method} (quality: ${job._qualityScore ?? 'N/A'})`);
-            await prisma.user.update({ where: { id: userId }, data: { aiCreditsUsed: { increment: 1 } } });
-          } else {
-            jobsSkipped++;
-            logActivity(ctx, 'archer', 'application_failed', `Failed to apply to ${job.title} at ${job.company}: ${result.details}`);
-          }
-        } catch (err) {
-          console.error(`[Orchestrator] Archer/Sentinel failed for ${job.title}:`, err);
-          logActivity(ctx, 'archer', 'error', `Error processing ${job.title}: ${(err as Error).message}`);
-          pipelineHadErrors = true;
+        if (!archerAutoApply) {
+          logActivity(ctx, 'archer', 'suggestion', `Ready to apply to ${job.title} at ${job.company} — waiting for user approval (${automationMode} mode)`);
           jobsSkipped++;
+          continue;
+        }
+
+        approvedJobs.push(job);
+      }
+
+      // ── Batch apply to all approved jobs in parallel ──
+      if (approvedJobs.length > 0) {
+        logActivity(ctx, 'archer', 'batch_start', `Archer batch applying to ${approvedJobs.length} approved jobs (multi-channel, parallel)`);
+
+        // Use optimized resume for the first few, base resume for the rest
+        const resumeForApply = resumeContent;
+
+        try {
+          const batchResult = await applyToJobsBatch(
+            userId,
+            approvedJobs,
+            resumeForApply,
+            run.id,
+            ctx,
+            {
+              onProgress: (completed, total, lastResult) => {
+                // Track credits
+                if (lastResult.success) {
+                  creditsUsed++;
+                }
+              },
+            },
+          );
+
+          jobsApplied = batchResult.applied;
+          jobsSkipped += batchResult.failed + batchResult.skipped;
+
+          // Update credits in DB
+          if (jobsApplied > 0) {
+            await prisma.user.update({ where: { id: userId }, data: { aiCreditsUsed: { increment: jobsApplied } } });
+          }
+
+          // Write results to context
+          for (const result of batchResult.results) {
+            addToContext(ctx, 'applicationsSent', [{
+              jobTitle: approvedJobs.find(j => j.id === result.jobApplicationId || batchResult.results.indexOf(result) < approvedJobs.length)?.title || 'Unknown',
+              company: approvedJobs.find(j => j.id === result.jobApplicationId || batchResult.results.indexOf(result) < approvedJobs.length)?.company || 'Unknown',
+              method: result.method === 'none' ? 'portal' : result.method,
+              status: result.success ? 'sent' : 'failed',
+            }]);
+          }
+
+          logActivity(ctx, 'archer', 'batch_complete',
+            `Batch complete: ${batchResult.applied} applied (${batchResult.emailed} emailed, ${batchResult.queued} queued), ${batchResult.failed} failed. ` +
+            `Routing: ${batchResult.routingStats.ats_api} ATS API, ${batchResult.routingStats.cold_email} cold email, ${batchResult.routingStats.portal_queue} portal. ` +
+            `Cover letters: ${batchResult.coverLetterStats.priority} priority, ${batchResult.coverLetterStats.standard} standard, ${batchResult.coverLetterStats.quick} quick (${batchResult.coverLetterStats.cached} cached). ` +
+            `Duration: ${Math.round(batchResult.durationMs / 1000)}s`);
+        } catch (err) {
+          console.error('[Orchestrator] Archer batch failed:', err);
+          logActivity(ctx, 'archer', 'error', `Batch application failed: ${(err as Error).message}`);
+          pipelineHadErrors = true;
+          jobsSkipped += approvedJobs.length;
         }
       }
     } else {

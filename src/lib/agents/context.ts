@@ -27,7 +27,7 @@ export interface ReviewResultSummary {
 export interface ApplicationSummary {
   jobTitle: string;
   company: string;
-  method: 'email' | 'portal';
+  method: 'email' | 'portal' | 'ats_api';
   status: 'sent' | 'queued' | 'failed';
 }
 
@@ -208,8 +208,9 @@ export function getContextSummary(ctx: AgentContext): string {
     const failed = ctx.applicationsSent.filter((a) => a.status === 'failed').length;
     const byEmail = ctx.applicationsSent.filter((a) => a.method === 'email').length;
     const byPortal = ctx.applicationsSent.filter((a) => a.method === 'portal').length;
+    const byAtsApi = ctx.applicationsSent.filter((a) => a.method === 'ats_api').length;
     lines.push(
-      `- Archer processed ${ctx.applicationsSent.length} applications (${sent} sent, ${queued} queued, ${failed} failed | ${byEmail} email, ${byPortal} portal)`
+      `- Archer processed ${ctx.applicationsSent.length} applications (${sent} sent, ${queued} queued, ${failed} failed | ${byAtsApi} ATS API, ${byEmail} email, ${byPortal} portal)`
     );
   } else {
     lines.push('- Archer: no applications sent yet');

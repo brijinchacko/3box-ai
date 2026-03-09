@@ -639,10 +639,10 @@ export default function LandingPageClient() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-8">
               <Users className="w-3.5 h-3.5" /> Used by 2,400+ job seekers
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              {firstName ? <>{firstName}, Stop Applying<br />to Jobs.</> : <>Stop Applying<br />to Jobs.</>}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-center">
+              {firstName ? <>{firstName}, Stop Applying to Jobs.</> : <>Stop Applying to Jobs.</>}
               <br />
-              <span className="gradient-text">Let AI Do It For You.</span>
+              <span className="gradient-text">Let AI Agents Do It For You.</span>
             </h1>
             <p className="text-lg sm:text-xl text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
               {countryCode === 'IN' ? (
