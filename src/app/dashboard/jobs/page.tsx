@@ -28,6 +28,9 @@ import {
   History,
   Shield,
   AlertTriangle,
+  Target,
+  Hammer,
+  ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -678,6 +681,44 @@ export default function JobsPage() {
                 topMatchScore={scoutJobs[0]?.matchScore}
                 completedAt={scoutCompletedAt}
               />
+            )}
+
+            {/* ── Post-Scout Action Bar ── */}
+            {scoutSummary && scoutJobs.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-4 rounded-xl bg-gradient-to-r from-green-500/5 via-emerald-500/5 to-orange-500/5 border border-white/10"
+              >
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      Scout found {scoutSummary.totalFiltered} qualifying jobs
+                    </h4>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Deploy Archer to auto-apply, or refine your resume with Forge first.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Link
+                      href="/dashboard/applications"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90 transition-all shadow-lg shadow-green-500/20"
+                    >
+                      <AgentAvatar agentId="archer" size={18} />
+                      Deploy Archer
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                    <Link
+                      href="/dashboard/resume"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all"
+                    >
+                      <AgentAvatar agentId="forge" size={18} />
+                      Modify Resume
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
             )}
 
             {/* View toggle + actions */}
