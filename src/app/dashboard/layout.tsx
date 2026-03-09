@@ -27,7 +27,7 @@ const sidebarAgents: { agentId: AgentId | 'cortex'; href: string; label: string;
   { agentId: 'cortex',   href: '/dashboard',           label: 'Cortex',   sublabel: 'Command Center' },
   { agentId: 'scout',    href: '/dashboard/jobs',      label: 'Scout',    sublabel: 'Job Hunter' },
   { agentId: 'forge',    href: '/dashboard/resume',    label: 'Forge',    sublabel: 'Resume Builder' },
-  { agentId: 'archer',   href: '/dashboard/jobs?tab=applications', label: 'Archer',   sublabel: 'Applications' },
+  { agentId: 'archer',   href: '/dashboard/applications', label: 'Archer',   sublabel: 'Applications' },
   { agentId: 'atlas',    href: '/dashboard/interview', label: 'Atlas',    sublabel: 'Interview Prep' },
   { agentId: 'sage',     href: '/dashboard/learning',  label: 'Sage',     sublabel: 'Skill Trainer' },
   { agentId: 'sentinel', href: '/dashboard/quality',   label: 'Sentinel', sublabel: 'Quality Check' },
