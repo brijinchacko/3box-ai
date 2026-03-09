@@ -24,7 +24,7 @@ export default function ScoutReportHeader({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-4 p-4 rounded-2xl border border-neon-blue/10 bg-gradient-to-r from-neon-blue/5 to-neon-purple/5"
+      className="mb-4 p-4 rounded-2xl border border-blue-400/10 bg-gradient-to-r from-blue-500/5 to-cyan-500/5"
     >
       <div className="flex items-center gap-3 mb-3">
         <AgentAvatar agentId="scout" size={32} />
@@ -47,7 +47,7 @@ export default function ScoutReportHeader({
           </span>
         )}
         {topMatchScore != null && (
-          <span className="text-neon-green/80">
+          <span className="text-blue-400/80">
             Top match: <span className="font-medium">{topMatchScore}%</span>
           </span>
         )}

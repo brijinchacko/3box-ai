@@ -93,10 +93,10 @@ interface PreflightData {
 // ── Config ─────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   QUEUED:    { label: 'Queued',    color: 'text-white/60',    bg: 'bg-white/5',        border: 'border-white/10' },
-  EMAILED:   { label: 'Emailed',   color: 'text-neon-blue',   bg: 'bg-neon-blue/10',   border: 'border-neon-blue/20' },
-  APPLIED:   { label: 'Applied',   color: 'text-neon-green',  bg: 'bg-neon-green/10',  border: 'border-neon-green/20' },
+  EMAILED:   { label: 'Emailed',   color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  APPLIED:   { label: 'Applied',   color: 'text-green-400',   bg: 'bg-green-500/10',   border: 'border-green-500/20' },
   VIEWED:    { label: 'Viewed',    color: 'text-amber-400',   bg: 'bg-amber-500/10',   border: 'border-amber-500/20' },
-  INTERVIEW: { label: 'Interview', color: 'text-neon-orange', bg: 'bg-neon-orange/10', border: 'border-neon-orange/20' },
+  INTERVIEW: { label: 'Interview', color: 'text-purple-400',   bg: 'bg-purple-500/10',  border: 'border-purple-500/20' },
   OFFER:     { label: 'Offer',     color: 'text-neon-purple', bg: 'bg-neon-purple/10', border: 'border-neon-purple/20' },
   REJECTED:  { label: 'Rejected',  color: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/20' },
   WITHDRAWN: { label: 'Withdrawn', color: 'text-white/40',    bg: 'bg-white/5',        border: 'border-white/10' },
@@ -258,7 +258,7 @@ export default function ApplicationsPage() {
           <div className="flex-1">
             <h1 className="text-lg font-bold flex items-center gap-2">
               Archer
-              <span className="text-[10px] px-2 py-0.5 rounded-full text-neon-orange bg-neon-orange/10 font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded-full text-green-400 bg-green-500/10 font-medium">
                 Auto-Apply Agent
               </span>
             </h1>
@@ -271,8 +271,8 @@ export default function ApplicationsPage() {
             disabled={running}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               running
-                ? 'bg-neon-orange/10 text-neon-orange/70 border border-neon-orange/20'
-                : 'bg-gradient-to-r from-neon-orange to-amber-500 text-white shadow-lg shadow-neon-orange/20 hover:shadow-neon-orange/40'
+                ? 'bg-green-500/10 text-green-400/70 border border-green-500/20'
+                : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/20 hover:shadow-green-500/40'
             } disabled:opacity-70`}
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -297,10 +297,10 @@ export default function ApplicationsPage() {
 
       {/* ── Running Progress ── */}
       {running && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 rounded-2xl border border-neon-orange/20 bg-gradient-to-r from-neon-orange/[0.04] to-amber-500/[0.02]">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 rounded-2xl border border-green-500/20 bg-gradient-to-r from-green-500/[0.04] to-emerald-500/[0.02]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-neon-orange/15 flex items-center justify-center">
-              <Loader2 className="w-4 h-4 text-neon-orange animate-spin" />
+            <div className="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center">
+              <Loader2 className="w-4 h-4 text-green-400 animate-spin" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">Pipeline Running</h3>
@@ -308,13 +308,13 @@ export default function ApplicationsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-white/30">
-            <span className="flex items-center gap-1 text-neon-green"><CheckCircle2 className="w-3 h-3" /> Scout</span>
+            <span className="flex items-center gap-1 text-blue-400"><CheckCircle2 className="w-3 h-3" /> Scout</span>
             <span className="text-white/10">→</span>
-            <span className="flex items-center gap-1 text-neon-blue"><RefreshCw className="w-3 h-3 animate-spin" /> Forge</span>
+            <span className="flex items-center gap-1 text-orange-400"><RefreshCw className="w-3 h-3 animate-spin" /> Forge</span>
             <span className="text-white/10">→</span>
-            <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Sentinel</span>
+            <span className="flex items-center gap-1 text-rose-400"><Shield className="w-3 h-3" /> Sentinel</span>
             <span className="text-white/10">→</span>
-            <span className="flex items-center gap-1"><Target className="w-3 h-3" /> Archer</span>
+            <span className="flex items-center gap-1 text-green-400"><Target className="w-3 h-3" /> Archer</span>
           </div>
         </motion.div>
       )}
@@ -324,10 +324,10 @@ export default function ApplicationsPage() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 rounded-2xl border border-white/10 bg-white/[0.02]">
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              runResult.jobsApplied > 0 ? 'bg-neon-green/15' : 'bg-amber-500/15'
+              runResult.jobsApplied > 0 ? 'bg-green-500/15' : 'bg-amber-500/15'
             }`}>
               {runResult.jobsApplied > 0 ? (
-                <CheckCircle2 className="w-4 h-4 text-neon-green" />
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
               ) : (
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
               )}
@@ -344,7 +344,7 @@ export default function ApplicationsPage() {
                 {runResult.summary || `Found ${runResult.jobsFound} jobs, applied to ${runResult.jobsApplied}, skipped ${runResult.jobsSkipped}.`}
               </p>
               {runResult.jobsFound === 0 && (
-                <Link href="/dashboard/jobs" className="inline-flex items-center gap-1.5 mt-2 text-xs text-neon-blue hover:underline">
+                <Link href="/dashboard/jobs" className="inline-flex items-center gap-1.5 mt-2 text-xs text-blue-400 hover:underline">
                   <Search className="w-3 h-3" /> Go to Scout to find jobs first
                 </Link>
               )}
@@ -371,7 +371,7 @@ export default function ApplicationsPage() {
       {!loading && !hasApps && !running && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-12">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-orange/10 to-amber-500/10 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 flex items-center justify-center mx-auto mb-4">
               <AgentAvatar agentId="archer" size={36} />
             </div>
             <h3 className="text-lg font-bold mb-1.5">No Applications Yet</h3>
@@ -385,16 +385,16 @@ export default function ApplicationsPage() {
             {/* Step 1: Find Jobs */}
             <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
               preflight?.lastRun?.jobsFound
-                ? 'border-neon-green/20 bg-neon-green/[0.03]'
-                : 'border-neon-blue/20 bg-neon-blue/[0.03]'
+                ? 'border-green-500/20 bg-green-500/[0.03]'
+                : 'border-blue-400/20 bg-blue-500/[0.03]'
             }`}>
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                preflight?.lastRun?.jobsFound ? 'bg-neon-green/15' : 'bg-neon-blue/15'
+                preflight?.lastRun?.jobsFound ? 'bg-green-500/15' : 'bg-blue-500/15'
               }`}>
                 {preflight?.lastRun?.jobsFound ? (
-                  <CheckCircle2 className="w-4 h-4 text-neon-green" />
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
                 ) : (
-                  <Search className="w-4 h-4 text-neon-blue" />
+                  <Search className="w-4 h-4 text-blue-400" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -406,7 +406,7 @@ export default function ApplicationsPage() {
                 </p>
               </div>
               {!preflight?.lastRun?.jobsFound && (
-                <Link href="/dashboard/jobs" className="text-xs px-3 py-1.5 rounded-lg bg-neon-blue/10 text-neon-blue hover:bg-neon-blue/20 transition-all flex items-center gap-1 flex-shrink-0">
+                <Link href="/dashboard/jobs" className="text-xs px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all flex items-center gap-1 flex-shrink-0">
                   Find Jobs <ArrowRight className="w-3 h-3" />
                 </Link>
               )}
@@ -415,16 +415,16 @@ export default function ApplicationsPage() {
             {/* Step 2: Resume Ready */}
             <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
               preflight?.hasResume
-                ? 'border-neon-green/20 bg-neon-green/[0.03]'
-                : 'border-white/10 bg-white/[0.02]'
+                ? 'border-green-500/20 bg-green-500/[0.03]'
+                : 'border-orange-400/20 bg-orange-500/[0.03]'
             }`}>
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                preflight?.hasResume ? 'bg-neon-green/15' : 'bg-white/5'
+                preflight?.hasResume ? 'bg-green-500/15' : 'bg-orange-500/10'
               }`}>
                 {preflight?.hasResume ? (
-                  <CheckCircle2 className="w-4 h-4 text-neon-green" />
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
                 ) : (
-                  <FileText className="w-4 h-4 text-white/40" />
+                  <FileText className="w-4 h-4 text-orange-400" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -436,16 +436,16 @@ export default function ApplicationsPage() {
                 </p>
               </div>
               {!preflight?.hasResume && (
-                <Link href="/dashboard/resume" className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-white/50 hover:bg-white/10 transition-all flex items-center gap-1 flex-shrink-0">
+                <Link href="/dashboard/resume" className="text-xs px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-all flex items-center gap-1 flex-shrink-0">
                   Build Resume <ArrowRight className="w-3 h-3" />
                 </Link>
               )}
             </div>
 
             {/* Step 3: Run Archer */}
-            <div className="flex items-center gap-3 p-3 rounded-xl border border-neon-orange/20 bg-neon-orange/[0.03]">
-              <div className="w-8 h-8 rounded-lg bg-neon-orange/15 flex items-center justify-center flex-shrink-0">
-                <Target className="w-4 h-4 text-neon-orange" />
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-green-500/20 bg-green-500/[0.03]">
+              <div className="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                <Target className="w-4 h-4 text-green-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-white">3. Run Archer to apply</p>
@@ -454,7 +454,7 @@ export default function ApplicationsPage() {
               <button
                 onClick={handleRunArcher}
                 disabled={running}
-                className="text-xs px-3 py-1.5 rounded-lg bg-neon-orange/10 text-neon-orange hover:bg-neon-orange/20 transition-all flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
+                className="text-xs px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
               >
                 <Play className="w-3 h-3" /> Run Now
               </button>
@@ -471,16 +471,16 @@ export default function ApplicationsPage() {
               <p className="text-xl font-bold text-white">{stats!.total}</p>
               <p className="text-[10px] text-white/30 mt-0.5">Total Applied</p>
             </div>
-            <div className="p-3 rounded-xl bg-neon-green/[0.03] border border-neon-green/10 text-center">
-              <p className="text-xl font-bold text-neon-green">{stats!.applied + stats!.interview + stats!.offer}</p>
+            <div className="p-3 rounded-xl bg-green-500/[0.03] border border-green-500/10 text-center">
+              <p className="text-xl font-bold text-green-400">{stats!.applied + stats!.interview + stats!.offer}</p>
               <p className="text-[10px] text-white/30 mt-0.5">Active</p>
             </div>
-            <div className="p-3 rounded-xl bg-neon-blue/[0.03] border border-neon-blue/10 text-center">
-              <p className="text-xl font-bold text-neon-blue">{stats!.interview}</p>
+            <div className="p-3 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/10 text-center">
+              <p className="text-xl font-bold text-emerald-400">{stats!.interview}</p>
               <p className="text-[10px] text-white/30 mt-0.5">Interviewing</p>
             </div>
-            <div className="p-3 rounded-xl bg-neon-purple/[0.03] border border-neon-purple/10 text-center">
-              <p className="text-xl font-bold text-neon-purple">{stats!.offer}</p>
+            <div className="p-3 rounded-xl bg-purple-500/[0.03] border border-purple-500/10 text-center">
+              <p className="text-xl font-bold text-purple-400">{stats!.offer}</p>
               <p className="text-[10px] text-white/30 mt-0.5">Offers</p>
             </div>
           </div>
@@ -489,17 +489,17 @@ export default function ApplicationsPage() {
           <div className="flex items-center gap-3 text-xs text-white/40 flex-wrap">
             <span className="font-medium text-white/50">Via:</span>
             {stats!.byMethod.ats_api > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-neon-green/5 text-neon-green/70 text-[10px]">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/5 text-green-400/70 text-[10px]">
                 <Wifi className="w-2.5 h-2.5" /> ATS {stats!.byMethod.ats_api}
               </span>
             )}
             {stats!.byMethod.cold_email > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-neon-blue/5 text-neon-blue/70 text-[10px]">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/5 text-emerald-400/70 text-[10px]">
                 <Send className="w-2.5 h-2.5" /> Email {stats!.byMethod.cold_email}
               </span>
             )}
             {stats!.byMethod.portal > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-neon-orange/5 text-neon-orange/70 text-[10px]">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/5 text-emerald-400/70 text-[10px]">
                 <ExternalLink className="w-2.5 h-2.5" /> Portal {stats!.byMethod.portal}
               </span>
             )}
@@ -572,7 +572,7 @@ export default function ApplicationsPage() {
                       <h4 className="font-semibold text-sm text-white truncate">{app.jobTitle}</h4>
                       {app.matchScore != null && (
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                          app.matchScore >= 70 ? 'bg-neon-green/10 text-neon-green' :
+                          app.matchScore >= 70 ? 'bg-green-500/10 text-green-400' :
                           app.matchScore >= 40 ? 'bg-amber-500/10 text-amber-400' :
                           'bg-white/5 text-white/40'
                         }`}>
@@ -613,11 +613,11 @@ export default function ApplicationsPage() {
                           {app.atsType && <span className="px-2 py-0.5 rounded bg-white/5 text-white/40">ATS: {app.atsType}</span>}
                           {app.source && <span className="px-2 py-0.5 rounded bg-white/5 text-white/40">Source: {app.source}</span>}
                           {app.emailSentTo && (
-                            <span className="px-2 py-0.5 rounded bg-neon-blue/5 text-neon-blue/60">
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/5 text-emerald-400/60">
                               Emailed: {app.emailSentTo} {app.emailConfidence != null && `(${app.emailConfidence}%)`}
                             </span>
                           )}
-                          {app.salaryRange && <span className="px-2 py-0.5 rounded bg-neon-green/5 text-neon-green/60">{app.salaryRange}</span>}
+                          {app.salaryRange && <span className="px-2 py-0.5 rounded bg-green-500/5 text-green-400/60">{app.salaryRange}</span>}
                           {app.appliedAt && <span className="px-2 py-0.5 rounded bg-white/5 text-white/40">Applied {new Date(app.appliedAt).toLocaleDateString()}</span>}
                         </div>
 
@@ -638,7 +638,7 @@ export default function ApplicationsPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-neon-blue/10 text-neon-blue hover:bg-neon-blue/20 transition-all"
+                            className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
                           >
                             <ExternalLink className="w-3 h-3" /> View Job Posting
                           </a>
@@ -658,7 +658,7 @@ export default function ApplicationsPage() {
         <div className="text-center py-12">
           <Inbox className="w-8 h-8 text-white/15 mx-auto mb-3" />
           <p className="text-sm text-white/40">No &quot;{STATUS_CONFIG[statusFilter]?.label || statusFilter}&quot; applications.</p>
-          <button onClick={() => handleFilterChange('all')} className="text-xs text-neon-blue mt-2 hover:underline">
+          <button onClick={() => handleFilterChange('all')} className="text-xs text-green-400 mt-2 hover:underline">
             Show all
           </button>
         </div>

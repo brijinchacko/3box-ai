@@ -106,9 +106,9 @@ function HumanExpertBanner({ userPlan }: { userPlan: string }) {
   };
 
   return (
-    <div className="card bg-gradient-to-r from-neon-green/10 to-neon-blue/10 border-neon-green/20 mb-4 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-neon-green/20 flex items-center justify-center flex-shrink-0">
-        <Users className="w-6 h-6 text-neon-green" />
+    <div className="card bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-orange-400/20 mb-4 flex items-center gap-4">
+      <div className="w-12 h-12 rounded-xl bg-orange-400/20 flex items-center justify-center flex-shrink-0">
+        <Users className="w-6 h-6 text-orange-400" />
       </div>
       <div className="flex-1">
         <h3 className="font-semibold text-sm">Get Your Resume Verified by Human Experts</h3>
@@ -120,7 +120,7 @@ function HumanExpertBanner({ userPlan }: { userPlan: string }) {
       </div>
       {hasAccess ? (
         requested ? (
-          <span className="text-xs text-neon-green flex items-center gap-1 flex-shrink-0">
+          <span className="text-xs text-orange-400 flex items-center gap-1 flex-shrink-0">
             <CheckCircle2 className="w-3.5 h-3.5" /> Request Sent
           </span>
         ) : (
@@ -629,7 +629,7 @@ export default function ResumePage() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-neon-blue" />
+                  <FileText className="w-5 h-5 text-orange-400" />
                   Generate Cover Letter
                 </h3>
                 <button onClick={() => setCoverLetterModal(false)} className="p-1.5 rounded-lg hover:bg-white/5">
@@ -744,7 +744,7 @@ export default function ResumePage() {
               {/* Wizard Header */}
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-neon-purple" />
+                  <Sparkles className="w-5 h-5 text-orange-400" />
                   Forge Resume Writer
                 </h3>
                 {!wizardGenerating && (
@@ -759,13 +759,13 @@ export default function ResumePage() {
                 {[1, 2, 3].map((s) => (
                   <div key={s} className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                      wizardStep === s ? 'bg-neon-purple text-white' :
-                      wizardStep > s ? 'bg-neon-green/20 text-neon-green' :
+                      wizardStep === s ? 'bg-orange-500 text-white' :
+                      wizardStep > s ? 'bg-amber-400/20 text-amber-400' :
                       'bg-white/5 text-white/30'
                     }`}>
                       {wizardStep > s ? <CheckCircle2 className="w-4 h-4" /> : s}
                     </div>
-                    {s < 3 && <div className={`w-12 h-px ${wizardStep > s ? 'bg-neon-green/40' : 'bg-white/10'}`} />}
+                    {s < 3 && <div className={`w-12 h-px ${wizardStep > s ? 'bg-amber-400/40' : 'bg-white/10'}`} />}
                   </div>
                 ))}
                 <span className="text-xs text-white/30 ml-2">
@@ -851,7 +851,7 @@ export default function ResumePage() {
                   <motion.div
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="text-xs text-neon-purple text-center mt-2"
+                    className="text-xs text-orange-400 text-center mt-2"
                   >
                     This usually takes 10-20 seconds
                   </motion.div>
@@ -861,7 +861,7 @@ export default function ResumePage() {
               {/* Step 3: Review */}
               {wizardStep === 3 && wizardResult && (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-neon-green/5 border border-neon-green/20 text-sm text-neon-green flex items-center gap-2">
+                  <div className="p-4 rounded-xl bg-orange-400/5 border border-amber-400/20 text-sm text-orange-400 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                     Resume generated successfully! Review below and accept to apply it.
                   </div>
@@ -925,15 +925,15 @@ export default function ResumePage() {
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 rounded-2xl border border-neon-blue/30 overflow-hidden"
+          className="mb-6 rounded-2xl border border-orange-400/30 overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(168,85,247,0.12) 100%)',
+            background: 'linear-gradient(135deg, rgba(249,115,22,0.12) 0%, rgba(245,158,11,0.12) 100%)',
           }}
         >
           <div className="px-5 py-5 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 flex items-center justify-center flex-shrink-0">
-                <Crown className="w-5 h-5 text-neon-purple" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Crown className="w-5 h-5 text-orange-400" />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-white">
@@ -946,7 +946,7 @@ export default function ResumePage() {
             </div>
             <Link
               href="/pricing"
-              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white text-sm font-semibold hover:shadow-lg hover:shadow-neon-blue/25 transition-all"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all"
             >
               <Crown className="w-4 h-4" />
               Upgrade Now
@@ -964,14 +964,14 @@ export default function ResumePage() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-              <FileText className="w-7 h-7 text-neon-blue" /> Resume Builder
+              <FileText className="w-7 h-7 text-orange-400" /> Resume Builder
             </h1>
             <p className="text-white/40">ATS-optimized resumes crafted by Forge</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => { setWizardOpen(true); setWizardStep(1); setWizardError(''); }}
-              className="btn-primary text-sm flex items-center gap-2 bg-gradient-to-r from-neon-purple to-neon-blue"
+              className="btn-primary text-sm flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500"
             >
               <Sparkles className="w-4 h-4" />
               Write with Forge
@@ -1203,7 +1203,7 @@ export default function ResumePage() {
                               }
                             }}
                             disabled={aiLoading !== null}
-                            className="p-1.5 rounded-lg hover:bg-white/5 text-neon-blue/60 hover:text-neon-blue transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-white/5 text-orange-400/60 hover:text-orange-400 transition-colors"
                             title="Enhance with Forge"
                           >
                             {aiLoading === `exp-${exp.id}` ? (

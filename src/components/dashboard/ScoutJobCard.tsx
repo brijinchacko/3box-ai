@@ -43,7 +43,7 @@ function timeAgo(dateStr: string): string {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 70) return 'bg-neon-green/10 text-neon-green border-neon-green/20';
+  if (score >= 70) return 'bg-blue-400/10 text-blue-400 border-blue-400/20';
   if (score >= 40) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
   return 'bg-white/5 text-white/40 border-white/10';
 }
@@ -101,10 +101,10 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
             <span className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
               {job.location}
-              {job.remote && <span className="text-neon-green/60 ml-1">(Remote)</span>}
+              {job.remote && <span className="text-blue-400/60 ml-1">(Remote)</span>}
             </span>
             {job.salary && (
-              <span className="text-neon-green/60">{job.salary}</span>
+              <span className="text-blue-400/60">{job.salary}</span>
             )}
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
@@ -136,7 +136,7 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
           {scamCheck && (
             <div className={`p-3 rounded-xl text-xs border ${
               scamCheck.verdict === 'safe'
-                ? 'bg-neon-green/5 border-neon-green/10 text-neon-green/80'
+                ? 'bg-blue-400/5 border-blue-400/10 text-blue-400/80'
                 : scamCheck.verdict === 'suspicious'
                   ? 'bg-amber-500/5 border-amber-500/10 text-amber-400/80'
                   : 'bg-red-500/5 border-red-500/10 text-red-400/80'
@@ -188,7 +188,7 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
                 onClick={() => onSave()}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                   isSaved
-                    ? 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20'
+                    ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20'
                     : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70'
                 }`}
               >
@@ -199,7 +199,7 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
                 href={job.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-blue-400/10 hover:bg-blue-400/20 text-blue-400 transition-all"
               >
                 Apply <ExternalLink className="w-3 h-3" />
               </a>

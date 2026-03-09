@@ -50,12 +50,12 @@ type Phase = 'setup' | 'practice' | 'evaluating' | 'review' | 'results';
 
 const typeBadgeColors: Record<string, string> = {
   behavioral: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  technical: 'bg-neon-purple/10 text-neon-purple border-neon-purple/20',
+  technical: 'bg-purple-400/10 text-purple-400 border-purple-400/20',
   situational: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
 };
 
 const difficultyColors: Record<string, string> = {
-  easy: 'text-neon-green',
+  easy: 'text-green-400',
   medium: 'text-yellow-400',
   hard: 'text-red-400',
 };
@@ -328,9 +328,9 @@ export default function InterviewPrepPage() {
       </motion.div>
 
       {/* Human Expert Banner */}
-      <div className="card bg-gradient-to-r from-neon-purple/10 to-neon-blue/10 border-neon-purple/20 mb-6 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-neon-purple/20 flex items-center justify-center flex-shrink-0">
-          <Users className="w-6 h-6 text-neon-purple" />
+      <div className="card bg-gradient-to-r from-purple-400/10 to-violet-400/10 border-purple-400/20 mb-6 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-purple-400/20 flex items-center justify-center flex-shrink-0">
+          <Users className="w-6 h-6 text-purple-400" />
         </div>
         <div className="flex-1">
           <h3 className="font-semibold text-sm">Practice with Real Industry Experts</h3>
@@ -342,7 +342,7 @@ export default function InterviewPrepPage() {
         </div>
         {hasExpertAccess ? (
           expertRequested ? (
-            <span className="text-xs text-neon-green flex items-center gap-1 flex-shrink-0">
+            <span className="text-xs text-purple-400 flex items-center gap-1 flex-shrink-0">
               <CheckCircle2 className="w-3.5 h-3.5" /> Request Sent
             </span>
           ) : (
@@ -375,7 +375,7 @@ export default function InterviewPrepPage() {
             {/* Role Selection */}
             <div className="card">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Target className="w-5 h-5 text-neon-blue" /> Setup Your Practice Session
+                <Target className="w-5 h-5 text-purple-400" /> Setup Your Practice Session
               </h2>
 
               <div className="space-y-4">
@@ -386,7 +386,7 @@ export default function InterviewPrepPage() {
                     value={targetRole}
                     onChange={e => setTargetRole(e.target.value)}
                     placeholder="e.g., Senior Frontend Engineer, Data Scientist, Product Manager..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-blue transition-colors"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-400 transition-colors"
                   />
                 </div>
 
@@ -394,7 +394,7 @@ export default function InterviewPrepPage() {
                 <div>
                   <button
                     onClick={() => setShowJdInput(!showJdInput)}
-                    className="text-sm text-neon-blue flex items-center gap-1 hover:underline"
+                    className="text-sm text-purple-400 flex items-center gap-1 hover:underline"
                   >
                     {showJdInput ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     {showJdInput ? 'Hide' : 'Add'} Job Description or JD Link (optional)
@@ -411,7 +411,7 @@ export default function InterviewPrepPage() {
                           value={jobDescription}
                           onChange={e => setJobDescription(e.target.value)}
                           placeholder="Paste the job description here OR paste a job posting URL for more targeted questions..."
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-blue transition-colors h-32 resize-none"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-400 transition-colors h-32 resize-none"
                         />
                         <p className="text-[11px] text-white/30">
                           Tip: Paste the full job description for best results. You can also paste a job posting URL.
@@ -431,7 +431,7 @@ export default function InterviewPrepPage() {
                         onClick={() => setQuestionCount(count)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                           questionCount === count
-                            ? 'bg-neon-blue text-white'
+                            ? 'bg-purple-500 text-white'
                             : 'bg-white/5 text-white/40 hover:text-white/70 hover:bg-white/10'
                         }`}
                       >
@@ -481,7 +481,7 @@ export default function InterviewPrepPage() {
                   <p className="text-xs text-white/40">Use the STAR method: Situation, Task, Action, Result. Be specific with examples.</p>
                 </div>
                 <div className="p-3 rounded-lg bg-white/[0.02]">
-                  <div className="text-xs font-medium text-neon-purple mb-1">Technical</div>
+                  <div className="text-xs font-medium text-purple-400 mb-1">Technical</div>
                   <p className="text-xs text-white/40">Think aloud, discuss trade-offs, and explain your reasoning before diving into details.</p>
                 </div>
                 <div className="p-3 rounded-lg bg-white/[0.02]">
@@ -506,7 +506,7 @@ export default function InterviewPrepPage() {
             <div className="flex items-center gap-4">
               <div className="flex-1 skill-bar h-2">
                 <motion.div
-                  className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
+                  className="skill-bar-fill bg-gradient-to-r from-purple-500 to-violet-500"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.5 }}
@@ -546,7 +546,7 @@ export default function InterviewPrepPage() {
                   <div className="text-xs text-white/40 mb-2">Key points to cover:</div>
                   <div className="flex flex-wrap gap-2">
                     {currentQuestion.keyPoints.map((point, i) => (
-                      <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-neon-blue/10 text-neon-blue/70">{point}</span>
+                      <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-purple-400/10 text-purple-400/70">{point}</span>
                     ))}
                   </div>
                 </div>
@@ -588,7 +588,7 @@ export default function InterviewPrepPage() {
                   value={answer}
                   onChange={e => setAnswer(e.target.value)}
                   placeholder="Type your answer here... Be specific, use examples, and structure your response clearly."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-blue transition-colors h-40 resize-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-400 transition-colors h-40 resize-none"
                   disabled={phase === 'evaluating'}
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-white/20">
@@ -639,7 +639,7 @@ export default function InterviewPrepPage() {
             <div className="flex items-center gap-4">
               <div className="flex-1 skill-bar h-2">
                 <motion.div
-                  className="skill-bar-fill bg-gradient-to-r from-neon-blue to-neon-purple"
+                  className="skill-bar-fill bg-gradient-to-r from-purple-500 to-violet-500"
                   animate={{ width: `${((results.length) / questions.length) * 100}%` }}
                   transition={{ duration: 0.5 }}
                 />
@@ -657,7 +657,7 @@ export default function InterviewPrepPage() {
                 </span>
               </div>
               <div className={`text-5xl font-bold mb-1 ${
-                currentEvaluation.score >= 8 ? 'text-neon-green' :
+                currentEvaluation.score >= 8 ? 'text-purple-400' :
                 currentEvaluation.score >= 5 ? 'text-yellow-400' : 'text-red-400'
               }`}>
                 {currentEvaluation.score}/10
@@ -668,20 +668,20 @@ export default function InterviewPrepPage() {
             {/* Feedback */}
             <div className="card">
               <h3 className="text-sm font-semibold text-white/60 mb-3 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-neon-blue" /> Feedback
+                <MessageSquare className="w-4 h-4 text-purple-400" /> Feedback
               </h3>
               <p className="text-sm text-white/70 mb-4">{currentEvaluation.feedback}</p>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 {/* Strengths */}
-                <div className="p-3 rounded-lg bg-neon-green/5 border border-neon-green/10">
-                  <div className="text-xs font-semibold text-neon-green mb-2 flex items-center gap-1">
+                <div className="p-3 rounded-lg bg-purple-400/5 border border-purple-400/10">
+                  <div className="text-xs font-semibold text-purple-400 mb-2 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Strengths
                   </div>
                   <ul className="space-y-1">
                     {currentEvaluation.strengths.map((s, i) => (
                       <li key={i} className="text-xs text-white/50 flex items-start gap-1.5">
-                        <span className="text-neon-green mt-0.5">+</span> {s}
+                        <span className="text-purple-400 mt-0.5">+</span> {s}
                       </li>
                     ))}
                   </ul>
@@ -704,9 +704,9 @@ export default function InterviewPrepPage() {
             </div>
 
             {/* Improved Answer */}
-            <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
+            <div className="card border border-purple-400/20 bg-gradient-to-r from-purple-500/5 to-violet-500/5">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-neon-purple" /> Model Answer
+                <Sparkles className="w-4 h-4 text-purple-400" /> Model Answer
               </h3>
               <p className="text-sm text-white/60 leading-relaxed">{currentEvaluation.improvedAnswer}</p>
             </div>
@@ -745,17 +745,17 @@ export default function InterviewPrepPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 <div>
                   <div className={`text-3xl font-bold ${
-                    Number(avgScore) >= 7 ? 'text-neon-green' :
+                    Number(avgScore) >= 7 ? 'text-purple-400' :
                     Number(avgScore) >= 5 ? 'text-yellow-400' : 'text-red-400'
                   }`}>{avgScore}</div>
                   <div className="text-xs text-white/40">Avg Score</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-neon-blue">{results.length}</div>
+                  <div className="text-3xl font-bold text-purple-400">{results.length}</div>
                   <div className="text-xs text-white/40">Questions</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-neon-purple">{highScore}/10</div>
+                  <div className="text-3xl font-bold text-purple-400">{highScore}/10</div>
                   <div className="text-xs text-white/40">Best Score</div>
                 </div>
                 <div>
@@ -770,7 +770,7 @@ export default function InterviewPrepPage() {
                   <div
                     key={i}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                      r.evaluation.score >= 8 ? 'bg-neon-green/20 text-neon-green' :
+                      r.evaluation.score >= 8 ? 'bg-purple-400/20 text-purple-400' :
                       r.evaluation.score >= 5 ? 'bg-yellow-400/20 text-yellow-400' :
                       'bg-red-400/20 text-red-400'
                     }`}
@@ -786,12 +786,12 @@ export default function InterviewPrepPage() {
             <div className="grid sm:grid-cols-2 gap-6">
               <div className="card">
                 <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-neon-green" /> Overall Strengths
+                  <CheckCircle2 className="w-4 h-4 text-purple-400" /> Overall Strengths
                 </h3>
                 <ul className="space-y-2">
                   {allStrengths.slice(0, 5).map((s, i) => (
                     <li key={i} className="text-sm text-white/50 flex items-start gap-2">
-                      <Star className="w-3 h-3 text-neon-green mt-0.5 flex-shrink-0" /> {s}
+                      <Star className="w-3 h-3 text-purple-400 mt-0.5 flex-shrink-0" /> {s}
                     </li>
                   ))}
                 </ul>
@@ -814,14 +814,14 @@ export default function InterviewPrepPage() {
             {/* Question-by-Question Breakdown */}
             <div className="card">
               <h3 className="text-sm font-semibold text-white/60 mb-4 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-neon-blue" /> Question Breakdown
+                <BarChart3 className="w-4 h-4 text-purple-400" /> Question Breakdown
               </h3>
               <div className="space-y-3">
                 {results.map((r, i) => (
                   <details key={i} className="group">
                     <summary className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] cursor-pointer transition-colors">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        r.evaluation.score >= 8 ? 'bg-neon-green/20 text-neon-green' :
+                        r.evaluation.score >= 8 ? 'bg-purple-400/20 text-purple-400' :
                         r.evaluation.score >= 5 ? 'bg-yellow-400/20 text-yellow-400' :
                         'bg-red-400/20 text-red-400'
                       }`}>
@@ -848,10 +848,10 @@ export default function InterviewPrepPage() {
                         <p className="text-xs text-white/60">{r.evaluation.feedback}</p>
                       </div>
                       <div>
-                        <div className="text-xs text-neon-purple mb-1 flex items-center gap-1">
+                        <div className="text-xs text-purple-400 mb-1 flex items-center gap-1">
                           <Sparkles className="w-3 h-3" /> Model Answer:
                         </div>
-                        <p className="text-xs text-white/50 p-2 rounded bg-neon-purple/5 border border-neon-purple/10">
+                        <p className="text-xs text-white/50 p-2 rounded bg-purple-400/5 border border-purple-400/10">
                           {r.evaluation.improvedAnswer}
                         </p>
                       </div>

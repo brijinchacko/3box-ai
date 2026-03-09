@@ -27,21 +27,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'An agent run is already in progress' }, { status: 409 });
     }
 
+    // Ensure auto-apply config exists and is enabled — auto-create if missing
+    let autoConfig = await prisma.autoApplyConfig.findUnique({
+      where: { userId: session.user.id },
+    });
+    if (!autoConfig) {
+      // Auto-create config with sensible defaults so first run works
+      autoConfig = await prisma.autoApplyConfig.create({
+        data: {
+          userId: session.user.id,
+          enabled: true,
+          automationMode: 'autopilot',
+          targetRoles: [],
+          targetLocations: [],
+          excludeCompanies: [],
+          excludeKeywords: [],
+          minMatchScore: 60,
+          maxAppliesPerRun: 100,
+          preferRemote: false,
+        },
+      });
+    } else if (!autoConfig.enabled) {
+      // Auto-enable for manual "Run Now" button clicks
+      await prisma.autoApplyConfig.update({
+        where: { userId: session.user.id },
+        data: { enabled: true },
+      });
+    }
+
     // Read automationMode: prefer request body, fall back to DB config, then default 'autopilot'
     let automationMode: AutomationMode = 'autopilot';
     try {
       const body = await request.json().catch(() => ({}));
       if (body?.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(body.automationMode)) {
         automationMode = body.automationMode as AutomationMode;
-      } else {
-        // Read from database config
-        const config = await prisma.autoApplyConfig.findUnique({
-          where: { userId: session.user.id },
-          select: { automationMode: true },
-        });
-        if (config?.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(config.automationMode)) {
-          automationMode = config.automationMode as AutomationMode;
-        }
+      } else if (autoConfig.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(autoConfig.automationMode)) {
+        automationMode = autoConfig.automationMode as AutomationMode;
       }
     } catch {
       // Fall through with default 'autopilot'

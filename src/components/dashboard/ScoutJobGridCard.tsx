@@ -39,7 +39,7 @@ function timeAgo(dateStr: string): string {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 70) return 'bg-neon-green/10 text-neon-green border-neon-green/20';
+  if (score >= 70) return 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20';
   if (score >= 40) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
   return 'bg-white/5 text-white/40 border-white/10';
 }
@@ -78,10 +78,10 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick 
         <div className="flex items-center gap-1">
           <MapPin className="w-3 h-3 flex-shrink-0" />
           <span className="truncate">{job.location}</span>
-          {job.remote && <span className="text-neon-green/60 ml-1">(Remote)</span>}
+          {job.remote && <span className="text-cyan-400/60 ml-1">(Remote)</span>}
         </div>
         {job.salary && (
-          <p className="text-neon-green/60 font-medium">{job.salary}</p>
+          <p className="text-cyan-400/60 font-medium">{job.salary}</p>
         )}
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3 flex-shrink-0" />
@@ -95,7 +95,7 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick 
           onClick={(e) => { e.stopPropagation(); onSave(); }}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
             isSaved
-              ? 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20'
+              ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20'
               : 'bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60'
           }`}
         >
@@ -107,7 +107,7 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick 
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue transition-all ml-auto"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-400/10 hover:bg-blue-400/20 text-blue-400 transition-all ml-auto"
         >
           Apply <ExternalLink className="w-3 h-3" />
         </a>

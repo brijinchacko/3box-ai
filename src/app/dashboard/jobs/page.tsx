@@ -175,7 +175,7 @@ function JobDetailOverlay({
               <h3 className="text-sm font-bold text-white">{job.title}</h3>
               {typeof job.matchScore === 'number' && (
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
-                  job.matchScore >= 70 ? 'bg-neon-green/10 text-neon-green border-neon-green/20' :
+                  job.matchScore >= 70 ? 'bg-blue-400/10 text-blue-400 border-blue-400/20' :
                   job.matchScore >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                   'bg-white/5 text-white/40 border-white/10'
                 }`}>
@@ -195,9 +195,9 @@ function JobDetailOverlay({
           <div className="flex items-center gap-3 text-xs text-white/30 flex-wrap">
             <span className="flex items-center gap-1">
               <MapPin className="w-3 h-3" /> {job.location}
-              {job.remote && <span className="text-neon-green/60 ml-1">(Remote)</span>}
+              {job.remote && <span className="text-cyan-400/60 ml-1">(Remote)</span>}
             </span>
-            {job.salary && <span className="text-neon-green/60">{job.salary}</span>}
+            {job.salary && <span className="text-cyan-400/60">{job.salary}</span>}
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
             </span>
@@ -559,15 +559,15 @@ export default function JobsPage() {
               >
                 <X className="w-4 h-4 text-white/40" />
               </button>
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-orange/20 to-neon-purple/20 flex items-center justify-center mx-auto mb-4">
-                <Crown className="w-8 h-8 text-neon-orange" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400/20 to-cyan-400/20 flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-blue-400" />
               </div>
               <h3 className="text-xl font-bold mb-2">Upgrade to Ultra</h3>
               <p className="text-sm text-white/50 mb-2">
                 You found a great match!
               </p>
               <p className="text-sm text-white/40 mb-6">
-                Upgrade to the <span className="text-neon-orange font-semibold">Ultra plan</span> to view full job details, apply directly, and get AI-powered application assistance.
+                Upgrade to the <span className="text-blue-400 font-semibold">Ultra plan</span> to view full job details, apply directly, and get AI-powered application assistance.
               </p>
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 mb-6 text-left">
                 <p className="text-sm font-medium text-white/80">{selectedJob.title}</p>
@@ -595,7 +595,7 @@ export default function JobsPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-          <Briefcase className="w-7 h-7 text-neon-orange" /> Job Matching
+          <Briefcase className="w-7 h-7 text-blue-400" /> Job Matching
         </h1>
         <p className="text-white/40">Find and track job opportunities powered by real-time data.</p>
       </motion.div>
@@ -650,7 +650,7 @@ export default function JobsPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-white/50 truncate">{run.summary?.split(' — ')[0] || 'Scout mission'}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] flex-shrink-0 ${
-                          run.status === 'completed' ? 'bg-neon-green/10 text-neon-green' :
+                          run.status === 'completed' ? 'bg-blue-400/10 text-blue-400' :
                           run.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
                           'bg-amber-500/10 text-amber-400'
                         }`}>
@@ -741,7 +741,7 @@ export default function JobsPage() {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-white/30">{run.jobsFound} jobs</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                            run.status === 'completed' ? 'bg-neon-green/10 text-neon-green' :
+                            run.status === 'completed' ? 'bg-blue-400/10 text-blue-400' :
                             run.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
                             'bg-amber-500/10 text-amber-400'
                           }`}>
@@ -837,7 +837,7 @@ export default function JobsPage() {
                   onClick={() => setRemoteOnly(!remoteOnly)}
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all border ${
                     remoteOnly
-                      ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
+                      ? 'bg-cyan-400/10 border-cyan-400/30 text-cyan-400'
                       : 'bg-white/5 border-white/10 text-white/40 hover:text-white/60'
                   }`}
                 >
@@ -910,7 +910,7 @@ export default function JobsPage() {
                         <h3 className="font-semibold text-white truncate">{job.title}</h3>
                         {typeof job.matchScore === 'number' && (
                           <span className={`badge text-xs flex-shrink-0 ${
-                            job.matchScore >= 70 ? 'bg-neon-green/10 text-neon-green' :
+                            job.matchScore >= 70 ? 'bg-blue-400/10 text-blue-400' :
                             job.matchScore >= 40 ? 'bg-amber-500/10 text-amber-400' :
                             'bg-white/5 text-white/40'
                           }`}>
@@ -918,7 +918,7 @@ export default function JobsPage() {
                           </span>
                         )}
                         {job.remote && (
-                          <span className="badge text-xs bg-neon-green/10 text-neon-green flex-shrink-0">
+                          <span className="badge text-xs bg-cyan-400/10 text-cyan-400 flex-shrink-0">
                             <Wifi className="w-3 h-3 mr-0.5" /> Remote
                           </span>
                         )}
@@ -932,7 +932,7 @@ export default function JobsPage() {
                           <MapPin className="w-3 h-3" /> {job.location}
                         </span>
                         {job.salary && (
-                          <span className="text-neon-green/80 font-medium">{job.salary}</span>
+                          <span className="text-cyan-400/80 font-medium">{job.salary}</span>
                         )}
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
@@ -1007,7 +1007,7 @@ export default function JobsPage() {
                     onClick={() => handlePageChange(pageNum)}
                     className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
                       page === pageNum
-                        ? 'bg-neon-orange/20 text-neon-orange border border-neon-orange/30'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                         : 'text-white/40 hover:text-white hover:bg-white/10'
                     }`}
                   >
@@ -1070,7 +1070,7 @@ export default function JobsPage() {
                     <div className="flex items-center gap-3 mb-1.5 flex-wrap">
                       <h3 className="font-semibold text-white truncate">{job.title}</h3>
                       {job.remote && (
-                        <span className="badge text-xs bg-neon-green/10 text-neon-green flex-shrink-0">
+                        <span className="badge text-xs bg-cyan-400/10 text-cyan-400 flex-shrink-0">
                           <Wifi className="w-3 h-3 mr-0.5" /> Remote
                         </span>
                       )}
@@ -1078,7 +1078,7 @@ export default function JobsPage() {
                     <div className="flex items-center gap-4 text-sm text-white/40 flex-wrap mb-2">
                       <span className="font-medium text-white/60">{job.company}</span>
                       <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {job.location}</span>
-                      {job.salary && <span className="text-neon-green/80 font-medium">{job.salary}</span>}
+                      {job.salary && <span className="text-cyan-400/80 font-medium">{job.salary}</span>}
                     </div>
                     <p className="text-sm text-white/30 line-clamp-2">{job.description}</p>
                   </div>

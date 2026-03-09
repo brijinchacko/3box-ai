@@ -138,13 +138,13 @@ function timeAgo(dateStr: string): string {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 80) return 'text-neon-green';
+  if (score >= 80) return 'text-rose-400';
   if (score >= 60) return 'text-yellow-400';
   return 'text-red-400';
 }
 
 function scoreBg(score: number): string {
-  if (score >= 80) return 'bg-neon-green/10 border-neon-green/20';
+  if (score >= 80) return 'bg-rose-500/10 border-rose-500/20';
   if (score >= 60) return 'bg-yellow-400/10 border-yellow-400/20';
   return 'bg-red-400/10 border-red-400/20';
 }
@@ -156,7 +156,7 @@ function issueIcon(type: ReviewIssue['type']) {
     case 'warning':
       return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-0.5" />;
     case 'info':
-      return <CheckCircle2 className="w-3.5 h-3.5 text-neon-blue flex-shrink-0 mt-0.5" />;
+      return <CheckCircle2 className="w-3.5 h-3.5 text-pink-400 flex-shrink-0 mt-0.5" />;
   }
 }
 
@@ -266,15 +266,15 @@ export default function QualityReviewPage() {
             label: 'Total Reviews',
             value: totalReviews,
             icon: FileCheck,
-            color: 'text-neon-blue',
-            bg: 'bg-neon-blue/10',
+            color: 'text-rose-400',
+            bg: 'bg-rose-400/10',
           },
           {
             label: 'Approved',
             value: approvedCount,
             icon: CheckCircle2,
-            color: 'text-neon-green',
-            bg: 'bg-neon-green/10',
+            color: 'text-rose-400',
+            bg: 'bg-rose-400/10',
           },
           {
             label: 'Rejected',
@@ -391,7 +391,7 @@ export default function QualityReviewPage() {
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
                             review.status === 'approved'
-                              ? 'bg-neon-green/10 text-neon-green border-neon-green/20'
+                              ? 'bg-rose-400/10 text-rose-400 border-rose-400/20'
                               : 'bg-red-400/10 text-red-400 border-red-400/20'
                           }`}
                         >
@@ -424,7 +424,7 @@ export default function QualityReviewPage() {
                             </span>
                           )}
                           {review.issues.some((iss) => iss.type === 'info') && (
-                            <span className="flex items-center gap-1 text-[10px] text-neon-blue bg-neon-blue/10 px-2 py-0.5 rounded-full">
+                            <span className="flex items-center gap-1 text-[10px] text-pink-400 bg-pink-400/10 px-2 py-0.5 rounded-full">
                               <CheckCircle2 className="w-3 h-3" />
                               {review.issues.filter((iss) => iss.type === 'info').length} note(s)
                             </span>
@@ -504,7 +504,7 @@ export default function QualityReviewPage() {
                                 transition={{ duration: 0.6, delay: 0.1 }}
                                 className={`h-full rounded-full ${
                                   review.qualityScore >= 80
-                                    ? 'bg-neon-green'
+                                    ? 'bg-rose-400'
                                     : review.qualityScore >= 60
                                     ? 'bg-yellow-400'
                                     : 'bg-red-400'
@@ -526,7 +526,7 @@ export default function QualityReviewPage() {
                                 transition={{ duration: 0.6, delay: 0.2 }}
                                 className={`h-full rounded-full ${
                                   review.resumeMatchPercent >= 80
-                                    ? 'bg-neon-green'
+                                    ? 'bg-rose-400'
                                     : review.resumeMatchPercent >= 60
                                     ? 'bg-yellow-400'
                                     : 'bg-red-400'

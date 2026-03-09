@@ -48,9 +48,9 @@ interface LearningPathData {
 
 // ─── Config ─────────────────────────────────────
 const typeConfig = {
-  course: { icon: Play, color: 'text-neon-blue', bg: 'bg-neon-blue/10' },
-  project: { icon: Code, color: 'text-neon-green', bg: 'bg-neon-green/10' },
-  reading: { icon: FileText, color: 'text-neon-purple', bg: 'bg-neon-purple/10' },
+  course: { icon: Play, color: 'text-teal-400', bg: 'bg-teal-400/10' },
+  project: { icon: Code, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
+  reading: { icon: FileText, color: 'text-teal-400', bg: 'bg-teal-400/10' },
   practice: { icon: Lightbulb, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
 };
 
@@ -98,7 +98,7 @@ function LoadingSkeleton() {
 // ─── AI Generating Animation ────────────────────
 function GeneratingAnimation({ targetRole }: { targetRole: string }) {
   return (
-    <div className="card border-neon-green/20 py-8">
+    <div className="card border-teal-500/20 py-8">
       <AgentLoader agentId="sage" message={`Agent Sage is curating your ${targetRole} learning path`} size="lg" />
     </div>
   );
@@ -115,9 +115,9 @@ function ApplicationInsights({ reports }: { reports: ApplicationGapReport[] }) {
       className="mb-8"
     >
       <div className="flex items-center gap-2 mb-4">
-        <Target className="w-5 h-5 text-neon-blue" />
+        <Target className="w-5 h-5 text-teal-400" />
         <h2 className="text-lg font-bold">Application Insights</h2>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-blue/10 text-neon-blue font-medium">
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-400/10 text-teal-400 font-medium">
           Based on your applications
         </span>
       </div>
@@ -155,14 +155,14 @@ function ApplicationInsights({ reports }: { reports: ApplicationGapReport[] }) {
               <div className="flex-1">
                 <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
                   <span>With skills</span>
-                  <span className="text-neon-green">{report.projectedMatchRate}%</span>
+                  <span className="text-teal-400">{report.projectedMatchRate}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-white/5">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${report.projectedMatchRate}%` }}
                     transition={{ duration: 0.8, delay: 0.2 }}
-                    className="h-full rounded-full bg-gradient-to-r from-neon-green to-neon-blue"
+                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-500"
                   />
                 </div>
               </div>
@@ -176,7 +176,7 @@ function ApplicationInsights({ reports }: { reports: ApplicationGapReport[] }) {
                   <span className="text-white/60">{ms.skill}</span>
                   <span className="text-white/30">
                     Required in{' '}
-                    <span className="text-neon-blue font-medium">{ms.frequency}/{ms.total}</span>
+                    <span className="text-teal-400 font-medium">{ms.frequency}/{ms.total}</span>
                     {' '}jobs
                   </span>
                 </div>
@@ -245,8 +245,8 @@ function EmptyState({
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <div className="text-center mb-10">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-neon-green/20 to-neon-blue/20 flex items-center justify-center mx-auto mb-6">
-          <BookOpen className="w-10 h-10 text-neon-green" />
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center mx-auto mb-6">
+          <BookOpen className="w-10 h-10 text-teal-400" />
         </div>
         <h2 className="text-2xl font-bold mb-3">Create Your AI Learning Path</h2>
         <p className="text-white/40 max-w-md mx-auto">
@@ -258,11 +258,11 @@ function EmptyState({
       {/* Quick generate if role already known */}
       {selectedRole && (
         <div className="max-w-md mx-auto mb-8">
-          <div className="card border-neon-green/10 bg-neon-green/[0.03]">
+          <div className="card border-teal-500/10 bg-teal-500/[0.03]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/40 mb-1">Target role detected</p>
-                <p className="font-semibold text-neon-green">{selectedRole}</p>
+                <p className="font-semibold text-teal-400">{selectedRole}</p>
               </div>
               <button
                 onClick={() => handleGenerate(selectedRole)}
@@ -319,18 +319,18 @@ function EmptyState({
       )}
 
       {/* Info Banner */}
-      <div className="mt-8 card border-neon-green/10 bg-neon-green/[0.03] max-w-2xl mx-auto">
+      <div className="mt-8 card border-teal-500/10 bg-teal-500/[0.03] max-w-2xl mx-auto">
         <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-neon-green flex-shrink-0 mt-0.5" />
+          <Sparkles className="w-5 h-5 text-teal-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="text-sm font-semibold text-neon-green mb-1">Adaptive Learning</h4>
+            <h4 className="text-sm font-semibold text-teal-400 mb-1">Adaptive Learning</h4>
             <p className="text-xs text-white/40">
               For the most personalized path, first complete your{' '}
-              <Link href="/dashboard/assessment" className="text-neon-green hover:underline">
+              <Link href="/dashboard/assessment" className="text-teal-400 hover:underline">
                 skill assessment
               </Link>{' '}
               and{' '}
-              <Link href="/dashboard/career-plan" className="text-neon-green hover:underline">
+              <Link href="/dashboard/career-plan" className="text-teal-400 hover:underline">
                 career plan
               </Link>
               . The AI uses your skill gaps to curate the most relevant resources.
@@ -472,7 +472,7 @@ export default function LearningPathPage() {
       <div className="max-w-4xl mx-auto">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-            <BookOpen className="w-7 h-7 text-neon-green" /> Adaptive Learning Path
+            <BookOpen className="w-7 h-7 text-teal-400" /> Adaptive Learning Path
           </h1>
           <p className="text-white/40">Curating your personalized modules...</p>
         </motion.div>
@@ -487,7 +487,7 @@ export default function LearningPathPage() {
       <div className="max-w-4xl mx-auto">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-            <BookOpen className="w-7 h-7 text-neon-green" /> Adaptive Learning Path
+            <BookOpen className="w-7 h-7 text-teal-400" /> Adaptive Learning Path
           </h1>
           <p className="text-white/40">Get an AI-curated learning path tailored to your goals.</p>
         </motion.div>
@@ -536,11 +536,11 @@ export default function LearningPathPage() {
       <AgentPageHeader agentId="sage" />
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-          <BookOpen className="w-7 h-7 text-neon-green" /> Adaptive Learning Path
+          <BookOpen className="w-7 h-7 text-teal-400" /> Adaptive Learning Path
         </h1>
         <p className="text-white/40">
           Personalized modules for your journey to{' '}
-          <span className="text-neon-green">{learningPath.targetRole}</span>.
+          <span className="text-teal-400">{learningPath.targetRole}</span>.
         </p>
       </motion.div>
 
@@ -567,7 +567,7 @@ export default function LearningPathPage() {
         animate={{ opacity: 1 }}
         className="flex items-center gap-2 mb-6 text-xs text-white/30"
       >
-        <Sparkles className="w-3.5 h-3.5 text-neon-green" />
+        <Sparkles className="w-3.5 h-3.5 text-teal-400" />
         <span>AI-Curated Path</span>
         {learningPath.estimatedCompletion && (
           <>
@@ -587,11 +587,11 @@ export default function LearningPathPage() {
           <div className="text-xs text-white/40">Overall Progress</div>
         </div>
         <div className="card text-center">
-          <div className="text-2xl font-bold text-neon-green">{completedCount}/{modules.length}</div>
+          <div className="text-2xl font-bold text-teal-400">{completedCount}/{modules.length}</div>
           <div className="text-xs text-white/40">Modules Complete</div>
         </div>
         <div className="card text-center">
-          <div className="text-2xl font-bold text-neon-purple">{adaptiveCount}</div>
+          <div className="text-2xl font-bold text-cyan-400">{adaptiveCount}</div>
           <div className="text-xs text-white/40">AI-Adaptive Modules</div>
         </div>
       </div>
@@ -604,14 +604,14 @@ export default function LearningPathPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-neon-green/10 via-neon-blue/10 to-neon-purple/10 border border-neon-green/20"
+          className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-cyan-400/10 border border-teal-500/20"
         >
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-green/20 to-neon-blue/20 flex items-center justify-center flex-shrink-0">
-              <Trophy className="w-7 h-7 text-neon-green" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center flex-shrink-0">
+              <Trophy className="w-7 h-7 text-teal-400" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-neon-green mb-1">🎉 Learning Path Complete!</h3>
+              <h3 className="text-lg font-bold text-teal-400 mb-1">🎉 Learning Path Complete!</h3>
               <p className="text-sm text-white/50 mb-4">
                 Congratulations! You've completed all {modules.length} modules. Time to prove your skills with an assessment.
                 Score at least 85% to unlock job applications.
@@ -694,7 +694,7 @@ export default function LearningPathPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`card ${progress > 0 && progress < 100 ? 'border-neon-blue/20' : ''}`}
+              className={`card ${progress > 0 && progress < 100 ? 'border-teal-500/20' : ''}`}
             >
               <div className="flex items-start gap-4">
                 <div className={`w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
@@ -728,7 +728,7 @@ export default function LearningPathPage() {
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 0.5 }}
-                        className={`skill-bar-fill ${progress === 100 ? 'bg-neon-green' : 'bg-neon-blue'}`}
+                        className={`skill-bar-fill ${progress === 100 ? 'bg-teal-400' : 'bg-gradient-to-r from-teal-500 to-cyan-500'}`}
                       />
                     </div>
                     <span className="text-xs text-white/40 w-10 text-right">{progress}%</span>
@@ -754,12 +754,12 @@ export default function LearningPathPage() {
                           className="ml-1"
                           title="Mark as complete"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-white/20 hover:text-neon-green transition-colors" />
+                          <CheckCircle2 className="w-4 h-4 text-white/20 hover:text-teal-400 transition-colors" />
                         </button>
                       )}
                     </div>
                     {mod.url && (
-                      <a href={mod.url} target="_blank" rel="noopener noreferrer" className="text-neon-blue hover:underline">
+                      <a href={mod.url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
@@ -777,7 +777,7 @@ export default function LearningPathPage() {
           <p className="text-white/40 text-sm">No modules match the selected filter.</p>
           <button
             onClick={() => setFilter('all')}
-            className="text-neon-blue text-xs hover:underline mt-2"
+            className="text-teal-400 text-xs hover:underline mt-2"
           >
             Show all modules
           </button>
