@@ -12,6 +12,7 @@ import {
 import AgentLoader from '@/components/brand/AgentLoader';
 import TemplatePreview from '@/components/resume/TemplatePreview';
 import { buildResumeHTML } from '@/lib/resume/buildHTML';
+import { notifyAgentStarted, notifyAgentCompleted, notifyAgentError } from '@/lib/notifications/toast';
 
 interface ForgeStatus {
   dashboardState: 'no_resume' | 'pending_approval' | 'approved' | 'editing';
@@ -53,7 +54,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('/api/forge/status');
+      const res = await fetch(`/api/forge/status?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         setStatus(data);
@@ -72,6 +73,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
 
     // Notify sidebar that Forge is working
     window.dispatchEvent(new CustomEvent('forge:status', { detail: { working: true } }));
+    notifyAgentStarted('forge', 'Building your resume & cover letter...');
 
     // Simulate progress steps
     const progressInterval = setInterval(() => {
@@ -100,11 +102,14 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        showToast(err.error || 'Failed to generate resume', 'error');
+        const errMsg = err.error || 'Failed to generate resume';
+        showToast(errMsg, 'error');
+        notifyAgentError('forge', errMsg);
         return;
       }
 
       showToast('Resume & cover letter generated! Review below.', 'success');
+      notifyAgentCompleted('forge', 'Resume & cover letter generated! Review and approve.', '/dashboard/resume');
       // Refresh status to get the new resume
       await fetchStatus();
       onStatusChange();
@@ -112,6 +117,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
       clearInterval(progressInterval);
       console.error('[ForgeAutoGenerate] Generation failed:', err);
       showToast('Generation failed. Please try again.', 'error');
+      notifyAgentError('forge', 'Resume generation failed. Please try again.');
     } finally {
       setGenerating(false);
       setGenProgress(0);
@@ -138,16 +144,20 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        showToast(err.error || 'Failed to process', 'error');
+        const errMsg = err.error || 'Failed to process';
+        showToast(errMsg, 'error');
+        notifyAgentError('forge', errMsg);
         return;
       }
 
       if (action === 'approve') {
         showToast('Resume approved! Archer can now use it for applications.', 'success');
+        notifyAgentCompleted('forge', 'Resume approved! Deploy Archer to start applying.', '/dashboard/applications');
         // Refresh pipeline/GuidedWorkflow
         window.dispatchEvent(new Event('journey:refresh'));
       } else {
         showToast('Resume rejected. You can regenerate or edit manually.', 'success');
+        notifyAgentCompleted('forge', 'Resume sent back for changes. Edit or regenerate.', '/dashboard/resume');
       }
 
       await fetchStatus();
@@ -155,6 +165,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
     } catch (err) {
       console.error('[ForgeAutoGenerate] Approval failed:', err);
       showToast('Failed to process. Try again.', 'error');
+      notifyAgentError('forge', 'Failed to process approval. Try again.');
     } finally {
       setApproving(false);
     }
@@ -391,6 +402,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
             {previewHtml ? (
               <div className="rounded-xl overflow-hidden border border-white/10 bg-white" style={{ maxHeight: '700px', overflow: 'auto' }}>
                 <iframe
+                  key={`preview-${resume?.id}-${resume?.updatedAt}`}
                   srcDoc={previewHtml}
                   title="Resume Preview"
                   className="w-full pointer-events-none"

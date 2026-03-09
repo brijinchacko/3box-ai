@@ -29,6 +29,7 @@ import { useSession } from 'next-auth/react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { notifyAgentStarted, notifyAgentCompleted, notifyAgentError } from '@/lib/notifications/toast';
 
 // ── Types ──────────────────────────────────────────────
 interface ApplicationEntry {
@@ -177,6 +178,18 @@ export default function ApplicationsPage() {
           setPreflight(prev => prev ? { ...prev, lastRun: run, runningNow: false } : prev);
           // Refresh applications
           fetchApplications(statusFilter, 1);
+          // Notify completion
+          if (run.status === 'completed' || run.status === 'partial') {
+            if (run.jobsApplied > 0) {
+              notifyAgentCompleted('archer', `Applied to ${run.jobsApplied} jobs! ${run.jobsFound} found, ${run.jobsSkipped || 0} skipped.`, '/dashboard/applications');
+            } else if (run.jobsFound > 0) {
+              notifyAgentCompleted('archer', `Found ${run.jobsFound} jobs but none applied. Review your resume or filters.`, '/dashboard/applications');
+            } else {
+              notifyAgentCompleted('archer', 'No matching jobs found. Try adjusting your target roles.', '/dashboard/jobs');
+            }
+          } else if (run.status === 'failed') {
+            notifyAgentError('archer', run.summary || 'Pipeline failed. Please try again.');
+          }
         }
       } catch {}
     }, 3000);
@@ -218,6 +231,7 @@ export default function ApplicationsPage() {
     setRunning(true);
     setRunResult(null);
     setRunError(null);
+    notifyAgentStarted('archer', 'Searching for jobs and preparing applications...');
     try {
       const res = await fetch('/api/agents/run', {
         method: 'POST',
@@ -226,8 +240,10 @@ export default function ApplicationsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setRunError(data.error || 'Failed to start pipeline');
+        const errMsg = data.error || 'Failed to start pipeline';
+        setRunError(errMsg);
         setRunning(false);
+        notifyAgentError('archer', errMsg);
         return;
       }
       // Pipeline started — poll will pick up completion
@@ -236,10 +252,19 @@ export default function ApplicationsPage() {
         setRunning(false);
         setRunResult(data);
         fetchApplications(statusFilter, 1);
+        if (data.jobsApplied > 0) {
+          notifyAgentCompleted('archer', `Applied to ${data.jobsApplied} jobs successfully!`, '/dashboard/applications');
+        } else if (data.jobsFound > 0) {
+          notifyAgentCompleted('archer', `Found ${data.jobsFound} jobs but none applied. Check filters or resume.`, '/dashboard/applications');
+        } else {
+          notifyAgentCompleted('archer', 'No matching jobs found in this run.', '/dashboard/jobs');
+        }
       }
     } catch (err: any) {
-      setRunError(err.message || 'Failed to start');
+      const errMsg = err.message || 'Failed to start';
+      setRunError(errMsg);
       setRunning(false);
+      notifyAgentError('archer', errMsg);
     }
   };
 

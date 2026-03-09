@@ -8,7 +8,7 @@ import AgentLoader from '@/components/brand/AgentLoader';
 import { getInsightsForRole, type JobInsight } from '@/lib/data/jobMarketInsights';
 import { useTokens } from '@/hooks/useTokens';
 import { TOKEN_COSTS, estimateScoutCost } from '@/lib/tokens/pricing';
-import { notifyAgentStarted } from '@/lib/notifications/toast';
+import { notifyAgentStarted, notifyAgentError } from '@/lib/notifications/toast';
 
 interface ScoutMissionModalProps {
   open: boolean;
@@ -131,9 +131,11 @@ export default function ScoutMissionModal({ open, onClose, onComplete, onBackgro
         // User cancelled — don't show error
         return;
       }
-      setError(err.message || 'Something went wrong');
+      const errMsg = err.message || 'Something went wrong';
+      setError(errMsg);
       setIsDeploying(false);
       abortRef.current = null;
+      notifyAgentError('scout', errMsg);
     }
   };
 
