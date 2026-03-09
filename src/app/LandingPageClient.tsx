@@ -19,7 +19,7 @@ import CortexAvatar, { type CortexExpression } from '@/components/brand/CortexAv
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
 import ResumePreviewSection from '@/components/landing/ResumePreviewSection';
-import FreeAutoApplyHero from '@/components/landing/FreeAutoApplyHero';
+
 import LiveApplicationCounter from '@/components/landing/LiveApplicationCounter';
 import PlacementCellBanner from '@/components/landing/PlacementCellBanner';
 import { saveOnboardingProfile } from '@/lib/onboarding/onboardingData';
@@ -724,9 +724,6 @@ export default function LandingPageClient() {
           </div>
         </div>
       </section>
-
-      {/* ─── Free Auto-Apply Widget ─── */}
-      <FreeAutoApplyHero />
 
       {/* ─── Chapter One: The Encounter (Hero) ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" aria-label="AI Career Coach Onboarding">
