@@ -10,7 +10,8 @@ import {
   CheckCircle2, BarChart3, Bot, Cpu, Award,
   DollarSign, Send, User, MapPin,
   Moon, Users, Workflow, Star, ChevronDown, ChevronUp, Quote,
-  Clock, Heart, Shield, Rocket, Lock, Eye, ShieldCheck, Upload, Search
+  Clock, Heart, Shield, Rocket, Lock, Eye, ShieldCheck, Upload, Search,
+  ClipboardPaste, Loader2, X
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import { useVisitorName } from '@/hooks/useVisitorName';
@@ -349,9 +350,9 @@ const reviewsByRegion: Record<string, Review[]> = {
 
 // ─── Conversational Steps ────────────────────
 
-type ConvoStep = 'intro' | 'role' | 'experience' | 'status' | 'education' | 'skills' | 'personal' | 'complete';
+type ConvoStep = 'intro' | 'resume' | 'role' | 'experience' | 'status' | 'education' | 'skills' | 'personal' | 'complete';
 
-const stepOrder: ConvoStep[] = ['intro', 'role', 'experience', 'status', 'education', 'skills', 'personal', 'complete'];
+const stepOrder: ConvoStep[] = ['intro', 'resume', 'role', 'experience', 'status', 'education', 'skills', 'personal', 'complete'];
 
 interface Message {
   from: 'nova' | 'user';
@@ -376,6 +377,16 @@ export default function LandingPageClient() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [fullName, setFullName] = useState('');
   const [location, setLocation] = useState('');
+
+  // Resume upload state
+  const [resumeMode, setResumeMode] = useState<'upload' | 'paste' | null>(null);
+  const [resumeText, setResumeText] = useState('');
+  const [resumeParsing, setResumeParsing] = useState(false);
+  const [resumeParsed, setResumeParsed] = useState(false);
+  const [resumeError, setResumeError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Collected data
   const [targetRole, setTargetRole] = useState('');
@@ -437,10 +448,10 @@ export default function LandingPageClient() {
       setTimeout(() => {
         setMessages([{
           from: 'nova',
-          text: "Hey! I'm Agent Cortex, your career coach. Let's find the perfect path for you.",
+          text: "Hey! I'm Agent Cortex. Upload your resume to fast-track onboarding, or skip to fill manually.",
           type: 'question',
         }]);
-        setTimeout(() => setStep('role'), 600);
+        setTimeout(() => setStep('resume'), 600);
       }, 500);
     }
   }, [alreadyDone]);
@@ -481,6 +492,80 @@ export default function LandingPageClient() {
 
   const proceedToStep = (nextStep: ConvoStep) => {
     setTimeout(() => setStep(nextStep), 400);
+  };
+
+  // ─── Resume Handlers ──────────────────────
+
+  const handleFileSelect = (file: File) => {
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'text/plain'];
+    const validExts = ['.pdf', '.docx', '.doc', '.txt'];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+      setResumeError('Please upload a PDF, DOCX, or TXT file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setResumeError('File size must be under 10MB.');
+      return;
+    }
+    setSelectedFile(file);
+    setResumeError('');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const parseResume = async (mode: 'file' | 'text') => {
+    setResumeParsing(true);
+    setResumeError('');
+
+    try {
+      let res: Response;
+
+      if (mode === 'file' && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        res = await fetch('/api/resume/parse', { method: 'POST', body: formData });
+      } else {
+        res = await fetch('/api/resume/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: resumeText }),
+        });
+      }
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to parse resume');
+
+      const parsed = result.data;
+
+      // Auto-populate all fields
+      if (parsed.fullName) setFullName(parsed.fullName);
+      if (parsed.location) setLocation(parsed.location);
+      if (parsed.targetRole) { setTargetRole(parsed.targetRole); setRoleInput(parsed.targetRole); }
+      if (parsed.experienceLevel) setExperience(parsed.experienceLevel);
+      if (parsed.currentStatus) setStatus(parsed.currentStatus);
+      if (parsed.educationLevel) setEducation(parsed.educationLevel);
+      if (parsed.skills?.length) setSelectedSkills(parsed.skills.slice(0, 10));
+
+      setResumeParsed(true);
+      triggerExpression('heart');
+
+      // Show success message and skip to personal info step (name/location confirmation)
+      addCortexMessage(`Resume parsed! I found your details — ${parsed.fullName || 'your profile'}. Let's confirm your info.`);
+
+      // Auto-advance to personal step to confirm name + location, then skip to complete
+      setTimeout(() => setStep('personal'), 1500);
+    } catch (err: any) {
+      setResumeError(err.message || 'Failed to parse resume. Try again or skip.');
+    } finally {
+      setResumeParsing(false);
+    }
   };
 
   // ─── Step Handlers ──────────────────────
@@ -594,6 +679,12 @@ export default function LandingPageClient() {
     setSelectedSkills([]);
     setFullName('');
     setLocation('');
+    setResumeMode(null);
+    setResumeText('');
+    setResumeParsed(false);
+    setResumeParsing(false);
+    setResumeError('');
+    setSelectedFile(null);
     localStorage.removeItem('3box_onboarding_profile');
     localStorage.removeItem('3box_target_role');
     setTimeout(() => {
@@ -741,7 +832,7 @@ export default function LandingPageClient() {
               className="text-center mb-8"
             >
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-5">
-                <Bot className="w-3.5 h-3.5" /> Tell us your target role
+                <Bot className="w-3.5 h-3.5" /> {step === 'resume' ? 'Upload your resume' : 'Tell us your target role'}
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4">
                 <span className="gradient-text">{firstName ? `${firstName}, Let\u2019s Build` : 'Let\u2019s Build'}</span>
@@ -835,7 +926,9 @@ export default function LandingPageClient() {
                       exit={{ opacity: 0, y: 10 }}
                       className="text-xl sm:text-2xl font-bold text-center mb-4"
                     >
-                      {step === 'intro' || step === 'role' ? (
+                      {step === 'resume' ? (
+                        <>Quick start with your <span className="gradient-text">resume</span></>
+                      ) : step === 'intro' || step === 'role' ? (
                         <>What role should your agents <span className="gradient-text">target?</span></>
                       ) : step === 'experience' ? (
                         <>How much <span className="gradient-text">experience</span> do you have?</>
@@ -856,6 +949,163 @@ export default function LandingPageClient() {
                   {/* Input Area — changes based on step */}
                   <div className="w-full">
                     <AnimatePresence mode="wait">
+                      {/* Resume Upload / Paste */}
+                      {step === 'resume' && (
+                        <motion.div key="resume-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                          {/* Success state */}
+                          {resumeParsed && (
+                            <div className="p-5 rounded-2xl bg-gradient-to-br from-neon-green/10 to-emerald-500/5 border border-neon-green/20 text-center">
+                              <CheckCircle2 className="w-10 h-10 text-neon-green mx-auto mb-2" />
+                              <h3 className="text-sm font-bold text-white mb-1">Resume Parsed Successfully!</h3>
+                              <p className="text-xs text-white/40">Auto-filling your details...</p>
+                            </div>
+                          )}
+
+                          {/* Parsing state */}
+                          {resumeParsing && (
+                            <div className="p-6 rounded-2xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-neon-blue/10 text-center">
+                              <Loader2 className="w-8 h-8 text-neon-blue mx-auto mb-2 animate-spin" />
+                              <h3 className="text-sm font-bold text-white mb-1">AI is reading your resume...</h3>
+                              <p className="text-xs text-white/40">Extracting name, skills, experience, and more</p>
+                            </div>
+                          )}
+
+                          {/* Error */}
+                          {resumeError && (
+                            <div className="mb-3 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">{resumeError}</div>
+                          )}
+
+                          {/* Upload / Paste UI */}
+                          {!resumeParsing && !resumeParsed && (
+                            <div className="space-y-3">
+                              {/* File Upload */}
+                              {resumeMode !== 'paste' && (
+                                <div>
+                                  <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf,.docx,.doc,.txt"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleFileSelect(file);
+                                    }}
+                                  />
+                                  <div
+                                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                                    onDragLeave={() => setDragOver(false)}
+                                    onDrop={handleDrop}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
+                                      dragOver
+                                        ? 'border-neon-blue bg-neon-blue/5'
+                                        : selectedFile
+                                          ? 'border-neon-green/30 bg-neon-green/5'
+                                          : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+                                    }`}
+                                  >
+                                    {selectedFile ? (
+                                      <div className="flex items-center justify-center gap-3">
+                                        <FileText className="w-7 h-7 text-neon-green" />
+                                        <div className="text-left">
+                                          <p className="text-sm font-semibold text-white">{selectedFile.name}</p>
+                                          <p className="text-[11px] text-white/40">{(selectedFile.size / 1024).toFixed(0)} KB</p>
+                                        </div>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                                          className="ml-2 p-1 rounded-lg hover:bg-white/10"
+                                        >
+                                          <X className="w-4 h-4 text-white/40" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <Upload className={`w-8 h-8 mx-auto mb-2 ${dragOver ? 'text-neon-blue' : 'text-white/20'}`} />
+                                        <p className="text-sm font-medium text-white/60 mb-1">
+                                          Drop your resume here or <span className="text-neon-blue">click to browse</span>
+                                        </p>
+                                        <p className="text-[11px] text-white/30">PDF, DOCX, or TXT (max 10MB)</p>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {selectedFile && (
+                                    <button
+                                      onClick={() => parseResume('file')}
+                                      className="btn-primary w-full mt-2.5 flex items-center justify-center gap-2 text-sm"
+                                    >
+                                      <Zap className="w-4 h-4" /> Parse Resume with AI
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Divider */}
+                              {!resumeMode && (
+                                <div className="flex items-center gap-3">
+                                  <div className="flex-1 h-px bg-white/10" />
+                                  <span className="text-[11px] text-white/30">or</span>
+                                  <div className="flex-1 h-px bg-white/10" />
+                                </div>
+                              )}
+
+                              {/* Paste Text */}
+                              {resumeMode !== 'upload' && (
+                                <div>
+                                  {!resumeMode && (
+                                    <button
+                                      onClick={() => setResumeMode('paste')}
+                                      className="w-full p-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2 text-sm text-white/50 hover:text-white/70"
+                                    >
+                                      <ClipboardPaste className="w-4 h-4" /> Paste resume as text
+                                    </button>
+                                  )}
+                                  {resumeMode === 'paste' && (
+                                    <>
+                                      <div className="flex items-center justify-between mb-2">
+                                        <label className="text-xs text-white/50 flex items-center gap-1.5">
+                                          <ClipboardPaste className="w-3.5 h-3.5" /> Paste your resume text
+                                        </label>
+                                        <button onClick={() => { setResumeMode(null); setResumeText(''); }} className="text-[11px] text-white/30 hover:text-white/50">Cancel</button>
+                                      </div>
+                                      <textarea
+                                        value={resumeText}
+                                        onChange={(e) => setResumeText(e.target.value)}
+                                        className="input-field resize-none text-xs w-full"
+                                        rows={6}
+                                        placeholder="Paste your entire resume text here..."
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={() => parseResume('text')}
+                                        disabled={resumeText.trim().length < 30}
+                                        className="btn-primary w-full mt-2.5 flex items-center justify-center gap-2 text-sm disabled:opacity-30"
+                                      >
+                                        <Zap className="w-4 h-4" /> Parse Resume with AI
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Skip button */}
+                          {!resumeParsing && !resumeParsed && (
+                            <button
+                              onClick={() => {
+                                addUserMessage('Skip — filling manually');
+                                addCortexMessage("No problem! Let's start with your target role.");
+                                proceedToStep('role');
+                              }}
+                              className="w-full mt-3 py-2 text-xs text-white/30 hover:text-white/50 transition-colors text-center"
+                            >
+                              Skip — I&apos;ll fill in manually
+                            </button>
+                          )}
+                        </motion.div>
+                      )}
+
                       {/* Role Input */}
                       {step === 'role' && (
                         <motion.div key="role-input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="relative">
