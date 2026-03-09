@@ -353,26 +353,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'} pt-14 lg:pt-0`}>
-        {/* Guided Workflow — pinned at the very top */}
-        {journey && (
-          <div className="px-4 sm:px-6 lg:px-8 pt-3">
-            <GuidedWorkflow journey={{
-              onboarding: !!journey.onboarding,
-              assessment: !!journey.assessment,
-              careerPlan: !!journey.careerPlan,
-              resume: !!journey.resume,
-              applied: !!journey.applied,
-              interview: !!journey.interview,
-              offer: !!journey.offer,
-            }} />
+        {/* Top Bar — Journey + Controls in one row */}
+        <div className="flex items-center gap-3 px-4 sm:px-6 lg:px-8 pt-3 pb-1">
+          {/* Guided Workflow fills left side */}
+          <div className="flex-1 min-w-0">
+            {journey && (
+              <GuidedWorkflow journey={{
+                onboarding: !!journey.onboarding,
+                assessment: !!journey.assessment,
+                careerPlan: !!journey.careerPlan,
+                resume: !!journey.resume,
+                applied: !!journey.applied,
+                interview: !!journey.interview,
+                offer: !!journey.offer,
+              }} />
+            )}
           </div>
-        )}
-
-        {/* Top Bar — Mode Selector */}
-        <div className="flex items-center justify-end gap-3 px-4 sm:px-6 lg:px-8 pt-2 pb-1">
-          <TokenCounter />
-          <AutomationModeSelector />
-          <NotificationCenter />
+          {/* Controls pinned right */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <TokenCounter />
+            <AutomationModeSelector />
+            <NotificationCenter />
+          </div>
         </div>
 
         {/* Mode accent line — subtle color strip that reflects the active automation mode */}
