@@ -4,7 +4,8 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /dashboard/settings
+Disallow: /dashboard/
+Disallow: /admin/
 Disallow: /_next/
 
 # AI Crawlers
