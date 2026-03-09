@@ -56,6 +56,18 @@ interface AgentConfig {
   maxAppliesPerRun: number;
   preferRemote: boolean;
   scheduleTime: string | null;
+  // Per-Agent Independent Scheduling
+  scoutEnabled: boolean;
+  scoutInterval: number;
+  scoutLastRunAt: string | null;
+  forgeEnabled: boolean;
+  forgeInterval: number;
+  forgeLastRunAt: string | null;
+  forgeMode: string;
+  archerEnabled: boolean;
+  archerInterval: number;
+  archerLastRunAt: string | null;
+  archerMaxPerRun: number;
 }
 
 interface AgentRun {
@@ -106,6 +118,18 @@ export default function AgentDashboardPage() {
     maxAppliesPerRun: 5,
     preferRemote: false,
     scheduleTime: null,
+    // Per-Agent Independent Scheduling
+    scoutEnabled: false,
+    scoutInterval: 24,
+    scoutLastRunAt: null,
+    forgeEnabled: false,
+    forgeInterval: 24,
+    forgeLastRunAt: null,
+    forgeMode: 'on_demand',
+    archerEnabled: false,
+    archerInterval: 24,
+    archerLastRunAt: null,
+    archerMaxPerRun: 10,
   });
   const [configDirty, setConfigDirty] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
@@ -192,6 +216,38 @@ export default function AgentDashboardPage() {
     }));
   }
 
+  const INTERVAL_OPTIONS = [
+    { value: 1, label: 'Every 1h' },
+    { value: 2, label: 'Every 2h' },
+    { value: 4, label: 'Every 4h' },
+    { value: 6, label: 'Every 6h' },
+    { value: 12, label: 'Every 12h' },
+    { value: 24, label: 'Every 24h' },
+  ];
+
+  function humanizeAgo(dateStr: string | null): string {
+    if (!dateStr) return 'Never';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  }
+
+  function nextRunLabel(lastRunAt: string | null, intervalHours: number): string {
+    if (!lastRunAt) return 'On next cron';
+    const nextRun = new Date(new Date(lastRunAt).getTime() + intervalHours * 3600000);
+    if (nextRun.getTime() <= Date.now()) return 'Due now';
+    const diff = nextRun.getTime() - Date.now();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `in ${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    return `in ${hrs}h`;
+  }
+
   const saveConfig = async () => {
     setSavingConfig(true);
     try {
@@ -201,6 +257,15 @@ export default function AgentDashboardPage() {
         targetLocations: targetLocationsInput.split(',').map(s => s.trim()).filter(Boolean),
         excludeCompanies: excludeCompaniesInput.split(',').map(s => s.trim()).filter(Boolean),
         excludeKeywords: excludeKeywordsInput.split(',').map(s => s.trim()).filter(Boolean),
+        // Per-agent scheduling
+        scoutEnabled: config.scoutEnabled,
+        scoutInterval: config.scoutInterval,
+        forgeEnabled: config.forgeEnabled,
+        forgeInterval: config.forgeInterval,
+        forgeMode: config.forgeMode,
+        archerEnabled: config.archerEnabled,
+        archerInterval: config.archerInterval,
+        archerMaxPerRun: config.archerMaxPerRun,
       };
       const res = await fetch('/api/agents/config', {
         method: 'PUT',
@@ -571,6 +636,194 @@ export default function AgentDashboardPage() {
               </div>
             </div>
 
+            {/* ── Per-Agent Independent Scheduling ── */}
+            <div className="border-t border-white/5 pt-6 mb-6">
+              <h4 className="text-sm font-semibold text-white/60 mb-4 flex items-center gap-2">
+                <Timer className="w-4 h-4 text-neon-purple" /> Independent Agent Scheduling
+              </h4>
+              <p className="text-xs text-white/30 mb-4">
+                Enable agents to run independently on their own schedules. Each agent works autonomously — Scout discovers jobs, Forge optimizes resumes, Archer applies.
+              </p>
+
+              <div className="space-y-4">
+                {/* ── Scout Scheduling ── */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <AgentAvatarMini agentId="scout" size={28} />
+                      <div>
+                        <span className="text-sm font-semibold text-white">Scout</span>
+                        <span className="text-xs text-white/30 ml-2">Job Discovery</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {config.scoutEnabled && (
+                        <div className="text-right">
+                          <div className="text-[10px] text-white/30">Last: {humanizeAgo(config.scoutLastRunAt)}</div>
+                          <div className="text-[10px] text-neon-green">Next: {nextRunLabel(config.scoutLastRunAt, config.scoutInterval)}</div>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => { setConfig(c => ({ ...c, scoutEnabled: !c.scoutEnabled })); setConfigDirty(true); }}
+                        className="flex items-center gap-1 text-sm"
+                      >
+                        {config.scoutEnabled ? (
+                          <ToggleRight className="w-6 h-6 text-neon-green" />
+                        ) : (
+                          <ToggleLeft className="w-6 h-6 text-white/30" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {config.scoutEnabled && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <label className="text-xs text-white/40">Search interval:</label>
+                      <select
+                        value={config.scoutInterval}
+                        onChange={e => { setConfig(c => ({ ...c, scoutInterval: Number(e.target.value) })); setConfigDirty(true); }}
+                        className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white focus:border-neon-blue/50 focus:outline-none"
+                      >
+                        {INTERVAL_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Forge Scheduling ── */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <AgentAvatarMini agentId="forge" size={28} />
+                      <div>
+                        <span className="text-sm font-semibold text-white">Forge</span>
+                        <span className="text-xs text-white/30 ml-2">Resume Optimization</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {config.forgeEnabled && (
+                        <div className="text-right">
+                          <div className="text-[10px] text-white/30">Last: {humanizeAgo(config.forgeLastRunAt)}</div>
+                          {config.forgeMode !== 'on_demand' && (
+                            <div className="text-[10px] text-neon-green">Next: {nextRunLabel(config.forgeLastRunAt, config.forgeInterval)}</div>
+                          )}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => { setConfig(c => ({ ...c, forgeEnabled: !c.forgeEnabled })); setConfigDirty(true); }}
+                        className="flex items-center gap-1 text-sm"
+                      >
+                        {config.forgeEnabled ? (
+                          <ToggleRight className="w-6 h-6 text-neon-green" />
+                        ) : (
+                          <ToggleLeft className="w-6 h-6 text-white/30" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {config.forgeEnabled && (
+                    <div className="flex flex-wrap items-center gap-4 mt-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-white/40">Mode:</label>
+                        <div className="flex rounded-lg overflow-hidden border border-white/10">
+                          {[
+                            { value: 'on_demand', label: 'On Demand' },
+                            { value: 'base_only', label: 'Base Only' },
+                            { value: 'per_job', label: 'Per Job' },
+                          ].map(mode => (
+                            <button
+                              key={mode.value}
+                              onClick={() => { setConfig(c => ({ ...c, forgeMode: mode.value })); setConfigDirty(true); }}
+                              className={`px-3 py-1.5 text-xs transition-colors ${
+                                config.forgeMode === mode.value
+                                  ? 'bg-neon-orange/20 text-neon-orange'
+                                  : 'bg-white/5 text-white/40 hover:text-white/60'
+                              }`}
+                            >
+                              {mode.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {config.forgeMode !== 'on_demand' && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-white/40">Interval:</label>
+                          <select
+                            value={config.forgeInterval}
+                            onChange={e => { setConfig(c => ({ ...c, forgeInterval: Number(e.target.value) })); setConfigDirty(true); }}
+                            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white focus:border-neon-blue/50 focus:outline-none"
+                          >
+                            {INTERVAL_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Archer Scheduling ── */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <AgentAvatarMini agentId="archer" size={28} />
+                      <div>
+                        <span className="text-sm font-semibold text-white">Archer</span>
+                        <span className="text-xs text-white/30 ml-2">Auto-Apply</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {config.archerEnabled && (
+                        <div className="text-right">
+                          <div className="text-[10px] text-white/30">Last: {humanizeAgo(config.archerLastRunAt)}</div>
+                          <div className="text-[10px] text-neon-green">Next: {nextRunLabel(config.archerLastRunAt, config.archerInterval)}</div>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => { setConfig(c => ({ ...c, archerEnabled: !c.archerEnabled })); setConfigDirty(true); }}
+                        className="flex items-center gap-1 text-sm"
+                      >
+                        {config.archerEnabled ? (
+                          <ToggleRight className="w-6 h-6 text-neon-green" />
+                        ) : (
+                          <ToggleLeft className="w-6 h-6 text-white/30" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {config.archerEnabled && (
+                    <div className="flex flex-wrap items-center gap-4 mt-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-white/40">Apply interval:</label>
+                        <select
+                          value={config.archerInterval}
+                          onChange={e => { setConfig(c => ({ ...c, archerInterval: Number(e.target.value) })); setConfigDirty(true); }}
+                          className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white focus:border-neon-blue/50 focus:outline-none"
+                        >
+                          {INTERVAL_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-white/40">Max per run:</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={config.archerMaxPerRun}
+                          onChange={e => { setConfig(c => ({ ...c, archerMaxPerRun: Math.max(1, Math.min(100, Number(e.target.value))) })); setConfigDirty(true); }}
+                          className="w-16 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white text-center focus:border-neon-blue/50 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="flex justify-end">
               <button
                 onClick={saveConfig}
@@ -742,7 +995,7 @@ export default function AgentDashboardPage() {
       </div>
 
       {/* ── Schedule CTA ── */}
-      {userPlan !== 'BASIC' && !config.scheduleTime && (
+      {userPlan !== 'BASIC' && !config.scheduleTime && !config.scoutEnabled && !config.archerEnabled && (
         <motion.div custom={10} variants={fadeUp} initial="hidden" animate="visible">
           <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
             <div className="flex items-center gap-4">

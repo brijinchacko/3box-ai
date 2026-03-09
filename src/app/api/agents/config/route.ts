@@ -24,6 +24,18 @@ export async function GET() {
         scheduleTime: null,
         preferRemote: false,
         lastRunAt: null,
+        // Per-agent scheduling defaults
+        scoutEnabled: false,
+        scoutInterval: 24,
+        scoutLastRunAt: null,
+        forgeEnabled: false,
+        forgeInterval: 24,
+        forgeLastRunAt: null,
+        forgeMode: 'on_demand',
+        archerEnabled: false,
+        archerInterval: 24,
+        archerLastRunAt: null,
+        archerMaxPerRun: 10,
       });
     }
 
@@ -46,7 +58,15 @@ export async function PUT(request: NextRequest) {
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { enabled, automationMode, resumeId, targetRoles, targetLocations, minMatchScore, maxAppliesPerRun, excludeCompanies, excludeKeywords, scheduleTime, preferRemote } = body;
+    const {
+      enabled, automationMode, resumeId, targetRoles, targetLocations,
+      minMatchScore, maxAppliesPerRun, excludeCompanies, excludeKeywords,
+      scheduleTime, preferRemote,
+      // Per-agent scheduling fields
+      scoutEnabled, scoutInterval,
+      forgeEnabled, forgeInterval, forgeMode,
+      archerEnabled, archerInterval, archerMaxPerRun,
+    } = body;
 
     // If enabling, check for finalized resume
     if (enabled) {
@@ -72,6 +92,20 @@ export async function PUT(request: NextRequest) {
     if (Array.isArray(excludeKeywords)) data.excludeKeywords = excludeKeywords;
     if (scheduleTime !== undefined) data.scheduleTime = scheduleTime;
     if (typeof preferRemote === 'boolean') data.preferRemote = preferRemote;
+
+    // ── Per-Agent Scheduling Fields ──
+    const VALID_INTERVALS = [1, 2, 4, 6, 12, 24];
+
+    if (typeof scoutEnabled === 'boolean') data.scoutEnabled = scoutEnabled;
+    if (typeof scoutInterval === 'number' && VALID_INTERVALS.includes(scoutInterval)) data.scoutInterval = scoutInterval;
+
+    if (typeof forgeEnabled === 'boolean') data.forgeEnabled = forgeEnabled;
+    if (typeof forgeInterval === 'number' && VALID_INTERVALS.includes(forgeInterval)) data.forgeInterval = forgeInterval;
+    if (typeof forgeMode === 'string' && ['on_demand', 'per_job', 'base_only'].includes(forgeMode)) data.forgeMode = forgeMode;
+
+    if (typeof archerEnabled === 'boolean') data.archerEnabled = archerEnabled;
+    if (typeof archerInterval === 'number' && VALID_INTERVALS.includes(archerInterval)) data.archerInterval = archerInterval;
+    if (typeof archerMaxPerRun === 'number') data.archerMaxPerRun = Math.min(100, Math.max(1, archerMaxPerRun));
 
     const config = await prisma.autoApplyConfig.upsert({
       where: { userId: session.user.id },

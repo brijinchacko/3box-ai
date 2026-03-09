@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db/prisma';
 import { discoverJobs, DiscoveredJob } from '@/lib/jobs/discovery';
 import { filterScamJobs } from '@/lib/jobs/scamDetector';
 import { type AgentContext, getContextSummary, logActivity } from './context';
+import { TOKEN_COSTS } from '@/lib/tokens/pricing';
 
 export interface ScoutConfig {
   userId: string;
@@ -133,4 +134,177 @@ export async function runScout(config: ScoutConfig, ctx?: AgentContext): Promise
     scamJobsFiltered,
     sources,
   };
+}
+
+// ── Deduplication helpers ──────────────────────────
+
+/**
+ * Compute a deduplication key for a job.
+ * Format: normalizedCompany::normalizedTitle::urlDomain
+ */
+export function computeDedupeKey(company: string, title: string, url: string): string {
+  const normalizedCompany = company.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30);
+  const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
+  let domain = '';
+  try {
+    domain = new URL(url).hostname.replace('www.', '');
+  } catch {}
+  return `${normalizedCompany}::${normalizedTitle}::${domain}`;
+}
+
+/**
+ * Persist an array of DiscoveredJobs to the ScoutJob table with deduplication.
+ * Returns counts of new vs duplicate jobs.
+ */
+export async function persistScoutJobs(
+  userId: string,
+  jobs: DiscoveredJob[],
+  scoutRunId?: string,
+): Promise<{ newCount: number; dupCount: number }> {
+  let newCount = 0;
+  let dupCount = 0;
+
+  for (const job of jobs) {
+    const dedupeKey = computeDedupeKey(job.company, job.title, job.url);
+    try {
+      await prisma.scoutJob.create({
+        data: {
+          userId,
+          title: job.title,
+          company: job.company,
+          jobUrl: job.url,
+          dedupeKey,
+          location: job.location || null,
+          description: job.description || '',
+          salary: job.salary || null,
+          source: job.source,
+          remote: job.remote || false,
+          postedAt: job.postedAt || null,
+          matchScore: job.matchScore || null,
+          status: 'NEW',
+          scoutRunId: scoutRunId || null,
+        },
+      });
+      newCount++;
+    } catch (err: any) {
+      // Unique constraint violation (P2002) = duplicate, silently skip
+      if (err.code === 'P2002') {
+        dupCount++;
+      } else {
+        console.error('[Scout] Failed to persist job:', job.title, err.message);
+      }
+    }
+  }
+
+  return { newCount, dupCount };
+}
+
+// ── Independent Scout (runs on its own schedule) ──
+
+export interface IndependentScoutConfig {
+  targetRoles: string[];
+  targetLocations: string[];
+  preferRemote: boolean;
+  minMatchScore: number;
+  excludeCompanies: string[];
+  excludeKeywords: string[];
+  platforms?: string[];
+}
+
+export interface IndependentScoutResult {
+  runId: string;
+  jobsDiscovered: number;
+  jobsNew: number;
+  jobsDuplicate: number;
+  creditsUsed: number;
+  sources: string[];
+}
+
+/**
+ * Run Scout independently — discovers jobs and persists them to the ScoutJob table.
+ * Used by the cron scheduler and can also be called manually.
+ */
+export async function runIndependentScout(
+  userId: string,
+  config: IndependentScoutConfig,
+): Promise<IndependentScoutResult> {
+  // 1. Create run record
+  const run = await prisma.autoApplyRun.create({
+    data: {
+      userId,
+      status: 'running',
+      agentType: 'scout',
+      summary: `Scout searching: ${config.targetRoles.join(', ')}`,
+    },
+  });
+
+  try {
+    // 2. Run Scout discovery
+    const scoutResult = await runScout({
+      userId,
+      targetRoles: config.targetRoles,
+      targetLocations: config.targetLocations,
+      preferRemote: config.preferRemote,
+      minMatchScore: config.minMatchScore,
+      excludeCompanies: config.excludeCompanies,
+      excludeKeywords: config.excludeKeywords,
+      platforms: config.platforms,
+      limit: 40,
+    });
+
+    // 3. Persist to ScoutJob table with dedup
+    const { newCount, dupCount } = await persistScoutJobs(userId, scoutResult.jobs, run.id);
+
+    // 4. Calculate token cost
+    const platformCount = config.platforms?.length || 6;
+    const tokenCost = platformCount * TOKEN_COSTS.scout_search_per_platform;
+
+    // 5. Update run record + deduct tokens + update lastRunAt
+    await Promise.all([
+      prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+          jobsFound: scoutResult.totalFound,
+          creditsUsed: tokenCost,
+          summary: `Scout found ${scoutResult.totalFound} jobs, ${newCount} new, ${dupCount} duplicates (${scoutResult.scamJobsFiltered} scam filtered) from ${scoutResult.sources.join(', ')}`,
+          details: JSON.parse(JSON.stringify({
+            totalFound: scoutResult.totalFound,
+            newJobs: newCount,
+            duplicates: dupCount,
+            scamFiltered: scoutResult.scamJobsFiltered,
+            sources: scoutResult.sources,
+          })),
+        },
+      }),
+      prisma.autoApplyConfig.update({
+        where: { userId },
+        data: { scoutLastRunAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { aiCreditsUsed: { increment: tokenCost } },
+      }),
+    ]);
+
+    return {
+      runId: run.id,
+      jobsDiscovered: scoutResult.totalFound,
+      jobsNew: newCount,
+      jobsDuplicate: dupCount,
+      creditsUsed: tokenCost,
+      sources: scoutResult.sources,
+    };
+  } catch (err) {
+    await prisma.autoApplyRun.update({
+      where: { id: run.id },
+      data: {
+        status: 'failed',
+        completedAt: new Date(),
+        summary: `Scout failed: ${(err as Error).message}`,
+      },
+    });
+    throw err;
+  }
 }

@@ -114,6 +114,7 @@ model User {
   emailLogs       EmailLog[]
   newsletterSub   NewsletterSubscriber?
   tickets         SupportTicket[]
+  scoutJobs       ScoutJob[]
 
   @@index([email])
   @@index([referralCode])
@@ -525,6 +526,22 @@ model AutoApplyConfig {
   perJobResumeRewrite Boolean   @default(false)  // Allow Forge to rewrite resume per job
   perJobAutoApprove   Boolean   @default(false)  // Auto-approve per-job variants
   lastRunAt           DateTime?
+
+  // ── Per-Agent Independent Scheduling ──
+  scoutEnabled        Boolean   @default(false)
+  scoutInterval       Int       @default(24)      // Hours between runs: 1, 2, 4, 6, 12, 24
+  scoutLastRunAt      DateTime?
+
+  forgeEnabled        Boolean   @default(false)
+  forgeInterval       Int       @default(24)
+  forgeLastRunAt      DateTime?
+  forgeMode           String    @default("on_demand") // "on_demand" | "per_job" | "base_only"
+
+  archerEnabled       Boolean   @default(false)
+  archerInterval      Int       @default(24)
+  archerLastRunAt     DateTime?
+  archerMaxPerRun     Int       @default(10)
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 }
@@ -534,6 +551,7 @@ model AutoApplyRun {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   status      String    @default("running")
+  agentType   String?   // "scout" | "forge" | "archer" | "pipeline" | null (legacy)
   jobsFound   Int       @default(0)
   jobsApplied Int       @default(0)
   jobsSkipped Int       @default(0)
@@ -563,6 +581,53 @@ model AgentActivity {
   @@index([userId])
   @@index([agent])
   @@index([createdAt])
+}
+
+// ─── Scout Job Store (persistent discovered jobs) ──
+
+enum ScoutJobStatus {
+  NEW
+  FORGE_PENDING
+  FORGE_READY
+  READY
+  APPLYING
+  APPLIED
+  SKIPPED
+  EXPIRED
+}
+
+model ScoutJob {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  company          String
+  jobUrl           String          @db.Text
+  dedupeKey        String          // normalized(company)::normalized(title)::urlDomain
+  location         String?
+  description      String          @db.Text
+  salary           String?
+  source           String
+  remote           Boolean         @default(false)
+  postedAt         String?
+  matchScore       Float?
+  atsScore         Float?
+  qualityScore     Float?
+  scamScore        Float?
+  status           ScoutJobStatus  @default(NEW)
+  scoutRunId       String?
+  resumeVariantId  String?
+  applicationId    String?
+  discoveredAt     DateTime        @default(now())
+  forgeProcessedAt DateTime?
+  appliedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, status])
+  @@index([userId, discoveredAt])
+  @@index([status])
 }
 
 // ─── Audit Logs ────────────────────────────────

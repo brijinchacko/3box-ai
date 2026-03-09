@@ -701,3 +701,192 @@ export function findCompanyEmail(company: string): string | null {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// ── Independent Archer (runs on its own schedule) ──────────────────
+
+export interface IndependentArcherConfig {
+  maxPerRun: number;
+  resumeId?: string;
+  forgeEnabled: boolean;
+  forgeMode: string;
+}
+
+export interface IndependentArcherResult {
+  runId: string;
+  jobsApplied: number;
+  jobsSkipped: number;
+  creditsUsed: number;
+}
+
+/**
+ * Run Archer independently — reads from the ScoutJob persistent store
+ * and applies to jobs with status READY or FORGE_READY.
+ *
+ * When Forge is not configured (forgeMode === 'on_demand' or forgeEnabled is false),
+ * Archer also picks up NEW jobs directly.
+ */
+export async function runIndependentArcher(
+  userId: string,
+  config: IndependentArcherConfig,
+): Promise<IndependentArcherResult> {
+  const run = await prisma.autoApplyRun.create({
+    data: {
+      userId,
+      status: 'running',
+      agentType: 'archer',
+      summary: `Archer applying to up to ${config.maxPerRun} jobs`,
+    },
+  });
+
+  try {
+    // Load resume
+    const resume = config.resumeId
+      ? await prisma.resume.findUnique({ where: { id: config.resumeId } })
+      : await prisma.resume.findFirst({
+          where: { userId, isFinalized: true },
+          orderBy: { updatedAt: 'desc' },
+        });
+
+    if (!resume) {
+      await prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: { status: 'completed', completedAt: new Date(), summary: 'Archer skipped: no finalized resume found' },
+      });
+      return { runId: run.id, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0 };
+    }
+
+    const resumeContent = resume.content as unknown as ResumeData;
+
+    // Determine which statuses to pull from
+    // If Forge is not configured, also pull NEW jobs (they'll use the base resume)
+    const forgeConfigured = config.forgeEnabled && config.forgeMode !== 'on_demand';
+    const validStatuses = forgeConfigured
+      ? ['READY', 'FORGE_READY']
+      : ['NEW', 'READY', 'FORGE_READY'];
+
+    // Query jobs ready for application
+    const readyJobs = await prisma.scoutJob.findMany({
+      where: {
+        userId,
+        status: { in: validStatuses as any },
+      },
+      orderBy: [
+        { matchScore: 'desc' },
+        { discoveredAt: 'desc' },
+      ],
+      take: config.maxPerRun,
+    });
+
+    if (readyJobs.length === 0) {
+      await prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: { status: 'completed', completedAt: new Date(), summary: 'No jobs ready for application' },
+      });
+      return { runId: run.id, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0 };
+    }
+
+    // Mark jobs as APPLYING
+    const jobIds = readyJobs.map(j => j.id);
+    await prisma.scoutJob.updateMany({
+      where: { id: { in: jobIds } },
+      data: { status: 'APPLYING' },
+    });
+
+    // Convert ScoutJob records → JobForApplication format
+    const jobsForApplication: JobForApplication[] = readyJobs.map(sj => ({
+      id: sj.id,
+      title: sj.title,
+      company: sj.company,
+      location: sj.location || '',
+      description: sj.description,
+      url: sj.jobUrl,
+      source: sj.source,
+      matchScore: sj.matchScore || undefined,
+    }));
+
+    // Apply using existing batch function
+    const batchResult = await applyToJobsBatch(
+      userId,
+      jobsForApplication,
+      resumeContent,
+      run.id,
+    );
+
+    // Update ScoutJob statuses based on results
+    for (let i = 0; i < jobsForApplication.length; i++) {
+      const appResult = batchResult.results[i];
+      const scoutJobId = jobsForApplication[i].id;
+
+      if (appResult?.success) {
+        await prisma.scoutJob.update({
+          where: { id: scoutJobId },
+          data: {
+            status: 'APPLIED',
+            appliedAt: new Date(),
+            applicationId: appResult.jobApplicationId || null,
+          },
+        }).catch(() => {});
+      } else {
+        // Revert to READY for retry on next run
+        await prisma.scoutJob.update({
+          where: { id: scoutJobId },
+          data: { status: 'READY' },
+        }).catch(() => {});
+      }
+    }
+
+    const creditsUsed = batchResult.applied;
+
+    // Update run + config + user credits
+    await Promise.all([
+      prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+          jobsFound: readyJobs.length,
+          jobsApplied: batchResult.applied,
+          jobsSkipped: batchResult.failed + batchResult.skipped,
+          creditsUsed,
+          summary: `Archer applied to ${batchResult.applied} jobs (${batchResult.emailed} email, ${batchResult.queued} portal, ${batchResult.failed} failed)`,
+          details: JSON.parse(JSON.stringify({
+            applied: batchResult.applied,
+            emailed: batchResult.emailed,
+            queued: batchResult.queued,
+            failed: batchResult.failed,
+            skipped: batchResult.skipped,
+            routingStats: batchResult.routingStats,
+            durationMs: batchResult.durationMs,
+          })),
+        },
+      }),
+      prisma.autoApplyConfig.update({
+        where: { userId },
+        data: { archerLastRunAt: new Date() },
+      }),
+      ...(creditsUsed > 0 ? [prisma.user.update({
+        where: { id: userId },
+        data: { aiCreditsUsed: { increment: creditsUsed } },
+      })] : []),
+    ]);
+
+    return {
+      runId: run.id,
+      jobsApplied: batchResult.applied,
+      jobsSkipped: batchResult.failed + batchResult.skipped,
+      creditsUsed,
+    };
+  } catch (err) {
+    // Revert any APPLYING jobs back to READY
+    await prisma.scoutJob.updateMany({
+      where: { userId, status: 'APPLYING' },
+      data: { status: 'READY' },
+    }).catch(() => {});
+
+    await prisma.autoApplyRun.update({
+      where: { id: run.id },
+      data: { status: 'failed', completedAt: new Date(), summary: `Archer failed: ${(err as Error).message}` },
+    });
+    throw err;
+  }
+}

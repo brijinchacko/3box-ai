@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
-import { runScout } from '@/lib/agents/scout';
+import { runScout, persistScoutJobs } from '@/lib/agents/scout';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
 
@@ -106,6 +106,9 @@ export async function POST(request: Request) {
       platforms,
     });
 
+    // Persist to ScoutJob table for independent agent pipeline
+    const { newCount, dupCount } = await persistScoutJobs(session.user.id, result.jobs, run.id);
+
     // Update run record + deduct tokens
     await Promise.all([
       prisma.autoApplyRun.update({
@@ -113,15 +116,18 @@ export async function POST(request: Request) {
         data: {
           status: 'completed',
           completedAt: new Date(),
+          agentType: 'scout',
           jobsFound: result.totalFound,
           jobsSkipped: result.scamJobsFiltered,
           creditsUsed: tokenCost,
-          summary: `Scout found ${result.totalFound} jobs, ${result.totalFiltered} qualified (${result.scamJobsFiltered} scam filtered) from ${result.sources.join(', ')}`,
+          summary: `Scout found ${result.totalFound} jobs, ${result.totalFiltered} qualified, ${newCount} new, ${dupCount} duplicates (${result.scamJobsFiltered} scam filtered) from ${result.sources.join(', ')}`,
           details: JSON.parse(JSON.stringify({
             jobs: result.jobs,
             totalFound: result.totalFound,
             totalFiltered: result.totalFiltered,
             scamJobsFiltered: result.scamJobsFiltered,
+            newJobs: newCount,
+            duplicates: dupCount,
             sources: result.sources,
             missionParams: { targetRole, location, workMode, salaryExpectation, experienceLevel, platforms },
           })),

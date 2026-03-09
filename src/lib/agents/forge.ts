@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
 import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
+import { TOKEN_COSTS } from '@/lib/tokens/pricing';
 
 interface ResumeContent {
   contact: { name: string; email: string; phone: string; location: string; linkedin?: string };
@@ -665,4 +666,183 @@ Return ONLY the cover letter text. No JSON, no markdown formatting.`;
   }
 
   return { resume: finalResume, coverLetter, atsScore };
+}
+
+// ── Independent Forge (runs on its own schedule) ──────────────────
+
+export interface IndependentForgeConfig {
+  forgeMode: 'on_demand' | 'per_job' | 'base_only';
+  resumeId?: string;
+  batchLimit?: number;
+}
+
+export interface IndependentForgeResult {
+  runId: string;
+  jobsProcessed: number;
+  creditsUsed: number;
+  mode: string;
+}
+
+/**
+ * Run Forge independently — processes ScoutJob records based on mode.
+ *
+ * Modes:
+ * - "per_job"   → For each NEW ScoutJob, generate an ATS-optimized ResumeVariant
+ * - "base_only" → Verify the base resume readiness, then mark all NEW jobs as READY
+ * - "on_demand" → No-op from cron (only runs when manually triggered)
+ */
+export async function runIndependentForge(
+  userId: string,
+  config: IndependentForgeConfig,
+): Promise<IndependentForgeResult> {
+  // on_demand = no-op from cron
+  if (config.forgeMode === 'on_demand') {
+    return { runId: '', jobsProcessed: 0, creditsUsed: 0, mode: 'on_demand' };
+  }
+
+  const run = await prisma.autoApplyRun.create({
+    data: {
+      userId,
+      status: 'running',
+      agentType: 'forge',
+      summary: `Forge running in ${config.forgeMode} mode`,
+    },
+  });
+
+  try {
+    // Load resume
+    const resume = config.resumeId
+      ? await prisma.resume.findUnique({ where: { id: config.resumeId } })
+      : await prisma.resume.findFirst({
+          where: { userId, isFinalized: true, approvalStatus: 'approved' },
+          orderBy: { updatedAt: 'desc' },
+        });
+
+    if (!resume) {
+      await prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: { status: 'completed', completedAt: new Date(), summary: 'Forge skipped: no approved resume found' },
+      });
+      return { runId: run.id, jobsProcessed: 0, creditsUsed: 0, mode: config.forgeMode };
+    }
+
+    const resumeContent = resume.content as unknown as ResumeContent;
+    let creditsUsed = 0;
+    let jobsProcessed = 0;
+
+    if (config.forgeMode === 'per_job') {
+      // ── Per-Job Resume Generation ──
+      const pendingJobs = await prisma.scoutJob.findMany({
+        where: { userId, status: 'NEW' },
+        orderBy: { matchScore: 'desc' },
+        take: config.batchLimit || 10,
+      });
+
+      for (const scoutJob of pendingJobs) {
+        try {
+          // Mark as processing
+          await prisma.scoutJob.update({
+            where: { id: scoutJob.id },
+            data: { status: 'FORGE_PENDING' },
+          });
+
+          // Analyze resume against this job
+          const analysis = await analyzeResumeForJob(
+            userId, resumeContent, scoutJob.title, scoutJob.description, scoutJob.company,
+          );
+
+          // Generate optimized variant
+          const optimized = await generateOptimizedResume(
+            userId, resumeContent, scoutJob.title, scoutJob.description, scoutJob.company, analysis,
+          );
+
+          // Save ResumeVariant
+          const variant = await prisma.resumeVariant.create({
+            data: {
+              resumeId: resume.id,
+              userId,
+              jobTitle: scoutJob.title,
+              company: scoutJob.company,
+              content: JSON.parse(JSON.stringify(optimized)),
+              atsScore: analysis.atsScore,
+              runId: run.id,
+            },
+          });
+
+          // Update ScoutJob → FORGE_READY
+          await prisma.scoutJob.update({
+            where: { id: scoutJob.id },
+            data: {
+              status: 'FORGE_READY',
+              atsScore: analysis.atsScore,
+              resumeVariantId: variant.id,
+              forgeProcessedAt: new Date(),
+            },
+          });
+
+          creditsUsed += TOKEN_COSTS.per_job_rewrite;
+          jobsProcessed++;
+        } catch (err) {
+          console.error(`[Forge Independent] Failed for ${scoutJob.title}:`, err);
+          // Revert to NEW so it can be retried
+          await prisma.scoutJob.update({
+            where: { id: scoutJob.id },
+            data: { status: 'NEW' },
+          }).catch(() => {});
+        }
+      }
+    } else {
+      // ── Base Only: verify readiness, then transition NEW → READY ──
+      const sampleJobs = await prisma.scoutJob.findMany({
+        where: { userId, status: 'NEW' },
+        orderBy: { matchScore: 'desc' },
+        take: 10,
+      });
+
+      if (sampleJobs.length > 0) {
+        await verifyResumeReadiness(
+          userId,
+          resumeContent,
+          sampleJobs.map(j => ({ title: j.title, description: j.description, company: j.company })),
+        );
+      }
+
+      // Mark all NEW jobs as READY (they'll use the base resume)
+      const updated = await prisma.scoutJob.updateMany({
+        where: { userId, status: 'NEW' },
+        data: { status: 'READY' },
+      });
+      jobsProcessed = updated.count;
+    }
+
+    // Update run record + lastRunAt
+    await Promise.all([
+      prisma.autoApplyRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+          creditsUsed,
+          summary: `Forge processed ${jobsProcessed} jobs (mode: ${config.forgeMode})`,
+          details: JSON.parse(JSON.stringify({ mode: config.forgeMode, jobsProcessed, creditsUsed })),
+        },
+      }),
+      prisma.autoApplyConfig.update({
+        where: { userId },
+        data: { forgeLastRunAt: new Date() },
+      }),
+      ...(creditsUsed > 0 ? [prisma.user.update({
+        where: { id: userId },
+        data: { aiCreditsUsed: { increment: creditsUsed } },
+      })] : []),
+    ]);
+
+    return { runId: run.id, jobsProcessed, creditsUsed, mode: config.forgeMode };
+  } catch (err) {
+    await prisma.autoApplyRun.update({
+      where: { id: run.id },
+      data: { status: 'failed', completedAt: new Date(), summary: `Forge failed: ${(err as Error).message}` },
+    });
+    throw err;
+  }
 }
