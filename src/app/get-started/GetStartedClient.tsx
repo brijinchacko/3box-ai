@@ -8,6 +8,7 @@ import { signIn } from 'next-auth/react';
 import {
   User, Briefcase, Target, Zap, FileText, ArrowRight, ArrowLeft,
   Check, MapPin, Sparkles, Mail, Lock, Eye, EyeOff, ShieldCheck, Chrome, UserPlus,
+  Upload, ClipboardPaste, Loader2, X, CheckCircle2, Linkedin,
 } from 'lucide-react';
 import CortexAvatar from '@/components/brand/CortexAvatar';
 import Logo from '@/components/brand/Logo';
@@ -55,6 +56,7 @@ const popularSkills = [
 
 // ── Steps ──
 const STEPS = [
+  { icon: FileText, label: 'Resume', title: 'Quick start with your resume' },
   { icon: User, label: 'You', title: "Let's get to know you" },
   { icon: Briefcase, label: 'Status', title: 'Where are you right now?' },
   { icon: Target, label: 'Goal', title: 'What do you want?' },
@@ -64,6 +66,7 @@ const STEPS = [
 ];
 
 const cortexMessages = [
+  "Hi! Upload your resume to auto-fill everything, or skip to fill manually.",
   "Hi! I'm Cortex. Let's build your career together.",
   'Great! This helps me find the right opportunities.',
   'Nice. I will search for the best roles for you.',
@@ -109,6 +112,16 @@ export default function GetStartedClient() {
   const [skillInput, setSkillInput] = useState('');
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
 
+  // Resume upload state (Step 0)
+  const [resumeMode, setResumeMode] = useState<'upload' | 'paste' | null>(null);
+  const [resumeText, setResumeText] = useState('');
+  const [resumeParsing, setResumeParsing] = useState(false);
+  const [resumeParsed, setResumeParsed] = useState(false);
+  const [resumeError, setResumeError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Signup state (Step 5)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -139,9 +152,13 @@ export default function GetStartedClient() {
     }
   }, []);
 
-  // Check Google auth availability
+  // Check OAuth availability
+  const [linkedinEnabled, setLinkedinEnabled] = useState(true);
   useEffect(() => {
-    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleEnabled(!!d.google)).catch(() => setGoogleEnabled(false));
+    fetch('/api/auth/providers').then(r => r.json()).then(d => {
+      setGoogleEnabled(!!d.google);
+      setLinkedinEnabled(!!d.linkedin);
+    }).catch(() => { setGoogleEnabled(false); setLinkedinEnabled(false); });
   }, []);
 
   // OTP resend timer
@@ -160,20 +177,21 @@ export default function GetStartedClient() {
 
   const canProceed = (): boolean => {
     switch (step) {
-      case 0: return data.fullName.trim().length >= 2;
-      case 1: return !!data.currentStatus && !!data.experienceLevel;
-      case 2: return !!data.targetRole;
-      case 3: return data.skills.length >= 1;
-      case 4: return true; // bio is optional
-      case 5: return false; // signup step has its own submit flow
+      case 0: return true; // Resume step is always skippable
+      case 1: return data.fullName.trim().length >= 2;
+      case 2: return !!data.currentStatus && !!data.experienceLevel;
+      case 3: return !!data.targetRole;
+      case 4: return data.skills.length >= 1;
+      case 5: return true; // bio is optional
+      case 6: return false; // signup step has its own submit flow
       default: return false;
     }
   };
 
   const next = () => {
     if (!canProceed()) return;
-    // Save name to visitor store when completing step 0
-    if (step === 0 && data.fullName.trim()) {
+    // Save name to visitor store when completing step 1
+    if (step === 1 && data.fullName.trim()) {
       setVisitorName(data.fullName.trim());
     }
     // Save to unified profile on each step
@@ -188,6 +206,71 @@ export default function GetStartedClient() {
     if (step > 0) {
       setDirection(-1);
       setStep((s) => s - 1);
+    }
+  };
+
+  // ── Resume Handlers (Step 0) ──
+  const handleFileSelect = (file: File) => {
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'text/plain'];
+    const validExts = ['.pdf', '.docx', '.doc', '.txt'];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+      setResumeError('Please upload a PDF, DOCX, or TXT file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setResumeError('File size must be under 10MB.');
+      return;
+    }
+    setSelectedFile(file);
+    setResumeError('');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const parseResume = async (mode: 'file' | 'text') => {
+    setResumeParsing(true);
+    setResumeError('');
+    try {
+      let res: Response;
+      if (mode === 'file' && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        res = await fetch('/api/resume/parse', { method: 'POST', body: formData });
+      } else {
+        res = await fetch('/api/resume/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: resumeText }),
+        });
+      }
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to parse resume');
+      const parsed = result.data;
+      // Auto-populate all fields
+      setData((prev) => ({
+        ...prev,
+        fullName: parsed.fullName || prev.fullName,
+        location: parsed.location || prev.location,
+        targetRole: parsed.targetRole || prev.targetRole,
+        currentStatus: parsed.currentStatus || prev.currentStatus,
+        experienceLevel: parsed.experienceLevel || prev.experienceLevel,
+        skills: parsed.skills?.length ? parsed.skills.slice(0, 15) : prev.skills,
+        bio: parsed.bio || prev.bio,
+      }));
+      if (parsed.fullName) setVisitorName(parsed.fullName);
+      setResumeParsed(true);
+      // Auto-advance to next step
+      setTimeout(() => { setDirection(1); setStep(1); }, 1500);
+    } catch (err: any) {
+      setResumeError(err.message || 'Failed to parse resume. Try again or skip.');
+    } finally {
+      setResumeParsing(false);
     }
   };
 
@@ -367,6 +450,11 @@ export default function GetStartedClient() {
     signIn('google', { callbackUrl: '/dashboard' });
   };
 
+  const handleLinkedInSignUp = () => {
+    saveOnboardingProfile(data);
+    signIn('linkedin', { callbackUrl: '/dashboard' });
+  };
+
   const progress = ((step + 1) / STEPS.length) * 100;
 
   return (
@@ -422,9 +510,9 @@ export default function GetStartedClient() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-start gap-3 mb-8"
           >
-            <CortexAvatar size={36} expression={step === 4 ? 'happy' : 'normal'} />
+            <CortexAvatar size={36} expression={step === 5 ? 'happy' : 'normal'} />
             <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-white/50">
-              {step === 5 && signupSubStep === 'verify'
+              {step === 6 && signupSubStep === 'verify'
                 ? 'Check your inbox! Enter the code to verify your email.'
                 : cortexMessages[step]}
             </div>
@@ -447,8 +535,151 @@ export default function GetStartedClient() {
                 Step {step + 1} of {STEPS.length}
               </p>
 
-              {/* Step 0: Name + Location */}
+              {/* Step 0: Resume Upload */}
               {step === 0 && (
+                <div className="space-y-4">
+                  {/* Success state */}
+                  {resumeParsed && (
+                    <div className="p-5 rounded-2xl bg-gradient-to-br from-neon-green/10 to-emerald-500/5 border border-neon-green/20 text-center">
+                      <CheckCircle2 className="w-10 h-10 text-neon-green mx-auto mb-2" />
+                      <h3 className="text-sm font-bold text-white mb-1">Resume Parsed Successfully!</h3>
+                      <p className="text-xs text-white/40">Auto-filling your details...</p>
+                    </div>
+                  )}
+
+                  {/* Parsing state */}
+                  {resumeParsing && (
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-neon-blue/10 text-center">
+                      <Loader2 className="w-8 h-8 text-neon-blue mx-auto mb-2 animate-spin" />
+                      <h3 className="text-sm font-bold text-white mb-1">AI is reading your resume...</h3>
+                      <p className="text-xs text-white/40">Extracting name, skills, experience, and more</p>
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {resumeError && (
+                    <div className="mb-3 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">{resumeError}</div>
+                  )}
+
+                  {/* Upload / Paste UI */}
+                  {!resumeParsing && !resumeParsed && (
+                    <div className="space-y-4">
+                      {/* File Upload */}
+                      {resumeMode !== 'paste' && (
+                        <div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".pdf,.docx,.doc,.txt"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileSelect(file);
+                            }}
+                          />
+                          <div
+                            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                            className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
+                              dragOver
+                                ? 'border-neon-blue bg-neon-blue/5'
+                                : selectedFile
+                                  ? 'border-neon-green/30 bg-neon-green/5'
+                                  : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+                            }`}
+                          >
+                            {selectedFile ? (
+                              <div className="flex items-center justify-center gap-3">
+                                <FileText className="w-8 h-8 text-neon-green" />
+                                <div className="text-left">
+                                  <p className="text-sm font-semibold text-white">{selectedFile.name}</p>
+                                  <p className="text-[11px] text-white/40">{(selectedFile.size / 1024).toFixed(0)} KB</p>
+                                </div>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                                  className="ml-2 p-1 rounded-lg hover:bg-white/10"
+                                >
+                                  <X className="w-4 h-4 text-white/40" />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <Upload className={`w-10 h-10 mx-auto mb-3 ${dragOver ? 'text-neon-blue' : 'text-white/20'}`} />
+                                <p className="text-sm font-medium text-white/60 mb-1">
+                                  Drop your resume here or <span className="text-neon-blue">click to browse</span>
+                                </p>
+                                <p className="text-[11px] text-white/30">PDF, DOCX, or TXT (max 10MB)</p>
+                              </>
+                            )}
+                          </div>
+
+                          {selectedFile && (
+                            <button
+                              onClick={() => parseResume('file')}
+                              className="w-full mt-3 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold text-sm hover:opacity-90 transition-all"
+                            >
+                              <Zap className="w-4 h-4" /> Parse Resume with AI
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Divider */}
+                      {!resumeMode && (
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-px bg-white/10" />
+                          <span className="text-[11px] text-white/30">or</span>
+                          <div className="flex-1 h-px bg-white/10" />
+                        </div>
+                      )}
+
+                      {/* Paste Text */}
+                      {resumeMode !== 'upload' && (
+                        <div>
+                          {!resumeMode && (
+                            <button
+                              onClick={() => setResumeMode('paste')}
+                              className="w-full p-3 rounded-xl border border-white/10 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2 text-sm text-white/50 hover:text-white/70"
+                            >
+                              <ClipboardPaste className="w-4 h-4" /> Paste resume as text
+                            </button>
+                          )}
+                          {resumeMode === 'paste' && (
+                            <>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-xs text-white/50 flex items-center gap-1.5">
+                                  <ClipboardPaste className="w-3.5 h-3.5" /> Paste your resume text
+                                </label>
+                                <button onClick={() => { setResumeMode(null); setResumeText(''); }} className="text-[11px] text-white/30 hover:text-white/50">Cancel</button>
+                              </div>
+                              <textarea
+                                value={resumeText}
+                                onChange={(e) => setResumeText(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors resize-none text-xs"
+                                rows={8}
+                                placeholder="Paste your entire resume text here..."
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => parseResume('text')}
+                                disabled={resumeText.trim().length < 30}
+                                className="w-full mt-3 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-30"
+                              >
+                                <Zap className="w-4 h-4" /> Parse Resume with AI
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 1: Name + Location */}
+              {step === 1 && (
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
@@ -479,8 +710,8 @@ export default function GetStartedClient() {
                 </div>
               )}
 
-              {/* Step 1: Status + Experience */}
-              {step === 1 && (
+              {/* Step 2: Status + Experience */}
+              {step === 2 && (
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-3">
@@ -527,8 +758,8 @@ export default function GetStartedClient() {
                 </div>
               )}
 
-              {/* Step 2: Target Role + Industry */}
-              {step === 2 && (
+              {/* Step 3: Target Role + Industry */}
+              {step === 3 && (
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
@@ -581,8 +812,8 @@ export default function GetStartedClient() {
                 </div>
               )}
 
-              {/* Step 3: Skills */}
-              {step === 3 && (
+              {/* Step 4: Skills */}
+              {step === 4 && (
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
@@ -647,8 +878,8 @@ export default function GetStartedClient() {
                 </div>
               )}
 
-              {/* Step 4: Bio */}
-              {step === 4 && (
+              {/* Step 5: Bio */}
+              {step === 5 && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
@@ -689,8 +920,8 @@ export default function GetStartedClient() {
                 </div>
               )}
 
-              {/* Step 5: Account / Signup */}
-              {step === 5 && (
+              {/* Step 6: Account / Signup */}
+              {step === 6 && (
                 <div className="space-y-5">
                   <AnimatePresence mode="wait">
                     {signupSubStep === 'form' ? (
@@ -711,14 +942,24 @@ export default function GetStartedClient() {
                           </div>
                         )}
 
-                        <button
-                          onClick={handleGoogleSignUp}
-                          disabled={!googleEnabled}
-                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/8 hover:text-white transition-all text-sm font-medium ${!googleEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        >
-                          <Chrome className="w-4 h-4" /> Sign up with Google
-                          {!googleEnabled && <span className="text-[10px] text-white/30 ml-1">(Coming soon)</span>}
-                        </button>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={handleGoogleSignUp}
+                            disabled={!googleEnabled}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/8 hover:text-white transition-all text-sm font-medium ${!googleEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                          >
+                            <Chrome className="w-4 h-4" /> Google
+                            {!googleEnabled && <span className="text-[10px] text-white/30 ml-1">(Soon)</span>}
+                          </button>
+                          <button
+                            onClick={handleLinkedInSignUp}
+                            disabled={!linkedinEnabled}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/8 hover:text-white transition-all text-sm font-medium ${!linkedinEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                          >
+                            <Linkedin className="w-4 h-4" /> LinkedIn
+                            {!linkedinEnabled && <span className="text-[10px] text-white/30 ml-1">(Soon)</span>}
+                          </button>
+                        </div>
 
                         <div className="flex items-center gap-3">
                           <div className="flex-1 h-px bg-white/10" />
@@ -864,7 +1105,7 @@ export default function GetStartedClient() {
           <div className="flex items-center justify-between mt-10">
             <button
               onClick={() => {
-                if (step === 5 && signupSubStep === 'verify') {
+                if (step === 6 && signupSubStep === 'verify') {
                   setSignupSubStep('form');
                   setSignupError('');
                 } else {
@@ -881,7 +1122,7 @@ export default function GetStartedClient() {
               Back
             </button>
 
-            {step < 5 && (
+            {step < 6 && (
               <button
                 onClick={next}
                 disabled={!canProceed()}

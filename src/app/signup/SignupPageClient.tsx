@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn } from 'next-auth/react';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Chrome, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Chrome, CheckCircle2, ShieldCheck, Linkedin } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 import { getOnboardingProfile } from '@/lib/onboarding/onboardingData';
 
@@ -32,6 +32,7 @@ export default function SignupPageClient() {
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const [targetRole, setTargetRole] = useState('');
   const [googleEnabled, setGoogleEnabled] = useState(true);
+  const [linkedinEnabled, setLinkedinEnabled] = useState(true);
 
   // OTP state
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
@@ -54,9 +55,12 @@ export default function SignupPageClient() {
     }
   });
 
-  // Check if Google auth is available
+  // Check OAuth availability
   useEffect(() => {
-    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleEnabled(!!d.google)).catch(() => setGoogleEnabled(false));
+    fetch('/api/auth/providers').then(r => r.json()).then(d => {
+      setGoogleEnabled(!!d.google);
+      setLinkedinEnabled(!!d.linkedin);
+    }).catch(() => { setGoogleEnabled(false); setLinkedinEnabled(false); });
   }, []);
 
   // Timer for resend
@@ -253,6 +257,10 @@ export default function SignupPageClient() {
     signIn('google', { callbackUrl: '/dashboard' });
   };
 
+  const handleLinkedInSignUp = () => {
+    signIn('linkedin', { callbackUrl: '/dashboard' });
+  };
+
   return (
     <div className="min-h-screen flex bg-surface">
       {/* Left: Benefits Panel */}
@@ -326,15 +334,26 @@ export default function SignupPageClient() {
                     </div>
                   )}
 
-                  <button
-                    onClick={handleGoogleSignUp}
-                    disabled={!googleEnabled}
-                    className={`btn-secondary w-full flex items-center justify-center gap-2 mb-6 ${!googleEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    title={!googleEnabled ? 'Google sign-up is not configured yet' : undefined}
-                  >
-                    <Chrome className="w-4 h-4" /> Sign up with Google
-                    {!googleEnabled && <span className="text-[10px] text-white/30 ml-1">(Coming soon)</span>}
-                  </button>
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      onClick={handleGoogleSignUp}
+                      disabled={!googleEnabled}
+                      className={`btn-secondary flex-1 flex items-center justify-center gap-2 ${!googleEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      title={!googleEnabled ? 'Google sign-up is not configured yet' : undefined}
+                    >
+                      <Chrome className="w-4 h-4" /> Google
+                      {!googleEnabled && <span className="text-[10px] text-white/30 ml-1">(Soon)</span>}
+                    </button>
+                    <button
+                      onClick={handleLinkedInSignUp}
+                      disabled={!linkedinEnabled}
+                      className={`btn-secondary flex-1 flex items-center justify-center gap-2 ${!linkedinEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      title={!linkedinEnabled ? 'LinkedIn sign-up is not configured yet' : undefined}
+                    >
+                      <Linkedin className="w-4 h-4" /> LinkedIn
+                      {!linkedinEnabled && <span className="text-[10px] text-white/30 ml-1">(Soon)</span>}
+                    </button>
+                  </div>
 
                   <div className="my-6 flex items-center gap-3">
                     <div className="flex-1 h-px bg-white/10" />
