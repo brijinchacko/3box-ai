@@ -3,6 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { canAfford as checkAfford, tokensRemaining, tokenUsagePercent } from '@/lib/tokens/pricing';
 
+interface DailyCapData {
+  used: number;
+  limit: number;
+  remaining: number;
+  isUnlimited: boolean;
+  resetsAt: string; // ISO string
+}
+
 interface TokenData {
   used: number;
   limit: number;
@@ -10,7 +18,17 @@ interface TokenData {
   percentUsed: number;
   loading: boolean;
   error: string | null;
+  // Daily application cap
+  dailyCap: DailyCapData;
 }
+
+const DEFAULT_DAILY_CAP: DailyCapData = {
+  used: 0,
+  limit: 30,
+  remaining: 30,
+  isUnlimited: false,
+  resetsAt: '',
+};
 
 export function useTokens(pollInterval = 30000) {
   const [data, setData] = useState<TokenData>({
@@ -20,6 +38,7 @@ export function useTokens(pollInterval = 30000) {
     percentUsed: 0,
     loading: true,
     error: null,
+    dailyCap: DEFAULT_DAILY_CAP,
   });
 
   const fetchTokens = useCallback(async () => {
@@ -31,6 +50,18 @@ export function useTokens(pollInterval = 30000) {
       const used = profile.aiCreditsUsed ?? 0;
       const limit = profile.aiCreditsLimit ?? 0;
 
+      // Parse daily cap from profile response
+      const dc = profile.dailyCap;
+      const dailyCap: DailyCapData = dc
+        ? {
+            used: dc.used ?? 0,
+            limit: dc.limit ?? 30,
+            remaining: dc.isUnlimited ? Infinity : (dc.remaining ?? 30),
+            isUnlimited: dc.isUnlimited ?? false,
+            resetsAt: dc.resetsAt ?? '',
+          }
+        : DEFAULT_DAILY_CAP;
+
       setData({
         used,
         limit,
@@ -38,6 +69,7 @@ export function useTokens(pollInterval = 30000) {
         percentUsed: tokenUsagePercent(used, limit),
         loading: false,
         error: null,
+        dailyCap,
       });
     } catch (err: any) {
       setData(prev => ({ ...prev, loading: false, error: err.message }));

@@ -81,6 +81,9 @@ model User {
   stripePriceId   String?
   aiCreditsUsed   Int       @default(0)
   aiCreditsLimit  Int       @default(10)
+  dailyAppsUsed    Int       @default(0)
+  dailyAppsResetAt DateTime  @default(now())
+  hasUnlimitedDaily Boolean  @default(false)
   onboardingDone  Boolean   @default(false)
   referralCode    String?   @unique
   referredBy      String?

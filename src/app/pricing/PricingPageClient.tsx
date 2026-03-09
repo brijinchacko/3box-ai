@@ -17,6 +17,7 @@ import {
   Users,
   Globe,
   Rocket,
+  Infinity as InfinityIcon,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRegion } from '@/lib/geo';
@@ -205,6 +206,7 @@ export default function PricingPageClient() {
   const [yearly, setYearly] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [loadingPack, setLoadingPack] = useState<string | null>(null);
+  const [loadingUnlimited, setLoadingUnlimited] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { data: session } = useSession();
   const {
@@ -323,6 +325,34 @@ export default function PricingPageClient() {
       setCheckoutError('Unable to connect to payment service. Please try again.');
     } finally {
       setLoadingPack(null);
+    }
+  };
+
+  // ---- Stripe checkout for unlimited daily ----
+  const handleUnlimitedCheckout = async () => {
+    if (!session) {
+      window.location.href = '/login?redirect=/pricing';
+      return;
+    }
+    setLoadingUnlimited(true);
+    setCheckoutError(null);
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlimited-daily' }),
+      });
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else if (data?.error) {
+        setCheckoutError(data.error);
+      }
+    } catch (err) {
+      console.error('Unlimited checkout error', err);
+      setCheckoutError('Unable to connect to payment service. Please try again.');
+    } finally {
+      setLoadingUnlimited(false);
     }
   };
 
@@ -663,6 +693,73 @@ export default function PricingPageClient() {
                   </button>
                 </motion.div>
               ))}
+            </div>
+          </motion.div>
+
+          {/* ============================================================ */}
+          {/* UNLIMITED DAILY APPLICATIONS                                 */}
+          {/* ============================================================ */}
+          <motion.div
+            id="unlimited"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-20 max-w-2xl mx-auto scroll-mt-24"
+          >
+            <div className="card relative overflow-hidden">
+              {/* Accent border */}
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" />
+
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-6">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
+                    <InfinityIcon className="w-8 h-8 text-amber-400" />
+                  </div>
+                </div>
+
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="text-xl font-bold mb-1">Unlimited Daily Applications</h3>
+                  <p className="text-sm text-white/40 mb-3">
+                    Remove the 30/day application cap permanently. Apply to as many jobs as you want, every day, forever.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-white/50">
+                    <span className="flex items-center gap-1"><Check className="w-3 h-3 text-neon-green" /> No daily limit</span>
+                    <span className="flex items-center gap-1"><Check className="w-3 h-3 text-neon-green" /> One-time payment</span>
+                    <span className="flex items-center gap-1"><Check className="w-3 h-3 text-neon-green" /> Works with any plan</span>
+                    <span className="flex items-center gap-1"><Check className="w-3 h-3 text-neon-green" /> Never expires</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-3xl font-extrabold text-amber-400">
+                    {formatPrice(pricing.unlimitedDaily)}
+                  </div>
+                  <span className="text-[10px] text-white/30">one-time</span>
+                  {!session ? (
+                    <Link
+                      href="/signup"
+                      className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/20 text-amber-400 hover:from-amber-500/30 hover:to-orange-500/30 transition-all"
+                    >
+                      Get Unlimited
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={handleUnlimitedCheckout}
+                      disabled={loadingUnlimited}
+                      className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/20 text-amber-400 hover:from-amber-500/30 hover:to-orange-500/30 transition-all flex items-center gap-2"
+                    >
+                      {loadingUnlimited ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        'Get Unlimited'
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
 

@@ -14,6 +14,7 @@ import { analyzeSkillGaps } from './sage';
 import { reviewApplication, verifyJobAlignment } from './sentinel';
 import { generateNetworkingSuggestions } from './networkSuggester';
 import { calculateApplicationQuality } from '@/lib/jobs/qualityScore';
+import { checkDailyCap, consumeDailySlot } from '@/lib/tokens/dailyCap';
 import { detectScamSignals } from '@/lib/jobs/scamDetector';
 import { aiChatWithFallback } from '@/lib/ai/openrouter';
 import {
@@ -473,6 +474,31 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
         approvedJobs.push(job);
       }
 
+      // ── Daily cap check — limit jobs to available daily slots ──
+      let dailyCapReached = false;
+      if (approvedJobs.length > 0) {
+        try {
+          const dailyCap = await checkDailyCap(userId);
+          if (!dailyCap.allowed) {
+            logActivity(ctx, 'archer', 'daily_cap_reached', `Daily application limit reached (${dailyCap.used}/${dailyCap.limit}). Skipping all ${approvedJobs.length} jobs.`);
+            jobsSkipped += approvedJobs.length;
+            approvedJobs.length = 0;
+            dailyCapReached = true;
+          } else if (!dailyCap.isUnlimited) {
+            const slotsAvailable = dailyCap.remaining;
+            if (approvedJobs.length > slotsAvailable) {
+              const trimmed = approvedJobs.length - slotsAvailable;
+              logActivity(ctx, 'archer', 'daily_cap_trim', `Daily cap: ${slotsAvailable} slots remaining. Trimming from ${approvedJobs.length} to ${slotsAvailable} jobs.`);
+              jobsSkipped += trimmed;
+              approvedJobs.splice(slotsAvailable);
+            }
+          }
+        } catch (err) {
+          console.error('[Orchestrator] Daily cap check failed:', err);
+          // On error, proceed without cap (don't block the pipeline)
+        }
+      }
+
       // ── Batch apply to all approved jobs in parallel ──
       if (approvedJobs.length > 0) {
         logActivity(ctx, 'archer', 'batch_start', `Archer batch applying to ${approvedJobs.length} approved jobs (multi-channel, parallel)`);
@@ -489,9 +515,10 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             ctx,
             {
               onProgress: (completed, total, lastResult) => {
-                // Track credits
+                // Track credits + consume daily slot
                 if (lastResult.success) {
                   creditsUsed++;
+                  consumeDailySlot(userId).catch(() => {}); // Fire-and-forget
                 }
               },
             },

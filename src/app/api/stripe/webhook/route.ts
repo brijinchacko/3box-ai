@@ -52,7 +52,12 @@ async function handleCheckoutSessionCompleted(
   if (session.mode === 'subscription') {
     await handleSubscriptionCheckout(session, userId);
   } else if (session.mode === 'payment') {
-    await handleCreditPackCheckout(session, userId);
+    // Check if this is an unlimited daily purchase
+    if (session.metadata?.type === 'unlimited_daily') {
+      await handleUnlimitedDailyCheckout(session, userId);
+    } else {
+      await handleCreditPackCheckout(session, userId);
+    }
   }
 }
 
@@ -134,6 +139,31 @@ async function handleSubscriptionCheckout(
   }
 
   console.log(`[Webhook] Subscription activated: user=${userId} plan=${plan} interval=${interval}`);
+}
+
+async function handleUnlimitedDailyCheckout(
+  session: Stripe.Checkout.Session,
+  userId: string
+): Promise<void> {
+  const paymentIntentId = session.payment_intent as string;
+
+  // Enable unlimited daily applications
+  await prisma.user.update({
+    where: { id: userId },
+    data: { hasUnlimitedDaily: true },
+  });
+
+  // Record as a credit purchase for audit trail
+  await prisma.creditPurchase.create({
+    data: {
+      userId,
+      credits: 0, // Not a credit pack — it's a feature unlock
+      amountPaid: 14900,
+      stripePaymentId: paymentIntentId || null,
+    },
+  });
+
+  console.log(`[Webhook] Unlimited daily applications activated: user=${userId}`);
 }
 
 async function handleCreditPackCheckout(

@@ -87,8 +87,8 @@ export function getOptimalTimeWindow(targetTimezoneOffset = 5.5): {
 // ─── Rate Limiting ─────────────────────────────────────────────────
 
 const RATE_LIMITS = {
-  perHour: 25,
-  perDay: 100,
+  perHour: 15,
+  perDay: 30,       // Matches DB-backed daily cap (DAILY_APP_LIMIT)
   perCompanyDomain: 5,
 };
 

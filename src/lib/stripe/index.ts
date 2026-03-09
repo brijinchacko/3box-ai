@@ -155,6 +155,54 @@ export async function createCreditPackCheckout({
   });
 }
 
+// ─── Unlimited Daily Applications (One-Time) ────
+
+export const UNLIMITED_DAILY_PRICE_ID = process.env.STRIPE_UNLIMITED_DAILY_PRICE_ID || '';
+
+export const UNLIMITED_DAILY_PACK = {
+  name: 'Unlimited Daily Applications',
+  price: 14900, // $149 USD base — regional pricing overrides this in the UI
+} as const;
+
+export async function createUnlimitedDailyCheckout({
+  userId,
+  email,
+  name,
+  successUrl,
+  cancelUrl,
+  priceOverride,
+}: {
+  userId: string;
+  email: string;
+  name?: string;
+  successUrl: string;
+  cancelUrl: string;
+  priceOverride?: number; // For regional pricing (cents)
+}): Promise<Stripe.Checkout.Session> {
+  const customerId = await getOrCreateCustomer(userId, email, name);
+  const price = priceOverride || UNLIMITED_DAILY_PACK.price;
+
+  return stripe.checkout.sessions.create({
+    customer: customerId,
+    mode: 'payment',
+    payment_method_types: ['card'],
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: UNLIMITED_DAILY_PACK.name,
+          description: 'Remove the 30/day application limit permanently. One-time purchase, never expires.',
+        },
+        unit_amount: price,
+      },
+      quantity: 1,
+    }],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: { userId, type: 'unlimited_daily' },
+  });
+}
+
 // ─── Billing Portal ─────────────────────────────
 
 export async function createBillingPortalSession(customerId: string, returnUrl: string): Promise<Stripe.BillingPortal.Session> {

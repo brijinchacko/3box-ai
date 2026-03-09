@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
+import { getDailyCapStatus } from '@/lib/tokens/dailyCap';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
       offer: offerCount > 0,
     };
 
+    // Daily application cap status
+    const dailyCap = await getDailyCapStatus(session.user.id);
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
@@ -69,6 +73,13 @@ export async function GET(request: NextRequest) {
       careerTwin: user.careerTwin,
       coachSettings: user.coachSettings,
       journey,
+      dailyCap: {
+        used: dailyCap.used,
+        limit: dailyCap.limit,
+        remaining: dailyCap.isUnlimited ? -1 : dailyCap.remaining,
+        isUnlimited: dailyCap.isUnlimited,
+        resetsAt: dailyCap.resetsAt.toISOString(),
+      },
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });

@@ -11,6 +11,7 @@ import {
   getOrCreateCustomer,
   createCheckoutSession,
   createCreditPackCheckout,
+  createUnlimitedDailyCheckout,
   createBillingPortalSession,
 } from '@/lib/stripe';
 
@@ -35,7 +36,11 @@ interface PortalBody {
   action: 'portal';
 }
 
-type RequestBody = CheckoutBody | CreditPackBody | PortalBody;
+interface UnlimitedDailyBody {
+  action: 'unlimited-daily';
+}
+
+type RequestBody = CheckoutBody | CreditPackBody | PortalBody | UnlimitedDailyBody;
 
 const VALID_PLANS: PlanKey[] = ['STARTER', 'PRO', 'ULTRA'];
 const VALID_INTERVALS: IntervalKey[] = ['monthly', 'yearly'];
@@ -140,6 +145,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ url: creditSession.url });
       }
 
+      // ─── Unlimited Daily Applications ───────────
+      case 'unlimited-daily': {
+        const unlimitedSession = await createUnlimitedDailyCheckout({
+          userId,
+          email,
+          name: name || undefined,
+          successUrl: `${APP_URL}/dashboard/settings?unlimited=success`,
+          cancelUrl: `${APP_URL}/pricing?unlimited=canceled`,
+        });
+
+        return NextResponse.json({ url: unlimitedSession.url });
+      }
+
       // ─── Billing Portal ────────────────────────
       case 'portal': {
         const customerId = await getOrCreateCustomer(userId, email, name || undefined);
@@ -154,7 +172,7 @@ export async function POST(request: Request) {
 
       default:
         return NextResponse.json(
-          { error: `Unknown action: ${(body as any).action}. Must be one of: checkout, credit-pack, portal` },
+          { error: `Unknown action: ${(body as any).action}. Must be one of: checkout, credit-pack, unlimited-daily, portal` },
           { status: 400 }
         );
     }
