@@ -155,6 +155,26 @@ async function searchAdzunaIndia(role: string, location: string): Promise<Discov
 }
 
 /**
+ * Clean location string for API search queries.
+ * Strips postcodes, zip codes, extra punctuation that confuse job search APIs.
+ */
+function cleanLocationForSearch(location: string): string {
+  if (!location) return '';
+  let clean = location
+    // Remove UK postcodes (e.g., "BD7 2AA", "SW1A 1AA")
+    .replace(/,?\s*[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi, '')
+    // Remove US zip codes (e.g., "90210", "90210-1234")
+    .replace(/,?\s*\d{5}(-\d{4})?\b/g, '')
+    // Remove Indian PIN codes (e.g., "560001")
+    .replace(/,?\s*\d{6}\b/g, '')
+    // Clean up trailing/leading commas and whitespace
+    .replace(/^[\s,]+|[\s,]+$/g, '')
+    .replace(/,\s*,/g, ',')
+    .trim();
+  return clean || location; // Fall back to original if cleaning removed everything
+}
+
+/**
  * Main discovery function — aggregates from all sources
  */
 export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJob[]> {
@@ -167,7 +187,7 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
   const activePlatforms = platforms && platforms.length > 0 ? platforms : ALL_PLATFORMS;
 
   for (const role of roles.slice(0, 3)) { // Max 3 roles to avoid rate limits
-    const loc = locations[0] || '';
+    const loc = cleanLocationForSearch(locations[0] || '');
 
     for (const platform of activePlatforms) {
       const searchFn = PLATFORM_SEARCH_MAP[platform];
