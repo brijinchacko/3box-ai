@@ -429,3 +429,198 @@ export async function quickATSScore(resume: ResumeContent, jobDescription: strin
   
   return Math.min(100, Math.round(ratio * 120)); // Slight boost since not all JD words are keywords
 }
+
+// ─── Generate Resume From Onboarding Profile ────────────────────────────────
+
+export interface OnboardingProfile {
+  fullName: string;
+  phone: string;
+  location: string;
+  linkedin: string;
+  targetRole: string;
+  experienceLevel: string;
+  currentStatus: string;
+  experiences: { title: string; company: string; duration: string; description: string }[];
+  educationLevel: string;
+  fieldOfStudy: string;
+  institution: string;
+  graduationYear: string;
+  skills: string[];
+  bio: string;
+  email?: string;
+}
+
+/**
+ * Generate a complete resume + cover letter from onboarding profile data.
+ * This is the first step after onboarding — takes the raw profile and
+ * produces a polished, ATS-friendly resume ready for user approval.
+ *
+ * Cost: 3 tokens (resume) + 2 tokens (cover letter) = 5 total
+ */
+export async function generateResumeFromProfile(
+  userId: string,
+  profile: OnboardingProfile,
+  ctx?: AgentContext,
+): Promise<{ resume: ResumeContent; coverLetter: string; atsScore: number }> {
+  // ── Step 1: Convert profile → ResumeContent structure ──
+  const baseResume: ResumeContent = {
+    contact: {
+      name: profile.fullName,
+      email: profile.email || '',
+      phone: profile.phone || '',
+      location: profile.location || '',
+      linkedin: profile.linkedin || undefined,
+    },
+    summary: profile.bio || '',
+    experience: (profile.experiences || []).map(exp => ({
+      title: exp.title || '',
+      company: exp.company || '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      bullets: exp.description ? exp.description.split(/[.;]\s*/).filter(Boolean).map(s => s.trim()) : [],
+    })),
+    education: profile.institution ? [{
+      degree: profile.educationLevel || '',
+      institution: profile.institution,
+      year: profile.graduationYear || '',
+    }] : [],
+    skills: profile.skills || [],
+  };
+
+  // ── Step 2: AI-enhance the resume (generate summary + polish bullets) ──
+  const resumePrompt = `You are Forge, an expert ATS Resume Optimizer. Generate a polished, professional resume from this candidate's profile data.
+
+CANDIDATE PROFILE:
+Name: ${profile.fullName}
+Target Role: ${profile.targetRole}
+Experience Level: ${profile.experienceLevel}
+Current Status: ${profile.currentStatus}
+Bio: ${profile.bio || 'Not provided'}
+Skills: ${(profile.skills || []).join(', ')}
+Experience:
+${(profile.experiences || []).map(e => `- ${e.title} at ${e.company} (${e.duration}): ${e.description}`).join('\n')}
+Education: ${profile.educationLevel} in ${profile.fieldOfStudy || 'N/A'} from ${profile.institution || 'N/A'} (${profile.graduationYear || 'N/A'})
+
+Generate a professional resume in JSON format:
+{
+  "summary": "<2-3 sentence professional summary targeting ${profile.targetRole}, highlighting key strengths>",
+  "enhancedExperience": [
+    {
+      "title": "<job title>",
+      "company": "<company>",
+      "bullets": ["<achievement-oriented bullet with metrics where possible>", "<another bullet>"]
+    }
+  ],
+  "reorderedSkills": ["<most relevant skills first for ${profile.targetRole}>"],
+  "estimatedAtsScore": <number 40-90, realistic assessment>
+}
+
+Rules:
+- Summary should be compelling and target the ${profile.targetRole} role
+- Enhance experience bullets with action verbs and quantified achievements where reasonable
+- NEVER fabricate companies, titles, or skills not in the original profile
+- Reorder skills with most relevant to ${profile.targetRole} first
+- Be realistic with the ATS score estimate`;
+
+  let enhancedSummary = profile.bio || '';
+  let enhancedExperience = baseResume.experience;
+  let reorderedSkills = baseResume.skills;
+  let atsScore = 50;
+
+  try {
+    const resumeResponse = await aiChatWithFallback({ messages: [
+      { role: 'system', content: 'You are Forge, the ATS Resume Optimizer. Generate polished resume content from raw profile data. Output valid JSON only. Never fabricate data.' },
+      { role: 'user', content: resumePrompt },
+    ] }, 'free');
+
+    const parsed = JSON.parse(extractJSON(resumeResponse));
+
+    if (typeof parsed.summary === 'string' && parsed.summary.length > 10) {
+      enhancedSummary = parsed.summary;
+    }
+
+    if (Array.isArray(parsed.enhancedExperience)) {
+      enhancedExperience = parsed.enhancedExperience.map((exp: any, i: number) => ({
+        title: exp.title || baseResume.experience[i]?.title || '',
+        company: exp.company || baseResume.experience[i]?.company || '',
+        location: baseResume.experience[i]?.location || '',
+        startDate: baseResume.experience[i]?.startDate || '',
+        endDate: baseResume.experience[i]?.endDate || '',
+        bullets: Array.isArray(exp.bullets) ? exp.bullets.filter((b: string) => typeof b === 'string') : baseResume.experience[i]?.bullets || [],
+      }));
+    }
+
+    if (Array.isArray(parsed.reorderedSkills)) {
+      const originalSkillsLower = new Set(baseResume.skills.map(s => s.toLowerCase()));
+      const validReordered = parsed.reorderedSkills.filter(
+        (s: string) => typeof s === 'string' && originalSkillsLower.has(s.toLowerCase())
+      );
+      if (validReordered.length >= baseResume.skills.length * 0.5) {
+        const reorderedLower = new Set(validReordered.map((s: string) => s.toLowerCase()));
+        const missing = baseResume.skills.filter(s => !reorderedLower.has(s.toLowerCase()));
+        reorderedSkills = [...validReordered, ...missing];
+      }
+    }
+
+    atsScore = Math.min(95, Math.max(20, Number(parsed.estimatedAtsScore) || 50));
+  } catch (err) {
+    console.error('[Forge] Resume generation from profile failed:', err);
+    // Fall back to raw profile data
+  }
+
+  const finalResume: ResumeContent = {
+    ...baseResume,
+    summary: enhancedSummary,
+    experience: enhancedExperience,
+    skills: reorderedSkills,
+  };
+
+  // ── Step 3: Generate cover letter ──
+  let coverLetter = '';
+  try {
+    const clPrompt = `Write a professional cover letter for this candidate applying to ${profile.targetRole} roles.
+
+CANDIDATE:
+Name: ${profile.fullName}
+Summary: ${enhancedSummary}
+Key Skills: ${reorderedSkills.slice(0, 8).join(', ')}
+Experience: ${enhancedExperience.map(e => `${e.title} at ${e.company}`).join(', ')}
+Education: ${profile.educationLevel} in ${profile.fieldOfStudy || 'N/A'} from ${profile.institution || 'N/A'}
+
+Write a 3-4 paragraph cover letter that:
+1. Opens with enthusiasm for the ${profile.targetRole} role
+2. Highlights 2-3 key achievements from their experience
+3. Connects their skills to the role requirements
+4. Closes with a strong call-to-action
+
+Return ONLY the cover letter text. No JSON, no markdown formatting.`;
+
+    const clResponse = await aiChatWithFallback({ messages: [
+      { role: 'system', content: 'You are Forge, writing a professional cover letter. Write naturally and compellingly. Return only the letter text, no JSON or markdown.' },
+      { role: 'user', content: clPrompt },
+    ] }, 'free');
+
+    coverLetter = clResponse.trim();
+  } catch (err) {
+    console.error('[Forge] Cover letter generation failed:', err);
+    coverLetter = `Dear Hiring Manager,\n\nI am writing to express my interest in ${profile.targetRole} positions. With experience as ${enhancedExperience[0]?.title || 'a professional'} and skills in ${reorderedSkills.slice(0, 3).join(', ')}, I believe I would be a strong fit.\n\nThank you for your consideration.\n\nBest regards,\n${profile.fullName}`;
+  }
+
+  // ── Log activity ──
+  await prisma.agentActivity.create({
+    data: {
+      userId,
+      agent: 'forge',
+      action: 'generated_from_profile',
+      summary: `Generated resume + cover letter from onboarding profile for "${profile.targetRole}" — ATS Score: ${atsScore}%`,
+      details: { targetRole: profile.targetRole, experienceLevel: profile.experienceLevel, skillCount: reorderedSkills.length, atsScore },
+    },
+  });
+
+  if (ctx) {
+    logActivity(ctx, 'forge', 'generated_from_profile', `Generated resume + cover letter from profile for "${profile.targetRole}" (ATS: ${atsScore}%)`);
+  }
+
+  return { resume: finalResume, coverLetter, atsScore };
+}

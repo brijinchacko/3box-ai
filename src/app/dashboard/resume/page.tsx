@@ -14,6 +14,7 @@ import TemplatePreview from '@/components/resume/TemplatePreview';
 import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentLoader from '@/components/brand/AgentLoader';
+import ForgeAutoGenerate from '@/components/forge/ForgeAutoGenerate';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
@@ -146,6 +147,8 @@ export default function ResumePage() {
   const { data: session } = useSession();
   const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
   const forgeLocked = !isAgentAvailable('forge', userPlan);
+  const [showEditor, setShowEditor] = useState(false);
+  const [forgeKey, setForgeKey] = useState(0); // Used to re-render ForgeAutoGenerate
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [resume, setResume] = useState(emptyResume);
   const [activeSection, setActiveSection] = useState('contact');
@@ -605,6 +608,25 @@ export default function ResumePage() {
   return (
     <div className="max-w-6xl mx-auto">
       <AgentPageHeader agentId="forge" onRunNow={() => { setWizardOpen(true); setWizardStep(1); setWizardError(''); }} />
+
+      {/* ── Forge Auto-Generate + Approval Layer ── */}
+      {!showEditor && (
+        <ForgeAutoGenerate
+          key={forgeKey}
+          onEnterEditor={() => setShowEditor(true)}
+          onStatusChange={() => setForgeKey(prev => prev + 1)}
+        />
+      )}
+
+      {showEditor && (
+        <button
+          onClick={() => setShowEditor(false)}
+          className="mb-4 text-xs text-white/30 hover:text-white/50 flex items-center gap-1"
+        >
+          ← Back to Forge Dashboard
+        </button>
+      )}
+
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -920,6 +942,8 @@ export default function ResumePage() {
         )}
       </AnimatePresence>
 
+      {/* ── Editor Section (only shown when user enters editor) ── */}
+      {showEditor && (<>
       {/* ── Paywall Banner (BASIC plan) ─────────────────────── */}
       {isBasic && (
         <motion.div
@@ -1813,6 +1837,7 @@ export default function ResumePage() {
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }

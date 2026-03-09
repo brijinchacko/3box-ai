@@ -7,7 +7,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { isAgentAvailable } from './permissions';
 import { runScout } from './scout';
-import { analyzeResumeForJob, generateOptimizedResume, verifyResumeReadiness } from './forge';
+import { analyzeResumeForJob, generateOptimizedResume, verifyResumeReadiness, quickATSScore } from './forge';
 import { applyToJob, applyToJobsBatch } from './archer';
 import { prepareInterview } from './atlas';
 import { analyzeSkillGaps } from './sage';
@@ -81,13 +81,23 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
     throw new Error('Auto-apply is not configured or disabled');
   }
 
-  // Check for finalized resume
+  // Check for finalized + approved resume
   const resume = autoConfig.resumeId
     ? await prisma.resume.findUnique({ where: { id: autoConfig.resumeId } })
-    : await prisma.resume.findFirst({ where: { userId, isFinalized: true }, orderBy: { updatedAt: 'desc' } });
+    : await prisma.resume.findFirst({
+        where: { userId, isFinalized: true, approvalStatus: 'approved' },
+        orderBy: { updatedAt: 'desc' },
+      });
 
-  if (!resume || !resume.isFinalized) {
-    throw new Error('No finalized resume found. Please finalize your resume first.');
+  // Fall back to any finalized resume (legacy resumes without approvalStatus)
+  const fallbackResume = !resume
+    ? await prisma.resume.findFirst({ where: { userId, isFinalized: true }, orderBy: { updatedAt: 'desc' } })
+    : null;
+
+  const activeResume = resume || fallbackResume;
+
+  if (!activeResume || !activeResume.isFinalized) {
+    throw new Error('No approved resume found. Please generate and approve your resume in Forge first.');
   }
 
   // Check credits
@@ -102,7 +112,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
     throw new Error('No AI credits remaining. Please upgrade your plan or purchase credits.');
   }
 
-  const resumeContent = resume.content as any;
+  const resumeContent = activeResume.content as any;
   const targetRoles = (autoConfig.targetRoles as string[]) || [];
   const targetLocations = (autoConfig.targetLocations as string[]) || [];
   const excludeCompanies = (autoConfig.excludeCompanies as string[]) || [];
@@ -183,23 +193,57 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
 
     // ── Step 2: Forge optimizes resume + Quality Gate (STARTER+) ──
     // Runs automatically in autopilot + full-agent; produces suggestions in copilot
+    // Respects perJobResumeRewrite setting — if OFF, only runs free ATS check
+    const shouldRewritePerJob = autoConfig.perJobResumeRewrite ?? false;
+
     if (isAgentAvailable('forge', plan) && shouldAutoRun('forge', automationMode)) {
       const _scoutToForgeHandoff = getAgentHandoff(ctx, 'scout', 'forge');
+
+      if (shouldRewritePerJob) {
+        logActivity(ctx, 'forge', 'per_job_rewrite_enabled', `Per-job rewriting is ON — will generate variants for top jobs (2 tokens each)`);
+      } else {
+        logActivity(ctx, 'forge', 'per_job_rewrite_disabled', `Per-job rewriting is OFF — using base resume for all applications`);
+      }
+
       for (const job of jobsToProcess.slice(0, 5)) { // Optimize for top 5
         try {
-          // Analyze resume fit
-          const forgeResult = await analyzeResumeForJob(userId, resumeContent, job.title, job.description, job.company);
-          const atsScore = forgeResult?.atsScore ?? 0;
+          let atsScore = 0;
+          let keywordGaps: string[] = [];
 
-          // Generate per-job optimized resume variant
-          try {
-            const optimizedResume = await generateOptimizedResume(
-              userId, resumeContent, job.title, job.description, job.company, forgeResult, ctx,
-            );
-            // Attach optimized resume to job for Archer
-            job._optimizedResume = optimizedResume;
-          } catch {
-            // Fall back to base resume if variant generation fails
+          if (shouldRewritePerJob) {
+            // Full per-job analysis + variant generation (costs tokens)
+            const forgeResult = await analyzeResumeForJob(userId, resumeContent, job.title, job.description, job.company);
+            atsScore = forgeResult?.atsScore ?? 0;
+            keywordGaps = forgeResult?.keywordGaps ?? [];
+
+            // Generate per-job optimized resume variant
+            try {
+              const optimizedResume = await generateOptimizedResume(
+                userId, resumeContent, job.title, job.description, job.company, forgeResult, ctx,
+              );
+              // Attach optimized resume to job for Archer
+              job._optimizedResume = optimizedResume;
+
+              // Save as ResumeVariant in DB
+              try {
+                await prisma.resumeVariant.create({
+                  data: {
+                    resumeId: activeResume.id,
+                    userId,
+                    jobTitle: job.title,
+                    company: job.company,
+                    content: optimizedResume as any,
+                    atsScore,
+                    runId: run.id,
+                  },
+                });
+              } catch { /* non-critical */ }
+            } catch {
+              // Fall back to base resume if variant generation fails
+            }
+          } else {
+            // Free ATS check only (no AI cost)
+            atsScore = await quickATSScore(resumeContent, job.description);
           }
 
           // Quality gate: score the application before sending
@@ -223,7 +267,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             jobTitle: job.title,
             company: job.company,
             atsScore,
-            keywordsAdded: forgeResult?.keywordGaps ?? [],
+            keywordsAdded: keywordGaps,
           }]);
           addToContext(ctx, 'qualityScores', [{
             jobTitle: job.title,

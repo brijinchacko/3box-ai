@@ -370,20 +370,25 @@ model LearningPath {
 // ─── Resumes ───────────────────────────────────
 
 model Resume {
-  id          String          @id @default(cuid())
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  template    String          @default("modern")
-  content     Json
-  targetJob   String?
-  atsScore    Float?
-  pdfUrl      String?
-  isFinalized Boolean         @default(false)
-  version     Int             @default(1)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  variants    ResumeVariant[]
+  id                        String          @id @default(cuid())
+  userId                    String
+  user                      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                     String
+  template                  String          @default("modern")
+  content                   Json
+  targetJob                 String?
+  atsScore                  Float?
+  pdfUrl                    String?
+  isFinalized               Boolean         @default(false)
+  approvalStatus            String          @default("draft")    // draft | pending | approved | rejected
+  approvedAt                DateTime?
+  sourceType                String          @default("manual")   // manual | onboarding | per_job
+  coverLetter               String?         @db.Text
+  coverLetterApprovalStatus String?         @default("draft")    // draft | pending | approved
+  version                   Int             @default(1)
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  variants                  ResumeVariant[]
 
   @@index([userId])
 }
@@ -503,23 +508,25 @@ model CoachSettings {
 // ─── Auto Apply System ──────────────────────────
 
 model AutoApplyConfig {
-  id               String    @id @default(cuid())
-  userId           String    @unique
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enabled          Boolean   @default(false)
-  automationMode   String    @default("autopilot") // copilot | autopilot | full-agent
-  resumeId         String?
-  targetRoles      Json      @default("[]")
-  targetLocations  Json      @default("[]")
-  minMatchScore    Int       @default(60)
-  maxAppliesPerRun Int       @default(100)
-  excludeCompanies Json      @default("[]")
-  excludeKeywords  Json      @default("[]")
-  scheduleTime     String?
-  preferRemote     Boolean   @default(false)
-  lastRunAt        DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled             Boolean   @default(false)
+  automationMode      String    @default("autopilot") // copilot | autopilot | full-agent
+  resumeId            String?
+  targetRoles         Json      @default("[]")
+  targetLocations     Json      @default("[]")
+  minMatchScore       Int       @default(60)
+  maxAppliesPerRun    Int       @default(100)
+  excludeCompanies    Json      @default("[]")
+  excludeKeywords     Json      @default("[]")
+  scheduleTime        String?
+  preferRemote        Boolean   @default(false)
+  perJobResumeRewrite Boolean   @default(false)  // Allow Forge to rewrite resume per job
+  perJobAutoApprove   Boolean   @default(false)  // Auto-approve per-job variants
+  lastRunAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 model AutoApplyRun {

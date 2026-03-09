@@ -21,6 +21,8 @@ export const TOKEN_COSTS = {
   resume_generate: 3,
   resume_enhance: 2,
   resume_analyze: 2,
+  forge_auto_generate: 5,  // First resume from profile (3 resume + 2 cover letter)
+  per_job_rewrite: 2,      // Per-job ATS-optimized variant
 
   // Archer Agent
   cover_letter: 2,
@@ -49,6 +51,8 @@ export type TokenOperation = keyof typeof TOKEN_COSTS;
 export const TOKEN_COST_LABELS: { operation: string; cost: string; description: string }[] = [
   { operation: 'Scout Search', cost: '2/platform', description: '6 platforms = 12 tokens' },
   { operation: 'Resume Generation', cost: '3', description: 'AI-powered full resume' },
+  { operation: 'Auto-Generate from Profile', cost: '5', description: 'Resume + cover letter from onboarding' },
+  { operation: 'Per-Job Rewrite', cost: '2', description: 'ATS-tailored variant per job' },
   { operation: 'Resume Enhancement', cost: '2', description: 'Section optimization' },
   { operation: 'Cover Letter', cost: '2', description: 'Per job application' },
   { operation: 'Interview Prep', cost: '2', description: 'Company-specific questions' },
