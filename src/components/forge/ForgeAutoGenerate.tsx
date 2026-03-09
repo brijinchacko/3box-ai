@@ -20,14 +20,39 @@ function LinkedInSection({
   isOpen,
   onToggle,
   onCopy,
+  resumeId,
+  onLinkedInGenerated,
 }: {
   content: any;
   checklist: string[];
   isOpen: boolean;
   onToggle: () => void;
   onCopy: (text: string, label: string) => void;
+  resumeId?: string;
+  onLinkedInGenerated?: () => void;
 }) {
-  if (!content?.linkedinHeadline && !content?.linkedinBio) return null;
+  const [generatingLinkedIn, setGeneratingLinkedIn] = useState(false);
+  const hasLinkedInData = !!(content?.linkedinHeadline || content?.linkedinBio);
+
+  const handleGenerateLinkedIn = async () => {
+    if (!resumeId || generatingLinkedIn) return;
+    setGeneratingLinkedIn(true);
+    try {
+      const res = await fetch('/api/forge/linkedin-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeId }),
+      });
+      if (res.ok) {
+        onLinkedInGenerated?.();
+      }
+    } catch (err) {
+      console.error('[LinkedInSection] Generation failed:', err);
+    } finally {
+      setGeneratingLinkedIn(false);
+    }
+  };
+
   return (
     <div className="card">
       <button onClick={onToggle} className="w-full flex items-center justify-between">
@@ -42,13 +67,40 @@ function LinkedInSection({
           animate={{ height: 'auto', opacity: 1 }}
           className="mt-3 space-y-3"
         >
+          {/* Disclaimer Banner — always visible */}
           <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-blue-300/80">
               Unfortunately LinkedIn hate the automation tools — so I can&apos;t check your LinkedIn page. Please update it manually using the suggestions below.
             </p>
           </div>
-          {content.linkedinHeadline && (
+
+          {/* Generate button if LinkedIn data doesn't exist yet */}
+          {!hasLinkedInData && (
+            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
+              <p className="text-sm text-white/50 mb-3">
+                Generate personalized LinkedIn headline, bio &amp; skill suggestions based on your resume.
+              </p>
+              <button
+                onClick={handleGenerateLinkedIn}
+                disabled={generatingLinkedIn}
+                className="btn-primary text-sm px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center gap-2 mx-auto"
+              >
+                {generatingLinkedIn ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" /> Generate LinkedIn Suggestions
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* LinkedIn Headline */}
+          {content?.linkedinHeadline && (
             <div className="p-3 rounded-xl bg-white/5">
               <div className="flex items-center justify-between mb-1">
                 <h5 className="text-xs text-white/40">Suggested Headline</h5>
@@ -59,7 +111,9 @@ function LinkedInSection({
               <p className="text-sm text-white/80 font-medium">{content.linkedinHeadline}</p>
             </div>
           )}
-          {content.linkedinBio && (
+
+          {/* LinkedIn Bio */}
+          {content?.linkedinBio && (
             <div className="p-3 rounded-xl bg-white/5">
               <div className="flex items-center justify-between mb-1">
                 <h5 className="text-xs text-white/40">Suggested About Section</h5>
@@ -70,7 +124,9 @@ function LinkedInSection({
               <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{content.linkedinBio}</p>
             </div>
           )}
-          {content.linkedinSuggestedSkills?.length > 0 && (
+
+          {/* Suggested Skills */}
+          {content?.linkedinSuggestedSkills?.length > 0 && (
             <div className="p-3 rounded-xl bg-white/5">
               <h5 className="text-xs text-white/40 mb-2">Suggested LinkedIn Skills</h5>
               <div className="flex flex-wrap gap-1.5">
@@ -80,6 +136,8 @@ function LinkedInSection({
               </div>
             </div>
           )}
+
+          {/* Profile Checklist — always visible */}
           <div className="p-3 rounded-xl bg-white/5">
             <h5 className="text-xs text-white/40 mb-2">LinkedIn Profile Checklist</h5>
             <div className="space-y-2">
@@ -91,6 +149,18 @@ function LinkedInSection({
               ))}
             </div>
           </div>
+
+          {/* Regenerate button if LinkedIn data already exists */}
+          {hasLinkedInData && (
+            <button
+              onClick={handleGenerateLinkedIn}
+              disabled={generatingLinkedIn}
+              className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1"
+            >
+              {generatingLinkedIn ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              Regenerate LinkedIn suggestions
+            </button>
+          )}
         </motion.div>
       )}
     </div>
@@ -593,6 +663,8 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
             isOpen={showLinkedIn}
             onToggle={() => setShowLinkedIn(!showLinkedIn)}
             onCopy={handleCopyText}
+            resumeId={resume.id}
+            onLinkedInGenerated={fetchStatus}
           />
 
           {/* Approve / Reject Buttons */}
@@ -707,6 +779,8 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
             isOpen={showLinkedInApproved}
             onToggle={() => setShowLinkedInApproved(!showLinkedInApproved)}
             onCopy={handleCopyText}
+            resumeId={resume.id}
+            onLinkedInGenerated={fetchStatus}
           />
 
           {/* Per-Job Rewrite Settings */}
