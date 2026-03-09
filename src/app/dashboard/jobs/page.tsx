@@ -35,6 +35,7 @@ import {
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
+import AgentConfigPanel from '@/components/dashboard/AgentConfigPanel';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentLoader from '@/components/brand/AgentLoader';
 import AgentAvatar from '@/components/brand/AgentAvatar';
@@ -517,6 +518,7 @@ export default function JobsPage() {
   return (
     <div className="max-w-5xl mx-auto">
       <AgentPageHeader agentId="scout" onRunNow={() => setShowMissionModal(true)} />
+      <AgentConfigPanel agentId="scout" variant="collapsible" />
 
       {/* Scout Mission Modal */}
       <ScoutMissionModal

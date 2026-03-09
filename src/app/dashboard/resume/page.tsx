@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import TemplatePreview from '@/components/resume/TemplatePreview';
 import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
+import AgentConfigPanel from '@/components/dashboard/AgentConfigPanel';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentLoader from '@/components/brand/AgentLoader';
 import ForgeAutoGenerate from '@/components/forge/ForgeAutoGenerate';
@@ -758,6 +759,7 @@ export default function ResumePage() {
   return (
     <div className="max-w-6xl mx-auto">
       <AgentPageHeader agentId="forge" onRunNow={() => { setWizardOpen(true); setWizardStep(1); setWizardError(''); }} />
+      <AgentConfigPanel agentId="forge" variant="collapsible" />
 
       {/* ── Forge Auto-Generate + Approval Layer ── */}
       {!showEditor && (

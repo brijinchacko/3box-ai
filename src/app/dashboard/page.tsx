@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Lock, ArrowRight, Clock, Loader2,
   Shield, Target, TrendingUp, Zap, CheckCircle2,
-  Brain, FileText, Send, MessageSquare, Trophy, ChevronRight, ChevronDown, Rocket,
+  Brain, FileText, Send, MessageSquare, Trophy, ChevronRight, ChevronDown, Rocket, Settings2,
 } from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import CortexAvatar from '@/components/brand/CortexAvatar';
@@ -170,6 +170,32 @@ export default function DashboardPage() {
           </motion.div>
         );
       })()}
+
+      {/* ───── COMMAND CENTER QUICK ACCESS ───── */}
+      {!loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+        >
+          <Link
+            href="/dashboard/agents"
+            className="group block rounded-2xl border border-neon-purple/15 bg-gradient-to-r from-neon-purple/[0.06] to-neon-blue/[0.04] p-4 hover:border-neon-purple/30 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <CortexAvatar size={40} pulse />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-white">Agent Command Center</h3>
+                <p className="text-xs text-white/40 mt-0.5">Configure schedules, view run history, manage all agents</p>
+              </div>
+              <div className="flex items-center gap-2 text-neon-purple">
+                <Settings2 className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+      )}
 
       {/* ───── METRICS/ACTIVITY + STORY (side-by-side) ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">

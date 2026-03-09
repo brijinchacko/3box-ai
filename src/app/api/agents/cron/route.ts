@@ -5,6 +5,7 @@ import { runIndependentScout } from '@/lib/agents/scout';
 import { runIndependentForge } from '@/lib/agents/forge';
 import { runIndependentArcher } from '@/lib/agents/archer';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { checkDailyCap } from '@/lib/tokens/dailyCap';
 
 /**
  * Cron endpoint — called hourly by external cron job
@@ -83,8 +84,31 @@ export async function GET(request: NextRequest) {
       // Skip BASIC plan users
       if (config.user.plan === 'BASIC') continue;
 
-      // Skip if no credits remaining
-      if (config.user.aiCreditsLimit >= 0 && config.user.aiCreditsUsed >= config.user.aiCreditsLimit) continue;
+      // Skip if no credits remaining — log depletion event once per day
+      if (config.user.aiCreditsLimit >= 0 && config.user.aiCreditsUsed >= config.user.aiCreditsLimit) {
+        console.log(`[Cron] Agents paused for user ${config.userId}: credits depleted (${config.user.aiCreditsUsed}/${config.user.aiCreditsLimit})`);
+        try {
+          const todayStart = new Date(now);
+          todayStart.setHours(0, 0, 0, 0);
+          const alreadyLogged = await prisma.agentActivity.findFirst({
+            where: { userId: config.userId, agent: 'cortex', action: 'credits_depleted', createdAt: { gte: todayStart } },
+          });
+          if (!alreadyLogged) {
+            await prisma.agentActivity.create({
+              data: {
+                userId: config.userId,
+                agent: 'cortex',
+                action: 'credits_depleted',
+                summary: `Agents paused: ${config.user.aiCreditsUsed}/${config.user.aiCreditsLimit} tokens used. Agents will resume on token reset.`,
+                creditsUsed: 0,
+              },
+            });
+          }
+        } catch (logErr) {
+          console.error(`[Cron] Failed to log credit depletion for ${config.userId}:`, logErr);
+        }
+        continue;
+      }
 
       // Check for any running job for this user (prevent concurrent runs)
       const activeRun = await prisma.autoApplyRun.findFirst({
@@ -161,19 +185,26 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Archer
+      // Archer — also check daily application cap
       if (config.archerEnabled && shouldRunAgent(config.archerLastRunAt, config.archerInterval, now)) {
         if (isAgentAvailable('archer', plan)) {
-          try {
-            const result = await runIndependentArcher(config.userId, {
-              maxPerRun: config.archerMaxPerRun,
-              resumeId: config.resumeId || undefined,
-              forgeEnabled: config.forgeEnabled,
-              forgeMode: config.forgeMode,
-            });
-            results.push({ userId: config.userId, agent: 'archer', status: 'completed', jobsApplied: result.jobsApplied });
-          } catch (err: any) {
-            results.push({ userId: config.userId, agent: 'archer', status: 'failed', error: err.message });
+          // Check daily application cap before dispatching
+          const dailyCap = await checkDailyCap(config.userId);
+          if (!dailyCap.allowed) {
+            console.log(`[Cron] Archer daily cap for ${config.userId}: ${dailyCap.used}/${dailyCap.limit}`);
+            results.push({ userId: config.userId, agent: 'archer', status: 'daily_cap_reached' });
+          } else {
+            try {
+              const result = await runIndependentArcher(config.userId, {
+                maxPerRun: config.archerMaxPerRun,
+                resumeId: config.resumeId || undefined,
+                forgeEnabled: config.forgeEnabled,
+                forgeMode: config.forgeMode,
+              });
+              results.push({ userId: config.userId, agent: 'archer', status: 'completed', jobsApplied: result.jobsApplied });
+            } catch (err: any) {
+              results.push({ userId: config.userId, agent: 'archer', status: 'failed', error: err.message });
+            }
           }
         }
       }

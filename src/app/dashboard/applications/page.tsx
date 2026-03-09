@@ -28,6 +28,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
+import AgentConfigPanel from '@/components/dashboard/AgentConfigPanel';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { notifyAgentStarted, notifyAgentCompleted, notifyAgentError } from '@/lib/notifications/toast';
 
@@ -319,6 +320,8 @@ export default function ApplicationsPage() {
           </button>
         </div>
       </motion.div>
+
+      <AgentConfigPanel agentId="archer" variant="collapsible" />
 
       {/* ── Run Error ── */}
       {runError && (

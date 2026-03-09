@@ -7,7 +7,13 @@ import {
   User, Briefcase, GraduationCap, Sparkles, ArrowRight, ArrowLeft,
   Check, MapPin, Phone, Linkedin, Plus, X, Loader2, Rocket,
   DollarSign, FileText, Upload, ClipboardPaste, Zap, CheckCircle2,
+  ToggleLeft, ToggleRight, AlertTriangle, Clock, Target,
 } from 'lucide-react';
+import {
+  SCHEDULE_PRESETS, type SchedulePreset,
+  estimateTotalMonthlyTokens, getTokenWarningLevel,
+} from '@/lib/agents/configUtils';
+import { PLAN_TOKEN_LIMITS } from '@/lib/tokens/pricing';
 
 // ─── Types ──────────────────────────────────────
 interface ExperienceEntry {
@@ -123,6 +129,15 @@ export default function OnboardingPage() {
   const [customSkill, setCustomSkill] = useState('');
   const [userEmail, setUserEmail] = useState('');
 
+  // Agent scheduling state (Step 5)
+  const [agentConfig, setAgentConfig] = useState({
+    scoutEnabled: true,
+    forgeEnabled: false,
+    archerEnabled: false,
+    preset: 'balanced' as SchedulePreset,
+  });
+  const [userPlan, setUserPlan] = useState<string>('STARTER');
+
   // Resume upload state
   const [resumeMode, setResumeMode] = useState<'upload' | 'paste' | null>(null);
   const [resumeText, setResumeText] = useState('');
@@ -155,6 +170,7 @@ export default function OnboardingPage() {
       .then((profile) => {
         if (profile.name) setData((prev) => ({ ...prev, fullName: profile.name }));
         if (profile.email) setUserEmail(profile.email);
+        if (profile.plan) setUserPlan(profile.plan);
       })
       .catch(() => {});
   }, []);
@@ -352,6 +368,23 @@ export default function OnboardingPage() {
         targetRole: data.targetRole,
       };
       localStorage.setItem('3box_resume_draft', JSON.stringify(resumeData));
+
+      // Save agent configuration from onboarding
+      const selectedPreset = SCHEDULE_PRESETS[agentConfig.preset];
+      await fetch('/api/agents/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scoutEnabled: agentConfig.scoutEnabled,
+          scoutInterval: selectedPreset.scoutInterval,
+          forgeEnabled: agentConfig.forgeEnabled,
+          forgeInterval: selectedPreset.forgeInterval,
+          forgeMode: 'on_demand',
+          archerEnabled: agentConfig.archerEnabled,
+          archerInterval: selectedPreset.archerInterval,
+          archerMaxPerRun: 10,
+        }),
+      }).catch(() => {}); // Non-blocking — don't fail onboarding if config save fails
 
       router.push('/dashboard');
     } catch {
@@ -865,39 +898,141 @@ export default function OnboardingPage() {
               </motion.div>
             )}
 
-            {/* ─── Step 5: Meet Your Agents ──── */}
+            {/* ─── Step 5: Meet Your Agents + Configure ──── */}
             {step === 5 && (
               <motion.div key="step-5" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <div className="text-center mb-5">
+                <div className="text-center mb-4">
                   <h2 className="text-xl font-bold">Meet Your AI Agents</h2>
-                  <p className="text-xs text-white/40 mt-1 max-w-md mx-auto">Your personal team of AI agents will work together to accelerate your career. Here&apos;s your team:</p>
+                  <p className="text-xs text-white/40 mt-1 max-w-md mx-auto">Your personal team of AI agents will work together to accelerate your career.</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Agent overview cards — compact */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-5">
                   {[
-                    { emoji: '\uD83D\uDD0D', name: 'Scout', role: 'Job Hunter', desc: 'Finds jobs matching your profile', borderColor: 'border-l-blue-500' },
-                    { emoji: '\uD83D\uDCC4', name: 'Forge', role: 'Resume Optimizer', desc: 'Optimizes your resume per job', borderColor: 'border-l-orange-500' },
-                    { emoji: '\uD83D\uDCE8', name: 'Archer', role: 'Application Agent', desc: 'Sends applications & cover letters', borderColor: 'border-l-green-500' },
-                    { emoji: '\uD83C\uDFAF', name: 'Atlas', role: 'Interview Coach', desc: 'Preps company-specific interviews', borderColor: 'border-l-purple-500' },
-                    { emoji: '\uD83D\uDCDA', name: 'Sage', role: 'Skill Trainer', desc: 'Identifies gaps & recommends learning', borderColor: 'border-l-teal-500' },
-                    { emoji: '\uD83D\uDEE1\uFE0F', name: 'Sentinel', role: 'Quality Reviewer', desc: 'Reviews apps before sending', borderColor: 'border-l-rose-500' },
-                  ].map((agent) => (
-                    <div key={agent.name} className={`p-3 rounded-xl bg-white/[0.03] border border-white/5 border-l-[3px] ${agent.borderColor} transition-all hover:bg-white/[0.06]`}>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-base">{agent.emoji}</span>
-                        <span className="text-sm font-bold text-white">{agent.name}</span>
-                        <span className="text-[10px] text-white/30 font-medium">{agent.role}</span>
+                    { emoji: '\uD83D\uDD0D', name: 'Scout', desc: 'Finds jobs', borderColor: 'border-l-blue-500' },
+                    { emoji: '\uD83D\uDCC4', name: 'Forge', desc: 'Optimizes resume', borderColor: 'border-l-orange-500' },
+                    { emoji: '\uD83D\uDCE8', name: 'Archer', desc: 'Auto-applies', borderColor: 'border-l-green-500' },
+                    { emoji: '\uD83C\uDFAF', name: 'Atlas', desc: 'Interview prep', borderColor: 'border-l-purple-500' },
+                    { emoji: '\uD83D\uDCDA', name: 'Sage', desc: 'Skill training', borderColor: 'border-l-teal-500' },
+                    { emoji: '\uD83D\uDEE1\uFE0F', name: 'Sentinel', desc: 'Quality review', borderColor: 'border-l-rose-500' },
+                  ].map((a) => (
+                    <div key={a.name} className={`p-2 rounded-lg bg-white/[0.03] border border-white/5 border-l-[3px] ${a.borderColor}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">{a.emoji}</span>
+                        <span className="text-xs font-bold text-white">{a.name}</span>
                       </div>
-                      <p className="text-[11px] text-white/40 pl-7">{agent.desc}</p>
+                      <p className="text-[10px] text-white/40 pl-6">{a.desc}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-white/5 text-center">
-                  <p className="text-[11px] text-white/40">Agents are coordinated by <span className="text-neon-blue font-semibold">Cortex</span>, your AI brain. Available agents scale with your plan.</p>
+                {/* ── Agent Configuration ── */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 mb-4">
+                  <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-neon-blue" /> Configure Automation
+                  </h3>
+
+                  {/* Agent toggles */}
+                  <div className="space-y-2 mb-4">
+                    {[
+                      { key: 'scoutEnabled' as const, label: 'Scout', desc: 'Auto-discover jobs matching your profile', color: 'text-blue-400' },
+                      { key: 'forgeEnabled' as const, label: 'Forge', desc: 'Auto-optimize your resume for each job', color: 'text-orange-400' },
+                      { key: 'archerEnabled' as const, label: 'Archer', desc: 'Auto-apply to matched jobs', color: 'text-green-400' },
+                    ].map((agent) => (
+                      <div key={agent.key} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02]">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold ${agent.color}`}>{agent.label}</span>
+                          <span className="text-[10px] text-white/30">{agent.desc}</span>
+                        </div>
+                        <button
+                          onClick={() => setAgentConfig(prev => ({ ...prev, [agent.key]: !prev[agent.key] }))}
+                          className="flex-shrink-0"
+                        >
+                          {agentConfig[agent.key] ? (
+                            <ToggleRight className="w-5 h-5 text-neon-green" />
+                          ) : (
+                            <ToggleLeft className="w-5 h-5 text-white/30" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Schedule presets */}
+                  <h4 className="text-xs font-semibold text-white/50 mb-2">Schedule Pace</h4>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {(Object.entries(SCHEDULE_PRESETS) as [SchedulePreset, typeof SCHEDULE_PRESETS[SchedulePreset]][]).map(([key, preset]) => {
+                      const isActive = agentConfig.preset === key;
+                      const PresetIcon = key === 'aggressive' ? Zap : key === 'balanced' ? Target : Clock;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setAgentConfig(prev => ({ ...prev, preset: key }))}
+                          className={`p-2.5 rounded-lg border text-left transition-all ${
+                            isActive
+                              ? 'border-neon-blue/40 bg-neon-blue/10'
+                              : 'border-white/5 bg-white/[0.02] hover:border-white/10'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <PresetIcon className={`w-3 h-3 ${isActive ? 'text-neon-blue' : 'text-white/30'}`} />
+                            <span className={`text-xs font-bold ${isActive ? 'text-neon-blue' : 'text-white/60'}`}>{preset.label}</span>
+                          </div>
+                          <p className="text-[9px] text-white/30 leading-tight">{preset.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Token estimate */}
+                  {(() => {
+                    const selectedPreset = SCHEDULE_PRESETS[agentConfig.preset];
+                    const estimate = estimateTotalMonthlyTokens({
+                      scoutEnabled: agentConfig.scoutEnabled,
+                      scoutInterval: selectedPreset.scoutInterval,
+                      forgeEnabled: agentConfig.forgeEnabled,
+                      forgeInterval: selectedPreset.forgeInterval,
+                      forgeMode: 'on_demand',
+                      archerEnabled: agentConfig.archerEnabled,
+                      archerInterval: selectedPreset.archerInterval,
+                      archerMaxPerRun: 10,
+                    });
+                    const limit = PLAN_TOKEN_LIMITS[userPlan as keyof typeof PLAN_TOKEN_LIMITS] ?? 200;
+                    const warning = getTokenWarningLevel(estimate, userPlan as any);
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] text-white/40">
+                          <span>Estimated: ~{estimate} tokens/month</span>
+                          <span>Your plan: {limit}/month</span>
+                        </div>
+                        {estimate > 0 && (
+                          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                warning.level === 'error' ? 'bg-red-500' : warning.level === 'warning' ? 'bg-amber-500' : 'bg-neon-green'
+                              }`}
+                              style={{ width: `${Math.min(100, (estimate / limit) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                        {warning.level !== 'none' && (
+                          <div className={`flex items-start gap-1.5 text-[10px] ${
+                            warning.level === 'error' ? 'text-red-400' : 'text-amber-400'
+                          }`}>
+                            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                            <span>{warning.message}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                <div className="flex gap-3 mt-5">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-white/5 text-center mb-4">
+                  <p className="text-[11px] text-white/40">Agents are coordinated by <span className="text-neon-blue font-semibold">Cortex</span>. You can adjust these settings anytime in the Command Center.</p>
+                </div>
+
+                <div className="flex gap-3">
                   <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
                   <button onClick={handleSubmit} disabled={!canProceed(5) || loading}
                     className="btn-primary flex-1 flex items-center justify-center gap-2 text-base py-3">
