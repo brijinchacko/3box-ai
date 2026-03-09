@@ -13,6 +13,10 @@ interface ResumeContent {
   education: { degree: string; institution: string; year: string; gpa?: string }[];
   skills: string[];
   certifications?: string[];
+  // LinkedIn optimization content (generated alongside resume)
+  linkedinHeadline?: string;
+  linkedinBio?: string;
+  linkedinSuggestedSkills?: string[];
 }
 
 interface ForgeAnalysis {
@@ -502,7 +506,7 @@ Experience:
 ${(profile.experiences || []).map(e => `- ${e.title} at ${e.company} (${e.duration}): ${e.description}`).join('\n')}
 Education: ${profile.educationLevel} in ${profile.fieldOfStudy || 'N/A'} from ${profile.institution || 'N/A'} (${profile.graduationYear || 'N/A'})
 
-Generate a professional resume in JSON format:
+Generate a professional resume AND LinkedIn profile content in JSON format:
 {
   "summary": "<2-3 sentence professional summary targeting ${profile.targetRole}, highlighting key strengths>",
   "enhancedExperience": [
@@ -513,7 +517,10 @@ Generate a professional resume in JSON format:
     }
   ],
   "reorderedSkills": ["<most relevant skills first for ${profile.targetRole}>"],
-  "estimatedAtsScore": <number 40-90, realistic assessment>
+  "estimatedAtsScore": <number 40-90, realistic assessment>,
+  "linkedinHeadline": "<compelling LinkedIn headline, max 120 chars, with relevant keywords for ${profile.targetRole}. Example format: 'Senior Software Engineer | React & Node.js | Building scalable web applications'>",
+  "linkedinBio": "<3-5 sentence LinkedIn About section. Conversational and engaging tone (first person). Highlight key strengths, years of experience, core skills, and career goals. End with what excites them about their field.>",
+  "linkedinSuggestedSkills": ["<top 10-15 LinkedIn skills based on their profile, most relevant to ${profile.targetRole} first>"]
 }
 
 Rules:
@@ -521,12 +528,18 @@ Rules:
 - Enhance experience bullets with action verbs and quantified achievements where reasonable
 - NEVER fabricate companies, titles, or skills not in the original profile
 - Reorder skills with most relevant to ${profile.targetRole} first
-- Be realistic with the ATS score estimate`;
+- Be realistic with the ATS score estimate
+- LinkedIn headline must be under 120 characters and keyword-rich
+- LinkedIn bio should be written in first person, professional but personable
+- LinkedIn suggested skills should include both technical and soft skills from the profile`;
 
   let enhancedSummary = profile.bio || '';
   let enhancedExperience = baseResume.experience;
   let reorderedSkills = baseResume.skills;
   let atsScore = 50;
+  let linkedinHeadline = '';
+  let linkedinBio = '';
+  let linkedinSuggestedSkills: string[] = [];
 
   try {
     const resumeResponse = await aiChatWithFallback({ messages: [
@@ -564,6 +577,19 @@ Rules:
     }
 
     atsScore = Math.min(95, Math.max(20, Number(parsed.estimatedAtsScore) || 50));
+
+    // Extract LinkedIn optimization content
+    if (typeof parsed.linkedinHeadline === 'string' && parsed.linkedinHeadline.length > 5) {
+      linkedinHeadline = parsed.linkedinHeadline.slice(0, 120);
+    }
+    if (typeof parsed.linkedinBio === 'string' && parsed.linkedinBio.length > 10) {
+      linkedinBio = parsed.linkedinBio;
+    }
+    if (Array.isArray(parsed.linkedinSuggestedSkills)) {
+      linkedinSuggestedSkills = parsed.linkedinSuggestedSkills
+        .filter((s: string) => typeof s === 'string' && s.length > 0)
+        .slice(0, 15);
+    }
   } catch (err) {
     console.error('[Forge] Resume generation from profile failed:', err);
     // Fall back to raw profile data
@@ -574,6 +600,9 @@ Rules:
     summary: enhancedSummary,
     experience: enhancedExperience,
     skills: reorderedSkills,
+    ...(linkedinHeadline && { linkedinHeadline }),
+    ...(linkedinBio && { linkedinBio }),
+    ...(linkedinSuggestedSkills.length > 0 && { linkedinSuggestedSkills }),
   };
 
   // ── Step 3: Generate cover letter ──
