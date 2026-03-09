@@ -82,11 +82,26 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
 
+      {/* ───── GUIDED WORKFLOW (top bar) ───── */}
+      {!loading && journey && (
+        <div className="pt-3">
+          <GuidedWorkflow journey={{
+            onboarding: !!journey.onboarding,
+            assessment: !!journey.assessment,
+            careerPlan: !!journey.careerPlan,
+            resume: !!journey.resume,
+            applied: !!journey.applied,
+            interview: !!journey.interview,
+            offer: !!journey.offer,
+          }} />
+        </div>
+      )}
+
       {/* ───── HERO HEADER ───── */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 pt-4"
+        className="flex items-center gap-4"
       >
         <CortexAvatar size={52} pulse />
         <div className="flex-1 min-w-0">
@@ -121,19 +136,6 @@ export default function DashboardPage() {
           </Link>
         </div>
       </motion.div>
-
-      {/* ───── GUIDED WORKFLOW ───── */}
-      {!loading && journey && (
-        <GuidedWorkflow journey={{
-          onboarding: !!journey.onboarding,
-          assessment: !!journey.assessment,
-          careerPlan: !!journey.careerPlan,
-          resume: !!journey.resume,
-          applied: !!journey.applied,
-          interview: !!journey.interview,
-          offer: !!journey.offer,
-        }} />
-      )}
 
       {/* ───── NEXT STEP PROMPT ───── */}
       {!loading && journey && (() => {
