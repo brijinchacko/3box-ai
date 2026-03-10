@@ -1,29 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, useSpring, useTransform } from 'framer-motion';
-import { Zap } from 'lucide-react';
-
-function AnimatedDigit({ value }: { value: number }) {
-  const spring = useSpring(value, { stiffness: 50, damping: 20 });
-  const display = useTransform(spring, (v) => Math.round(v).toLocaleString());
-  const [text, setText] = useState(value.toLocaleString());
-
-  useEffect(() => {
-    spring.set(value);
-  }, [value, spring]);
-
-  useEffect(() => {
-    const unsub = display.on('change', (v) => setText(v));
-    return unsub;
-  }, [display]);
-
-  return <span>{text}</span>;
-}
+import { motion } from 'framer-motion';
+import { Users } from 'lucide-react';
 
 export default function LiveApplicationCounter({ className = '' }: { className?: string }) {
   const [total, setTotal] = useState(0);
-  const [today, setToday] = useState(0);
   const fetched = useRef(false);
 
   useEffect(() => {
@@ -33,28 +15,14 @@ export default function LiveApplicationCounter({ className = '' }: { className?:
     fetch('/api/free-burst/counter')
       .then((r) => r.json())
       .then((d) => {
-        setTotal(d.totalApplied || 5000);
-        setToday(d.todayApplied || 127);
+        if (d.totalApplied && d.totalApplied > 0) {
+          setTotal(d.totalApplied);
+        }
       })
-      .catch(() => {
-        setTotal(5247);
-        setToday(134);
-      });
-
-    // Refresh every 60s
-    const interval = setInterval(() => {
-      fetch('/api/free-burst/counter')
-        .then((r) => r.json())
-        .then((d) => {
-          setTotal(d.totalApplied || 5000);
-          setToday(d.todayApplied || 127);
-        })
-        .catch(() => {});
-    }, 60_000);
-
-    return () => clearInterval(interval);
+      .catch(() => {});
   }, []);
 
+  // Only show if we have real data from the API
   if (total === 0) return null;
 
   return (
@@ -62,22 +30,10 @@ export default function LiveApplicationCounter({ className = '' }: { className?:
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.5 }}
-      className={`flex items-center justify-center gap-2 text-sm text-white/40 ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/5 text-xs text-white/40 ${className}`}
     >
-      <Zap className="w-3.5 h-3.5 text-neon-green" />
-      <span>
-        <span className="text-white/70 font-semibold tabular-nums">
-          <AnimatedDigit value={today} />
-        </span>{' '}
-        applications sent today
-      </span>
-      <span className="text-white/20">|</span>
-      <span>
-        <span className="text-white/70 font-semibold tabular-nums">
-          <AnimatedDigit value={total} />
-        </span>{' '}
-        total
-      </span>
+      <Users className="w-3 h-3 text-neon-green" />
+      <span>Used by <span className="text-white/60 font-medium">{total.toLocaleString()}+</span> job seekers</span>
     </motion.div>
   );
 }

@@ -427,7 +427,7 @@ export default function PricingPageClient() {
                 }`}
               >
                 Yearly{' '}
-                <span className="badge-green text-[10px]">Save 20%</span>
+                <span className="badge-green text-[10px]">Best Value</span>
               </button>
             </div>
           </motion.div>

@@ -290,7 +290,7 @@ export default function Navbar() {
                   Sign In
                 </Link>
                 <Link href="/get-started" className="btn-primary text-sm flex items-center gap-1">
-                  Get 20 Free Apps <ChevronRight className="w-4 h-4" />
+                  Get Started Free <ChevronRight className="w-4 h-4" />
                 </Link>
               </>
             )}
@@ -463,7 +463,7 @@ export default function Navbar() {
                       Sign In
                     </Link>
                     <Link href="/get-started" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-primary text-sm">
-                      Get 20 Free Apps
+                      Get Started Free
                     </Link>
                   </>
                 )}

@@ -727,9 +727,7 @@ export default function LandingPageClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-8">
-              <Users className="w-3.5 h-3.5" /> Used by 2,400+ job seekers
-            </div>
+            <LiveApplicationCounter className="mb-8" />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-center">
               {firstName ? <>{firstName}, Stop Applying to Jobs.</> : <>Stop Applying to Jobs.</>}
               <br />
@@ -745,18 +743,13 @@ export default function LandingPageClient() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href="#free-burst"
+                href="/get-started"
                 className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById('free-burst')?.scrollIntoView({ behavior: 'smooth' });
-                }}
               >
-                Get 20 Free Applications <ArrowRight className="w-5 h-5" />
+                Start Free — 20 Job Applications <ArrowRight className="w-5 h-5" />
               </a>
               <p className="text-xs text-white/30">No credit card required</p>
             </div>
-            <LiveApplicationCounter className="mt-6" />
           </motion.div>
         </div>
       </section>
@@ -1330,7 +1323,7 @@ export default function LandingPageClient() {
                             </div>
 
                             <Link href="/get-started" className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3">
-                              Get 20 Free Applications <ArrowRight className="w-5 h-5" />
+                              Get Started Free <ArrowRight className="w-5 h-5" />
                             </Link>
                             <p className="text-center text-[10px] text-white/20">No credit card required. AI starts applying in 60 seconds.</p>
                           </div>
@@ -1353,7 +1346,7 @@ export default function LandingPageClient() {
               <p className="text-white/40 mb-6">Your {targetRole} career profile is ready. Get your free applications now.</p>
               <div className="flex gap-3 justify-center">
                 <Link href="/get-started" className="btn-primary text-sm flex items-center gap-2">
-                  Get 20 Free Applications <ArrowRight className="w-4 h-4" />
+                  Get Started Free <ArrowRight className="w-4 h-4" />
                 </Link>
                 <button onClick={handleRestart} className="btn-secondary text-sm">
                   Start Over
@@ -2018,14 +2011,10 @@ export default function LandingPageClient() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href="#free-burst"
+                href="/get-started"
                 className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById('free-burst')?.scrollIntoView({ behavior: 'smooth' });
-                }}
               >
-                {firstName ? `${firstName}, ` : ''}Get 20 Free Applications <ArrowRight className="w-5 h-5" />
+                {firstName ? `${firstName}, ` : ''}Start Free — 20 Job Applications <ArrowRight className="w-5 h-5" />
               </a>
               <p className="text-xs text-white/30">No credit card required</p>
             </div>
@@ -2041,7 +2030,7 @@ export default function LandingPageClient() {
                 <CortexAvatar size={22} />
               </div>
             </div>
-            <p className="text-[10px] text-white/20 mt-3">7 AI agents. Unlimited applications. Your career on autopilot.</p>
+            <p className="text-[10px] text-white/20 mt-3">7 AI agents working together to land your dream job.</p>
           </motion.div>
         </div>
       </section>

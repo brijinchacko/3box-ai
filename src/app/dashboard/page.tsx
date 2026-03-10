@@ -99,7 +99,7 @@ export default function DashboardPage() {
             )}
           </h1>
           <p className="text-white/40 text-sm mt-0.5">
-            {agents.filter(a => !a.locked).length} of {agents.length} agents hired
+            Your AI career dashboard
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
