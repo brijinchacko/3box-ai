@@ -1,20 +1,90 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Play, Lock, ArrowRight, Clock, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Play, Lock, Clock, Loader2, ChevronDown, Settings2,
+  Search, Hammer, Target, Compass, BookOpen, Shield,
+} from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import CortexAvatar from '@/components/brand/CortexAvatar';
-import { type AgentId } from '@/lib/agents/registry';
+import { AGENTS, type AgentId } from '@/lib/agents/registry';
 import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
+
+/* ── Per-agent config fields ── */
+const AGENT_CONFIGS: Record<AgentId, { fields: { key: string; label: string; type: 'text' | 'select' | 'toggle'; placeholder?: string; options?: string[] }[] }> = {
+  scout: {
+    fields: [
+      { key: 'targetRole', label: 'Target Role', type: 'text', placeholder: 'e.g. Senior Frontend Developer' },
+      { key: 'location', label: 'Location', type: 'text', placeholder: 'e.g. Remote, Bangalore' },
+      { key: 'jobType', label: 'Job Type', type: 'select', options: ['Any', 'Remote', 'Hybrid', 'On-site'] },
+    ],
+  },
+  forge: {
+    fields: [
+      { key: 'optimizeFor', label: 'Optimize For', type: 'select', options: ['ATS Score', 'Readability', 'Keywords'] },
+      { key: 'tone', label: 'Tone', type: 'select', options: ['Professional', 'Creative', 'Technical'] },
+    ],
+  },
+  archer: {
+    fields: [
+      { key: 'autoApply', label: 'Auto-Apply', type: 'toggle' },
+      { key: 'dailyLimit', label: 'Max Apps/Day', type: 'text', placeholder: '10' },
+      { key: 'coverLetter', label: 'Cover Letter', type: 'select', options: ['Always', 'When Required', 'Never'] },
+    ],
+  },
+  atlas: {
+    fields: [
+      { key: 'company', label: 'Prep for Company', type: 'text', placeholder: 'e.g. Google, TCS' },
+      { key: 'interviewType', label: 'Interview Type', type: 'select', options: ['Technical', 'Behavioral', 'HR', 'All'] },
+    ],
+  },
+  sage: {
+    fields: [
+      { key: 'focusSkill', label: 'Focus Skill', type: 'text', placeholder: 'e.g. React, System Design' },
+      { key: 'learningStyle', label: 'Learning Style', type: 'select', options: ['Quick Tasks', 'Deep Dive', 'Project-Based'] },
+    ],
+  },
+  sentinel: {
+    fields: [
+      { key: 'qualityThreshold', label: 'Quality Threshold', type: 'select', options: ['Strict', 'Balanced', 'Lenient'] },
+      { key: 'checkScam', label: 'Scam Detection', type: 'toggle' },
+    ],
+  },
+};
+
+const AGENT_ICONS: Record<AgentId, any> = {
+  scout: Search, forge: Hammer, archer: Target,
+  atlas: Compass, sage: BookOpen, sentinel: Shield,
+};
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [plan, setPlan] = useState<PlanTier>('STARTER');
   const [runningAll, setRunningAll] = useState(false);
+  const [runningAgent, setRunningAgent] = useState<string | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
+  const [expandedAgent, setExpandedAgent] = useState<AgentId | null>(null);
+  const [configs, setConfigs] = useState<Record<string, Record<string, string>>>({});
+
+  // Load saved configs from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('3box_agent_configs');
+      if (saved) setConfigs(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Save configs to localStorage
+  const updateConfig = useCallback((agentId: string, key: string, value: string) => {
+    setConfigs(prev => {
+      const next = { ...prev, [agentId]: { ...prev[agentId], [key]: value } };
+      localStorage.setItem('3box_agent_configs', JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -38,32 +108,41 @@ export default function DashboardPage() {
 
   const handleRunAll = async () => {
     setRunningAll(true);
-    try {
-      await fetch('/api/agents/run', { method: 'POST' });
-    } catch {}
+    try { await fetch('/api/agents/run', { method: 'POST' }); } catch {}
     setTimeout(() => setRunningAll(false), 3000);
   };
 
+  const handleRunAgent = async (agentId: string) => {
+    setRunningAgent(agentId);
+    try {
+      await fetch('/api/agents/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, config: configs[agentId] || {} }),
+      });
+    } catch {}
+    setTimeout(() => setRunningAgent(null), 3000);
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="space-y-6">
 
       {/* ───── HEADER ───── */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
         className="flex items-center gap-4"
       >
-        <CortexAvatar size={48} pulse />
+        <CortexAvatar size={44} pulse />
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold">
+          <h1 className="text-lg sm:text-xl font-bold">
             {loading ? (
-              <span className="inline-block w-24 h-7 bg-white/5 rounded animate-pulse align-middle" />
+              <span className="inline-block w-32 h-6 bg-white/5 rounded animate-pulse" />
             ) : (
               <>{greeting}, {userName || 'there'}</>
             )}
           </h1>
-          <p className="text-white/40 text-sm mt-0.5">Your AI career team</p>
+          <p className="text-white/35 text-sm">Workspace</p>
         </div>
         <button
           onClick={handleRunAll}
@@ -74,113 +153,231 @@ export default function DashboardPage() {
                      transition-all disabled:opacity-50"
         >
           {runningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          <span className="hidden sm:inline">{runningAll ? 'Running...' : 'Run All'}</span>
+          <span className="hidden sm:inline">{runningAll ? 'Running...' : 'Run Pipeline'}</span>
         </button>
       </motion.div>
 
-      {/* ───── AGENT CARDS (2x3 grid) ───── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.15, duration: 0.4 }}
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {agents.map((agent, i) => (
+      {/* ───── AGENT WORKSPACE ───── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {agents.map((agent, i) => {
+          const isExpanded = expandedAgent === agent.id;
+          const isRunning = runningAgent === agent.id || runningAll;
+          const agentConfig = configs[agent.id] || {};
+          const configDef = AGENT_CONFIGS[agent.id as AgentId];
+          const Icon = AGENT_ICONS[agent.id as AgentId];
+          const recentForAgent = activities.filter(a => a.agentId === agent.id).slice(0, 3);
+
+          return (
             <motion.div
               key={agent.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * i }}
+              transition={{ delay: 0.04 * i }}
+              className={isExpanded ? 'sm:col-span-2 lg:col-span-3' : ''}
             >
               {agent.locked ? (
+                /* ── Locked agent ── */
                 <Link
                   href="/pricing"
-                  className="block rounded-xl border border-white/5 bg-white/[0.015] p-4 opacity-50 hover:opacity-70 transition-all"
+                  className="block rounded-xl border border-white/5 bg-white/[0.015] p-4 opacity-40 hover:opacity-60 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <AgentAvatar agentId={agent.id} size={36} />
+                    <AgentAvatar agentId={agent.id} size={32} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">{agent.displayName}</span>
+                        <span className="text-sm font-semibold">{agent.name}</span>
                         <Lock className="w-3 h-3 text-white/30" />
                       </div>
-                      <p className="text-xs text-white/30">{agent.role}</p>
+                      <p className="text-[11px] text-white/25">{agent.role}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-white/20 mt-2 pl-12">
-                    Upgrade to {agent.minPlan} to activate
-                  </p>
                 </Link>
               ) : (
-                <Link
-                  href={agent.linkedPage}
-                  className="block rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:border-white/15 hover:bg-white/[0.04] transition-all group"
+                /* ── Active agent card ── */
+                <div
+                  className={`rounded-xl border transition-all cursor-pointer ${
+                    isExpanded
+                      ? 'border-white/15 bg-white/[0.04]'
+                      : isRunning
+                        ? 'border-neon-blue/20 bg-neon-blue/[0.04]'
+                        : 'border-white/5 bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.03]'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <AgentAvatar agentId={agent.id} size={36} pulse />
+                  {/* Card header — always visible */}
+                  <div
+                    className="p-4 flex items-center gap-3"
+                    onClick={() => setExpandedAgent(isExpanded ? null : agent.id as AgentId)}
+                  >
+                    <AgentAvatar agentId={agent.id} size={32} pulse={isRunning} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">{agent.displayName}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
+                        <span className="text-sm font-semibold">{agent.name}</span>
+                        {isRunning ? (
+                          <span className="flex items-center gap-1 text-[10px] text-neon-blue font-medium">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Working
+                          </span>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-neon-green/60" />
+                        )}
                       </div>
-                      <p className="text-xs text-white/40">{agent.role}</p>
+                      <p className="text-[11px] text-white/30">{agent.role}</p>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-white/15 group-hover:text-white/40 group-hover:translate-x-0.5 transition-all" />
+                    <ChevronDown className={`w-4 h-4 text-white/20 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </div>
-                  <p className="text-xs text-white/25 mt-2 pl-12">{agent.shortDescription}</p>
-                </Link>
+
+                  {/* Expanded panel */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-4 border-t border-white/5 pt-4 space-y-4">
+                          {/* Description */}
+                          <p className="text-xs text-white/40 leading-relaxed">{agent.description}</p>
+
+                          {/* Capabilities */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {agent.capabilities.map((cap: string) => (
+                              <span key={cap} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40">
+                                {cap}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Configuration */}
+                          {configDef && (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+                                <Settings2 className="w-3 h-3" /> Configure
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {configDef.fields.map(field => (
+                                  <div key={field.key}>
+                                    <label className="text-[10px] text-white/30 mb-1 block">{field.label}</label>
+                                    {field.type === 'text' && (
+                                      <input
+                                        type="text"
+                                        value={agentConfig[field.key] || ''}
+                                        onChange={e => updateConfig(agent.id, field.key, e.target.value)}
+                                        placeholder={field.placeholder}
+                                        className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-sm text-white placeholder:text-white/15 focus:outline-none focus:border-white/15 transition-colors"
+                                      />
+                                    )}
+                                    {field.type === 'select' && (
+                                      <select
+                                        value={agentConfig[field.key] || field.options?.[0] || ''}
+                                        onChange={e => updateConfig(agent.id, field.key, e.target.value)}
+                                        className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-sm text-white focus:outline-none focus:border-white/15 transition-colors"
+                                      >
+                                        {field.options?.map(opt => (
+                                          <option key={opt} value={opt} className="bg-surface text-white">{opt}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    {field.type === 'toggle' && (
+                                      <button
+                                        onClick={() => updateConfig(agent.id, field.key, agentConfig[field.key] === 'true' ? 'false' : 'true')}
+                                        className={`w-10 h-5 rounded-full transition-colors relative ${
+                                          agentConfig[field.key] === 'true' ? 'bg-neon-green/40' : 'bg-white/10'
+                                        }`}
+                                      >
+                                        <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all ${
+                                          agentConfig[field.key] === 'true' ? 'left-5' : 'left-0.5'
+                                        }`} />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => handleRunAgent(agent.id)}
+                              disabled={isRunning}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
+                                isRunning
+                                  ? 'bg-white/5 text-white/50'
+                                  : 'bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white hover:from-neon-blue/30 hover:to-neon-purple/30'
+                              }`}
+                            >
+                              {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                              {isRunning ? 'Running...' : `Run ${agent.name}`}
+                            </button>
+                          </div>
+
+                          {/* Recent activity for this agent */}
+                          {recentForAgent.length > 0 && (
+                            <div className="pt-2 border-t border-white/5">
+                              <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider mb-2">Recent</p>
+                              <div className="space-y-1.5">
+                                {recentForAgent.map((item: any, idx: number) => (
+                                  <div key={item.id || idx} className="flex items-center gap-2 text-[11px] text-white/40">
+                                    <span className="flex-1 truncate">{item.action}</span>
+                                    <span className="text-white/15 flex-shrink-0">{item.timestamp ? timeAgo(item.timestamp) : ''}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               )}
             </motion.div>
-          ))}
-        </div>
-      </motion.div>
+          );
+        })}
+      </div>
 
-      {/* ───── RECENT ACTIVITY ───── */}
+      {/* ───── ACTIVITY FEED ───── */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.25 }}
         className="rounded-xl border border-white/5 bg-white/[0.02] p-5"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-white/50">Recent Activity</h2>
-          <Link href="/dashboard/agents" className="text-xs text-neon-blue hover:underline flex items-center gap-1">
-            View all <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
+        <h2 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-3">Activity</h2>
 
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
+          <div className="space-y-2.5">
+            {[1, 2, 3].map(i => (
               <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="w-6 h-6 rounded-lg bg-white/5" />
+                <div className="w-5 h-5 rounded bg-white/5" />
                 <div className="flex-1"><div className="h-3 bg-white/5 rounded w-3/4" /></div>
               </div>
             ))}
           </div>
         ) : activities.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {activities.map((item: any, i: number) => (
               <div key={item.id || i} className="flex items-center gap-3 text-sm">
                 {item.agentId ? (
-                  <AgentAvatar agentId={item.agentId as AgentId} size={22} />
+                  <AgentAvatar agentId={item.agentId as AgentId} size={20} />
                 ) : (
-                  <div className="w-5.5 h-5.5 rounded bg-white/5" />
+                  <div className="w-5 h-5 rounded bg-white/5" />
                 )}
-                <span className="text-white/60 flex-1 truncate">
-                  {item.agentName && <span className="font-medium text-white/80">{item.agentName}</span>}{' '}
+                <span className="text-white/50 flex-1 truncate">
+                  {item.agentName && <span className="font-medium text-white/70">{item.agentName}</span>}{' '}
                   {item.action}
                 </span>
-                <span className="text-[10px] text-white/20 flex-shrink-0">
+                <span className="text-[10px] text-white/15 flex-shrink-0">
                   {item.timestamp ? timeAgo(item.timestamp) : ''}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-white/25">
-            <Clock className="w-6 h-6 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">No activity yet. Run your agents to get started.</p>
+          <div className="text-center py-6 text-white/20">
+            <Clock className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
+            <p className="text-xs">No activity yet. Run your agents to get started.</p>
           </div>
         )}
       </motion.div>
