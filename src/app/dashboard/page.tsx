@@ -13,6 +13,9 @@ import ScoutToolbar from '@/components/dashboard/ScoutToolbar';
 import ForgeToolbar from '@/components/dashboard/ForgeToolbar';
 import ArcherToolbar from '@/components/dashboard/ArcherToolbar';
 import CortexToolbar, { DEFAULT_STEPS, type JourneyStep } from '@/components/dashboard/CortexToolbar';
+import AtlasToolbar from '@/components/dashboard/AtlasToolbar';
+import SageToolbar from '@/components/dashboard/SageToolbar';
+import SentinelToolbar from '@/components/dashboard/SentinelToolbar';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
 import UserMenu from '@/components/dashboard/UserMenu';
@@ -499,6 +502,15 @@ export default function DashboardPage() {
                     ) :
                     selectedAgent === 'archer' ? (
                       <ArcherToolbar />
+                    ) :
+                    selectedAgent === 'atlas' ? (
+                      <AtlasToolbar />
+                    ) :
+                    selectedAgent === 'sage' ? (
+                      <SageToolbar />
+                    ) :
+                    selectedAgent === 'sentinel' ? (
+                      <SentinelToolbar />
                     ) :
                     undefined
                   }
