@@ -12,6 +12,7 @@ import QualityReviewPanel from '@/components/dashboard/QualityReviewPanel';
 import ScoutToolbar from '@/components/dashboard/ScoutToolbar';
 import ForgeToolbar from '@/components/dashboard/ForgeToolbar';
 import ArcherToolbar from '@/components/dashboard/ArcherToolbar';
+import CortexToolbar, { DEFAULT_STEPS, type JourneyStep } from '@/components/dashboard/CortexToolbar';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
 import UserMenu from '@/components/dashboard/UserMenu';
@@ -49,13 +50,15 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userImage, setUserImage] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanTier>('STARTER');
-  const [selectedAgent, setSelectedAgent] = useState<SelectedAgentId>('scout');
+  const [selectedAgent, setSelectedAgent] = useState<SelectedAgentId>('cortex');
   const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
   const [recentlyDone, setRecentlyDone] = useState<Set<string>>(new Set());
   const [agentChats, setAgentChats] = useState<Record<string, ChatMessage[]>>({});
   const [activities, setActivities] = useState<TimelineEntry[]>([]);
   const [metrics, setMetrics] = useState<Metrics>({ jobsFound: 0, appsSent: 0, interviews: 0, responseRate: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [resumeReady, setResumeReady] = useState(false);
+  const [resumeFinalized, setResumeFinalized] = useState(false);
 
   const loadedAgents = useRef<Set<string>>(new Set());
   const handleRunPipelineRef = useRef<(() => void) | null>(null);
@@ -66,7 +69,8 @@ export default function DashboardPage() {
       fetch('/api/user/profile').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/agents/activity?limit=30').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/agents/pipeline-stats').then(r => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([profile, actData, stats]) => {
+      fetch('/api/forge/status').then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([profile, actData, stats, forgeStatus]) => {
       if (profile) {
         setUserName(profile.name || '');
         setUserEmail(profile.email || null);
@@ -90,6 +94,10 @@ export default function DashboardPage() {
           interviews: stats.interviews ?? stats.interviewsScheduled ?? 0,
           responseRate: stats.responseRate ?? 0,
         });
+      }
+      if (forgeStatus) {
+        setResumeReady(!!forgeStatus.hasResume || !!forgeStatus.resume || !!forgeStatus.atsScore);
+        setResumeFinalized(!!forgeStatus.finalized || !!forgeStatus.isFinalized || (forgeStatus.atsScore && forgeStatus.atsScore >= 70));
       }
       setLoading(false);
     });
@@ -297,6 +305,24 @@ export default function DashboardPage() {
     if (last) lastMessages[agentId] = last.content.slice(0, 60);
   }
 
+  /* ── Cortex journey steps (derived from current state) ── */
+  const journeySteps: JourneyStep[] = DEFAULT_STEPS.map(s => {
+    switch (s.id) {
+      case 'resume':
+        return { ...s, done: resumeFinalized, detail: resumeFinalized ? 'Finalized' : resumeReady ? 'Draft' : undefined };
+      case 'scout':
+        return { ...s, done: metrics.jobsFound > 0, detail: metrics.jobsFound > 0 ? `${metrics.jobsFound} found` : undefined };
+      case 'save':
+        return { ...s, done: metrics.jobsFound > 5, detail: metrics.jobsFound > 5 ? 'Reviewed' : undefined };
+      case 'apply':
+        return { ...s, done: metrics.appsSent > 0, detail: metrics.appsSent > 0 ? `${metrics.appsSent} sent` : undefined };
+      case 'interview':
+        return { ...s, done: metrics.interviews > 0, detail: metrics.interviews > 0 ? `${metrics.interviews} scheduled` : undefined };
+      default:
+        return { ...s, done: false };
+    }
+  });
+
   /* ── Sidebar dimensions ── */
   const SIDEBAR_EXPANDED = 260;
   const SIDEBAR_COLLAPSED = 60;
@@ -456,6 +482,12 @@ export default function DashboardPage() {
                   onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
                   isWorking={runningAgents.has(selectedAgent)}
                   toolbarSlot={
+                    selectedAgent === 'cortex' ? (
+                      <CortexToolbar
+                        steps={journeySteps}
+                        onNavigate={(id) => setSelectedAgent(id as SelectedAgentId)}
+                      />
+                    ) :
                     selectedAgent === 'scout' ? (
                       <ScoutToolbar
                         onDeploy={() => handleQuickAction('scout', 'search')}
@@ -463,7 +495,7 @@ export default function DashboardPage() {
                       />
                     ) :
                     selectedAgent === 'forge' ? (
-                      <ForgeToolbar />
+                      <ForgeToolbar hasResume={resumeReady} isFinalized={resumeFinalized} />
                     ) :
                     selectedAgent === 'archer' ? (
                       <ArcherToolbar />
