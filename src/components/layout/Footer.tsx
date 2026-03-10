@@ -1,7 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { Linkedin, Youtube, Facebook, Instagram, Twitter, Github } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
+
+const socialLinks = [
+  { icon: Linkedin, href: 'https://www.linkedin.com/company/3box-ai/', label: 'LinkedIn' },
+  { icon: Youtube, href: 'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/', label: 'YouTube' },
+  { icon: Facebook, href: 'https://www.facebook.com/61586302726912', label: 'Facebook' },
+  { icon: Instagram, href: 'https://www.instagram.com/3box.ai', label: 'Instagram' },
+  { icon: Twitter, href: 'https://x.com/oforoai', label: 'Twitter' },
+  { icon: Github, href: 'https://github.com/oforo-ai', label: 'GitHub' },
+];
 
 const footerLinks = {
   Product: [
@@ -51,6 +61,20 @@ export default function Footer() {
             <p className="text-sm text-white/40 mb-4">
               Your AI-powered career operating system. An OFORO AI product.
             </p>
+            <div className="flex items-center gap-3 mb-4">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/30 hover:text-white/70 transition-colors"
+                  aria-label={social.label}
+                >
+                  <social.icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
             <p className="text-xs text-white/20">
               &copy; {new Date().getFullYear()} OFORO AI. All rights reserved.
             </p>

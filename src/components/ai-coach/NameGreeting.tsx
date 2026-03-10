@@ -8,6 +8,8 @@ import { useStore } from '@/store/useStore';
 
 type Phase = 'hidden' | 'entering' | 'asking' | 'thanking' | 'leaving' | 'done';
 
+const AUTO_DISMISS_MS = 12000; // auto-dismiss after 12s of no interaction
+
 interface Props {
   onActiveChange?: (active: boolean) => void;
 }
@@ -19,6 +21,10 @@ export default function NameGreeting({ onActiveChange }: Props) {
   const visitorName = useStore((s) => s.visitorName);
   const setVisitorName = useStore((s) => s.setVisitorName);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const autoDismissRef = useRef<ReturnType<typeof setTimeout>>();
+  const interactedRef = useRef(false);
+  const autoFocusedRef = useRef(false);
 
   // Notify parent when active state changes
   useEffect(() => {
@@ -34,23 +40,48 @@ export default function NameGreeting({ onActiveChange }: Props) {
 
     const timer = setTimeout(() => {
       setPhase('entering');
-      // Transition to asking after brief entrance
       setTimeout(() => {
         setPhase('asking');
-        setTimeout(() => inputRef.current?.focus(), 300);
-      }, 600);
+        setTimeout(() => { autoFocusedRef.current = true; inputRef.current?.focus(); }, 400);
+      }, 500);
     }, 3000);
 
     return () => clearTimeout(timer);
   }, [visitorName]);
 
+  // Auto-dismiss: start timer when asking phase begins, clear on interaction
+  useEffect(() => {
+    if (phase === 'asking' && !interactedRef.current) {
+      autoDismissRef.current = setTimeout(() => {
+        localStorage.setItem('3box_name_skipped', 'true');
+        leave();
+      }, AUTO_DISMISS_MS);
+    }
+    return () => { if (autoDismissRef.current) clearTimeout(autoDismissRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  const cancelAutoDismiss = () => {
+    interactedRef.current = true;
+    if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
+  };
+
   const leave = useCallback(() => {
     setPhase('leaving');
-    setTimeout(() => setPhase('done'), 800);
+    setTimeout(() => setPhase('done'), 600);
   }, []);
+
+  // Click outside the card to dismiss
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+    if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+      localStorage.setItem('3box_name_skipped', 'true');
+      leave();
+    }
+  }, [leave]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    cancelAutoDismiss();
     const trimmed = name.trim();
     if (!trimmed) return;
     setVisitorName(trimmed);
@@ -60,11 +91,12 @@ export default function NameGreeting({ onActiveChange }: Props) {
   };
 
   const handleSkip = () => {
+    cancelAutoDismiss();
     localStorage.setItem('3box_name_skipped', 'true');
     leave();
   };
 
-  const expression = phase === 'thanking' ? 'star' : phase === 'leaving' ? 'happy' : 'happy';
+  const expression = phase === 'thanking' ? 'star' : 'happy';
 
   if (phase === 'hidden' || phase === 'done') return null;
 
@@ -72,8 +104,9 @@ export default function NameGreeting({ onActiveChange }: Props) {
     <motion.div
       className="fixed inset-0 z-[60] flex flex-col items-center justify-center"
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      animate={{ opacity: phase === 'leaving' ? 0 : 1 }}
+      transition={{ duration: phase === 'leaving' ? 0.5 : 0.3, ease: 'easeInOut' }}
+      onClick={phase === 'asking' ? handleBackdropClick : undefined}
     >
       {/* Backdrop */}
       <AnimatePresence>
@@ -83,20 +116,25 @@ export default function NameGreeting({ onActiveChange }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
           />
         )}
       </AnimatePresence>
 
-      {/* Cortex Avatar — animates to center, then back to corner */}
+      {/* Cortex Avatar */}
       <motion.div
         className="relative z-10"
+        initial={{ opacity: 0, scale: 0.5, y: 30 }}
         animate={
           phase === 'leaving'
-            ? { x: 'calc(50vw - 60px)', y: 'calc(50vh - 60px)', scale: 0.6, opacity: 0 }
-            : { x: 0, y: 0, scale: 1, opacity: 1 }
+            ? { opacity: 0, scale: 0.4, y: -20 }
+            : { opacity: 1, scale: 1, y: 0 }
         }
-        transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+        transition={
+          phase === 'leaving'
+            ? { duration: 0.4, ease: [0.4, 0, 1, 1] }
+            : { type: 'spring', damping: 18, stiffness: 200, delay: 0.05 }
+        }
       >
         <motion.div
           animate={phase === 'thanking' ? { scale: [1, 1.15, 1] } : {}}
@@ -111,10 +149,11 @@ export default function NameGreeting({ onActiveChange }: Props) {
         {phase === 'asking' && (
           <motion.div
             key="ask"
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            ref={cardRef}
+            initial={{ opacity: 0, y: 24, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+            exit={{ opacity: 0, y: -16, scale: 0.92 }}
+            transition={{ type: 'spring', damping: 24, stiffness: 280, mass: 0.8 }}
             className="relative z-10 mt-5 w-[90vw] max-w-[360px]"
           >
             <div className="bg-[#12121e]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 p-5">
@@ -128,7 +167,8 @@ export default function NameGreeting({ onActiveChange }: Props) {
                 <input
                   ref={inputRef}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); cancelAutoDismiss(); }}
+                  onFocus={() => { if (autoFocusedRef.current) { autoFocusedRef.current = false; return; } cancelAutoDismiss(); }}
                   placeholder="Your first name"
                   className="flex-1 bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2.5 text-sm placeholder:text-white/20 focus:outline-none focus:border-neon-blue/30 transition-colors"
                   maxLength={30}
@@ -156,10 +196,10 @@ export default function NameGreeting({ onActiveChange }: Props) {
         {phase === 'thanking' && (
           <motion.div
             key="thank"
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            initial={{ opacity: 0, y: 12, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 24, stiffness: 280, mass: 0.8 }}
             className="relative z-10 mt-5"
           >
             <div className="bg-[#12121e]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 px-6 py-4">

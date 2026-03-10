@@ -42,8 +42,11 @@ export function organizationSchema() {
       url: 'https://oforo.ai',
     },
     sameAs: [
+      'https://www.linkedin.com/company/3box-ai/',
+      'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/',
+      'https://www.facebook.com/61586302726912',
+      'https://www.instagram.com/3box.ai',
       'https://twitter.com/3boxai',
-      'https://linkedin.com/company/3boxai',
       'https://github.com/brijinchacko',
     ],
   };

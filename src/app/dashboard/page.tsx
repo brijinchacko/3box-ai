@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Lock, ArrowRight, Clock, Loader2,
   Shield, Target, TrendingUp, Zap, CheckCircle2,
-  Brain, FileText, Send, MessageSquare, Trophy, ChevronRight, ChevronDown, Rocket, Settings2,
+  Brain, FileText, Send, MessageSquare, Trophy, ChevronRight, ChevronDown, Rocket, Settings2, X,
 } from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import CortexAvatar from '@/components/brand/CortexAvatar';
@@ -38,6 +38,8 @@ export default function DashboardPage() {
     avgQuality: 0,
     interviewCallbacks: 0,
   });
+  const [showNextStep, setShowNextStep] = useState(true);
+  const [showCommandCenter, setShowCommandCenter] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -122,14 +124,17 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* ───── NEXT STEP PROMPT ───── */}
-      {!loading && journey && (() => {
+      <AnimatePresence>
+      {!loading && journey && showNextStep && (() => {
         const nextStep = NEXT_STEPS.find(s => !journey[s.key]);
         if (!nextStep) return null; // All done
         const allDone = NEXT_STEPS.every(s => journey[s.key]) && journey.offer;
         if (allDone) return (
           <motion.div
+            key="mission-complete"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
             className="rounded-2xl border border-neon-green/20 bg-gradient-to-r from-neon-green/[0.06] to-neon-blue/[0.04] p-5 flex items-center gap-4"
           >
             <Trophy className="w-8 h-8 text-neon-green flex-shrink-0" />
@@ -141,9 +146,12 @@ export default function DashboardPage() {
         );
         return (
           <motion.div
+            key="next-step"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
             transition={{ delay: 0.15 }}
+            className="relative"
           >
             <Link
               href={nextStep.href}
@@ -167,16 +175,28 @@ export default function DashboardPage() {
                 <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all flex-shrink-0" />
               </div>
             </Link>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowNextStep(false); }}
+              className="absolute top-3 right-3 p-1 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/5 transition-all z-10"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </motion.div>
         );
       })()}
+      </AnimatePresence>
 
       {/* ───── COMMAND CENTER QUICK ACCESS ───── */}
-      {!loading && (
+      <AnimatePresence>
+      {!loading && showCommandCenter && (
         <motion.div
+          key="command-center"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
           transition={{ delay: 0.12 }}
+          className="relative"
         >
           <Link
             href="/dashboard/agents"
@@ -194,8 +214,16 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowCommandCenter(false); }}
+            className="absolute top-3 right-3 p-1 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/5 transition-all z-10"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ───── METRICS/ACTIVITY + STORY (side-by-side) ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">

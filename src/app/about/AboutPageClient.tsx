@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   Sparkles, Users, Target, Zap, Heart, Globe, ArrowRight,
-  Mail, Twitter, Linkedin, Github
+  Mail, Twitter, Linkedin, Github, Youtube, Facebook, Instagram
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -93,8 +93,11 @@ export default function AboutPageClient() {
               <a href="mailto:hello@oforo.ai" className="btn-secondary text-sm flex items-center gap-2">
                 <Mail className="w-4 h-4" /> hello@oforo.ai
               </a>
+              <a href="https://www.linkedin.com/company/3box-ai/" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Linkedin className="w-4 h-4" /></a>
+              <a href="https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Youtube className="w-4 h-4" /></a>
+              <a href="https://www.facebook.com/61586302726912" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Facebook className="w-4 h-4" /></a>
+              <a href="https://www.instagram.com/3box.ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Instagram className="w-4 h-4" /></a>
               <a href="https://x.com/oforoai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Twitter className="w-4 h-4" /></a>
-              <a href="https://linkedin.com/company/oforo-ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Linkedin className="w-4 h-4" /></a>
               <a href="https://github.com/oforo-ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Github className="w-4 h-4" /></a>
             </div>
           </motion.div>

@@ -26,11 +26,14 @@ export default function AutomationModeSelector() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Only Manual (copilot) mode is available for now
     const saved = localStorage.getItem(MODE_STORAGE_KEY) as AutomationMode | null;
-    if (saved && AUTOMATION_MODES[saved]) {
-      setMode(saved);
-      emitModeChange(saved);
+    if (saved && saved !== 'copilot') {
+      // Reset to copilot if a non-available mode was saved
+      localStorage.setItem(MODE_STORAGE_KEY, 'copilot');
     }
+    setMode('copilot');
+    emitModeChange('copilot');
   }, []);
 
   // Close on outside click
@@ -117,19 +120,22 @@ export default function AutomationModeSelector() {
               {AUTOMATION_MODE_LIST.map(m => {
                 const Icon = MODE_ICONS[m.id];
                 const isActive = mode === m.id;
-                const isRecommended = m.id === 'autopilot';
+                const isComingSoon = m.id === 'autopilot' || m.id === 'full-agent';
                 return (
                   <button
                     key={m.id}
-                    onClick={() => handleSelect(m.id)}
+                    onClick={() => !isComingSoon && handleSelect(m.id)}
+                    disabled={isComingSoon}
                     className={`w-full flex items-start gap-3 p-3 rounded-lg text-left transition-all ${
-                      isActive
-                        ? m.id === 'copilot'
-                          ? 'bg-blue-500/5 border border-blue-500/20'
-                          : m.id === 'autopilot'
-                            ? 'bg-amber-500/5 border border-amber-500/20'
-                            : 'bg-neon-green/5 border border-neon-green/20'
-                        : 'hover:bg-white/[0.03] border border-transparent'
+                      isComingSoon
+                        ? 'opacity-50 cursor-not-allowed border border-transparent'
+                        : isActive
+                          ? m.id === 'copilot'
+                            ? 'bg-blue-500/5 border border-blue-500/20'
+                            : m.id === 'autopilot'
+                              ? 'bg-amber-500/5 border border-amber-500/20'
+                              : 'bg-neon-green/5 border border-neon-green/20'
+                          : 'hover:bg-white/[0.03] border border-transparent'
                     }`}
                   >
                     <div className={`mt-0.5 p-1.5 rounded-lg ${
@@ -141,28 +147,19 @@ export default function AutomationModeSelector() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white">{m.name}</span>
-                        {isRecommended && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                            <Star className="w-2.5 h-2.5 fill-current" /> Recommended
+                        <span className={`text-sm font-semibold ${isComingSoon ? 'text-white/40' : 'text-white'}`}>{m.name}</span>
+                        {isComingSoon ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/30 border border-white/10">
+                            Coming Soon
                           </span>
-                        )}
-                        {!isRecommended && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                            m.id === 'copilot' ? 'bg-blue-500/10 text-blue-400' :
-                            'bg-neon-green/10 text-neon-green'
-                          }`}>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
                             {m.label}
                           </span>
                         )}
-                        {isActive && <Check className="w-3.5 h-3.5 text-neon-green ml-auto flex-shrink-0" />}
+                        {isActive && !isComingSoon && <Check className="w-3.5 h-3.5 text-neon-green ml-auto flex-shrink-0" />}
                       </div>
-                      <p className="text-[11px] text-white/35 mt-0.5 leading-relaxed">{m.description}</p>
-                      {m.id === 'full-agent' && (
-                        <p className="text-[10px] text-amber-500/60 mt-1 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" /> AI may make mistakes. Use with caution.
-                        </p>
-                      )}
+                      <p className={`text-[11px] mt-0.5 leading-relaxed ${isComingSoon ? 'text-white/20' : 'text-white/35'}`}>{m.description}</p>
                     </div>
                   </button>
                 );

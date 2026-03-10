@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   Newspaper, Palette, Calendar, ExternalLink, Download,
-  Mail, Twitter, Linkedin, Github, Image, Type, Box
+  Mail, Twitter, Linkedin, Github, Image, Type, Box,
+  Youtube, Facebook, Instagram
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -33,8 +34,11 @@ const pressReleases = [
 ];
 
 const socialLinks = [
+  { icon: Linkedin, href: 'https://www.linkedin.com/company/3box-ai/', label: 'LinkedIn' },
+  { icon: Youtube, href: 'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/', label: 'YouTube' },
+  { icon: Facebook, href: 'https://www.facebook.com/61586302726912', label: 'Facebook' },
+  { icon: Instagram, href: 'https://www.instagram.com/3box.ai', label: 'Instagram' },
   { icon: Twitter, href: 'https://x.com/oforoai', label: 'Twitter' },
-  { icon: Linkedin, href: 'https://linkedin.com/company/oforo-ai', label: 'LinkedIn' },
   { icon: Github, href: 'https://github.com/oforo-ai', label: 'GitHub' },
 ];
 
