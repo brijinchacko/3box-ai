@@ -8,6 +8,13 @@ import { Menu, X, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Logo from '@/components/brand/Logo';
 
+const NAV_LINKS = [
+  { href: '/agents', label: 'AI Agents' },
+  { href: '/resume', label: 'AI Tools' },
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/case-studies', label: 'Case Studies' },
+];
+
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
@@ -53,7 +60,17 @@ export default function Navbar() {
           <div className={`hidden md:flex items-center gap-1 transition-all duration-300 ${
             scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
           }`}>
-            <Link href="/pricing" className="btn-ghost text-sm">Pricing</Link>
+            {NAV_LINKS.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`btn-ghost text-sm ${
+                  pathname === link.href ? 'text-white' : ''
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
           {/* CTA */}
@@ -96,13 +113,18 @@ export default function Navbar() {
             className="md:hidden border-t border-white/5 bg-surface/95 backdrop-blur-xl"
           >
             <div className="px-4 py-4 space-y-2">
-              <Link
-                href="/pricing"
-                onClick={() => setMobileOpen(false)}
-                className="block px-4 py-3 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-colors"
-              >
-                Pricing
-              </Link>
+              {NAV_LINKS.map(link => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`block px-4 py-3 rounded-xl hover:bg-white/5 transition-colors ${
+                    pathname === link.href ? 'text-white bg-white/5' : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
               <div className="pt-2 space-y-2">
                 {session ? (
                   <Link

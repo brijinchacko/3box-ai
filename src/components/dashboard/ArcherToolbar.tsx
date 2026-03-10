@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 
-type ArcherFilter = 'all' | 'applied' | 'emailed' | 'interview' | 'offer' | 'queued' | 'rejected';
+export type ArcherFilter = 'all' | 'applied' | 'emailed' | 'interview' | 'offer' | 'queued' | 'rejected';
 
 interface ArcherToolbarProps {
   counts?: Record<ArcherFilter, number>;
+  onTabChange?: (tab: ArcherFilter) => void;
+  activeTab?: ArcherFilter;
 }
 
 const DEFAULT_COUNTS: Record<ArcherFilter, number> = {
@@ -22,8 +24,14 @@ const FILTERS: { id: ArcherFilter; label: string }[] = [
   { id: 'rejected', label: 'Rejected' },
 ];
 
-export default function ArcherToolbar({ counts = DEFAULT_COUNTS }: ArcherToolbarProps) {
-  const [active, setActive] = useState<ArcherFilter>('all');
+export default function ArcherToolbar({ counts = DEFAULT_COUNTS, onTabChange, activeTab }: ArcherToolbarProps) {
+  const [localActive, setLocalActive] = useState<ArcherFilter>('all');
+  const active = activeTab ?? localActive;
+
+  const handleTabClick = (tab: ArcherFilter) => {
+    setLocalActive(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-white/5 bg-white/[0.01] overflow-x-auto scrollbar-none">
@@ -33,7 +41,7 @@ export default function ArcherToolbar({ counts = DEFAULT_COUNTS }: ArcherToolbar
         return (
           <button
             key={f.id}
-            onClick={() => setActive(f.id)}
+            onClick={() => handleTabClick(f.id)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] whitespace-nowrap transition-all ${
               sel ? 'bg-white/[0.07] text-white/70' : 'text-white/30 hover:text-white/50'
             }`}

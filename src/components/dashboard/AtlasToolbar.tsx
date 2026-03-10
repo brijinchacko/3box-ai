@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { MessageSquare, Building2, Target, Trophy } from 'lucide-react';
 
-type AtlasTab = 'practice' | 'mock' | 'company' | 'results';
+export type AtlasTab = 'practice' | 'mock' | 'company' | 'results';
 
 interface AtlasToolbarProps {
   sessionCount?: number;
   avgScore?: number;
+  onTabChange?: (tab: AtlasTab) => void;
+  activeTab?: AtlasTab;
 }
 
 const TABS: { id: AtlasTab; label: string; icon: typeof MessageSquare }[] = [
@@ -17,8 +19,14 @@ const TABS: { id: AtlasTab; label: string; icon: typeof MessageSquare }[] = [
   { id: 'results', label: 'Results', icon: Trophy },
 ];
 
-export default function AtlasToolbar({ sessionCount = 0, avgScore }: AtlasToolbarProps) {
-  const [active, setActive] = useState<AtlasTab>('practice');
+export default function AtlasToolbar({ sessionCount = 0, avgScore, onTabChange, activeTab }: AtlasToolbarProps) {
+  const [localActive, setLocalActive] = useState<AtlasTab>('practice');
+  const active = activeTab ?? localActive;
+
+  const handleTabClick = (tab: AtlasTab) => {
+    setLocalActive(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-white/5 bg-white/[0.01]">
@@ -29,7 +37,7 @@ export default function AtlasToolbar({ sessionCount = 0, avgScore }: AtlasToolba
           return (
             <button
               key={t.id}
-              onClick={() => setActive(t.id)}
+              onClick={() => handleTabClick(t.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] whitespace-nowrap transition-all ${
                 sel ? 'bg-white/[0.07] text-white/70' : 'text-white/30 hover:text-white/50'
               }`}

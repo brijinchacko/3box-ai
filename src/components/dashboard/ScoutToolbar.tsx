@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { FileText, Search, Bookmark, Rocket, Loader2 } from 'lucide-react';
 
-type ScoutTab = 'report' | 'discover' | 'saved';
+export type ScoutTab = 'report' | 'discover' | 'saved';
 
 interface ScoutToolbarProps {
   onDeploy: () => void;
+  onTabChange?: (tab: ScoutTab) => void;
   isWorking: boolean;
   savedCount?: number;
+  activeTab?: ScoutTab;
 }
 
 const TABS: { id: ScoutTab; label: string; icon: typeof Search }[] = [
@@ -17,8 +19,14 @@ const TABS: { id: ScoutTab; label: string; icon: typeof Search }[] = [
   { id: 'saved', label: 'Saved Jobs', icon: Bookmark },
 ];
 
-export default function ScoutToolbar({ onDeploy, isWorking, savedCount = 0 }: ScoutToolbarProps) {
-  const [active, setActive] = useState<ScoutTab>('discover');
+export default function ScoutToolbar({ onDeploy, onTabChange, isWorking, savedCount = 0, activeTab }: ScoutToolbarProps) {
+  const [localActive, setLocalActive] = useState<ScoutTab>('discover');
+  const active = activeTab ?? localActive;
+
+  const handleTabClick = (tab: ScoutTab) => {
+    setLocalActive(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-white/5 bg-white/[0.01]">
@@ -29,7 +37,7 @@ export default function ScoutToolbar({ onDeploy, isWorking, savedCount = 0 }: Sc
           return (
             <button
               key={t.id}
-              onClick={() => setActive(t.id)}
+              onClick={() => handleTabClick(t.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] whitespace-nowrap transition-all ${
                 sel ? 'bg-white/[0.07] text-white/70' : 'text-white/30 hover:text-white/50'
               }`}
@@ -37,7 +45,7 @@ export default function ScoutToolbar({ onDeploy, isWorking, savedCount = 0 }: Sc
               <Icon className="w-3 h-3" />
               {t.label}
               {t.id === 'saved' && savedCount > 0 && (
-                <span className="text-[9px] bg-white/10 text-white/40 px-1 rounded">{savedCount}</span>
+                <span className="text-[9px] bg-amber-400/10 text-amber-400/60 px-1 rounded">{savedCount}</span>
               )}
             </button>
           );

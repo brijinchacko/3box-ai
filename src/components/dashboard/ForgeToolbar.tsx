@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { FileText, Mail, Linkedin, Check, Pencil } from 'lucide-react';
 
-type ForgeTab = 'resume' | 'cover' | 'linkedin';
+export type ForgeTab = 'resume' | 'cover' | 'linkedin';
 
 interface ForgeToolbarProps {
   hasResume?: boolean;
   isFinalized?: boolean;
   onEdit?: () => void;
+  onTabChange?: (tab: ForgeTab) => void;
+  activeTab?: ForgeTab;
 }
 
 const TABS: { id: ForgeTab; label: string; icon: typeof FileText }[] = [
@@ -17,8 +19,14 @@ const TABS: { id: ForgeTab; label: string; icon: typeof FileText }[] = [
   { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
 ];
 
-export default function ForgeToolbar({ hasResume = false, isFinalized = false, onEdit }: ForgeToolbarProps) {
-  const [active, setActive] = useState<ForgeTab>('resume');
+export default function ForgeToolbar({ hasResume = false, isFinalized = false, onEdit, onTabChange, activeTab }: ForgeToolbarProps) {
+  const [localActive, setLocalActive] = useState<ForgeTab>('resume');
+  const active = activeTab ?? localActive;
+
+  const handleTabClick = (tab: ForgeTab) => {
+    setLocalActive(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-white/5 bg-white/[0.01]">
@@ -29,7 +37,7 @@ export default function ForgeToolbar({ hasResume = false, isFinalized = false, o
           return (
             <button
               key={t.id}
-              onClick={() => setActive(t.id)}
+              onClick={() => handleTabClick(t.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] whitespace-nowrap transition-all ${
                 sel ? 'bg-white/[0.07] text-white/70' : 'text-white/30 hover:text-white/50'
               }`}

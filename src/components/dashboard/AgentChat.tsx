@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Search, Hammer, Target, Compass, BookOpen, Shield,
   Loader2, Briefcase, FileText, Star, AlertTriangle, ExternalLink, Zap,
+  Bookmark, BookmarkCheck, ArrowRight, MapPin, DollarSign, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import FeedbackButtons from '@/components/dashboard/FeedbackButtons';
@@ -39,6 +40,9 @@ interface AgentChatProps {
   onSendMessage: (content: string) => void;
   onQuickAction: (action: string) => void;
   onFeedback: (messageId: string, fb: 'up' | 'down' | null) => void;
+  onApplyJob?: (job: any) => void;
+  onSaveJob?: (job: any) => void;
+  savedJobIds?: Set<string>;
   isWorking: boolean;
   /** Optional panel content rendered above messages (e.g. Interview Prep for Atlas) */
   panelSlot?: React.ReactNode;
@@ -47,34 +51,136 @@ interface AgentChatProps {
 }
 
 /* ── Inline Output Renderers ── */
-function JobCards({ data }: { data: any[] }) {
+function JobCardItem({ job, onApply, onSave, isSaved }: { job: any; onApply?: (j: any) => void; onSave?: (j: any) => void; isSaved?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const url = job.jobUrl || job.url;
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden transition-all hover:border-white/10">
+      <div className="px-3 py-2.5 flex items-start gap-3">
+        {/* Company logo or placeholder */}
+        {job.companyLogo ? (
+          <img src={job.companyLogo} alt="" className="w-8 h-8 rounded-lg object-contain bg-white/5 flex-shrink-0 mt-0.5" />
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Briefcase className="w-3.5 h-3.5 text-white/20" />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold text-white/80 truncate flex-1">{job.title}</p>
+            {job.matchScore && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                job.matchScore >= 80 ? 'text-neon-green bg-neon-green/10' :
+                job.matchScore >= 60 ? 'text-amber-400 bg-amber-400/10' :
+                'text-white/40 bg-white/5'
+              }`}>{job.matchScore}%</span>
+            )}
+          </div>
+          <p className="text-[10px] text-white/35 truncate">{job.company}</p>
+
+          {/* Location + Salary + Type row */}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {(job.location || job.remote) && (
+              <span className="flex items-center gap-0.5 text-[9px] text-white/25">
+                <MapPin className="w-2.5 h-2.5" />{job.location || 'Remote'}
+              </span>
+            )}
+            {job.salary && (
+              <span className="flex items-center gap-0.5 text-[9px] text-white/25">
+                <DollarSign className="w-2.5 h-2.5" />{job.salary}
+              </span>
+            )}
+            {job.type && (
+              <span className="text-[9px] text-white/20 px-1 bg-white/5 rounded">{job.type}</span>
+            )}
+            {job.remote && (
+              <span className="text-[9px] text-blue-400/50 px-1 bg-blue-400/5 rounded">Remote</span>
+            )}
+            {job.source && (
+              <span className="text-[9px] text-white/15">{job.source}</span>
+            )}
+          </div>
+
+          {/* Expandable description */}
+          {job.description && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-0.5 text-[9px] text-white/20 hover:text-white/40 mt-1 transition-colors"
+            >
+              {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+              {expanded ? 'Less' : 'Details'}
+            </button>
+          )}
+          {expanded && job.description && (
+            <p className="text-[10px] text-white/30 mt-1 leading-relaxed line-clamp-4">{job.description}</p>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5 mt-2">
+            {onApply && (
+              <button
+                onClick={() => onApply(job)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium
+                           bg-gradient-to-r from-neon-blue/15 to-neon-purple/15 text-blue-300/80
+                           hover:from-neon-blue/25 hover:to-neon-purple/25 transition-all"
+              >
+                <ArrowRight className="w-2.5 h-2.5" />Apply via Archer
+              </button>
+            )}
+            {onSave && (
+              <button
+                onClick={() => onSave(job)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] transition-all ${
+                  isSaved
+                    ? 'bg-amber-400/10 text-amber-400/70'
+                    : 'bg-white/5 text-white/30 hover:text-white/50 hover:bg-white/10'
+                }`}
+              >
+                {isSaved ? <BookmarkCheck className="w-2.5 h-2.5" /> : <Bookmark className="w-2.5 h-2.5" />}
+                {isSaved ? 'Saved' : 'Save'}
+              </button>
+            )}
+            {url && (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px]
+                           bg-white/5 text-white/30 hover:text-white/50 hover:bg-white/10 transition-all"
+              >
+                <ExternalLink className="w-2.5 h-2.5" />View
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JobCards({ data, onApply, onSave, savedJobIds }: { data: any[]; onApply?: (j: any) => void; onSave?: (j: any) => void; savedJobIds?: Set<string> }) {
   if (!data?.length) return null;
+  const [showAll, setShowAll] = useState(false);
+  const visibleJobs = showAll ? data : data.slice(0, 5);
   return (
     <div className="space-y-2 mt-2">
-      {data.slice(0, 5).map((job: any, i: number) => (
-        <div key={job.id || i} className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/80 truncate">{job.title}</p>
-            <p className="text-[10px] text-white/35 truncate">{job.company} · {job.location || 'Remote'}</p>
-          </div>
-          {job.matchScore && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-              job.matchScore >= 80 ? 'text-neon-green bg-neon-green/10' :
-              job.matchScore >= 60 ? 'text-amber-400 bg-amber-400/10' :
-              'text-white/40 bg-white/5'
-            }`}>
-              {job.matchScore}%
-            </span>
-          )}
-          {job.jobUrl && (
-            <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="text-white/20 hover:text-white/40">
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
-        </div>
+      {visibleJobs.map((job: any, i: number) => (
+        <JobCardItem
+          key={job.id || i}
+          job={job}
+          onApply={onApply}
+          onSave={onSave}
+          isSaved={savedJobIds?.has(job.id)}
+        />
       ))}
-      {data.length > 5 && (
-        <p className="text-[10px] text-white/20 text-center">+{data.length - 5} more jobs</p>
+      {data.length > 5 && !showAll && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full text-[10px] text-white/25 hover:text-white/40 text-center py-1 transition-colors"
+        >
+          Show all {data.length} jobs ↓
+        </button>
       )}
     </div>
   );
@@ -186,9 +292,9 @@ function QualityReport({ data }: { data: any }) {
 }
 
 /* ── Render Output by Type ── */
-function MessageOutput({ msg }: { msg: ChatMessage }) {
+function MessageOutput({ msg, onApplyJob, onSaveJob, savedJobIds }: { msg: ChatMessage; onApplyJob?: (j: any) => void; onSaveJob?: (j: any) => void; savedJobIds?: Set<string> }) {
   switch (msg.type) {
-    case 'job-cards': return <JobCards data={msg.data} />;
+    case 'job-cards': return <JobCards data={msg.data} onApply={onApplyJob} onSave={onSaveJob} savedJobIds={savedJobIds} />;
     case 'resume-preview': return <ResumePreview data={msg.data} />;
     case 'application-status': return <AppStatus data={msg.data} />;
     case 'interview-prep': return <InterviewPrep data={msg.data} />;
@@ -205,6 +311,9 @@ export default function AgentChat({
   onSendMessage,
   onQuickAction,
   onFeedback,
+  onApplyJob,
+  onSaveJob,
+  savedJobIds,
   isWorking,
   panelSlot,
   toolbarSlot,
@@ -296,7 +405,7 @@ export default function AgentChat({
                   </p>
 
                   {/* Structured output */}
-                  {msg.type !== 'text' && <MessageOutput msg={msg} />}
+                  {msg.type !== 'text' && <MessageOutput msg={msg} onApplyJob={onApplyJob} onSaveJob={onSaveJob} savedJobIds={savedJobIds} />}
 
                   {/* Feedback + time */}
                   {msg.role === 'agent' && (

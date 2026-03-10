@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { ClipboardCheck, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
-type SentinelTab = 'queue' | 'approved' | 'flagged' | 'rejected';
+export type SentinelTab = 'queue' | 'approved' | 'flagged' | 'rejected';
 
 interface SentinelToolbarProps {
   counts?: Partial<Record<SentinelTab, number>>;
   qualityScore?: number;
+  onTabChange?: (tab: SentinelTab) => void;
+  activeTab?: SentinelTab;
 }
 
 const TABS: { id: SentinelTab; label: string; icon: typeof ClipboardCheck }[] = [
@@ -17,8 +19,14 @@ const TABS: { id: SentinelTab; label: string; icon: typeof ClipboardCheck }[] = 
   { id: 'rejected', label: 'Rejected', icon: XCircle },
 ];
 
-export default function SentinelToolbar({ counts = {}, qualityScore }: SentinelToolbarProps) {
-  const [active, setActive] = useState<SentinelTab>('queue');
+export default function SentinelToolbar({ counts = {}, qualityScore, onTabChange, activeTab }: SentinelToolbarProps) {
+  const [localActive, setLocalActive] = useState<SentinelTab>('queue');
+  const active = activeTab ?? localActive;
+
+  const handleTabClick = (tab: SentinelTab) => {
+    setLocalActive(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-white/5 bg-white/[0.01]">
@@ -30,7 +38,7 @@ export default function SentinelToolbar({ counts = {}, qualityScore }: SentinelT
           return (
             <button
               key={t.id}
-              onClick={() => setActive(t.id)}
+              onClick={() => handleTabClick(t.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] whitespace-nowrap transition-all ${
                 sel ? 'bg-white/[0.07] text-white/70' : 'text-white/30 hover:text-white/50'
               }`}

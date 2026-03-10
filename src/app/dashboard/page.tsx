@@ -9,13 +9,13 @@ import AgentChat, { type ChatMessage } from '@/components/dashboard/AgentChat';
 import InterviewPrepPanel from '@/components/dashboard/InterviewPrepPanel';
 import LearningPathPanel from '@/components/dashboard/LearningPathPanel';
 import QualityReviewPanel from '@/components/dashboard/QualityReviewPanel';
-import ScoutToolbar from '@/components/dashboard/ScoutToolbar';
-import ForgeToolbar from '@/components/dashboard/ForgeToolbar';
-import ArcherToolbar from '@/components/dashboard/ArcherToolbar';
+import ScoutToolbar, { type ScoutTab } from '@/components/dashboard/ScoutToolbar';
+import ForgeToolbar, { type ForgeTab } from '@/components/dashboard/ForgeToolbar';
+import ArcherToolbar, { type ArcherFilter } from '@/components/dashboard/ArcherToolbar';
 import CortexToolbar, { DEFAULT_STEPS, type JourneyStep } from '@/components/dashboard/CortexToolbar';
-import AtlasToolbar from '@/components/dashboard/AtlasToolbar';
-import SageToolbar from '@/components/dashboard/SageToolbar';
-import SentinelToolbar from '@/components/dashboard/SentinelToolbar';
+import AtlasToolbar, { type AtlasTab } from '@/components/dashboard/AtlasToolbar';
+import SageToolbar, { type SageTab } from '@/components/dashboard/SageToolbar';
+import SentinelToolbar, { type SentinelTab } from '@/components/dashboard/SentinelToolbar';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
 import UserMenu from '@/components/dashboard/UserMenu';
@@ -62,6 +62,7 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [resumeReady, setResumeReady] = useState(false);
   const [resumeFinalized, setResumeFinalized] = useState(false);
+  const [savedJobs, setSavedJobs] = useState<any[]>([]);
 
   const loadedAgents = useRef<Set<string>>(new Set());
   const handleRunPipelineRef = useRef<(() => void) | null>(null);
@@ -110,6 +111,10 @@ export default function DashboardPage() {
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
   const initials = getInitials(userName || 'User');
   const badge = planBadges[plan] || planBadges.BASIC;
+  const savedJobIds = new Set(savedJobs.map(j => j.id));
+
+  /* ── Job search intent keywords ── */
+  const JOB_SEARCH_KEYWORDS = /\b(find|search|look\s?for|discover|hunt|get\s?me|show\s?me|any)\b.*\b(job|jobs|role|roles|position|positions|opening|openings|vacancy|vacancies|work|gig|opportunity|opportunities)\b/i;
 
   /* ── Persist a message to DB (fire-and-forget) ── */
   const persistMsg = useCallback((agentId: string, msg: ChatMessage) => {
@@ -261,10 +266,52 @@ export default function DashboardPage() {
     setTimeout(() => { setRecentlyDone(prev => { const n = new Set(prev); n.delete(agentId); return n; }); }, 30000);
   }, [addMessage]);
 
-  /* ── Send text message ── */
+  /* ── Send text message (with smart intent detection) ── */
   const handleSendMessage = useCallback(async (agentId: SelectedAgentId, content: string) => {
     addMessage(agentId, createMsg(agentId, 'user', content));
     setRunningAgents(prev => new Set(prev).add(agentId));
+
+    /* ── Scout: detect job search intent and return structured cards ── */
+    if (agentId === 'scout' && JOB_SEARCH_KEYWORDS.test(content)) {
+      addMessage('scout', createMsg('scout', 'system', 'Searching for matching jobs...'));
+      try {
+        const query = content.replace(JOB_SEARCH_KEYWORDS, '').trim() || '';
+        const searchParams = new URLSearchParams({ query, limit: '10' });
+        const res = await fetch(`/api/jobs/search?${searchParams}`);
+        const data = await res.json().catch(() => null);
+        const jobs = data?.jobs || data?.results || [];
+        if (jobs.length > 0) {
+          addMessage('scout', createMsg('scout', 'agent', `Found ${jobs.length} jobs matching your search!`, 'job-cards', jobs));
+        } else {
+          addMessage('scout', createMsg('scout', 'agent', 'No jobs found for that query. Try broadening your search or use a different keyword.'));
+        }
+      } catch {
+        addMessage('scout', createMsg('scout', 'agent', 'Connection error while searching. Please try again.'));
+      }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
+      return;
+    }
+
+    /* ── Forge: detect resume-related intent ── */
+    if (agentId === 'forge' && /\b(optimize|improve|update|build|create|generate)\b.*\b(resume|cv)\b/i.test(content)) {
+      addMessage('forge', createMsg('forge', 'system', 'Working on your resume...'));
+      try {
+        const res = await fetch('/api/forge/auto-generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        const data = await res.json().catch(() => null);
+        if (data) {
+          addMessage('forge', createMsg('forge', 'agent', 'Resume optimized successfully!', 'resume-preview', data));
+          setResumeReady(true);
+        } else {
+          addMessage('forge', createMsg('forge', 'agent', "I'll need your profile data to optimize your resume. Please upload your resume first or fill in your profile."));
+        }
+      } catch {
+        addMessage('forge', createMsg('forge', 'agent', 'Connection error. Please try again.'));
+      }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
+      return;
+    }
+
+    /* ── Default: AI chat ── */
     const agentName = agentId === 'cortex' ? COORDINATOR.name : AGENTS[agentId].name;
     const agentRole = agentId === 'cortex' ? COORDINATOR.role : AGENTS[agentId].role;
     try {
@@ -307,6 +354,168 @@ export default function DashboardPage() {
     const last = [...msgs].reverse().find(m => m.role !== 'system');
     if (last) lastMessages[agentId] = last.content.slice(0, 60);
   }
+
+  /* ── Apply job → switch to Archer ── */
+  const handleApplyJob = useCallback((job: any) => {
+    setSavedJobs(prev => prev.some(j => j.id === job.id) ? prev : [...prev, job]);
+    setSelectedAgent('archer');
+    addMessage('archer', createMsg('archer', 'system', `Preparing application for ${job.title} at ${job.company}...`));
+    setTimeout(async () => {
+      setRunningAgents(prev => new Set(prev).add('archer'));
+      try {
+        const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: 'archer', jobId: job.id, jobTitle: job.title, company: job.company, jobUrl: job.url || job.jobUrl }) });
+        const data = await res.json().catch(() => null);
+        if (data?.applications || data?.applied) {
+          const apps = data.applications || data.applied || [];
+          addMessage('archer', createMsg('archer', 'agent', `Application sent for ${job.title} at ${job.company}!`, 'application-status', apps));
+        } else {
+          addMessage('archer', createMsg('archer', 'agent', data?.summary || `Application for ${job.title} at ${job.company} has been queued. I'll process it shortly.`));
+        }
+      } catch {
+        addMessage('archer', createMsg('archer', 'agent', `I've queued the application for ${job.title} at ${job.company}. I'll process it when connectivity is restored.`));
+      }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete('archer'); return n; });
+    }, 300);
+  }, [addMessage]);
+
+  /* ── Save/unsave job ── */
+  const handleSaveJob = useCallback((job: any) => {
+    setSavedJobs(prev => {
+      const exists = prev.some(j => j.id === job.id);
+      return exists ? prev.filter(j => j.id !== job.id) : [...prev, job];
+    });
+  }, []);
+
+  /* ── Toolbar tab handlers ── */
+  const handleScoutTab = useCallback(async (tab: ScoutTab) => {
+    if (tab === 'report') {
+      setRunningAgents(prev => new Set(prev).add('scout'));
+      addMessage('scout', createMsg('scout', 'system', 'Loading Scout report...'));
+      try {
+        const res = await fetch('/api/agents/scout/results');
+        const data = await res.json().catch(() => null);
+        const jobs = data?.jobs || data?.results || [];
+        if (jobs.length > 0) {
+          addMessage('scout', createMsg('scout', 'agent', `📊 Scout Report: Found ${jobs.length} jobs from your last search.`, 'job-cards', jobs));
+        } else {
+          addMessage('scout', createMsg('scout', 'agent', 'No previous search results. Deploy Scout or search for jobs to see your report.'));
+        }
+      } catch { addMessage('scout', createMsg('scout', 'agent', 'Could not load report. Try deploying Scout first.')); }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete('scout'); return n; });
+    } else if (tab === 'discover') {
+      setRunningAgents(prev => new Set(prev).add('scout'));
+      addMessage('scout', createMsg('scout', 'system', 'Discovering new jobs...'));
+      try {
+        const res = await fetch('/api/jobs/search?limit=10');
+        const data = await res.json().catch(() => null);
+        const jobs = data?.jobs || data?.results || [];
+        if (jobs.length > 0) {
+          addMessage('scout', createMsg('scout', 'agent', `🔍 Found ${jobs.length} new opportunities:`, 'job-cards', jobs));
+        } else {
+          addMessage('scout', createMsg('scout', 'agent', 'No new jobs discovered. Check back later or adjust your profile targets.'));
+        }
+      } catch { addMessage('scout', createMsg('scout', 'agent', 'Connection error while discovering jobs.')); }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete('scout'); return n; });
+    } else if (tab === 'saved') {
+      if (savedJobs.length > 0) {
+        addMessage('scout', createMsg('scout', 'agent', `📌 You have ${savedJobs.length} saved jobs:`, 'job-cards', savedJobs));
+      } else {
+        addMessage('scout', createMsg('scout', 'agent', 'No saved jobs yet. Search for jobs and click "Save" to bookmark them here.'));
+      }
+    }
+  }, [addMessage, savedJobs]);
+
+  const handleForgeTab = useCallback(async (tab: ForgeTab) => {
+    if (tab === 'resume') {
+      setRunningAgents(prev => new Set(prev).add('forge'));
+      addMessage('forge', createMsg('forge', 'system', 'Loading resume status...'));
+      try {
+        const res = await fetch('/api/forge/status');
+        const data = await res.json().catch(() => null);
+        if (data?.atsScore || data?.hasResume) {
+          addMessage('forge', createMsg('forge', 'agent', 'Here is your current resume status:', 'resume-preview', data));
+          setResumeReady(true);
+          if (data.atsScore >= 70) setResumeFinalized(true);
+        } else {
+          addMessage('forge', createMsg('forge', 'agent', 'No resume on file yet. Use "Optimize Resume" to create one, or paste a job description to start.'));
+        }
+      } catch { addMessage('forge', createMsg('forge', 'agent', 'Could not load resume status.')); }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete('forge'); return n; });
+    } else if (tab === 'cover') {
+      addMessage('forge', createMsg('forge', 'agent', 'Ready to generate a cover letter! Paste a job description or tell me the company and role, and I\'ll craft a personalized cover letter.'));
+    } else if (tab === 'linkedin') {
+      addMessage('forge', createMsg('forge', 'agent', 'I can optimize your LinkedIn profile. Tell me your target role and I\'ll suggest headline, summary, and skill improvements.'));
+    }
+  }, [addMessage]);
+
+  const handleArcherTab = useCallback(async (tab: ArcherFilter) => {
+    setRunningAgents(prev => new Set(prev).add('archer'));
+    addMessage('archer', createMsg('archer', 'system', `Loading ${tab === 'all' ? 'all applications' : tab + ' applications'}...`));
+    try {
+      const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: 'archer', filter: tab }) });
+      const data = await res.json().catch(() => null);
+      if (data?.applications || data?.applied) {
+        const apps = data.applications || data.applied || [];
+        const filtered = tab === 'all' ? apps : apps.filter((a: any) => a.status === tab);
+        addMessage('archer', createMsg('archer', 'agent', `${filtered.length} ${tab === 'all' ? '' : tab + ' '}applications:`, 'application-status', filtered));
+      } else {
+        addMessage('archer', createMsg('archer', 'agent', data?.summary || `No ${tab === 'all' ? '' : tab + ' '}applications found. Use "Apply to Top Matches" to get started.`));
+      }
+    } catch { addMessage('archer', createMsg('archer', 'agent', 'Could not load applications.')); }
+    setRunningAgents(prev => { const n = new Set(prev); n.delete('archer'); return n; });
+  }, [addMessage]);
+
+  const handleAtlasTab = useCallback(async (tab: AtlasTab) => {
+    if (tab === 'practice') {
+      addMessage('atlas', createMsg('atlas', 'agent', 'Ready for practice! Tell me the role and company, or say "start" for general interview practice.'));
+    } else if (tab === 'mock') {
+      setRunningAgents(prev => new Set(prev).add('atlas'));
+      addMessage('atlas', createMsg('atlas', 'system', 'Setting up mock interview...'));
+      try {
+        const res = await fetch('/api/ai/interview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'mock' }) });
+        const data = await res.json().catch(() => null);
+        if (data) addMessage('atlas', createMsg('atlas', 'agent', 'Mock interview ready! Here are your questions:', 'interview-prep', data));
+        else addMessage('atlas', createMsg('atlas', 'agent', 'Ready for a mock interview. Tell me the role you\'re preparing for.'));
+      } catch { addMessage('atlas', createMsg('atlas', 'agent', 'Could not start mock interview. Please try again.')); }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete('atlas'); return n; });
+    } else if (tab === 'company') {
+      addMessage('atlas', createMsg('atlas', 'agent', 'Tell me the company name and I\'ll research their interview style, culture, and common questions.'));
+    } else if (tab === 'results') {
+      addMessage('atlas', createMsg('atlas', 'agent', 'Your interview practice results will appear here after completing sessions. Start a practice session to begin tracking.'));
+    }
+  }, [addMessage]);
+
+  const handleSageTab = useCallback(async (tab: SageTab) => {
+    if (tab === 'gaps') {
+      setRunningAgents(prev => new Set(prev).add('sage'));
+      addMessage('sage', createMsg('sage', 'system', 'Analyzing skill gaps...'));
+      try {
+        const res = await fetch('/api/agents/skill-gaps');
+        const data = await res.json().catch(() => null);
+        if (data) addMessage('sage', createMsg('sage', 'agent', 'Skill gap analysis:', 'skill-gaps', data));
+        else addMessage('sage', createMsg('sage', 'agent', 'Upload your resume or set a target role to analyze skill gaps.'));
+      } catch { addMessage('sage', createMsg('sage', 'agent', 'Could not analyze skill gaps.')); }
+      setRunningAgents(prev => { const n = new Set(prev); n.delete('sage'); return n; });
+    } else if (tab === 'path') {
+      addMessage('sage', createMsg('sage', 'agent', 'Your personalized learning path is shown above. Complete modules to unlock new skills and improve your market readiness.'));
+    } else if (tab === 'courses') {
+      addMessage('sage', createMsg('sage', 'agent', 'Tell me which skill you want to improve and I\'ll recommend the best courses, tutorials, and resources.'));
+    } else if (tab === 'trends') {
+      addMessage('sage', createMsg('sage', 'agent', 'I track market trends for your target roles — demand shifts, salary movements, and emerging skills. Ask me about trends in any field.'));
+    }
+  }, [addMessage]);
+
+  const handleSentinelTab = useCallback(async (tab: SentinelTab) => {
+    setRunningAgents(prev => new Set(prev).add('sentinel'));
+    addMessage('sentinel', createMsg('sentinel', 'system', `Loading ${tab} items...`));
+    try {
+      const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: 'sentinel', filter: tab }) });
+      const data = await res.json().catch(() => null);
+      if (data) addMessage('sentinel', createMsg('sentinel', 'agent', `${tab.charAt(0).toUpperCase() + tab.slice(1)} review:`, 'quality-report', data));
+      else addMessage('sentinel', createMsg('sentinel', 'agent', `No ${tab} items found.`));
+    } catch { addMessage('sentinel', createMsg('sentinel', 'agent', 'Could not load review items.')); }
+    setRunningAgents(prev => { const n = new Set(prev); n.delete('sentinel'); return n; });
+  }, [addMessage]);
 
   /* ── Cortex journey steps (derived from current state) ── */
   const journeySteps: JourneyStep[] = DEFAULT_STEPS.map(s => {
@@ -483,6 +692,9 @@ export default function DashboardPage() {
                   onSendMessage={(content) => handleSendMessage(selectedAgent, content)}
                   onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
                   onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
+                  onApplyJob={handleApplyJob}
+                  onSaveJob={handleSaveJob}
+                  savedJobIds={savedJobIds}
                   isWorking={runningAgents.has(selectedAgent)}
                   toolbarSlot={
                     selectedAgent === 'cortex' ? (
@@ -494,23 +706,29 @@ export default function DashboardPage() {
                     selectedAgent === 'scout' ? (
                       <ScoutToolbar
                         onDeploy={() => handleQuickAction('scout', 'search')}
+                        onTabChange={handleScoutTab}
                         isWorking={runningAgents.has('scout')}
+                        savedCount={savedJobs.length}
                       />
                     ) :
                     selectedAgent === 'forge' ? (
-                      <ForgeToolbar hasResume={resumeReady} isFinalized={resumeFinalized} />
+                      <ForgeToolbar
+                        hasResume={resumeReady}
+                        isFinalized={resumeFinalized}
+                        onTabChange={handleForgeTab}
+                      />
                     ) :
                     selectedAgent === 'archer' ? (
-                      <ArcherToolbar />
+                      <ArcherToolbar onTabChange={handleArcherTab} />
                     ) :
                     selectedAgent === 'atlas' ? (
-                      <AtlasToolbar />
+                      <AtlasToolbar onTabChange={handleAtlasTab} />
                     ) :
                     selectedAgent === 'sage' ? (
-                      <SageToolbar />
+                      <SageToolbar onTabChange={handleSageTab} />
                     ) :
                     selectedAgent === 'sentinel' ? (
-                      <SentinelToolbar />
+                      <SentinelToolbar onTabChange={handleSentinelTab} />
                     ) :
                     undefined
                   }

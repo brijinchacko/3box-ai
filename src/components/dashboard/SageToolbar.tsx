@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { Route, BarChart3, GraduationCap, TrendingUp } from 'lucide-react';
 
-type SageTab = 'path' | 'gaps' | 'courses' | 'trends';
+export type SageTab = 'path' | 'gaps' | 'courses' | 'trends';
 
 interface SageToolbarProps {
   progress?: number;
   moduleCount?: number;
+  onTabChange?: (tab: SageTab) => void;
+  activeTab?: SageTab;
 }
 
 const TABS: { id: SageTab; label: string; icon: typeof Route }[] = [
@@ -17,8 +19,14 @@ const TABS: { id: SageTab; label: string; icon: typeof Route }[] = [
   { id: 'trends', label: 'Trends', icon: TrendingUp },
 ];
 
-export default function SageToolbar({ progress, moduleCount }: SageToolbarProps) {
-  const [active, setActive] = useState<SageTab>('path');
+export default function SageToolbar({ progress, moduleCount, onTabChange, activeTab }: SageToolbarProps) {
+  const [localActive, setLocalActive] = useState<SageTab>('path');
+  const active = activeTab ?? localActive;
+
+  const handleTabClick = (tab: SageTab) => {
+    setLocalActive(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-white/5 bg-white/[0.01]">
@@ -29,7 +37,7 @@ export default function SageToolbar({ progress, moduleCount }: SageToolbarProps)
           return (
             <button
               key={t.id}
-              onClick={() => setActive(t.id)}
+              onClick={() => handleTabClick(t.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] whitespace-nowrap transition-all ${
                 sel ? 'bg-white/[0.07] text-white/70' : 'text-white/30 hover:text-white/50'
               }`}
