@@ -12,7 +12,7 @@ import QualityReviewPanel from '@/components/dashboard/QualityReviewPanel';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
 import UserMenu from '@/components/dashboard/UserMenu';
-import { AGENTS, type AgentId } from '@/lib/agents/registry';
+import { AGENTS, COORDINATOR, type AgentId } from '@/lib/agents/registry';
 import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
 import { getInitials } from '@/lib/utils';
 
@@ -26,14 +26,18 @@ const planBadges: Record<string, { label: string; color: string }> = {
   ULTRA:   { label: 'Ultra',   color: 'text-neon-purple bg-neon-purple/10' },
 };
 
+/* ── Selected agent can include cortex ── */
+type SelectedAgentId = AgentId | 'cortex';
+
 /* ── Welcome messages per agent ── */
-const WELCOME: Record<AgentId, string> = {
+const WELCOME: Record<SelectedAgentId, string> = {
   scout: "I'm ready to hunt for jobs matching your profile. Hit 'Search Jobs' or tell me what role you're looking for.",
   forge: "I'll optimize your resume for any job. Use 'Optimize Resume' or paste a job description and I'll tailor it.",
   archer: "I can send applications with tailored cover letters. Hit 'Apply to Top Matches' to get started.",
   atlas: "Let me prepare you for interviews. Pick a company or use 'Practice Interview' to start a mock session.",
   sage: "I'll analyze your skill gaps and recommend learning paths. Hit 'Find Skill Gaps' to begin.",
   sentinel: "I review applications for quality and catch issues before they go out. Use 'Review Queue' to check pending items.",
+  cortex: "I'm Cortex — your AI team coordinator. I oversee all six agents and can give you a status report or run the full pipeline. What would you like to do?",
 };
 
 export default function DashboardPage() {
@@ -42,7 +46,7 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userImage, setUserImage] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanTier>('STARTER');
-  const [selectedAgent, setSelectedAgent] = useState<AgentId>('scout');
+  const [selectedAgent, setSelectedAgent] = useState<SelectedAgentId>('scout');
   const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
   const [recentlyDone, setRecentlyDone] = useState<Set<string>>(new Set());
   const [agentChats, setAgentChats] = useState<Record<string, ChatMessage[]>>({});
@@ -51,6 +55,7 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const loadedAgents = useRef<Set<string>>(new Set());
+  const handleRunPipelineRef = useRef<(() => void) | null>(null);
 
   /* ── Initial data fetch ── */
   useEffect(() => {
@@ -113,12 +118,12 @@ export default function DashboardPage() {
   }, []);
 
   /* ── Chat helpers ── */
-  const addMessage = useCallback((agentId: AgentId, msg: ChatMessage) => {
+  const addMessage = useCallback((agentId: SelectedAgentId, msg: ChatMessage) => {
     setAgentChats(prev => ({ ...prev, [agentId]: [...(prev[agentId] || []), msg] }));
     persistMsg(agentId, msg);
   }, [persistMsg]);
 
-  const createMsg = (agentId: AgentId, role: 'agent' | 'user' | 'system', content: string, type: ChatMessage['type'] = 'text', data?: any): ChatMessage => ({
+  const createMsg = (agentId: SelectedAgentId, role: 'agent' | 'user' | 'system', content: string, type: ChatMessage['type'] = 'text', data?: any): ChatMessage => ({
     id: `${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     role, content, type, data, feedback: null, timestamp: Date.now(),
   });
@@ -135,7 +140,7 @@ export default function DashboardPage() {
         if (data?.messages?.length) {
           setAgentChats(prev => ({ ...prev, [selectedAgent]: data.messages }));
         } else {
-          const welcome = WELCOME[selectedAgent];
+          const welcome = WELCOME[selectedAgent as SelectedAgentId];
           if (welcome) {
             const msg: ChatMessage = { id: `welcome-${selectedAgent}`, role: 'agent', content: welcome, type: 'text', feedback: null, timestamp: Date.now() };
             setAgentChats(prev => ({ ...prev, [selectedAgent]: [msg] }));
@@ -144,7 +149,7 @@ export default function DashboardPage() {
         }
       })
       .catch(() => {
-        const welcome = WELCOME[selectedAgent];
+        const welcome = WELCOME[selectedAgent as SelectedAgentId];
         if (welcome) {
           setAgentChats(prev => ({ ...prev, [selectedAgent]: [{ id: `welcome-${selectedAgent}`, role: 'agent', content: welcome, type: 'text', feedback: null, timestamp: Date.now() }] }));
         }
@@ -178,7 +183,24 @@ export default function DashboardPage() {
   }, [addMessage]);
 
   /* ── Quick action handler ── */
-  const handleQuickAction = useCallback(async (agentId: AgentId, action: string) => {
+  const handleQuickAction = useCallback(async (agentId: SelectedAgentId, action: string) => {
+    /* Cortex-specific quick actions */
+    if (agentId === 'cortex') {
+      if (action === 'pipeline') {
+        addMessage('cortex', createMsg('cortex', 'system', 'Running full pipeline...'));
+        handleRunPipelineRef.current?.();
+        return;
+      }
+      if (action === 'status') {
+        const unlocked = agents.filter(a => !a.locked);
+        const running = [...runningAgents];
+        const status = unlocked.map(a => `• ${AGENTS[a.id as AgentId].name}: ${running.includes(a.id) ? '🔄 Working' : '✅ Ready'}`).join('\n');
+        addMessage('cortex', createMsg('cortex', 'agent', `Team status:\n${status}`));
+        return;
+      }
+      return;
+    }
+
     const agent = AGENTS[agentId];
     if (!agent) return;
 
@@ -226,11 +248,13 @@ export default function DashboardPage() {
   }, [addMessage]);
 
   /* ── Send text message ── */
-  const handleSendMessage = useCallback(async (agentId: AgentId, content: string) => {
+  const handleSendMessage = useCallback(async (agentId: SelectedAgentId, content: string) => {
     addMessage(agentId, createMsg(agentId, 'user', content));
     setRunningAgents(prev => new Set(prev).add(agentId));
+    const agentName = agentId === 'cortex' ? COORDINATOR.name : AGENTS[agentId].name;
+    const agentRole = agentId === 'cortex' ? COORDINATOR.role : AGENTS[agentId].role;
     try {
-      const res = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: content, context: { agentId, agentName: AGENTS[agentId].name, agentRole: AGENTS[agentId].role } }) });
+      const res = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: content, context: { agentId, agentName, agentRole } }) });
       const data = await res.json().catch(() => null);
       addMessage(agentId, createMsg(agentId, 'agent', data?.reply || data?.message || "I'm not sure how to help with that. Try using one of the quick actions above."));
     } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
@@ -238,7 +262,7 @@ export default function DashboardPage() {
   }, [addMessage]);
 
   /* ── Feedback handler ── */
-  const handleFeedback = useCallback((agentId: AgentId, messageId: string, fb: 'up' | 'down' | null) => {
+  const handleFeedback = useCallback((agentId: SelectedAgentId, messageId: string, fb: 'up' | 'down' | null) => {
     setAgentChats(prev => ({ ...prev, [agentId]: (prev[agentId] || []).map(m => m.id === messageId ? { ...m, feedback: fb } : m) }));
     fetch(`/api/agents/chat/${messageId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feedback: fb }) }).catch(() => {});
   }, []);
@@ -252,6 +276,7 @@ export default function DashboardPage() {
       await new Promise(r => setTimeout(r, 400));
     }
   }, [agents, handleRunAgent]);
+  handleRunPipelineRef.current = handleRunPipeline;
 
   /* ── Agent strip data ── */
   const agentStripData = agents.map(a => ({
@@ -282,21 +307,32 @@ export default function DashboardPage() {
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className="relative flex-shrink-0 border-r border-white/5 bg-white/[0.01] hidden lg:flex flex-col overflow-hidden"
       >
-        {/* Sidebar top — Cortex branding */}
+        {/* Sidebar top — Cortex branding (clickable → opens Cortex chat) */}
         {sidebarOpen ? (
-          <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2.5 flex-shrink-0">
+          <button
+            onClick={() => setSelectedAgent('cortex')}
+            className={`w-full px-4 py-3 border-b border-white/5 flex items-center gap-2.5 flex-shrink-0 text-left transition-all hover:bg-white/[0.03] ${
+              selectedAgent === 'cortex' ? 'bg-white/[0.05]' : ''
+            }`}
+          >
             <CortexAvatar size={32} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white/70 truncate">
-                {loading ? <span className="inline-block w-20 h-3 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
+                {loading ? <span className="inline-block w-20 h-3 bg-white/5 rounded animate-pulse" /> : <>{COORDINATOR.name}</>}
               </p>
-              <p className="text-[9px] text-white/20">Your AI team is ready</p>
+              <p className="text-[9px] text-white/20">{COORDINATOR.role}</p>
             </div>
-          </div>
+          </button>
         ) : (
-          <div className="flex justify-center py-3 border-b border-white/5 flex-shrink-0">
+          <button
+            onClick={() => setSelectedAgent('cortex')}
+            className={`w-full flex justify-center py-3 border-b border-white/5 flex-shrink-0 transition-all hover:bg-white/[0.03] ${
+              selectedAgent === 'cortex' ? 'bg-white/[0.05]' : ''
+            }`}
+            title="Cortex"
+          >
             <CortexAvatar size={28} />
-          </div>
+          </button>
         )}
 
         {/* Agent team + UserMenu at bottom */}
@@ -304,7 +340,7 @@ export default function DashboardPage() {
           vertical
           collapsed={!sidebarOpen}
           agents={agentStripData}
-          selectedAgent={selectedAgent}
+          selectedAgent={selectedAgent === 'cortex' ? null : selectedAgent}
           runningAgents={runningAgents}
           recentlyDone={recentlyDone}
           onSelect={(id) => setSelectedAgent(id)}
@@ -350,26 +386,22 @@ export default function DashboardPage() {
 
         {/* Top bar — mobile greeting + Run All */}
         <div className="px-4 sm:px-6 py-2.5 border-b border-white/5 flex items-center gap-3 flex-shrink-0">
-          {/* Cortex greeting — mobile only (sidebar has it on desktop) */}
-          <div className="lg:hidden flex items-center gap-2.5 flex-1 min-w-0">
+          {/* Cortex greeting — mobile only (clickable → opens Cortex chat) */}
+          <button
+            onClick={() => setSelectedAgent('cortex')}
+            className="lg:hidden flex items-center gap-2.5 flex-1 min-w-0 text-left"
+          >
             <CortexAvatar size={26} pulse />
             <div className="min-w-0">
               <span className="text-sm font-semibold">
-                {loading ? <span className="inline-block w-28 h-4 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
+                {loading ? <span className="inline-block w-28 h-4 bg-white/5 rounded animate-pulse" /> : <>{COORDINATOR.name}</>}
               </span>
-              <p className="text-[10px] text-white/20">Your AI team is ready</p>
+              <p className="text-[10px] text-white/20">{COORDINATOR.role}</p>
             </div>
-          </div>
+          </button>
 
-          {/* Desktop: just show agent name as context */}
-          <div className="hidden lg:flex items-center gap-2 flex-1 min-w-0">
-            {selectedAgent && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white/80">{AGENTS[selectedAgent].name}</span>
-                <span className="text-xs text-white/25">{AGENTS[selectedAgent].role}</span>
-              </div>
-            )}
-          </div>
+          {/* Desktop: empty spacer */}
+          <div className="hidden lg:flex flex-1" />
 
           {/* Run All — mobile only */}
           <button
@@ -388,7 +420,7 @@ export default function DashboardPage() {
         <div className="lg:hidden px-4 py-2 border-b border-white/5">
           <AgentTeamStrip
             agents={agentStripData}
-            selectedAgent={selectedAgent}
+            selectedAgent={selectedAgent === 'cortex' ? null : selectedAgent}
             runningAgents={runningAgents}
             recentlyDone={recentlyDone}
             onSelect={(id) => setSelectedAgent(id)}
@@ -400,37 +432,34 @@ export default function DashboardPage() {
 
           {/* Agent workspace area */}
           <div className="flex-1 min-w-0 flex flex-col">
-            {selectedAgent && !agents.find(a => a.id === selectedAgent)?.locked ? (
-              /* Dedicated panels for Atlas, Sage, Sentinel — chat for others */
-              selectedAgent === 'atlas' ? (
-                <InterviewPrepPanel />
-              ) : selectedAgent === 'sage' ? (
-                <LearningPathPanel />
-              ) : selectedAgent === 'sentinel' ? (
-                <QualityReviewPanel />
-              ) : (
-                <div className="flex-1 flex flex-col p-4 sm:p-6">
-                  <AgentChat
-                    agentId={selectedAgent}
-                    messages={agentChats[selectedAgent] || []}
-                    onSendMessage={(content) => handleSendMessage(selectedAgent, content)}
-                    onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
-                    onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
-                    isWorking={runningAgents.has(selectedAgent)}
-                  />
-                </div>
-              )
-            ) : (
+            {selectedAgent !== 'cortex' && agents.find(a => a.id === selectedAgent)?.locked ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="rounded-xl border border-dashed border-white/5 flex-1 flex flex-col items-center justify-center m-4 sm:m-6"
               >
-                <p className="text-sm text-white/25">Select an agent to start a conversation</p>
+                <p className="text-sm text-white/25">This agent is locked</p>
                 <p className="text-xs text-white/15 mt-1">
-                  Or hit <span className="text-white/30 font-medium">Run All</span> to launch all agents
+                  Upgrade your plan to unlock this agent
                 </p>
               </motion.div>
+            ) : (
+              <div className="flex-1 flex flex-col p-4 sm:p-6">
+                <AgentChat
+                  agentId={selectedAgent}
+                  messages={agentChats[selectedAgent] || []}
+                  onSendMessage={(content) => handleSendMessage(selectedAgent, content)}
+                  onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
+                  onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
+                  isWorking={runningAgents.has(selectedAgent)}
+                  panelSlot={
+                    selectedAgent === 'atlas' ? <InterviewPrepPanel /> :
+                    selectedAgent === 'sage' ? <LearningPathPanel /> :
+                    selectedAgent === 'sentinel' ? <QualityReviewPanel /> :
+                    undefined
+                  }
+                />
+              </div>
             )}
           </div>
 

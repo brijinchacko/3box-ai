@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Search, Hammer, Target, Compass, BookOpen, Shield,
-  Loader2, Briefcase, FileText, Star, AlertTriangle, ExternalLink,
+  Loader2, Briefcase, FileText, Star, AlertTriangle, ExternalLink, Zap,
 } from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import FeedbackButtons from '@/components/dashboard/FeedbackButtons';
-import { AGENTS, type AgentId } from '@/lib/agents/registry';
+import { AGENTS, COORDINATOR, type AgentId } from '@/lib/agents/registry';
 
 /* ── Message Types ── */
 export interface ChatMessage {
@@ -22,23 +22,26 @@ export interface ChatMessage {
 }
 
 /* ── Quick Actions per Agent ── */
-const QUICK_ACTIONS: Record<AgentId, { label: string; icon: any; action: string }[]> = {
+const QUICK_ACTIONS: Record<AgentId | 'cortex', { label: string; icon: any; action: string }[]> = {
   scout:    [{ label: 'Search Jobs', icon: Search, action: 'search' }, { label: 'Scan LinkedIn', icon: Briefcase, action: 'linkedin' }],
   forge:    [{ label: 'Optimize Resume', icon: Hammer, action: 'optimize' }, { label: 'ATS Check', icon: FileText, action: 'ats' }],
   archer:   [{ label: 'Apply to Top Matches', icon: Target, action: 'apply' }, { label: 'Send Cover Letters', icon: Send, action: 'cover' }],
   atlas:    [{ label: 'Practice Interview', icon: Compass, action: 'practice' }, { label: 'Company Research', icon: Search, action: 'research' }],
   sage:     [{ label: 'Find Skill Gaps', icon: BookOpen, action: 'gaps' }, { label: 'Learning Path', icon: Star, action: 'learn' }],
   sentinel: [{ label: 'Review Queue', icon: Shield, action: 'review' }, { label: 'Quality Report', icon: AlertTriangle, action: 'report' }],
+  cortex:   [{ label: 'Team Status', icon: Briefcase, action: 'status' }, { label: 'Run Pipeline', icon: Zap, action: 'pipeline' }],
 };
 
 /* ── Props ── */
 interface AgentChatProps {
-  agentId: AgentId;
+  agentId: AgentId | 'cortex';
   messages: ChatMessage[];
   onSendMessage: (content: string) => void;
   onQuickAction: (action: string) => void;
   onFeedback: (messageId: string, fb: 'up' | 'down' | null) => void;
   isWorking: boolean;
+  /** Optional panel content rendered above messages (e.g. Interview Prep for Atlas) */
+  panelSlot?: React.ReactNode;
 }
 
 /* ── Inline Output Renderers ── */
@@ -201,10 +204,13 @@ export default function AgentChat({
   onQuickAction,
   onFeedback,
   isWorking,
+  panelSlot,
 }: AgentChatProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const agent = AGENTS[agentId];
+  const agent = agentId === 'cortex'
+    ? { name: COORDINATOR.name, role: COORDINATOR.role, shortDescription: COORDINATOR.description }
+    : AGENTS[agentId];
   const quickActions = QUICK_ACTIONS[agentId] || [];
 
   // Auto-scroll on new messages
@@ -238,9 +244,16 @@ export default function AgentChat({
         )}
       </div>
 
-      {/* ── Messages ── */}
+      {/* ── Panel Slot + Messages ── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {messages.length === 0 ? (
+        {/* Embedded panel (e.g. Interview Prep, Learning Path, Quality Review) */}
+        {panelSlot && (
+          <div className="mb-2 -mx-4 -mt-3">
+            {panelSlot}
+          </div>
+        )}
+
+        {messages.length === 0 && !panelSlot ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <AgentAvatar agentId={agentId} size={48} />
             <p className="text-sm text-white/30 mt-3">
