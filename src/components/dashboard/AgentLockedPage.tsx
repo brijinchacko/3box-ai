@@ -21,7 +21,7 @@ export default function AgentLockedPage({ agentId }: AgentLockedPageProps) {
         className="text-center max-w-md mx-auto"
       >
         <div className="mb-6">
-          <AgentAvatar agentId={agentId} size={80} sleeping />
+          <AgentAvatar agentId={agentId} size={80} />
         </div>
 
         <h2 className="text-2xl font-bold mb-2">{agent.displayName}</h2>

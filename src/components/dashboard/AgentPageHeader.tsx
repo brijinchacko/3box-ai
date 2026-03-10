@@ -74,7 +74,7 @@ export default function AgentPageHeader({ agentId, statusText, onRunNow }: Agent
       {/* Main header row */}
       <div className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3">
-          <AgentAvatar agentId={agentId} size={40} pulse={running} sleeping={!running} />
+          <AgentAvatar agentId={agentId} size={40} pulse={running} />
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white">{agent.displayName}</h3>

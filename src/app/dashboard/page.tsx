@@ -98,7 +98,7 @@ export default function DashboardPage() {
                   className="block rounded-xl border border-white/5 bg-white/[0.015] p-4 opacity-50 hover:opacity-70 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <AgentAvatar agentId={agent.id} size={36} sleeping />
+                    <AgentAvatar agentId={agent.id} size={36} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold">{agent.displayName}</span>

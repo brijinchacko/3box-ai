@@ -170,7 +170,7 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 transition-all disabled:opacity-40"
                   title={!sentinelAvailable ? 'Sentinel requires Ultra plan' : ''}
                 >
-                  <AgentAvatar agentId="sentinel" size={16} sleeping={!sentinelAvailable} />
+                  <AgentAvatar agentId="sentinel" size={16} />
                   Verify Listing
                 </button>
               )}
@@ -181,7 +181,7 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
                 title={!forgeAvailable ? 'Forge requires Starter plan' : ''}
                 style={!forgeAvailable ? { opacity: 0.4, pointerEvents: 'none' } : {}}
               >
-                <AgentAvatar agentId="forge" size={16} sleeping={!forgeAvailable} />
+                <AgentAvatar agentId="forge" size={16} />
                 Tailor Resume
               </a>
               <button

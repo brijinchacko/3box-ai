@@ -294,7 +294,7 @@ export default function ApplicationsPage() {
       {/* ── Agent Header ── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-center gap-3 mb-1">
-          <AgentAvatar agentId="archer" size={36} pulse={running} sleeping={!running && !hasApps} />
+          <AgentAvatar agentId="archer" size={36} pulse={running} />
           <div className="flex-1">
             <h1 className="text-lg font-bold flex items-center gap-2">
               Archer

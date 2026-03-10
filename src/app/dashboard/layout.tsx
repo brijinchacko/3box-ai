@@ -148,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {isCortex ? (
           <CortexAvatar size={28} />
         ) : (
-          <AgentAvatar agentId={item.agentId as AgentId} size={28} sleeping={locked} />
+          <AgentAvatar agentId={item.agentId as AgentId} size={28} />
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">

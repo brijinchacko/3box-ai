@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { type AgentId, AGENTS, COORDINATOR } from '@/lib/agents/registry';
 
 /**
@@ -18,8 +18,8 @@ interface AgentAvatarProps {
   size?: number;
   className?: string;
   pulse?: boolean;
-  sleeping?: boolean;
-  autoSleep?: boolean;
+  sleeping?: boolean; // deprecated — kept for backward compat, no longer used
+  autoSleep?: boolean; // deprecated — kept for backward compat, no longer used
 }
 
 interface BodyShape {
@@ -53,14 +53,7 @@ function getBodyShape(_agentId: AgentId | 'cortex'): BodyShape {
 
 /* ═══════════════ IDLE ANIMATIONS ═══════════════ */
 
-function getIdleAnimation(agentId: AgentId | 'cortex', sleeping: boolean) {
-  if (sleeping) {
-    // Gentle float only — no scale distortion, keeps logo shape perfectly intact
-    return {
-      animate: { y: [0, -1, 0] },
-      transition: { duration: 3, repeat: Infinity, ease: 'easeInOut' as const },
-    };
-  }
+function getIdleAnimation(agentId: AgentId | 'cortex') {
   switch (agentId) {
     case 'scout':
       return { animate: { x: [0, 2, 0, -2, 0] }, transition: { duration: 3.5, repeat: Infinity, ease: 'easeInOut' as const } };
@@ -379,47 +372,20 @@ function AgentEmblem({ agentId, bodyShape, filterId, colors }: {
 /* ═══════════════ MAIN COMPONENT ═══════════════ */
 
 export default function AgentAvatar({
-  agentId, size = 48, className = '', pulse = false, sleeping = false, autoSleep = false,
+  agentId, size = 48, className = '', pulse = false,
 }: AgentAvatarProps) {
   const avatarRef = useRef<HTMLDivElement>(null);
   const [blinkScale, setBlinkScale] = useState(1);
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
-  const [isAutoSleeping, setIsAutoSleeping] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   const colors = getAgentColors(agentId);
   const uid = `av-${agentId}-${size}`;
   const scale = size / 32;
   const bodyShape = useMemo(() => getBodyShape(agentId), [agentId]);
-  // Hover immediately wakes the agent
-  const isSleeping = (sleeping || isAutoSleeping) && !isHovered;
-  const idle = useMemo(() => getIdleAnimation(agentId, isSleeping), [agentId, isSleeping]);
-
-  /* ── Auto-sleep: randomly doze off and wake up ── */
-  useEffect(() => {
-    if (!autoSleep) { setIsAutoSleeping(false); return; }
-    let cancelled = false;
-    const cycle = () => {
-      if (cancelled) return;
-      const awakeTime = 12000 + Math.random() * 20000;
-      setTimeout(() => {
-        if (cancelled) return;
-        setIsAutoSleeping(true);
-        const sleepTime = 3000 + Math.random() * 5000;
-        setTimeout(() => {
-          if (cancelled) return;
-          setIsAutoSleeping(false);
-          cycle();
-        }, sleepTime);
-      }, awakeTime);
-    };
-    setTimeout(() => { if (!cancelled) cycle(); }, Math.random() * 15000);
-    return () => { cancelled = true; };
-  }, [autoSleep]);
+  const idle = useMemo(() => getIdleAnimation(agentId), [agentId]);
 
   /* ── Periodic blink ── */
   useEffect(() => {
-    if (isSleeping) { setBlinkScale(0.08); return; }
     setBlinkScale(1);
     let tid: ReturnType<typeof setTimeout>;
     let oid: ReturnType<typeof setTimeout>;
@@ -429,11 +395,10 @@ export default function AgentAvatar({
     const onClick = () => blink();
     window.addEventListener('click', onClick);
     return () => { clearTimeout(tid); clearTimeout(oid); window.removeEventListener('click', onClick); };
-  }, [isSleeping]);
+  }, []);
 
   /* ── Mouse tracking ── */
   useEffect(() => {
-    if (isSleeping) { setPupilOffset({ x: 0, y: 0 }); return; }
     const onMove = (e: MouseEvent) => {
       if (!avatarRef.current) return;
       const r = avatarRef.current.getBoundingClientRect();
@@ -449,7 +414,7 @@ export default function AgentAvatar({
     };
     window.addEventListener('mousemove', onMove);
     return () => window.removeEventListener('mousemove', onMove);
-  }, [isSleeping, size]);
+  }, [size]);
 
   const { body, legs } = bodyShape;
 
@@ -460,11 +425,9 @@ export default function AgentAvatar({
       style={{ width: size, height: size }}
       animate={idle.animate}
       transition={idle.transition}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Pulse glow */}
-      {pulse && !isSleeping && (
+      {pulse && (
         <div
           className="absolute -inset-1 rounded-xl opacity-40 animate-pulse"
           style={{ background: `radial-gradient(circle, ${colors.start}40 0%, transparent 70%)` }}
@@ -483,75 +446,24 @@ export default function AgentAvatar({
           </filter>
         </defs>
 
-        {/* ═══ HEAD — static SVG x/y, FM x/y = translateX/Y offset for sleep ═══ */}
-        {/* Awake: (11,1,20,14)  Sleep target: (8,6,16,20) → offset (-3,+5) */}
-        <motion.rect
-          x={11} y={1} rx="3"
-          fill={`url(#${uid}-grad)`}
-          initial={{ x: 0, y: 0, width: 20, height: 14 }}
-          animate={isSleeping
-            ? { x: -3, y: 5, width: 16, height: 20 }
-            : { x: 0, y: 0, width: 20, height: 14 }
-          }
-          transition={{ type: 'spring', stiffness: 180, damping: 16 }}
-        />
+        {/* ═══ HEAD ═══ */}
+        <rect x={11} y={1} width={20} height={14} rx="3" fill={`url(#${uid}-grad)`} />
 
-        {/* ═══ BODY — static SVG x/y, FM x/y offset for sleep ═══ */}
-        {/* Awake: (1,10,14,12)  Sleep target: (8,6,16,20) → offset (+7,-4) */}
-        <motion.rect
-          x={body.x} y={body.y} rx="3"
-          fill={`url(#${uid}-grad)`}
-          initial={{ x: 0, y: 0, width: body.w, height: body.h }}
-          animate={isSleeping
-            ? { x: 8 - body.x, y: 6 - body.y, width: 16, height: 20 }
-            : { x: 0, y: 0, width: body.w, height: body.h }
-          }
-          transition={{ type: 'spring', stiffness: 180, damping: 16 }}
-        />
+        {/* ═══ BODY ═══ */}
+        <rect x={body.x} y={body.y} width={body.w} height={body.h} rx="3" fill={`url(#${uid}-grad)`} />
 
-        {/* ═══ LEGS — static SVG x/y, FM x/y offset for sleep ═══ */}
-        {/* Awake: (11,18,12,13)  Sleep target: (8,6,16,20) → offset (-3,-12) */}
-        <motion.rect
-          x={legs.x} y={legs.y} rx="3"
-          fill={`url(#${uid}-grad)`}
-          initial={{ x: 0, y: 0, width: legs.w, height: legs.h }}
-          animate={isSleeping
-            ? { x: 8 - legs.x, y: 6 - legs.y, width: 16, height: 20 }
-            : { x: 0, y: 0, width: legs.w, height: legs.h }
-          }
-          transition={{ type: 'spring', stiffness: 180, damping: 16 }}
-        />
+        {/* ═══ LEGS ═══ */}
+        <rect x={legs.x} y={legs.y} width={legs.w} height={legs.h} rx="3" fill={`url(#${uid}-grad)`} />
 
         {/* ═══ AGENT HAIR / ACCESSORY ═══ */}
-        {!isSleeping && <AgentHair agentId={agentId} colors={colors} />}
+        <AgentHair agentId={agentId} colors={colors} />
 
         {/* ═══ AGENT EMBLEM — fills body rect with colored bg + white icon ═══ */}
-        {!isSleeping && <AgentEmblem agentId={agentId} bodyShape={bodyShape} filterId={`${uid}-glow`} colors={colors} />}
+        <AgentEmblem agentId={agentId} bodyShape={bodyShape} filterId={`${uid}-glow`} colors={colors} />
 
         {/* ═══ EYES ═══ */}
         <AgentEyes agentId={agentId} blinkScale={blinkScale} pupilOffset={pupilOffset} scale={scale} />
       </svg>
-
-      {/* Zzz sleep indicator */}
-      <AnimatePresence>
-        {isSleeping && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            className="absolute -top-1 -right-1 pointer-events-none select-none"
-            style={{ fontSize: Math.max(size * 0.22, 8) }}
-          >
-            <motion.span
-              animate={{ y: [0, -3, 0] }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-              className="block font-bold text-white/30"
-            >
-              zzz
-            </motion.span>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
