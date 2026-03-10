@@ -209,14 +209,6 @@ export default function InterviewPrepPanel() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-            <Mic className="w-7 h-7 text-rose-400" /> Interview Prep
-          </h1>
-          <p className="text-white/40">Practice with AI-generated questions and get real-time feedback on your answers.</p>
-        </motion.div>
-
         {/* ============ SETUP PHASE ============ */}
         <AnimatePresence mode="wait">
           {phase === 'setup' && (

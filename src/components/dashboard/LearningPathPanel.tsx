@@ -218,10 +218,6 @@ export default function LearningPathPanel() {
   if (isGenerating) {
     return (
       <div className="h-full overflow-y-auto"><div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3"><BookOpen className="w-7 h-7 text-teal-400" /> Adaptive Learning Path</h1>
-          <p className="text-white/40">Curating your personalized modules...</p>
-        </motion.div>
         <div className="card border-teal-500/20 py-8"><AgentLoader agentId="sage" message={`Agent Sage is curating your ${learningPath?.targetRole || 'target role'} learning path`} size="lg" /></div>
       </div></div>
     );
@@ -230,10 +226,6 @@ export default function LearningPathPanel() {
   if (!learningPath) {
     return (
       <div className="h-full overflow-y-auto"><div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3"><BookOpen className="w-7 h-7 text-teal-400" /> Adaptive Learning Path</h1>
-          <p className="text-white/40">Get an AI-curated learning path tailored to your goals.</p>
-        </motion.div>
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="card border-red-500/20 bg-red-500/5 mb-6">
             <div className="flex items-start gap-3"><AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" /><div><h4 className="text-sm font-semibold text-red-400 mb-1">Generation Failed</h4><p className="text-xs text-white/40">{error}</p><button onClick={() => setError(null)} className="text-xs text-red-400 hover:underline mt-2">Dismiss</button></div></div>
@@ -255,11 +247,6 @@ export default function LearningPathPanel() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3"><BookOpen className="w-7 h-7 text-teal-400" /> Adaptive Learning Path</h1>
-          <p className="text-white/40">Personalized modules for your journey to <span className="text-teal-400">{learningPath.targetRole}</span>.</p>
-        </motion.div>
-
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="card border-red-500/20 bg-red-500/5 mb-6">
             <div className="flex items-start gap-3"><AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" /><div><h4 className="text-sm font-semibold text-red-400 mb-1">Error</h4><p className="text-xs text-white/40">{error}</p></div></div>

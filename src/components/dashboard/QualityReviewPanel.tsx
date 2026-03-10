@@ -113,14 +113,6 @@ export default function QualityReviewPanel() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-5xl mx-auto p-4 sm:p-6">
-        {/* Page Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
-            <Shield className="w-7 h-7 text-rose-400" /> Quality Review
-          </h1>
-          <p className="text-white/40">Every application is reviewed for accuracy, relevance, and quality before submission.</p>
-        </motion.div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
