@@ -6,6 +6,9 @@ import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import CortexAvatar from '@/components/brand/CortexAvatar';
 import AgentTeamStrip from '@/components/dashboard/AgentTeamStrip';
 import AgentChat, { type ChatMessage } from '@/components/dashboard/AgentChat';
+import InterviewPrepPanel from '@/components/dashboard/InterviewPrepPanel';
+import LearningPathPanel from '@/components/dashboard/LearningPathPanel';
+import QualityReviewPanel from '@/components/dashboard/QualityReviewPanel';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
 import UserMenu from '@/components/dashboard/UserMenu';
@@ -395,25 +398,35 @@ export default function DashboardPage() {
         {/* Workspace: Chat + Timeline/Metrics */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
 
-          {/* Chat area */}
-          <div className="flex-1 min-w-0 flex flex-col p-4 sm:p-6">
+          {/* Agent workspace area */}
+          <div className="flex-1 min-w-0 flex flex-col">
             {selectedAgent && !agents.find(a => a.id === selectedAgent)?.locked ? (
-              <AgentChat
-                agentId={selectedAgent}
-                messages={agentChats[selectedAgent] || []}
-                onSendMessage={(content) => handleSendMessage(selectedAgent, content)}
-                onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
-                onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
-                isWorking={runningAgents.has(selectedAgent)}
-              />
+              /* Dedicated panels for Atlas, Sage, Sentinel — chat for others */
+              selectedAgent === 'atlas' ? (
+                <InterviewPrepPanel />
+              ) : selectedAgent === 'sage' ? (
+                <LearningPathPanel />
+              ) : selectedAgent === 'sentinel' ? (
+                <QualityReviewPanel />
+              ) : (
+                <div className="flex-1 flex flex-col p-4 sm:p-6">
+                  <AgentChat
+                    agentId={selectedAgent}
+                    messages={agentChats[selectedAgent] || []}
+                    onSendMessage={(content) => handleSendMessage(selectedAgent, content)}
+                    onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
+                    onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
+                    isWorking={runningAgents.has(selectedAgent)}
+                  />
+                </div>
+              )
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="rounded-xl border border-dashed border-white/5 flex-1 flex flex-col items-center justify-center"
+                className="rounded-xl border border-dashed border-white/5 flex-1 flex flex-col items-center justify-center m-4 sm:m-6"
               >
-                <CortexAvatar size={56} />
-                <p className="text-sm text-white/25 mt-4">Select an agent to start a conversation</p>
+                <p className="text-sm text-white/25">Select an agent to start a conversation</p>
                 <p className="text-xs text-white/15 mt-1">
                   Or hit <span className="text-white/30 font-medium">Run All</span> to launch all agents
                 </p>
