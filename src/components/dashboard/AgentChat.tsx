@@ -222,7 +222,7 @@ export default function AgentChat({
   };
 
   return (
-    <div className="flex flex-col h-full min-h-[400px] max-h-[600px] rounded-xl border border-white/5 bg-white/[0.015] overflow-hidden">
+    <div className="flex flex-col h-full min-h-[400px] rounded-xl border border-white/5 bg-white/[0.015] overflow-hidden">
       {/* ── Chat Header ── */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.02]">
         <AgentAvatar agentId={agentId} size={28} pulse={isWorking} />

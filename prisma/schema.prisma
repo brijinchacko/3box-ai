@@ -115,6 +115,7 @@ model User {
   newsletterSub   NewsletterSubscriber?
   tickets         SupportTicket[]
   scoutJobs       ScoutJob[]
+  chatMessages    AgentChatMessage[]
 
   @@index([email])
   @@index([referralCode])
@@ -581,6 +582,24 @@ model AgentActivity {
   @@index([userId])
   @@index([agent])
   @@index([createdAt])
+}
+
+// ─── Agent Chat Messages ────────────────────────────
+
+model AgentChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId   String   // scout | forge | archer | atlas | sage | sentinel
+  role      String   // agent | user | system
+  content   String   @db.Text
+  type      String   @default("text") // text | job-cards | resume-preview | application-status | interview-prep | skill-gaps | quality-report
+  data      Json?    // structured output data
+  feedback  String?  // up | down | null
+  createdAt DateTime @default(now())
+
+  @@index([userId, agentId, createdAt])
+  @@index([userId, agentId])
 }
 
 // ─── Scout Job Store (persistent discovered jobs) ──
