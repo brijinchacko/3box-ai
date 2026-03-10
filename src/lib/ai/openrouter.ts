@@ -497,10 +497,58 @@ export async function coachChat(
   userMessage: string,
   context: any,
   userPlan: PlanTier = 'BASIC',
-  userContext?: string
+  userContext?: string,
+  agentKnowledge?: string | null
 ): Promise<string> {
   const model = getModelForFeature('coach', userPlan);
   const userContextBlock = userContext ? `\n\n## User Profile\n${userContext}\n\nIMPORTANT: Use the user's actual name, skills, targets, and progress data above to give highly personalized advice. Reference their specific situation.` : '';
+
+  // If agent-specific knowledge is provided, build a specialized prompt
+  if (agentKnowledge) {
+    const agentSystemPrompt = `${agentKnowledge}
+${userContextBlock}
+
+## Response Rules
+- Be concise (2-3 paragraphs max), encouraging, and actionable.
+- Always suggest specific next steps.
+- Address the user by their first name when you know it.
+- Reference their specific skills, gaps, and progress when giving advice.
+- If a feature requires a higher plan, mention it naturally without being pushy.
+- If the user seems stuck, proactively suggest next steps based on their actual progress data.
+
+## PROFILE UPDATE CAPABILITY
+You can update the user's profile when they ask. Supported fields: name, phone, location, linkedin, bio, targetRole.
+When an update is requested, respond with BOTH a friendly confirmation AND an action block:
+
+Your friendly reply confirming the change.
+
+---ACTION---
+{"actions":[{"type":"update_profile","field":"phone","value":"the new value"}]}
+---END_ACTION---
+
+Only include the ACTION block when the user EXPLICITLY asks to update/change a profile field.
+
+## Navigation Actions
+When the user asks to go to a page, emit a navigation action:
+---ACTION---
+{"actions": [{"type": "navigate", "page": "/dashboard/resume"}]}
+---END_ACTION---
+
+Available pages: /dashboard, /dashboard/jobs, /dashboard/resume, /dashboard/agents, /dashboard/interview, /dashboard/learning, /dashboard/quality, /dashboard/settings, /dashboard/assessment, /dashboard/career-plan, /dashboard/portfolio, /pricing`;
+
+    return aiChatWithFallback(
+      {
+        messages: [
+          { role: 'system', content: agentSystemPrompt },
+          ...(context.history || []),
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.7,
+        maxTokens: 1024,
+      },
+      model.tier
+    );
+  }
 
   const systemPrompt = `You are ${context.coachName || 'Cortex'}, the AI coordinator for 3BOX AI — an AI-powered career acceleration platform.
 

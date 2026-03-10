@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { coachChat } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
+import { getAgentKnowledge } from '@/lib/agents/knowledge';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -12,6 +13,9 @@ export interface ChatContext {
   targetRole?: string;
   progress?: number;
   history?: { role: 'user' | 'assistant'; content: string }[];
+  agentId?: string;
+  agentName?: string;
+  agentRole?: string;
 }
 
 const VALID_PROFILE_FIELDS = ['name', 'phone', 'location', 'linkedin', 'bio', 'targetRole'];
@@ -106,19 +110,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Build context with defaults
+    // Build context with defaults — include agent-specific info from dashboard
+    const agentId = context?.agentId || null;
     const chatContext: ChatContext = {
-      coachName: context?.coachName || 'Cortex',
+      coachName: context?.agentName || context?.coachName || 'Cortex',
       personality: context?.personality || 'friendly',
       targetRole: context?.targetRole || 'not set',
       progress: context?.progress ?? 0,
       history: context?.history || [],
+      agentId: agentId || undefined,
+      agentName: context?.agentName,
+      agentRole: context?.agentRole,
     };
 
     // Build user context for AI personalization
     const userContext = await getUserContextString(session.user.id);
 
-    const reply = await coachChat(message, chatContext, user?.plan || 'BASIC', userContext);
+    // Inject agent-specific knowledge if chatting with a specific agent
+    const agentKnowledge = agentId ? getAgentKnowledge(agentId as any) : null;
+
+    const reply = await coachChat(message, chatContext, user?.plan || 'BASIC', userContext, agentKnowledge);
 
     // Parse actions from AI reply
     const { cleanReply, actions } = parseActions(reply);
