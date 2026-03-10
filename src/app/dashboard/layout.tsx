@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-surface">
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/5 bg-surface/90 backdrop-blur-xl">
-        <div className="h-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+        <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <Link href="/dashboard">
             <Logo size="sm" />
           </Link>
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className="pt-14">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>
