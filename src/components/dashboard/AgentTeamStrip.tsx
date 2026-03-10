@@ -27,6 +27,8 @@ interface AgentTeamStripProps {
   onRunPipeline?: () => void;
   /** If true render as vertical sidebar, else horizontal strip */
   vertical?: boolean;
+  /** Slot rendered at the bottom of the vertical sidebar (e.g. UserMenu) */
+  bottomSlot?: React.ReactNode;
 }
 
 export default function AgentTeamStrip({
@@ -38,6 +40,7 @@ export default function AgentTeamStrip({
   lastMessages,
   onRunPipeline,
   vertical = false,
+  bottomSlot,
 }: AgentTeamStripProps) {
 
   /* ── Horizontal strip (mobile) ────────────────────── */
@@ -212,6 +215,13 @@ export default function AgentTeamStrip({
           );
         })}
       </div>
+
+      {/* Bottom slot — UserMenu, etc. */}
+      {bottomSlot && (
+        <div className="flex-shrink-0 border-t border-white/5 p-2">
+          {bottomSlot}
+        </div>
+      )}
     </div>
   );
 }

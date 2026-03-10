@@ -1,18 +1,27 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import CortexAvatar from '@/components/brand/CortexAvatar';
 import AgentTeamStrip from '@/components/dashboard/AgentTeamStrip';
 import AgentChat, { type ChatMessage } from '@/components/dashboard/AgentChat';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
+import UserMenu from '@/components/dashboard/UserMenu';
 import { AGENTS, type AgentId } from '@/lib/agents/registry';
 import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
+import { getInitials } from '@/lib/utils';
 
 /* ── Types ── */
 interface Metrics { jobsFound: number; appsSent: number; interviews: number; responseRate: number }
+
+const planBadges: Record<string, { label: string; color: string }> = {
+  BASIC:   { label: 'Free',    color: 'text-white/40 bg-white/5' },
+  STARTER: { label: 'Starter', color: 'text-neon-green bg-neon-green/10' },
+  PRO:     { label: 'Pro',     color: 'text-neon-blue bg-neon-blue/10' },
+  ULTRA:   { label: 'Ultra',   color: 'text-neon-purple bg-neon-purple/10' },
+};
 
 /* ── Welcome messages per agent ── */
 const WELCOME: Record<AgentId, string> = {
@@ -27,6 +36,8 @@ const WELCOME: Record<AgentId, string> = {
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userImage, setUserImage] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanTier>('STARTER');
   const [selectedAgent, setSelectedAgent] = useState<AgentId>('scout');
   const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
@@ -34,8 +45,8 @@ export default function DashboardPage() {
   const [agentChats, setAgentChats] = useState<Record<string, ChatMessage[]>>({});
   const [activities, setActivities] = useState<TimelineEntry[]>([]);
   const [metrics, setMetrics] = useState<Metrics>({ jobsFound: 0, appsSent: 0, interviews: 0, responseRate: 0 });
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Track which agents already had their chat loaded from DB
   const loadedAgents = useRef<Set<string>>(new Set());
 
   /* ── Initial data fetch ── */
@@ -47,6 +58,8 @@ export default function DashboardPage() {
     ]).then(([profile, actData, stats]) => {
       if (profile) {
         setUserName(profile.name || '');
+        setUserEmail(profile.email || null);
+        setUserImage(profile.image || null);
         setPlan((profile.plan as PlanTier) || 'STARTER');
       }
       if (actData) {
@@ -73,32 +86,23 @@ export default function DashboardPage() {
 
   const agents = getAgentsWithStatus(plan);
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
+  const initials = getInitials(userName || 'User');
+  const badge = planBadges[plan] || planBadges.BASIC;
 
   /* ── Persist a message to DB (fire-and-forget) ── */
   const persistMsg = useCallback((agentId: string, msg: ChatMessage) => {
-    // Don't persist system messages (transient status indicators)
     if (msg.role === 'system') return;
-
     fetch('/api/agents/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agentId,
-        role: msg.role,
-        content: msg.content,
-        type: msg.type,
-        data: msg.data,
-      }),
+      body: JSON.stringify({ agentId, role: msg.role, content: msg.content, type: msg.type, data: msg.data }),
     })
       .then(r => r.ok ? r.json() : null)
       .then(saved => {
-        // Swap client-generated ID → DB ID so feedback PATCH works
         if (saved?.id) {
           setAgentChats(prev => ({
             ...prev,
-            [agentId]: (prev[agentId] || []).map(m =>
-              m.id === msg.id ? { ...m, id: saved.id } : m
-            ),
+            [agentId]: (prev[agentId] || []).map(m => m.id === msg.id ? { ...m, id: saved.id } : m),
           }));
         }
       })
@@ -107,73 +111,39 @@ export default function DashboardPage() {
 
   /* ── Chat helpers ── */
   const addMessage = useCallback((agentId: AgentId, msg: ChatMessage) => {
-    setAgentChats(prev => ({
-      ...prev,
-      [agentId]: [...(prev[agentId] || []), msg],
-    }));
+    setAgentChats(prev => ({ ...prev, [agentId]: [...(prev[agentId] || []), msg] }));
     persistMsg(agentId, msg);
   }, [persistMsg]);
 
   const createMsg = (agentId: AgentId, role: 'agent' | 'user' | 'system', content: string, type: ChatMessage['type'] = 'text', data?: any): ChatMessage => ({
     id: `${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    role,
-    content,
-    type,
-    data,
-    feedback: null,
-    timestamp: Date.now(),
+    role, content, type, data, feedback: null, timestamp: Date.now(),
   });
 
-  /* ── Load chat history from DB when selecting an agent ── */
+  /* ── Load chat history from DB ── */
   useEffect(() => {
     if (!selectedAgent) return;
     if (loadedAgents.current.has(selectedAgent)) return;
-
     loadedAgents.current.add(selectedAgent);
 
     fetch(`/api/agents/chat?agentId=${selectedAgent}&limit=50`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.messages?.length) {
-          setAgentChats(prev => ({
-            ...prev,
-            [selectedAgent]: data.messages,
-          }));
+          setAgentChats(prev => ({ ...prev, [selectedAgent]: data.messages }));
         } else {
-          // No history — show welcome message and save it
           const welcome = WELCOME[selectedAgent];
           if (welcome) {
-            const msg: ChatMessage = {
-              id: `welcome-${selectedAgent}`,
-              role: 'agent',
-              content: welcome,
-              type: 'text',
-              feedback: null,
-              timestamp: Date.now(),
-            };
-            setAgentChats(prev => ({
-              ...prev,
-              [selectedAgent]: [msg],
-            }));
+            const msg: ChatMessage = { id: `welcome-${selectedAgent}`, role: 'agent', content: welcome, type: 'text', feedback: null, timestamp: Date.now() };
+            setAgentChats(prev => ({ ...prev, [selectedAgent]: [msg] }));
             persistMsg(selectedAgent, msg);
           }
         }
       })
       .catch(() => {
-        // Fallback: show welcome message
         const welcome = WELCOME[selectedAgent];
         if (welcome) {
-          setAgentChats(prev => ({
-            ...prev,
-            [selectedAgent]: [{
-              id: `welcome-${selectedAgent}`,
-              role: 'agent',
-              content: welcome,
-              type: 'text',
-              feedback: null,
-              timestamp: Date.now(),
-            }],
-          }));
+          setAgentChats(prev => ({ ...prev, [selectedAgent]: [{ id: `welcome-${selectedAgent}`, role: 'agent', content: welcome, type: 'text', feedback: null, timestamp: Date.now() }] }));
         }
       });
   }, [selectedAgent, persistMsg]);
@@ -182,43 +152,24 @@ export default function DashboardPage() {
   const handleRunAgent = useCallback(async (agentId: AgentId) => {
     const agent = AGENTS[agentId];
     if (!agent) return;
-
     setRunningAgents(prev => new Set(prev).add(agentId));
     addMessage(agentId, createMsg(agentId, 'system', `${agent.name} started working...`));
 
     try {
-      const res = await fetch('/api/agents/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId }),
-      });
+      const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId }) });
       const data = await res.json().catch(() => null);
+      if (data?.error) addMessage(agentId, createMsg(agentId, 'agent', data.error || 'Something went wrong.'));
+      else addMessage(agentId, createMsg(agentId, 'agent', data?.summary || `Done! ${agent.name} completed the task.`));
+    } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
 
-      if (data?.error) {
-        addMessage(agentId, createMsg(agentId, 'agent', data.error || 'Something went wrong. Please try again.'));
-      } else {
-        const summary = data?.summary || `Done! ${agent.name} completed the task.`;
-        addMessage(agentId, createMsg(agentId, 'agent', summary));
-      }
-    } catch {
-      addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.'));
-    }
-
-    setRunningAgents(prev => { const next = new Set(prev); next.delete(agentId); return next; });
+    setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
     setRecentlyDone(prev => new Set(prev).add(agentId));
-    setTimeout(() => { setRecentlyDone(prev => { const next = new Set(prev); next.delete(agentId); return next; }); }, 30000);
+    setTimeout(() => { setRecentlyDone(prev => { const n = new Set(prev); n.delete(agentId); return n; }); }, 30000);
 
-    // Refresh activity
     fetch('/api/agents/activity?limit=30').then(r => r.ok ? r.json() : null).then(actData => {
       if (actData) {
         const list: any[] = Array.isArray(actData) ? actData : actData.activities ?? [];
-        setActivities(list.slice(0, 30).map((a: any) => ({
-          id: a.id || String(Math.random()),
-          agentId: a.agent || a.agentId || '',
-          action: a.action || '',
-          summary: a.summary || a.action || '',
-          timestamp: a.createdAt || a.timestamp || '',
-        })));
+        setActivities(list.slice(0, 30).map((a: any) => ({ id: a.id || String(Math.random()), agentId: a.agent || a.agentId || '', action: a.action || '', summary: a.summary || a.action || '', timestamp: a.createdAt || a.timestamp || '' })));
       }
     }).catch(() => {});
   }, [addMessage]);
@@ -245,10 +196,7 @@ export default function DashboardPage() {
 
     const key = `${agentId}:${action}`;
     const api = apiMap[key];
-    if (!api) {
-      addMessage(agentId, createMsg(agentId, 'agent', `I don't know how to handle "${action}" yet.`));
-      return;
-    }
+    if (!api) { addMessage(agentId, createMsg(agentId, 'agent', `I don't know how to handle "${action}" yet.`)); return; }
 
     setRunningAgents(prev => new Set(prev).add(agentId));
     addMessage(agentId, createMsg(agentId, 'system', api.label));
@@ -256,75 +204,40 @@ export default function DashboardPage() {
     try {
       const opts: RequestInit = { method: api.method, headers: { 'Content-Type': 'application/json' } };
       if (api.method === 'POST' && api.body) opts.body = JSON.stringify(api.body);
-
       const res = await fetch(api.url, opts);
       const data = await res.json().catch(() => null);
 
-      if (!res.ok) {
-        addMessage(agentId, createMsg(agentId, 'agent', data?.error || `Something went wrong (${res.status}). Please try again.`));
-      } else if (agentId === 'scout' && (data?.jobs || data?.results)) {
-        const jobs = data.jobs || data.results || [];
-        addMessage(agentId, createMsg(agentId, 'agent', `Found ${jobs.length} jobs matching your profile!`, 'job-cards', jobs));
-      } else if (agentId === 'forge' && data) {
-        addMessage(agentId, createMsg(agentId, 'agent', 'Resume optimized successfully!', 'resume-preview', data));
-      } else if (agentId === 'archer' && (data?.applications || data?.applied)) {
-        const apps = data.applications || data.applied || [];
-        addMessage(agentId, createMsg(agentId, 'agent', `Sent ${apps.length} applications!`, 'application-status', apps));
-      } else if (agentId === 'atlas' && data) {
-        addMessage(agentId, createMsg(agentId, 'agent', 'Here are your interview prep questions:', 'interview-prep', data));
-      } else if (agentId === 'sage' && data) {
-        addMessage(agentId, createMsg(agentId, 'agent', 'Skill gap analysis complete:', 'skill-gaps', data));
-      } else if (agentId === 'sentinel' && data) {
-        addMessage(agentId, createMsg(agentId, 'agent', 'Quality review complete:', 'quality-report', data));
-      } else {
-        addMessage(agentId, createMsg(agentId, 'agent', data?.summary || data?.message || 'Done!'));
-      }
-    } catch {
-      addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.'));
-    }
+      if (!res.ok) addMessage(agentId, createMsg(agentId, 'agent', data?.error || `Something went wrong (${res.status}).`));
+      else if (agentId === 'scout' && (data?.jobs || data?.results)) { const jobs = data.jobs || data.results || []; addMessage(agentId, createMsg(agentId, 'agent', `Found ${jobs.length} jobs matching your profile!`, 'job-cards', jobs)); }
+      else if (agentId === 'forge' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Resume optimized successfully!', 'resume-preview', data));
+      else if (agentId === 'archer' && (data?.applications || data?.applied)) { const apps = data.applications || data.applied || []; addMessage(agentId, createMsg(agentId, 'agent', `Sent ${apps.length} applications!`, 'application-status', apps)); }
+      else if (agentId === 'atlas' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Here are your interview prep questions:', 'interview-prep', data));
+      else if (agentId === 'sage' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Skill gap analysis complete:', 'skill-gaps', data));
+      else if (agentId === 'sentinel' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Quality review complete:', 'quality-report', data));
+      else addMessage(agentId, createMsg(agentId, 'agent', data?.summary || data?.message || 'Done!'));
+    } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
 
-    setRunningAgents(prev => { const next = new Set(prev); next.delete(agentId); return next; });
+    setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
     setRecentlyDone(prev => new Set(prev).add(agentId));
-    setTimeout(() => { setRecentlyDone(prev => { const next = new Set(prev); next.delete(agentId); return next; }); }, 30000);
+    setTimeout(() => { setRecentlyDone(prev => { const n = new Set(prev); n.delete(agentId); return n; }); }, 30000);
   }, [addMessage]);
 
   /* ── Send text message ── */
   const handleSendMessage = useCallback(async (agentId: AgentId, content: string) => {
     addMessage(agentId, createMsg(agentId, 'user', content));
     setRunningAgents(prev => new Set(prev).add(agentId));
-
     try {
-      const res = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: content,
-          context: { agentId, agentName: AGENTS[agentId].name, agentRole: AGENTS[agentId].role },
-        }),
-      });
+      const res = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: content, context: { agentId, agentName: AGENTS[agentId].name, agentRole: AGENTS[agentId].role } }) });
       const data = await res.json().catch(() => null);
       addMessage(agentId, createMsg(agentId, 'agent', data?.reply || data?.message || "I'm not sure how to help with that. Try using one of the quick actions above."));
-    } catch {
-      addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.'));
-    }
-
-    setRunningAgents(prev => { const next = new Set(prev); next.delete(agentId); return next; });
+    } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
+    setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
   }, [addMessage]);
 
-  /* ── Feedback handler (persists to DB) ── */
+  /* ── Feedback handler ── */
   const handleFeedback = useCallback((agentId: AgentId, messageId: string, fb: 'up' | 'down' | null) => {
-    setAgentChats(prev => ({
-      ...prev,
-      [agentId]: (prev[agentId] || []).map(m =>
-        m.id === messageId ? { ...m, feedback: fb } : m
-      ),
-    }));
-    // Persist feedback
-    fetch(`/api/agents/chat/${messageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ feedback: fb }),
-    }).catch(() => {});
+    setAgentChats(prev => ({ ...prev, [agentId]: (prev[agentId] || []).map(m => m.id === messageId ? { ...m, feedback: fb } : m) }));
+    fetch(`/api/agents/chat/${messageId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feedback: fb }) }).catch(() => {});
   }, []);
 
   /* ── Run full pipeline ── */
@@ -346,7 +259,7 @@ export default function DashboardPage() {
     colorHex: AGENTS[a.id as AgentId].colorHex,
   }));
 
-  /* ── Last message per agent (for sidebar preview) ── */
+  /* ── Last message per agent ── */
   const lastMessages: Record<string, string> = {};
   for (const [agentId, msgs] of Object.entries(agentChats)) {
     const last = [...msgs].reverse().find(m => m.role !== 'system');
@@ -354,39 +267,86 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
+    <div className="flex h-screen">
 
-      {/* ═══ LEFT SIDEBAR (desktop) ═══ */}
-      <aside className="w-64 flex-shrink-0 border-r border-white/5 bg-white/[0.01] hidden lg:flex flex-col">
-        <AgentTeamStrip
-          vertical
-          agents={agentStripData}
-          selectedAgent={selectedAgent}
-          runningAgents={runningAgents}
-          recentlyDone={recentlyDone}
-          onSelect={(id) => setSelectedAgent(id)}
-          lastMessages={lastMessages}
-          onRunPipeline={handleRunPipeline}
-        />
-      </aside>
+      {/* ═══ LEFT SIDEBAR (desktop, collapsible) ═══ */}
+      <AnimatePresence initial={false}>
+        {sidebarOpen && (
+          <motion.aside
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 260, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="flex-shrink-0 border-r border-white/5 bg-white/[0.01] hidden lg:flex flex-col overflow-hidden"
+          >
+            {/* Sidebar top — Cortex branding */}
+            <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2.5 flex-shrink-0">
+              <CortexAvatar size={24} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white/70 truncate">
+                  {loading ? <span className="inline-block w-20 h-3 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
+                </p>
+                <p className="text-[9px] text-white/20">Your AI team is ready</p>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-1 rounded-md text-white/20 hover:text-white/50 hover:bg-white/5 transition-all"
+                title="Hide sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Agent team + UserMenu at bottom */}
+            <AgentTeamStrip
+              vertical
+              agents={agentStripData}
+              selectedAgent={selectedAgent}
+              runningAgents={runningAgents}
+              recentlyDone={recentlyDone}
+              onSelect={(id) => setSelectedAgent(id)}
+              lastMessages={lastMessages}
+              onRunPipeline={handleRunPipeline}
+              bottomSlot={
+                <UserMenu
+                  userName={userName || 'User'}
+                  userEmail={userEmail}
+                  userImage={userImage}
+                  initials={initials}
+                  planBadge={badge}
+                  collapsed={false}
+                />
+              }
+            />
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* ═══ RIGHT MAIN AREA ═══ */}
       <div className="flex-1 min-w-0 flex flex-col">
 
-        {/* Compact greeting bar */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="px-4 sm:px-6 py-3 border-b border-white/5 flex items-center gap-3 flex-shrink-0"
-        >
-          <CortexAvatar size={28} pulse />
+        {/* Top bar — Cortex greeting + toggle */}
+        <div className="px-4 sm:px-6 py-2.5 border-b border-white/5 flex items-center gap-3 flex-shrink-0">
+          {/* Toggle sidebar button (desktop — shown when sidebar is closed) */}
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="hidden lg:flex p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+              title="Show sidebar"
+            >
+              <PanelLeft className="w-4 h-4" />
+            </button>
+          )}
+
+          <CortexAvatar size={26} pulse />
           <div className="flex-1 min-w-0">
             <span className="text-sm font-semibold">
               {loading ? <span className="inline-block w-28 h-4 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
             </span>
             <p className="text-[10px] text-white/20">Your AI team is ready</p>
           </div>
-          {/* Run Pipeline button — visible only on mobile where sidebar is hidden */}
+
+          {/* Run All — mobile only */}
           <button
             onClick={handleRunPipeline}
             disabled={runningAgents.size > 0}
@@ -397,7 +357,7 @@ export default function DashboardPage() {
             {runningAgents.size > 0 ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
             {runningAgents.size > 0 ? 'Running...' : 'Run All'}
           </button>
-        </motion.div>
+        </div>
 
         {/* Mobile agent strip */}
         <div className="lg:hidden px-4 py-2 border-b border-white/5">
