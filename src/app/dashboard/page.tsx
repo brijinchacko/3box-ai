@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import CortexAvatar from '@/components/brand/CortexAvatar';
 import AgentTeamStrip from '@/components/dashboard/AgentTeamStrip';
 import AgentChat, { type ChatMessage } from '@/components/dashboard/AgentChat';
@@ -266,84 +266,106 @@ export default function DashboardPage() {
     if (last) lastMessages[agentId] = last.content.slice(0, 60);
   }
 
+  /* ── Sidebar dimensions ── */
+  const SIDEBAR_EXPANDED = 260;
+  const SIDEBAR_COLLAPSED = 60;
+
   return (
     <div className="flex h-screen">
 
-      {/* ═══ LEFT SIDEBAR (desktop, collapsible) ═══ */}
-      <AnimatePresence initial={false}>
-        {sidebarOpen && (
-          <motion.aside
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 260, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="flex-shrink-0 border-r border-white/5 bg-white/[0.01] hidden lg:flex flex-col overflow-hidden"
-          >
-            {/* Sidebar top — Cortex branding */}
-            <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2.5 flex-shrink-0">
-              <CortexAvatar size={24} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white/70 truncate">
-                  {loading ? <span className="inline-block w-20 h-3 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
-                </p>
-                <p className="text-[9px] text-white/20">Your AI team is ready</p>
-              </div>
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="p-1 rounded-md text-white/20 hover:text-white/50 hover:bg-white/5 transition-all"
-                title="Hide sidebar"
-              >
-                <PanelLeftClose className="w-4 h-4" />
-              </button>
+      {/* ═══ LEFT SIDEBAR (desktop, always visible — expanded / icon-only) ═══ */}
+      <motion.aside
+        animate={{ width: sidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED }}
+        transition={{ duration: 0.2, ease: 'easeInOut' }}
+        className="relative flex-shrink-0 border-r border-white/5 bg-white/[0.01] hidden lg:flex flex-col overflow-hidden"
+      >
+        {/* Sidebar top — Cortex branding */}
+        {sidebarOpen ? (
+          <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2.5 flex-shrink-0">
+            <CortexAvatar size={32} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white/70 truncate">
+                {loading ? <span className="inline-block w-20 h-3 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
+              </p>
+              <p className="text-[9px] text-white/20">Your AI team is ready</p>
             </div>
-
-            {/* Agent team + UserMenu at bottom */}
-            <AgentTeamStrip
-              vertical
-              agents={agentStripData}
-              selectedAgent={selectedAgent}
-              runningAgents={runningAgents}
-              recentlyDone={recentlyDone}
-              onSelect={(id) => setSelectedAgent(id)}
-              lastMessages={lastMessages}
-              onRunPipeline={handleRunPipeline}
-              bottomSlot={
-                <UserMenu
-                  userName={userName || 'User'}
-                  userEmail={userEmail}
-                  userImage={userImage}
-                  initials={initials}
-                  planBadge={badge}
-                  collapsed={false}
-                />
-              }
-            />
-          </motion.aside>
+          </div>
+        ) : (
+          <div className="flex justify-center py-3 border-b border-white/5 flex-shrink-0">
+            <CortexAvatar size={28} />
+          </div>
         )}
-      </AnimatePresence>
+
+        {/* Agent team + UserMenu at bottom */}
+        <AgentTeamStrip
+          vertical
+          collapsed={!sidebarOpen}
+          agents={agentStripData}
+          selectedAgent={selectedAgent}
+          runningAgents={runningAgents}
+          recentlyDone={recentlyDone}
+          onSelect={(id) => setSelectedAgent(id)}
+          lastMessages={lastMessages}
+          onRunPipeline={handleRunPipeline}
+          bottomSlot={
+            <UserMenu
+              userName={userName || 'User'}
+              userEmail={userEmail}
+              userImage={userImage}
+              initials={initials}
+              planBadge={badge}
+              collapsed={false}
+            />
+          }
+          bottomSlotCollapsed={
+            <UserMenu
+              userName={userName || 'User'}
+              userEmail={userEmail}
+              userImage={userImage}
+              initials={initials}
+              planBadge={badge}
+              collapsed={true}
+            />
+          }
+        />
+
+        {/* ── Toggle arrow — fixed at the edge ── */}
+        <button
+          onClick={() => setSidebarOpen(prev => !prev)}
+          className="absolute top-3 -right-3 z-50 w-6 h-6 rounded-full
+                     bg-surface border border-white/10 flex items-center justify-center
+                     text-white/40 hover:text-white/70 hover:border-white/20
+                     shadow-lg transition-all"
+          title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        >
+          {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        </button>
+      </motion.aside>
 
       {/* ═══ RIGHT MAIN AREA ═══ */}
       <div className="flex-1 min-w-0 flex flex-col">
 
-        {/* Top bar — Cortex greeting + toggle */}
+        {/* Top bar — mobile greeting + Run All */}
         <div className="px-4 sm:px-6 py-2.5 border-b border-white/5 flex items-center gap-3 flex-shrink-0">
-          {/* Toggle sidebar button (desktop — shown when sidebar is closed) */}
-          {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="hidden lg:flex p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
-              title="Show sidebar"
-            >
-              <PanelLeft className="w-4 h-4" />
-            </button>
-          )}
+          {/* Cortex greeting — mobile only (sidebar has it on desktop) */}
+          <div className="lg:hidden flex items-center gap-2.5 flex-1 min-w-0">
+            <CortexAvatar size={26} pulse />
+            <div className="min-w-0">
+              <span className="text-sm font-semibold">
+                {loading ? <span className="inline-block w-28 h-4 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
+              </span>
+              <p className="text-[10px] text-white/20">Your AI team is ready</p>
+            </div>
+          </div>
 
-          <CortexAvatar size={26} pulse />
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-semibold">
-              {loading ? <span className="inline-block w-28 h-4 bg-white/5 rounded animate-pulse" /> : <>{greeting}, {userName || 'there'}</>}
-            </span>
-            <p className="text-[10px] text-white/20">Your AI team is ready</p>
+          {/* Desktop: just show agent name as context */}
+          <div className="hidden lg:flex items-center gap-2 flex-1 min-w-0">
+            {selectedAgent && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white/80">{AGENTS[selectedAgent].name}</span>
+                <span className="text-xs text-white/25">{AGENTS[selectedAgent].role}</span>
+              </div>
+            )}
           </div>
 
           {/* Run All — mobile only */}
