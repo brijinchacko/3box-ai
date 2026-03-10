@@ -722,34 +722,56 @@ export default function LandingPageClient() {
         <div className="absolute inset-0 bg-grid opacity-20" aria-hidden="true" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-gradient-radial from-neon-blue/8 via-neon-purple/5 to-transparent rounded-full blur-3xl" aria-hidden="true" />
         <div className="relative max-w-3xl mx-auto px-4 text-center">
+          {/* Badge */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
           >
             <LiveApplicationCounter className="mb-8" />
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-center">
-              {firstName ? <>{firstName}, Stop Applying to Jobs.</> : <>Stop Applying to Jobs.</>}
-              <br />
-              <span className="gradient-text">Let AI Agents Do It For You.</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-              {countryCode === 'IN' ? (
-                <span className="sm:hidden">Resume upload karo. Target role batao. AI baaki sab handle karega.</span>
-              ) : null}
-              <span className={countryCode === 'IN' ? 'hidden sm:inline' : ''}>
-                Upload your resume. Pick your target role. Our AI applies to 20 matching jobs &mdash; free. No credit card.
-              </span>
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a
-                href="/get-started"
-                className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
-              >
-                Start Free — 20 Job Applications <ArrowRight className="w-5 h-5" />
-              </a>
-              <p className="text-xs text-white/30">No credit card required</p>
-            </div>
+          </motion.div>
+
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-center"
+          >
+            {firstName ? <>{firstName}, Stop Applying to Jobs.</> : <>Stop Applying to Jobs.</>}
+            <br />
+            <span className="gradient-text">Let AI Agents Do It For You.</span>
+          </motion.h1>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25, ease: 'easeOut' }}
+            className="text-lg sm:text-xl text-white/50 max-w-xl mx-auto mb-10 leading-relaxed"
+          >
+            {countryCode === 'IN' ? (
+              <span className="sm:hidden">Resume upload karo. Target role batao. AI baaki sab handle karega.</span>
+            ) : null}
+            <span className={countryCode === 'IN' ? 'hidden sm:inline' : ''}>
+              Upload your resume. Pick your target role. Our AI applies to 20 matching jobs &mdash; free. No credit card.
+            </span>
+          </motion.p>
+
+          {/* CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4, ease: 'easeOut' }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          >
+            <a
+              href="/get-started"
+              className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+            >
+              Start Free — 20 Job Applications <ArrowRight className="w-5 h-5" />
+            </a>
+            <p className="text-xs text-white/30">No credit card required</p>
           </motion.div>
         </div>
       </section>

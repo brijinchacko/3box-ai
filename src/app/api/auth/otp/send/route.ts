@@ -64,12 +64,23 @@ export async function POST(req: Request) {
       data: { email, code, type, expires },
     });
 
+    // Pre-flight: warn if email service not configured
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('[OTP] RESEND_API_KEY not configured — emails will only be logged to console');
+    }
+
     // Send OTP email
     const result = await sendOtpEmail(email, code, type);
 
     if (result.error) {
       console.error('[OTP] Email send error:', result.error);
-      return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to send verification code. Please try again later.' }, { status: 500 });
+    }
+
+    // If in demo mode (no API key), return a warning flag
+    if (result.id === 'demo-mode') {
+      console.warn(`[OTP] Demo mode — OTP for ${email}: ${code}`);
+      return NextResponse.json({ sent: true, demo: true });
     }
 
     return NextResponse.json({ sent: true });

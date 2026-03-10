@@ -58,6 +58,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Pre-flight: check API key ─────────────────
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('[Resume Parse] OPENROUTER_API_KEY is not configured');
+      return NextResponse.json(
+        { error: 'AI service is not configured. Please contact support.' },
+        { status: 503 }
+      );
+    }
+
     // ── AI Extraction ──────────────────────────────
     const response = await aiChat({
       model: AI_MODELS.standard.id,

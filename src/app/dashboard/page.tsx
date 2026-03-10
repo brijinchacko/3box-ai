@@ -87,6 +87,7 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
         className="flex items-center gap-4"
       >
         <CortexAvatar size={52} pulse />
@@ -350,7 +351,11 @@ export default function DashboardPage() {
       )}
 
       {/* ───── 6 AGENT CARDS (expand in-place) ───── */}
-      <div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
+      >
         <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4 text-center">Your Agent Team</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {agents.map((agent, i) => {
@@ -466,7 +471,7 @@ export default function DashboardPage() {
             );
           })}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
