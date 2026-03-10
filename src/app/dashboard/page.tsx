@@ -9,6 +9,9 @@ import AgentChat, { type ChatMessage } from '@/components/dashboard/AgentChat';
 import InterviewPrepPanel from '@/components/dashboard/InterviewPrepPanel';
 import LearningPathPanel from '@/components/dashboard/LearningPathPanel';
 import QualityReviewPanel from '@/components/dashboard/QualityReviewPanel';
+import ScoutToolbar from '@/components/dashboard/ScoutToolbar';
+import ForgeToolbar from '@/components/dashboard/ForgeToolbar';
+import ArcherToolbar from '@/components/dashboard/ArcherToolbar';
 import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
 import MetricsBar from '@/components/dashboard/MetricsBar';
 import UserMenu from '@/components/dashboard/UserMenu';
@@ -452,6 +455,21 @@ export default function DashboardPage() {
                   onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
                   onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
                   isWorking={runningAgents.has(selectedAgent)}
+                  toolbarSlot={
+                    selectedAgent === 'scout' ? (
+                      <ScoutToolbar
+                        onDeploy={() => handleQuickAction('scout', 'search')}
+                        isWorking={runningAgents.has('scout')}
+                      />
+                    ) :
+                    selectedAgent === 'forge' ? (
+                      <ForgeToolbar />
+                    ) :
+                    selectedAgent === 'archer' ? (
+                      <ArcherToolbar />
+                    ) :
+                    undefined
+                  }
                   panelSlot={
                     selectedAgent === 'atlas' ? <InterviewPrepPanel /> :
                     selectedAgent === 'sage' ? <LearningPathPanel /> :

@@ -42,6 +42,8 @@ interface AgentChatProps {
   isWorking: boolean;
   /** Optional panel content rendered above messages (e.g. Interview Prep for Atlas) */
   panelSlot?: React.ReactNode;
+  /** Optional toolbar rendered sticky between header and messages (e.g. ScoutToolbar) */
+  toolbarSlot?: React.ReactNode;
 }
 
 /* ── Inline Output Renderers ── */
@@ -205,6 +207,7 @@ export default function AgentChat({
   onFeedback,
   isWorking,
   panelSlot,
+  toolbarSlot,
 }: AgentChatProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -243,6 +246,9 @@ export default function AgentChat({
           </div>
         )}
       </div>
+
+      {/* ── Toolbar Slot (sticky, between header and messages) ── */}
+      {toolbarSlot}
 
       {/* ── Panel Slot + Messages ── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
