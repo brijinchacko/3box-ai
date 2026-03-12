@@ -11,6 +11,7 @@ module.exports = {
     'content-glassdoor': './src/content-scripts/glassdoor.ts',
     'content-workday': './src/content-scripts/workday.ts',
     'content-icims': './src/content-scripts/icims.ts',
+    'auth-bridge': './src/content-scripts/auth-bridge.ts',
     popup: './src/popup/popup.ts',
   },
   output: {

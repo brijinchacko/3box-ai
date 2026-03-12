@@ -78,6 +78,14 @@
       "js": ["dist/content-icims.js"],
       "css": ["dist/content.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://3box.ai/*",
+        "https://www.3box.ai/*"
+      ],
+      "js": ["dist/auth-bridge.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {

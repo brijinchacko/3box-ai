@@ -27,31 +27,14 @@ export default function ExtensionAuthPage() {
 
       const { token } = await res.json();
 
-      // Try to send token to the extension via chrome.runtime.sendMessage
-      // The extension listens for external messages
-      if (typeof window !== 'undefined' && (window as any).chrome?.runtime?.sendMessage) {
-        // If extension is installed, send directly
-        // Note: Extension ID must be known — for development, we use a different method
-        try {
-          (window as any).chrome.runtime.sendMessage(
-            undefined, // Extension ID — handled by externally_connectable
-            { type: 'SET_TOKEN', token },
-            (response: any) => {
-              if (response?.success) {
-                setTokenState('sent');
-              }
-            },
-          );
-        } catch {
-          // Fallback: store in localStorage for the extension to pick up
-          localStorage.setItem('3box_extension_token', token);
-          setTokenState('sent');
-        }
-      } else {
-        // Extension not installed — store token for manual pickup
-        localStorage.setItem('3box_extension_token', token);
-        setTokenState('sent');
-      }
+      // Store token in localStorage — the extension's auth-bridge content script
+      // will pick it up automatically and send to the background worker
+      localStorage.setItem('3box_extension_token', token);
+
+      // Dispatch custom event to notify the content script immediately
+      window.dispatchEvent(new Event('3box-token-ready'));
+
+      setTokenState('sent');
     } catch (err) {
       setErrorMsg((err as Error).message);
       setTokenState('error');
