@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3BOX AI</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading State -->
+    <div id="loading" class="state">
+      <div class="logo">3BOX</div>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Not Authenticated -->
+    <div id="auth" class="state hidden">
+      <div class="logo">3BOX</div>
+      <p class="subtitle">AI Career Operating System</p>
+      <p class="desc">Sign in to auto-apply to jobs across LinkedIn, Indeed, Naukri, and more.</p>
+      <button id="sign-in-btn" class="btn-primary">Sign In to 3BOX AI</button>
+    </div>
+
+    <!-- Authenticated -->
+    <div id="dashboard" class="state hidden">
+      <div class="header">
+        <div class="logo-sm">3B</div>
+        <div class="user-info">
+          <div id="user-name" class="user-name"></div>
+          <div id="user-plan" class="user-plan"></div>
+        </div>
+        <button id="logout-btn" class="btn-icon" title="Sign Out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+
+      <!-- Queue Section -->
+      <div class="section">
+        <div class="section-title">
+          <span>Extension Queue</span>
+          <span id="queue-count" class="badge">0</span>
+        </div>
+        <div id="queue-list" class="queue-list">
+          <div class="empty-state">No queued jobs</div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="section">
+        <div class="section-title">Status</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Extension</div>
+            <div id="ext-status" class="stat-value status-active">Active</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Sites</div>
+            <div class="stat-value">LinkedIn, Indeed, Naukri +3</div>
+          </div>
+        </div>
+      </div>
+
+      <a href="https://3box.ai/dashboard" target="_blank" class="btn-secondary">
+        Open 3BOX Dashboard
+      </a>
+    </div>
+  </div>
+
+  <script src="../dist/popup.js"></script>
+</body>
+</html>

@@ -119,12 +119,69 @@ model User {
   emailLogs       EmailLog[]
   newsletterSub   NewsletterSubscriber?
   tickets         SupportTicket[]
-  scoutJobs       ScoutJob[]
-  chatMessages    AgentChatMessage[]
-  searchProfiles  SearchProfile[]
+  scoutJobs          ScoutJob[]
+  chatMessages       AgentChatMessage[]
+  searchProfiles     SearchProfile[]
+  emailConnections   UserEmailConnection[]
 
   @@index([email])
   @@index([referralCode])
+}
+
+// ─── User Email Connections (OAuth Gmail/Outlook) ──
+
+model UserEmailConnection {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // "gmail" | "outlook"
+  email         String
+  accessToken   String   @db.Text  // encrypted
+  refreshToken  String   @db.Text  // encrypted
+  tokenExpiry   DateTime
+  scopes        String
+  isActive      Boolean  @default(true)
+  isPrimary     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider, email])
+  @@index([userId])
+}
+
+// ─── Application Outcome Tracking (Phase 3 Smart Routing) ──
+
+model ApplicationOutcome {
+  id              String    @id @default(cuid())
+  userId          String
+  company         String
+  atsType         String
+  channel         String    // ats_api | user_email | cold_email | linkedin_easy_apply | extension_queue | portal_queue
+  outcome         String    // applied | viewed | interview | offer | rejected | no_response
+  responseTimeMs  Int?
+  appliedAt       DateTime
+  outcomeAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([company, channel])
+  @@index([channel, outcome])
+  @@index([userId])
+}
+
+model ChannelSuccessRate {
+  id              String   @id @default(cuid())
+  company         String?
+  atsType         String?
+  channel         String
+  totalAttempts   Int      @default(0)
+  successCount    Int      @default(0)
+  responseRate    Float    @default(0)
+  avgResponseMs   Float?
+  lastUpdated     DateTime @default(now())
+
+  @@unique([company, atsType, channel])
+  @@index([channel])
+  @@index([responseRate])
 }
 
 // ─── Subscriptions & Billing ─────────────────────

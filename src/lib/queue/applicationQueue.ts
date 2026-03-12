@@ -29,7 +29,7 @@ export interface ApplicationJobData {
   };
   resumeData: any;
   coverLetter?: string;
-  channel: 'ats_api' | 'cold_email' | 'portal_queue';
+  channel: 'ats_api' | 'extension_queue' | 'user_email' | 'cold_email' | 'portal_queue';
   priority: number; // 1=highest
 }
 

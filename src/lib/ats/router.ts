@@ -3,16 +3,17 @@
  * to the optimal application channel.
  *
  * Channels (in order of effectiveness):
- * 1. ats_api     — Direct API submission (Greenhouse, Lever) — highest success rate
- * 2. cold_email  — Verified email to HR/recruiter — good for smaller companies
- * 3. portal_queue — Queue URL for user to manually apply — fallback
- *
- * The router inspects the job URL to detect which ATS the company uses,
- * then selects the best application method.
+ * 1. ats_api         — Direct API submission (Greenhouse, Lever) — highest success rate
+ * 2. extension_queue — Browser extension auto-fill (Workday, iCIMS, LinkedIn, etc.)
+ * 3. user_email      — Send from user's connected Gmail/Outlook — personal touch
+ * 4. cold_email      — Verified email to HR/recruiter via company domain — fallback
+ * 5. portal_queue    — Queue URL for user to manually apply — last resort
  */
 
 import { isGreenhouseUrl, parseGreenhouseUrl } from './greenhouse';
 import { isLeverUrl, parseLeverUrl } from './lever';
+import { isWorkdayUrl, parseWorkdayUrl, prepareWorkdayApplicationData } from './workday';
+import { isIcimsUrl, parseIcimsUrl, prepareIcimsApplicationData } from './icims';
 
 // ─── Types ──────────────────────────────────────────
 
@@ -32,24 +33,28 @@ export type ATSType =
   | 'indeed'
   | 'generic';
 
-export type ApplicationChannel = 'ats_api' | 'cold_email' | 'portal_queue';
+export type ApplicationChannel = 'ats_api' | 'extension_queue' | 'user_email' | 'cold_email' | 'portal_queue';
 
 export interface RouteDecision {
   channel: ApplicationChannel;
   atsType: ATSType;
-  priority: number;           // 1=highest, 3=lowest
+  priority: number;           // 1=highest, 5=lowest
   supportsDirectApi: boolean;
+  supportsExtension: boolean;
   atsMetadata?: {
     boardToken?: string;      // Greenhouse board token
-    jobId?: string;           // Greenhouse or Lever job ID
+    jobId?: string;           // Greenhouse, Lever, Workday, iCIMS job ID
     site?: string;            // Lever site slug
+    company?: string;         // Workday/iCIMS company slug
+    instance?: string;        // Workday instance (wd1-wd5)
   };
+  extensionData?: Record<string, any>; // Pre-filled form data for extension
   reason: string;
 }
 
 // ─── ATS Detection Patterns ─────────────────────────
 
-const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[] = [
+const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean; supportsExtension: boolean }[] = [
   {
     type: 'greenhouse',
     patterns: [
@@ -58,6 +63,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /job-boards\.greenhouse/i,
     ],
     supportsApi: true,
+    supportsExtension: false,
   },
   {
     type: 'lever',
@@ -66,6 +72,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /lever\.co\/[^/]+\/[a-f0-9-]+/i,
     ],
     supportsApi: true,
+    supportsExtension: false,
   },
   {
     type: 'workday',
@@ -74,7 +81,8 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /wd\d+\.myworkdayjobs/i,
       /workday\.com\/.*\/job/i,
     ],
-    supportsApi: false, // Complex multi-step form — needs browser automation
+    supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'taleo',
@@ -83,6 +91,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /oracle\.com\/.*taleo/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'icims',
@@ -91,6 +100,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /\.icims\./i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'successfactors',
@@ -99,6 +109,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /sap\.com\/.*career/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'smartrecruiters',
@@ -107,6 +118,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /jobs\.smartrecruiters/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'bamboohr',
@@ -114,6 +126,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /bamboohr\.com\/.*jobs/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'ashby',
@@ -122,6 +135,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /jobs\.ashby/i,
     ],
     supportsApi: false,
+    supportsExtension: false,
   },
   {
     type: 'jobvite',
@@ -130,6 +144,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /jobs\.jobvite/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'naukri',
@@ -137,6 +152,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /naukri\.com/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
   {
     type: 'linkedin',
@@ -144,6 +160,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /linkedin\.com\/jobs/i,
     ],
     supportsApi: false,
+    supportsExtension: true, // Easy Apply via extension
   },
   {
     type: 'indeed',
@@ -152,6 +169,7 @@ const ATS_PATTERNS: { type: ATSType; patterns: RegExp[]; supportsApi: boolean }[
       /indeed\.co/i,
     ],
     supportsApi: false,
+    supportsExtension: true,
   },
 ];
 
@@ -180,24 +198,32 @@ export function supportsDirectApi(atsType: ATSType): boolean {
   return entry?.supportsApi ?? false;
 }
 
+/**
+ * Check if a given ATS type supports Chrome extension auto-fill.
+ */
+export function supportsExtension(atsType: ATSType): boolean {
+  const entry = ATS_PATTERNS.find((p) => p.type === atsType);
+  return entry?.supportsExtension ?? false;
+}
+
 // ─── Application Routing ────────────────────────────
 
 /**
  * Route a job to the optimal application channel.
  *
- * Decision logic:
- * 1. If URL is Greenhouse/Lever → ats_api (direct submission)
- * 2. If we can find a verified email → cold_email
- * 3. Otherwise → portal_queue (user clicks apply link)
- *
- * @param jobUrl - The job application URL
- * @param hasVerifiedEmail - Whether we found a verified email for the company
- * @param emailConfidence - Confidence score of the found email (0-100)
+ * Priority:
+ * 1. ATS API (Greenhouse/Lever) → direct submission
+ * 2. Extension Queue (Workday/iCIMS/LinkedIn) → browser auto-fill
+ * 3. User's Connected Email (Gmail/Outlook) → personal outreach
+ * 4. Cold Email (via Resend from company domain) → fallback
+ * 5. Portal Queue → user manually applies
  */
 export function routeApplication(
   jobUrl: string,
   hasVerifiedEmail: boolean = false,
   emailConfidence: number = 0,
+  hasConnectedEmail: boolean = false,
+  hasExtension: boolean = false,
 ): RouteDecision {
   const atsType = detectATSType(jobUrl);
 
@@ -209,6 +235,7 @@ export function routeApplication(
       atsType,
       priority: 1,
       supportsDirectApi: true,
+      supportsExtension: false,
       atsMetadata: parsed ? { boardToken: parsed.boardToken, jobId: parsed.jobId } : undefined,
       reason: 'Greenhouse ATS detected — submitting via API',
     };
@@ -221,28 +248,96 @@ export function routeApplication(
       atsType,
       priority: 1,
       supportsDirectApi: true,
+      supportsExtension: false,
       atsMetadata: parsed ? { site: parsed.site, jobId: parsed.postingId } : undefined,
       reason: 'Lever ATS detected — submitting via API',
     };
   }
 
-  // Channel 2: Cold email (if we have a verified email with decent confidence)
+  // Channel 2: Extension Queue (Workday, iCIMS, LinkedIn, Indeed, Naukri)
+  if (hasExtension) {
+    if (atsType === 'workday') {
+      const parsed = parseWorkdayUrl(jobUrl);
+      return {
+        channel: 'extension_queue',
+        atsType,
+        priority: 2,
+        supportsDirectApi: false,
+        supportsExtension: true,
+        atsMetadata: parsed ? { company: parsed.company, instance: parsed.instance, jobId: parsed.jobId } : undefined,
+        reason: 'Workday ATS detected — queuing for browser extension auto-fill',
+      };
+    }
+
+    if (atsType === 'icims') {
+      const parsed = parseIcimsUrl(jobUrl);
+      return {
+        channel: 'extension_queue',
+        atsType,
+        priority: 2,
+        supportsDirectApi: false,
+        supportsExtension: true,
+        atsMetadata: parsed ? { company: parsed.company, jobId: parsed.jobId } : undefined,
+        reason: 'iCIMS ATS detected — queuing for browser extension auto-fill',
+      };
+    }
+
+    if (atsType === 'linkedin' || atsType === 'indeed' || atsType === 'naukri') {
+      return {
+        channel: 'extension_queue',
+        atsType,
+        priority: 2,
+        supportsDirectApi: false,
+        supportsExtension: true,
+        reason: `${atsType} detected — queuing for browser extension Easy Apply`,
+      };
+    }
+
+    // Other extension-supported ATS types
+    const atsEntry = ATS_PATTERNS.find(p => p.type === atsType);
+    if (atsEntry?.supportsExtension) {
+      return {
+        channel: 'extension_queue',
+        atsType,
+        priority: 2,
+        supportsDirectApi: false,
+        supportsExtension: true,
+        reason: `${atsType} detected — queuing for browser extension`,
+      };
+    }
+  }
+
+  // Channel 3: User's connected email (Gmail/Outlook)
+  if (hasConnectedEmail && hasVerifiedEmail && emailConfidence >= 40) {
+    return {
+      channel: 'user_email',
+      atsType,
+      priority: 3,
+      supportsDirectApi: false,
+      supportsExtension: false,
+      reason: `Sending from your personal email (${emailConfidence}% confidence) — higher response rate`,
+    };
+  }
+
+  // Channel 4: Cold email (via Resend from company domain)
   if (hasVerifiedEmail && emailConfidence >= 50) {
     return {
       channel: 'cold_email',
       atsType,
-      priority: 2,
+      priority: 4,
       supportsDirectApi: false,
+      supportsExtension: false,
       reason: `Verified email found (${emailConfidence}% confidence) — sending cold email`,
     };
   }
 
-  // Channel 3: Portal queue (fallback)
+  // Channel 5: Portal queue (fallback)
   return {
     channel: 'portal_queue',
     atsType,
-    priority: 3,
+    priority: 5,
     supportsDirectApi: false,
+    supportsExtension: false,
     reason: `${atsType === 'generic' ? 'Unknown' : atsType} ATS — queuing portal application`,
   };
 }
@@ -253,22 +348,34 @@ export function routeApplication(
  */
 export function routeApplicationsBatch(
   jobs: { id: string; url: string; company: string; hasVerifiedEmail?: boolean; emailConfidence?: number }[],
+  hasConnectedEmail: boolean = false,
+  hasExtension: boolean = false,
 ): {
   atsApi: (typeof jobs[0] & { route: RouteDecision })[];
+  extensionQueue: (typeof jobs[0] & { route: RouteDecision })[];
+  userEmail: (typeof jobs[0] & { route: RouteDecision })[];
   coldEmail: (typeof jobs[0] & { route: RouteDecision })[];
   portalQueue: (typeof jobs[0] & { route: RouteDecision })[];
 } {
   const atsApi: (typeof jobs[0] & { route: RouteDecision })[] = [];
+  const extensionQueue: (typeof jobs[0] & { route: RouteDecision })[] = [];
+  const userEmail: (typeof jobs[0] & { route: RouteDecision })[] = [];
   const coldEmail: (typeof jobs[0] & { route: RouteDecision })[] = [];
   const portalQueue: (typeof jobs[0] & { route: RouteDecision })[] = [];
 
   for (const job of jobs) {
-    const route = routeApplication(job.url, job.hasVerifiedEmail, job.emailConfidence);
+    const route = routeApplication(job.url, job.hasVerifiedEmail, job.emailConfidence, hasConnectedEmail, hasExtension);
     const enriched = { ...job, route };
 
     switch (route.channel) {
       case 'ats_api':
         atsApi.push(enriched);
+        break;
+      case 'extension_queue':
+        extensionQueue.push(enriched);
+        break;
+      case 'user_email':
+        userEmail.push(enriched);
         break;
       case 'cold_email':
         coldEmail.push(enriched);
@@ -279,7 +386,7 @@ export function routeApplicationsBatch(
     }
   }
 
-  return { atsApi, coldEmail, portalQueue };
+  return { atsApi, extensionQueue, userEmail, coldEmail, portalQueue };
 }
 
 /**
@@ -288,18 +395,24 @@ export function routeApplicationsBatch(
 export function getRoutingSummary(
   routes: { channel: ApplicationChannel; atsType: ATSType }[],
 ): string {
-  const counts = { ats_api: 0, cold_email: 0, portal_queue: 0 };
-  const atsTypes = new Map<string, number>();
+  const counts: Record<string, number> = {};
 
   for (const r of routes) {
-    counts[r.channel]++;
-    atsTypes.set(r.atsType, (atsTypes.get(r.atsType) || 0) + 1);
+    counts[r.channel] = (counts[r.channel] || 0) + 1;
   }
 
+  const labels: Record<string, string> = {
+    ats_api: 'ATS API',
+    extension_queue: 'browser extension',
+    user_email: 'your email',
+    cold_email: 'cold email',
+    portal_queue: 'portal queue',
+  };
+
   const parts: string[] = [];
-  if (counts.ats_api > 0) parts.push(`${counts.ats_api} via ATS API`);
-  if (counts.cold_email > 0) parts.push(`${counts.cold_email} via cold email`);
-  if (counts.portal_queue > 0) parts.push(`${counts.portal_queue} queued for portal`);
+  for (const [channel, count] of Object.entries(counts)) {
+    parts.push(`${count} via ${labels[channel] || channel}`);
+  }
 
   return parts.join(', ') || 'No jobs to route';
 }

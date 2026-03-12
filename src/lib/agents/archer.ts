@@ -1,25 +1,35 @@
 /**
  * Archer Agent — Multi-Channel Application Agent
  *
- * Generates cover letters and sends job applications through 3 channels:
- * 1. ATS API     — Direct submission to Greenhouse/Lever (highest success rate)
- * 2. Cold Email  — Verified email via Hunter.io to HR/recruiter
- * 3. Portal Queue — URL queued for user to manually apply (fallback)
+ * Generates cover letters and sends job applications through 5 channels:
+ * 1. ATS API         — Direct submission to Greenhouse/Lever (highest success rate)
+ * 2. Extension Queue — Browser extension auto-fill (Workday, iCIMS, LinkedIn, Indeed, Naukri)
+ * 3. User Email      — Send from user's connected Gmail/Outlook (personal touch)
+ * 4. Cold Email      — Verified email via Hunter.io to HR/recruiter (fallback)
+ * 5. Portal Queue    — URL queued for user to manually apply (last resort)
  *
  * Supports 100+ applications/day with:
  * - Parallel batch processing (5 concurrent)
  * - Multi-channel routing based on ATS detection
+ * - Smart routing that learns from application outcomes
  * - Cover letter tiering (priority/standard/quick)
  * - Hunter.io verified emails (replaces hr@company.com guessing)
  * - Greenhouse + Lever direct API submission
+ * - User's OAuth Gmail/Outlook for personal outreach
+ * - Chrome extension auto-fill for Workday/iCIMS/LinkedIn/Indeed
  */
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback } from '@/lib/ai/openrouter';
 import { sendEmail } from '@/lib/email';
 import { findCompanyEmail as findVerifiedEmail, type EmailFinderResult } from '@/lib/email/emailFinder';
 import { routeApplication, detectATSType, type RouteDecision, type ApplicationChannel } from '@/lib/ats/router';
+import { smartRouteApplication } from '@/lib/ats/smartRouter';
+import { recordOutcome } from '@/lib/ats/outcomeTracker';
 import { submitGreenhouseApplication, parseGreenhouseUrl, isGreenhouseUrl } from '@/lib/ats/greenhouse';
 import { submitLeverApplication, parseLeverUrl, isLeverUrl } from '@/lib/ats/lever';
+import { prepareWorkdayApplicationData } from '@/lib/ats/workday';
+import { prepareIcimsApplicationData } from '@/lib/ats/icims';
+import { sendViaUserEmail, hasConnectedEmail } from '@/lib/email/oauth';
 import { generateCoverLettersBatch, determineCoverLetterTier, type CoverLetterResult } from './coverLetterBatch';
 import { processApplicationsBatch, type ApplicationJobData, type ApplicationJobResult } from '@/lib/queue/applicationQueue';
 import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
@@ -49,7 +59,7 @@ export interface ResumeData {
 
 export interface ApplicationResult {
   success: boolean;
-  method: 'ats_api' | 'email' | 'portal' | 'none';
+  method: 'ats_api' | 'email' | 'user_email' | 'extension' | 'portal' | 'none';
   channel: ApplicationChannel;
   strategy: 'priority' | 'standard' | 'skip';
   jobApplicationId?: string;
@@ -67,7 +77,7 @@ export interface BatchApplicationResult {
   failed: number;
   results: ApplicationResult[];
   coverLetterStats: { priority: number; standard: number; quick: number; cached: number };
-  routingStats: { ats_api: number; cold_email: number; portal_queue: number };
+  routingStats: { ats_api: number; extension_queue: number; user_email: number; cold_email: number; portal_queue: number };
   durationMs: number;
 }
 
@@ -206,11 +216,19 @@ export async function applyToJob(
     // Non-critical — continue with other channels
   }
 
-  // ── Route to best channel ──
-  const route = routeApplication(
+  // ── Check user capabilities ──
+  const userHasEmail = await hasConnectedEmail(userId).catch(() => false);
+  // TODO: Extension detection — check if user has extension installed
+  const userHasExtension = false; // Will be set when extension reports back
+
+  // ── Smart Route to best channel (data-driven) ──
+  const route = await smartRouteApplication(
     job.url,
     !!emailResult && emailResult.confidence >= 50,
     emailResult?.confidence || 0,
+    userHasEmail,
+    userHasExtension,
+    job.company,
   );
 
   // ── Generate cover letter ──
@@ -227,8 +245,18 @@ export async function applyToJob(
     case 'ats_api':
       result = await executeAtsApiApplication(userId, job, resume, coverLetter, route, runId, burstMode, ctx);
       break;
+    case 'extension_queue':
+      result = await executeExtensionQueueApplication(userId, job, resume, coverLetter, route, runId, burstMode, ctx);
+      break;
+    case 'user_email':
+      result = await executeUserEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
+      break;
     case 'cold_email':
-      result = await executeColdEmailApplication(userId, job, resume, coverLetter, emailResult!, runId, burstMode, ctx);
+      if (emailResult && emailResult.confidence >= 50) {
+        result = await executeColdEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
+      } else {
+        result = await executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+      }
       break;
     case 'portal_queue':
     default:
@@ -361,6 +389,150 @@ async function executeColdEmailApplication(
 }
 
 /**
+ * Queue application for Chrome Extension to auto-fill and submit.
+ * Creates a QUEUED record with applicationMethod='extension_queue' and
+ * pre-filled form data so the extension can pick it up.
+ */
+async function executeExtensionQueueApplication(
+  userId: string,
+  job: JobForApplication,
+  resume: ResumeData,
+  coverLetter: string,
+  route: RouteDecision,
+  runId?: string,
+  burstMode?: boolean,
+  ctx?: AgentContext,
+): Promise<ApplicationResult> {
+  // Prepare pre-filled form data based on ATS type
+  let extensionData: Record<string, any> = {};
+
+  if (route.atsType === 'workday') {
+    extensionData = prepareWorkdayApplicationData({ contact: resume.contact }, coverLetter);
+  } else if (route.atsType === 'icims') {
+    extensionData = prepareIcimsApplicationData({ contact: resume.contact }, coverLetter);
+  } else {
+    // LinkedIn, Indeed, Naukri, etc. — pass resume contact data
+    extensionData = {
+      firstName: resume.contact.name.split(' ')[0] || '',
+      lastName: resume.contact.name.split(' ').slice(1).join(' ') || '',
+      email: resume.contact.email,
+      phone: resume.contact.phone,
+      location: resume.contact.location,
+      linkedin: resume.contact.linkedin || '',
+      coverLetter,
+    };
+  }
+
+  const applicationId = await recordApplication(
+    userId, job, coverLetter, 'QUEUED', 'extension_queue',
+    {
+      atsType: route.atsType,
+      extensionData,
+      ...route.atsMetadata,
+    },
+    runId, burstMode,
+  );
+
+  if (ctx) logActivity(ctx, 'archer', 'queued_extension', `Queued extension apply for "${job.title}" at ${job.company} (${route.atsType})`);
+
+  return {
+    success: true,
+    method: 'extension',
+    channel: 'extension_queue',
+    strategy: 'standard',
+    jobApplicationId: applicationId,
+    details: `Queued for Chrome extension auto-fill (${route.atsType})`,
+    atsType: route.atsType,
+  };
+}
+
+/**
+ * Send application via user's connected Gmail/Outlook account.
+ * Falls back to cold email, then portal queue on failure.
+ */
+async function executeUserEmailApplication(
+  userId: string,
+  job: JobForApplication,
+  resume: ResumeData,
+  coverLetter: string,
+  emailInfo: EmailFinderResult | null,
+  runId?: string,
+  burstMode?: boolean,
+  ctx?: AgentContext,
+): Promise<ApplicationResult> {
+  const recipientEmail = emailInfo?.email;
+  if (!recipientEmail) {
+    // No HR email found — fall back to portal queue
+    if (ctx) logActivity(ctx, 'archer', 'user_email_skip', `No recipient email found for ${job.company} — falling back`);
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
+
+  const emailSubject = `Application for ${job.title} — ${resume.contact.name}`;
+  const emailBody = buildApplicationEmail(resume, job, coverLetter);
+
+  try {
+    const result = await sendViaUserEmail(userId, {
+      to: recipientEmail,
+      subject: emailSubject,
+      html: emailBody,
+      text: `${coverLetter}\n\nBest regards,\n${resume.contact.name}\n${resume.contact.email}\n${resume.contact.phone}`,
+    });
+
+    if (!result.success) {
+      console.warn(`[Archer] User email failed for ${job.company}: ${result.error}`);
+      // Fall back to cold email if available
+      if (emailInfo && emailInfo.confidence >= 50) {
+        return executeColdEmailApplication(userId, job, resume, coverLetter, emailInfo, runId, burstMode, ctx);
+      }
+      return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+    }
+
+    const applicationId = await recordApplication(
+      userId, job, coverLetter, 'EMAILED', 'user_email',
+      {
+        sentTo: recipientEmail,
+        sentFrom: result.sentFrom,
+        provider: result.provider,
+        confidence: emailInfo.confidence,
+        source: emailInfo.source,
+        messageId: result.messageId,
+      },
+      runId, burstMode,
+    );
+
+    if (ctx) logActivity(ctx, 'archer', 'sent_user_email', `Sent application for "${job.title}" via ${result.provider} (from ${result.sentFrom}) to ${recipientEmail}`);
+
+    // Record outcome for smart routing
+    try {
+      await recordOutcome({
+        userId,
+        company: job.company,
+        atsType: detectATSType(job.url),
+        channel: 'user_email',
+        outcome: 'applied',
+        appliedAt: new Date(),
+      });
+    } catch {}
+
+    return {
+      success: true,
+      method: 'user_email',
+      channel: 'user_email',
+      strategy: 'standard',
+      jobApplicationId: applicationId,
+      details: `Sent from your ${result.provider} (${result.sentFrom}) to ${recipientEmail}`,
+    };
+  } catch (err) {
+    console.error(`[Archer] User email failed for ${job.company}:`, err);
+    // Fall back to cold email, then portal
+    if (emailInfo && emailInfo.confidence >= 50) {
+      return executeColdEmailApplication(userId, job, resume, coverLetter, emailInfo, runId, burstMode, ctx);
+    }
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
+}
+
+/**
  * Queue application for user to manually apply via portal URL.
  */
 async function executePortalQueueApplication(
@@ -422,7 +594,7 @@ export async function applyToJobsBatch(
   const burstMode = options?.burstMode ?? false;
   const results: ApplicationResult[] = [];
 
-  const routingStats = { ats_api: 0, cold_email: 0, portal_queue: 0 };
+  const routingStats = { ats_api: 0, extension_queue: 0, user_email: 0, cold_email: 0, portal_queue: 0 };
   const coverLetterStats = { priority: 0, standard: 0, quick: 0, cached: 0 };
 
   // ── Application cap check (skip in burst mode) ──
@@ -468,17 +640,28 @@ export async function applyToJobsBatch(
   const verifiedEmails = [...emailMap.values()].filter((e) => e && e.confidence >= 50).length;
   if (ctx) logActivity(ctx, 'archer', 'email_results', `Found ${verifiedEmails} verified emails out of ${uniqueCompanies.length} companies`);
 
-  // ── Step 2: Route each job to optimal channel ──
-  const routedJobs = jobs.map((job) => {
-    const email = emailMap.get(job.company);
-    const route = routeApplication(job.url, !!email && email.confidence >= 50, email?.confidence || 0);
+  // ── Step 2: Check user capabilities & Route each job to optimal channel ──
+  const userHasEmail = await hasConnectedEmail(userId).catch(() => false);
+  const userHasExtension = false; // TODO: detect from user's extension heartbeat
+
+  const routedJobs: { job: JobForApplication; route: RouteDecision; email: EmailFinderResult | null }[] = [];
+  for (const job of jobs) {
+    const email = emailMap.get(job.company) || null;
+    const route = await smartRouteApplication(
+      job.url,
+      !!email && email.confidence >= 50,
+      email?.confidence || 0,
+      userHasEmail,
+      userHasExtension,
+      job.company,
+    );
     routingStats[route.channel]++;
-    return { job, route, email };
-  });
+    routedJobs.push({ job, route, email });
+  }
 
   if (ctx) {
     logActivity(ctx, 'archer', 'routing_done',
-      `Routed ${jobs.length} jobs: ${routingStats.ats_api} ATS API, ${routingStats.cold_email} cold email, ${routingStats.portal_queue} portal queue`);
+      `Routed ${jobs.length} jobs: ${routingStats.ats_api} ATS, ${routingStats.extension_queue} extension, ${routingStats.user_email} user email, ${routingStats.cold_email} cold email, ${routingStats.portal_queue} portal`);
   }
 
   // ── Step 3: Generate cover letters in parallel batches ──
@@ -570,6 +753,12 @@ export async function applyToJobsBatch(
         case 'ats_api':
           appResult = await executeAtsApiApplication(userId, jobData, resume, coverLetter, routeInfo?.route!, runId, burstMode, ctx);
           break;
+        case 'extension_queue':
+          appResult = await executeExtensionQueueApplication(userId, jobData, resume, coverLetter, routeInfo?.route!, runId, burstMode, ctx);
+          break;
+        case 'user_email':
+          appResult = await executeUserEmailApplication(userId, jobData, resume, coverLetter, email || null, runId, burstMode, ctx);
+          break;
         case 'cold_email':
           if (email && email.confidence >= 50) {
             appResult = await executeColdEmailApplication(userId, jobData, resume, coverLetter, email, runId, burstMode, ctx);
@@ -602,8 +791,8 @@ export async function applyToJobsBatch(
   );
 
   // ── Step 5: Compile results ──
-  const applied = results.filter((r) => r.success && r.method === 'ats_api').length;
-  const emailed = results.filter((r) => r.success && r.method === 'email').length;
+  const applied = results.filter((r) => r.success && (r.method === 'ats_api' || r.method === 'extension')).length;
+  const emailed = results.filter((r) => r.success && (r.method === 'email' || r.method === 'user_email')).length;
   const queued = results.filter((r) => r.success && r.method === 'portal').length;
   const failed = results.filter((r) => !r.success).length;
   const skipped = jobs.length - results.length;
@@ -660,6 +849,8 @@ async function recordApplication(
         location: job.location,
         matchScore: job.matchScore || null,
         status,
+        applicationMethod: method, // ats_api | extension_queue | user_email | cold_email | portal
+        atsType: metadata.atsType || detectATSType(job.url),
         appliedAt: status === 'APPLIED' || status === 'EMAILED' ? new Date() : undefined,
         source: job.source,
         coverLetter,

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -11,12 +12,14 @@ import {
   FileText,
   FileEdit,
   Mic,
+  Globe,
   ChevronLeft,
   ChevronRight,
   Sparkles,
   X,
   Zap,
   Bot,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import UserMenu from '../UserMenu';
@@ -27,15 +30,56 @@ import CortexAvatar from '@/components/brand/CortexAvatar';
 import Logo from '@/components/brand/Logo';
 import type { AgentId } from '@/lib/agents/registry';
 
-/* ── Autopilot nav items ─────────────────────────────── */
-const AUTOPILOT_NAV = [
-  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Job Search', href: '/dashboard/jobs', icon: Search },
-  { label: 'Board', href: '/dashboard/board', icon: Columns3 },
-  { label: 'All Matches', href: '/dashboard/matches', icon: ListFilter },
-  { label: 'My Applications', href: '/dashboard/applications', icon: FileText },
-  { label: 'Resume', href: '/dashboard/resume', icon: FileEdit },
-  { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic },
+/* ── Autopilot: standalone top item ──────────────────── */
+const AUTOPILOT_TOP = { label: 'Overview', href: '/dashboard', icon: LayoutDashboard };
+
+/* ── Autopilot nav items (grouped into 3 boxes) ─────── */
+const AUTOPILOT_NAV_GROUPS = [
+  {
+    category: 'BOX 1 — PROFILE',
+    color: 'blue',
+    activeBg: 'bg-blue-50 dark:bg-blue-500/10',
+    activeText: 'text-blue-700 dark:text-blue-400',
+    activeIcon: 'text-blue-600 dark:text-blue-400',
+    headerText: 'text-blue-500 dark:text-blue-400/70',
+    iconColor: 'text-blue-500 dark:text-blue-400',
+    iconBg: 'bg-blue-50 dark:bg-blue-500/10',
+    iconBorder: 'border-blue-200 dark:border-blue-500/20',
+    items: [
+      { label: 'Resume', href: '/dashboard/resume', icon: FileEdit },
+      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic },
+    ],
+  },
+  {
+    category: 'BOX 2 — JOB HUNT',
+    color: 'green',
+    activeBg: 'bg-green-50 dark:bg-green-500/10',
+    activeText: 'text-green-700 dark:text-green-400',
+    activeIcon: 'text-green-600 dark:text-green-400',
+    headerText: 'text-green-500 dark:text-green-400/70',
+    iconColor: 'text-green-500 dark:text-green-400',
+    iconBg: 'bg-green-50 dark:bg-green-500/10',
+    iconBorder: 'border-green-200 dark:border-green-500/20',
+    items: [
+      { label: 'Job Search', href: '/dashboard/jobs', icon: Search },
+      { label: 'Board', href: '/dashboard/board', icon: Columns3 },
+      { label: 'All Matches', href: '/dashboard/matches', icon: ListFilter },
+    ],
+  },
+  {
+    category: 'BOX 3 — APPLY',
+    color: 'purple',
+    activeBg: 'bg-purple-50 dark:bg-purple-500/10',
+    activeText: 'text-purple-700 dark:text-purple-400',
+    activeIcon: 'text-purple-600 dark:text-purple-400',
+    headerText: 'text-purple-500 dark:text-purple-400/70',
+    iconColor: 'text-purple-500 dark:text-purple-400',
+    iconBg: 'bg-purple-50 dark:bg-purple-500/10',
+    iconBorder: 'border-purple-200 dark:border-purple-500/20',
+    items: [
+      { label: 'My Applications', href: '/dashboard/applications', icon: FileText },
+    ],
+  },
 ];
 
 /* ── Agent entries for Agentic sidebar ────────────────── */
@@ -64,6 +108,7 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
   const plan = normalizePlan((session?.user as any)?.plan || 'FREE');
   const planInfo = PLAN_PRICING[plan];
   const isFree = plan === 'FREE';
+  const [showBetaWarning, setShowBetaWarning] = useState(false);
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -79,6 +124,11 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
 
   function switchToAgentic() {
     if (isAgentic) return;
+    setShowBetaWarning(true);
+  }
+
+  function confirmAgentic() {
+    setShowBetaWarning(false);
     setMode('agentic');
     router.push('/dashboard/chat');
   }
@@ -282,29 +332,75 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
             </div>
           </nav>
         ) : (
-          /* ── AUTOPILOT MODE: Standard nav ─────────────────── */
-          <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
-            {AUTOPILOT_NAV.map((item) => {
-              const active = isActive(item.href);
+          /* ── AUTOPILOT MODE: Overview + 3 Box groups ────── */
+          <nav className="flex-1 overflow-y-auto py-2 px-2">
+            {/* Standalone Overview */}
+            {(() => {
+              const active = isActive(AUTOPILOT_TOP.href);
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  href={AUTOPILOT_TOP.href}
                   onClick={onMobileClose}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-3',
                     active
-                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                      ? 'bg-gray-100 dark:bg-white/[0.06] text-gray-900 dark:text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200',
                     collapsed && 'justify-center px-2',
                   )}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? AUTOPILOT_TOP.label : undefined}
                 >
-                  <item.icon className={cn('w-[18px] h-[18px] shrink-0', active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500')} />
-                  {!collapsed && <span>{item.label}</span>}
+                  <AUTOPILOT_TOP.icon className={cn('w-[18px] h-[18px] shrink-0', active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500')} />
+                  {!collapsed && <span>{AUTOPILOT_TOP.label}</span>}
                 </Link>
               );
-            })}
+            })()}
+
+            {/* 3 Box groups */}
+            {AUTOPILOT_NAV_GROUPS.map((group, idx) => (
+              <div key={group.category} className="mb-2">
+                {/* Separator line between groups */}
+                {!collapsed && idx > 0 && (
+                  <div className="mx-3 mb-2 border-t border-gray-100 dark:border-gray-800" />
+                )}
+                {!collapsed && (
+                  <div className={cn('px-3 py-1 text-[8px] font-bold uppercase tracking-widest opacity-70', group.headerText)}>
+                    {group.category}
+                  </div>
+                )}
+                {collapsed && (
+                  <div className="mx-auto my-1 w-6 border-t border-gray-200 dark:border-gray-700" />
+                )}
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const active = isActive(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onMobileClose}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          active
+                            ? `${group.activeBg} ${group.activeText}`
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200',
+                          collapsed && 'justify-center px-2',
+                        )}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        <div className={cn(
+                          'w-7 h-7 rounded-md border flex items-center justify-center shrink-0',
+                          active ? `${group.iconBg} ${group.iconBorder}` : `${group.iconBg} ${group.iconBorder} opacity-60`,
+                        )}>
+                          <item.icon className={cn('w-3.5 h-3.5', active ? group.activeIcon : group.iconColor)} />
+                        </div>
+                        {!collapsed && <span>{item.label}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         )}
 
@@ -346,6 +442,40 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
           </div>
         </div>
       </aside>
+
+      {/* Agentic Beta Warning Modal */}
+      {showBetaWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-md mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Agentic Mode (Beta)</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Agentic mode is currently in <span className="font-semibold text-amber-600 dark:text-amber-400">beta</span> and may produce errors or unexpected results.
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              We recommend using <span className="font-semibold text-blue-600 dark:text-blue-400">Autopilot mode</span> for the best experience.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowBetaWarning(false)}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Stay on Autopilot
+              </button>
+              <button
+                onClick={confirmAgentic}
+                className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

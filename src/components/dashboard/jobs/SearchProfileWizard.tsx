@@ -45,9 +45,9 @@ const EXPERIENCE_LEVELS = [
 ];
 
 const STEPS = [
-  { id: 'job', label: 'Job Search', icon: Search },
-  { id: 'resume', label: 'Resume Check', icon: FileText },
-  { id: 'automation', label: 'Automation', icon: Zap },
+  { id: 'profile', label: 'Box 1: Profile', icon: FileText },
+  { id: 'hunt', label: 'Box 2: Job Hunt', icon: Search },
+  { id: 'apply', label: 'Box 3: Auto-Apply', icon: Zap },
 ];
 
 export default function SearchProfileWizard({ onClose, onComplete }: SearchProfileWizardProps) {
@@ -85,8 +85,8 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
       .catch(() => setResumeLoading(false));
   }, []);
 
-  const canProceedStep0 = jobTitle.trim().length > 0;
-  const canProceedStep1 = resumeApproved;
+  const canProceedStep0 = resumeApproved;
+  const canProceedStep1 = jobTitle.trim().length > 0;
   const canSubmit = canProceedStep0 && canProceedStep1;
 
   const handleNext = () => {
@@ -160,7 +160,7 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Search Profile</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create Your 3BOX</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
@@ -204,146 +204,6 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
             {step === 0 && (
               <motion.div
                 key="step-0"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-5"
-              >
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Configure what jobs you want to find and apply to automatically.
-                  </p>
-                </div>
-
-                {/* Job Title */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Job Title <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="e.g. Software Engineer, Product Manager"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Location + Remote */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. San Francisco, CA"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remote</label>
-                    <button
-                      onClick={() => setRemote(!remote)}
-                      className={cn(
-                        'w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all',
-                        remote
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                          : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300',
-                      )}
-                    >
-                      <Globe className="w-4 h-4" />
-                      {remote ? 'Remote preferred' : 'Any work type'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Experience Level */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Experience Level</label>
-                  <select
-                    value={experienceLevel}
-                    onChange={(e) => setExperienceLevel(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Any level</option>
-                    {EXPERIENCE_LEVELS.map((l) => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Match Tolerance */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Minimum Match Score: {matchTolerance}%
-                  </label>
-                  <input
-                    type="range"
-                    min={30}
-                    max={95}
-                    step={5}
-                    value={matchTolerance}
-                    onChange={(e) => setMatchTolerance(Number(e.target.value))}
-                    className="w-full accent-blue-500"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>More results</span>
-                    <span>Higher quality</span>
-                  </div>
-                </div>
-
-                {/* Advanced filters (collapsible) */}
-                <details className="group">
-                  <summary className="text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1">
-                    <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
-                    Advanced filters
-                  </summary>
-                  <div className="mt-3 space-y-4 pl-1">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Include Keywords</label>
-                      <input
-                        type="text"
-                        value={includeKeywords}
-                        onChange={(e) => setIncludeKeywords(e.target.value)}
-                        placeholder="React, TypeScript, Node.js"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exclude Keywords</label>
-                      <input
-                        type="text"
-                        value={excludeKeywords}
-                        onChange={(e) => setExcludeKeywords(e.target.value)}
-                        placeholder="Senior, Lead, Manager"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exclude Companies</label>
-                      <input
-                        type="text"
-                        value={excludeCompanies}
-                        onChange={(e) => setExcludeCompanies(e.target.value)}
-                        placeholder="Acme Corp, Bad Company Inc"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                </details>
-              </motion.div>
-            )}
-
-            {step === 1 && (
-              <motion.div
-                key="step-1"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -491,6 +351,146 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
               </motion.div>
             )}
 
+            {step === 1 && (
+              <motion.div
+                key="step-1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-5"
+              >
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Configure what jobs you want to find and apply to automatically.
+                  </p>
+                </div>
+
+                {/* Job Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Job Title <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      placeholder="e.g. Software Engineer, Product Manager"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Location + Remote */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="e.g. San Francisco, CA"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remote</label>
+                    <button
+                      onClick={() => setRemote(!remote)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all',
+                        remote
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300',
+                      )}
+                    >
+                      <Globe className="w-4 h-4" />
+                      {remote ? 'Remote preferred' : 'Any work type'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Experience Level */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Experience Level</label>
+                  <select
+                    value={experienceLevel}
+                    onChange={(e) => setExperienceLevel(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Any level</option>
+                    {EXPERIENCE_LEVELS.map((l) => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Match Tolerance */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Minimum Match Score: {matchTolerance}%
+                  </label>
+                  <input
+                    type="range"
+                    min={30}
+                    max={95}
+                    step={5}
+                    value={matchTolerance}
+                    onChange={(e) => setMatchTolerance(Number(e.target.value))}
+                    className="w-full accent-blue-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>More results</span>
+                    <span>Higher quality</span>
+                  </div>
+                </div>
+
+                {/* Advanced filters (collapsible) */}
+                <details className="group">
+                  <summary className="text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1">
+                    <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                    Advanced filters
+                  </summary>
+                  <div className="mt-3 space-y-4 pl-1">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Include Keywords</label>
+                      <input
+                        type="text"
+                        value={includeKeywords}
+                        onChange={(e) => setIncludeKeywords(e.target.value)}
+                        placeholder="React, TypeScript, Node.js"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exclude Keywords</label>
+                      <input
+                        type="text"
+                        value={excludeKeywords}
+                        onChange={(e) => setExcludeKeywords(e.target.value)}
+                        placeholder="Senior, Lead, Manager"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exclude Companies</label>
+                      <input
+                        type="text"
+                        value={excludeCompanies}
+                        onChange={(e) => setExcludeCompanies(e.target.value)}
+                        placeholder="Acme Corp, Bad Company Inc"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </details>
+              </motion.div>
+            )}
+
             {step === 2 && (
               <motion.div
                 key="step-2"
@@ -578,6 +578,12 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                   )}
                 </div>
 
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 mt-4">
+                  <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                    Once activated, your 3BOX will automatically search and apply for matching jobs based on your plan limits.
+                  </p>
+                </div>
+
                 {/* Error */}
                 {error && (
                   <div className="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/5 p-3">
@@ -602,10 +608,10 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
           {step < STEPS.length - 1 ? (
             <button
               onClick={handleNext}
-              disabled={step === 0 && !canProceedStep0}
+              disabled={(step === 0 && !canProceedStep0) || (step === 1 && !canProceedStep1)}
               className={cn(
                 'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all',
-                (step === 0 && !canProceedStep0)
+                ((step === 0 && !canProceedStep0) || (step === 1 && !canProceedStep1))
                   ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700',
               )}
@@ -627,12 +633,12 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating...
+                  Activating...
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  Create & Start Searching
+                  Activate Your 3BOX
                 </>
               )}
             </button>

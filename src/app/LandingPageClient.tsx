@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Upload, Search, Sparkles, Rocket, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, Upload, Search, Sparkles, Rocket, ChevronDown, ChevronUp, Chrome, Mail, Globe, Zap, Shield } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AgentAvatar from '@/components/brand/AgentAvatar';
@@ -171,6 +171,99 @@ export default function LandingPageClient() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── How Applications Work ─── */}
+      <section className="relative py-16 sm:py-20 overflow-hidden">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">
+              5 ways to <span className="gradient-text">apply</span>
+            </h2>
+            <p className="text-white/40 max-w-lg mx-auto">
+              Archer uses the best channel for each job, maximizing your response rate.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              { icon: Zap, label: 'ATS API', desc: 'Direct submission to Greenhouse & Lever', color: 'text-green-400', bg: 'bg-green-500/10' },
+              { icon: Chrome, label: 'Chrome Extension', desc: 'Auto-apply on LinkedIn, Indeed, Naukri, Workday', color: 'text-neon-blue', bg: 'bg-neon-blue/10' },
+              { icon: Mail, label: 'Your Email', desc: 'Send from your Gmail or Outlook for personal touch', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+              { icon: Globe, label: 'Cold Email', desc: 'AI-verified HR emails with tailored cover letters', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+              { icon: Shield, label: 'Portal Queue', desc: 'Pre-filled forms ready for one-click submission', color: 'text-white/50', bg: 'bg-white/5' },
+            ].map((ch, i) => (
+              <motion.div
+                key={ch.label}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.06 }}
+                className="glass p-4 text-center"
+              >
+                <div className={`w-10 h-10 rounded-xl ${ch.bg} flex items-center justify-center mx-auto mb-3`}>
+                  <ch.icon className={`w-5 h-5 ${ch.color}`} />
+                </div>
+                <div className="text-sm font-semibold text-white mb-1">{ch.label}</div>
+                <div className="text-[11px] text-white/35 leading-snug">{ch.desc}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Chrome Extension CTA ─── */}
+      <section className="relative py-16 sm:py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-radial from-neon-blue/5 via-transparent to-transparent" aria-hidden="true" />
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="glass p-8 sm:p-10 text-center"
+          >
+            <Chrome className="w-12 h-12 text-neon-blue mx-auto mb-4" />
+            <h3 className="text-2xl font-bold mb-3">
+              Install the Chrome Extension
+            </h3>
+            <p className="text-white/40 max-w-md mx-auto mb-6 text-sm leading-relaxed">
+              Auto-apply to jobs directly on LinkedIn, Indeed, Naukri, Glassdoor, Workday, and iCIMS.
+              The extension auto-fills forms with your resume and syncs everything back to your dashboard.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <a
+                href="#"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity text-sm"
+              >
+                <Chrome className="w-4 h-4" /> Add to Chrome — Free
+              </a>
+              <Link
+                href="/extension-auth"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors text-sm"
+              >
+                Already installed? Connect
+              </Link>
+            </div>
+            <div className="flex items-center justify-center gap-6 mt-6 text-[11px] text-white/20">
+              <span>LinkedIn</span>
+              <span>&middot;</span>
+              <span>Indeed</span>
+              <span>&middot;</span>
+              <span>Naukri</span>
+              <span>&middot;</span>
+              <span>Glassdoor</span>
+              <span>&middot;</span>
+              <span>Workday</span>
+              <span>&middot;</span>
+              <span>iCIMS</span>
+            </div>
+          </motion.div>
         </div>
       </section>
 

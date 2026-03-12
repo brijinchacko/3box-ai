@@ -38,6 +38,7 @@ interface ReferralData {
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'email', label: 'Connected Email', icon: Mail },
   { id: 'billing', label: 'Billing', icon: CreditCard },
   { id: 'referral', label: 'Refer & Earn', icon: Gift },
   { id: 'coach', label: 'AI Coach', icon: Bot },
@@ -94,6 +95,14 @@ export default function SettingsPage() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // ----- Connected Email state -----
+  const [emailConnections, setEmailConnections] = useState<{
+    gmail?: { email: string; isPrimary: boolean };
+    outlook?: { email: string; isPrimary: boolean };
+  }>({});
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailDisconnecting, setEmailDisconnecting] = useState<string | null>(null);
 
   // ----- Coach state -----
   const [coachPersonality, setCoachPersonality] = useState('friendly');
@@ -191,6 +200,37 @@ export default function SettingsPage() {
       fetchReferral();
     }
   }, [activeTab, referral, fetchReferral]);
+
+  // Fetch email connections when tab switches to email
+  const fetchEmailConnections = useCallback(async () => {
+    setEmailLoading(true);
+    try {
+      const [gmailRes, outlookRes] = await Promise.all([
+        fetch('/api/auth/gmail/status'),
+        fetch('/api/auth/outlook/status'),
+      ]);
+      const gmail = gmailRes.ok ? await gmailRes.json() : null;
+      const outlook = outlookRes.ok ? await outlookRes.json() : null;
+      setEmailConnections({
+        gmail: gmail?.connected ? { email: gmail.email, isPrimary: gmail.isPrimary } : undefined,
+        outlook: outlook?.connected ? { email: outlook.email, isPrimary: outlook.isPrimary } : undefined,
+      });
+    } catch { /* ignore */ }
+    setEmailLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'email') fetchEmailConnections();
+  }, [activeTab, fetchEmailConnections]);
+
+  const disconnectEmail = async (provider: 'gmail' | 'outlook') => {
+    setEmailDisconnecting(provider);
+    try {
+      await fetch(`/api/auth/${provider}/disconnect`, { method: 'POST' });
+      setEmailConnections((prev) => ({ ...prev, [provider]: undefined }));
+    } catch { /* ignore */ }
+    setEmailDisconnecting(null);
+  };
 
   /* ---------------------------------------------------------------- */
   /*  Actions                                                          */
@@ -612,6 +652,103 @@ export default function SettingsPage() {
                     </button>
                   </>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* =============== CONNECTED EMAIL TAB =============== */}
+          {activeTab === 'email' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="card">
+                <h3 className="font-semibold mb-2">Connected Email Accounts</h3>
+                <p className="text-sm text-white/40 mb-6">
+                  Connect your Gmail or Outlook so job applications are sent from your personal email — boosting response rates.
+                </p>
+
+                {emailLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-white/40" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Gmail */}
+                    <div className="p-4 rounded-xl border border-white/10 bg-white/[.02] flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z" fill="#EA4335"/></svg>
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">Gmail</div>
+                          {emailConnections.gmail ? (
+                            <div className="text-xs text-green-400">{emailConnections.gmail.email}</div>
+                          ) : (
+                            <div className="text-xs text-white/30">Not connected</div>
+                          )}
+                        </div>
+                      </div>
+                      {emailConnections.gmail ? (
+                        <button
+                          onClick={() => disconnectEmail('gmail')}
+                          disabled={emailDisconnecting === 'gmail'}
+                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        >
+                          {emailDisconnecting === 'gmail' ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Disconnect'}
+                        </button>
+                      ) : (
+                        <a
+                          href="/api/auth/gmail/connect"
+                          className="px-3 py-1.5 rounded-lg bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs hover:bg-neon-blue/20 transition-colors"
+                        >
+                          Connect Gmail
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Outlook */}
+                    <div className="p-4 rounded-xl border border-white/10 bg-white/[.02] flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.3L19.4 7.5 12 11.7 4.6 7.5 12 4.3zM4 9l7.5 4v7.5L4 16.5V9zm9.5 11.5V13L21 9v7.5l-7.5 4z" fill="#0078D4"/></svg>
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">Outlook / Microsoft</div>
+                          {emailConnections.outlook ? (
+                            <div className="text-xs text-green-400">{emailConnections.outlook.email}</div>
+                          ) : (
+                            <div className="text-xs text-white/30">Not connected</div>
+                          )}
+                        </div>
+                      </div>
+                      {emailConnections.outlook ? (
+                        <button
+                          onClick={() => disconnectEmail('outlook')}
+                          disabled={emailDisconnecting === 'outlook'}
+                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        >
+                          {emailDisconnecting === 'outlook' ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Disconnect'}
+                        </button>
+                      ) : (
+                        <a
+                          href="/api/auth/outlook/connect"
+                          className="px-3 py-1.5 rounded-lg bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs hover:bg-neon-blue/20 transition-colors"
+                        >
+                          Connect Outlook
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Info box */}
+                <div className="mt-6 p-4 rounded-xl bg-neon-blue/5 border border-neon-blue/10">
+                  <h4 className="text-xs font-semibold text-neon-blue mb-2">Why Connect Your Email?</h4>
+                  <ul className="text-xs text-white/40 space-y-1">
+                    <li>• Applications sent from your personal email have 3× higher response rates</li>
+                    <li>• Employers see your name, not a generic company address</li>
+                    <li>• We only use the &quot;send email&quot; permission — we never read your inbox</li>
+                    <li>• You can disconnect at any time</li>
+                  </ul>
+                </div>
               </div>
             </motion.div>
           )}

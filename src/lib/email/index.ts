@@ -459,6 +459,37 @@ export async function sendWeeklyDigestEmail(
   });
 }
 
+// ─── Send Email via User's Connected Account or Fallback to Resend ──
+
+/**
+ * Try sending via the user's connected Gmail/Outlook first.
+ * Falls back to Resend (company domain) if no connection or send fails.
+ */
+export async function sendEmailViaUserOrFallback(
+  userId: string,
+  params: SendEmailParams,
+): Promise<{ id?: string; error?: string; sentFrom?: string; provider?: string }> {
+  try {
+    // Dynamic import to avoid circular deps
+    const { sendViaUserEmail, hasConnectedEmail } = await import('@/lib/email/oauth');
+
+    const connected = await hasConnectedEmail(userId);
+    if (connected) {
+      const result = await sendViaUserEmail(userId, params);
+      if (result.success) {
+        return { id: result.messageId, sentFrom: result.sentFrom, provider: result.provider };
+      }
+      console.warn(`[Email] User email failed, falling back to Resend: ${result.error}`);
+    }
+  } catch (err) {
+    console.warn('[Email] OAuth email unavailable, using Resend:', (err as Error).message);
+  }
+
+  // Fallback: send via Resend (company domain)
+  const result = await sendEmail(params);
+  return { ...result, provider: 'resend', sentFrom: FROM_EMAIL };
+}
+
 // ─── Job Application Email (Cold Outreach by Archer Agent) ──
 
 export async function sendJobApplicationEmail({

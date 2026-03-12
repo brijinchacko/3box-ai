@@ -8,7 +8,7 @@ import {
   FileText, Plus, Edit3, Download, Copy, Trash2, Eye, Wand2,
   Briefcase, GraduationCap, Code, Award, User, Mail, Phone,
   MapPin, Linkedin, Globe, ArrowRight, CheckCircle2, Sparkles,
-  Crown, Lock, X, Loader2, Users,
+  Crown, Lock, X, Loader2, Users, ShieldCheck, FileEdit, BarChart3, AlertTriangle, ClipboardCopy,
 } from 'lucide-react';
 import TemplatePreview from '@/components/resume/TemplatePreview';
 import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
@@ -41,6 +41,7 @@ const emptyResume = {
   experience: [] as { id: string; company: string; role: string; location: string; startDate: string; endDate: string; current: boolean; bullets: string[] }[],
   education: [] as { id: string; institution: string; degree: string; field: string; startDate: string; endDate: string; gpa: string }[],
   skills: [] as string[],
+  skillDescriptions: {} as Record<string, string>,
   certifications: [] as { id: string; name: string; issuer: string; date: string; verified: boolean }[],
   projects: [] as { id: string; name: string; description: string; url: string; technologies: string[] }[],
 };
@@ -153,15 +154,53 @@ function AutopilotResume() {
   const [resume, setResume] = useState(emptyResume);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [resumeLoaded, setResumeLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin' | 'portfolio'>('editor');
   const [activeSection, setActiveSection] = useState('contact');
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [atsResult, setAtsResult] = useState<any>(null);
+  const [atsLoading, setAtsLoading] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+  const [coverLetterJobDesc, setCoverLetterJobDesc] = useState('');
+  const [genericCoverLetter, setGenericCoverLetter] = useState('');
+  const [jdCoverLetter, setJdCoverLetter] = useState('');
+  const [genericCLLoading, setGenericCLLoading] = useState(false);
+  const [jdCLLoading, setJdCLLoading] = useState(false);
+  const [linkedinSuggestions, setLinkedinSuggestions] = useState<any>(null);
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
+  const [linkedinChecklist, setLinkedinChecklist] = useState<Record<string, boolean>>({
+    headline: false,
+    photo: false,
+    about: false,
+    openToWork: false,
+    experience: false,
+    skills: false,
+    location: false,
+    uploadCV: false,
+  });
+  const [portfolio, setPortfolio] = useState<any>(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const [portfolioFetched, setPortfolioFetched] = useState(false);
+  const [showAddPortfolioPrompt, setShowAddPortfolioPrompt] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(true);
+  const [showAIWizard, setShowAIWizard] = useState(false);
+  const [wizardForm, setWizardForm] = useState({ targetRole: '', yearsExperience: '1-3', achievements: '', tone: 'Professional' });
+  const [wizardGenerating, setWizardGenerating] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
 
-  // Load resume from DB (includes onboarding data, CareerTwin fallback)
+  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  // Load resume from DB, then auto-generate if empty
   useEffect(() => {
     fetch('/api/user/resume')
       .then(res => res.ok ? res.json() : null)
@@ -176,13 +215,119 @@ function AutopilotResume() {
             skills: data.resume.skills || [],
             certifications: data.resume.certifications || [],
             projects: data.resume.projects || [],
+            skillDescriptions: data.resume.skillDescriptions || {},
           }));
           if (data.resumeId) setResumeId(data.resumeId);
+          // Check if resume has real content (summary OR experience OR 3+ skills)
+          const hasContent = data.resume.summary || (data.resume.experience?.length > 0) || (data.resume.skills?.length >= 3);
+          if (hasContent) {
+            setIsFirstTime(false);
+            // Generate AI suggestions for what to improve
+            generateAISuggestions(data.resume);
+          } else {
+            // Auto-generate resume using profile data — never show empty
+            autoGenerateResume(data.resume?.contact?.name || session?.user?.name || '');
+          }
+        } else {
+          // No resume at all — auto-generate
+          autoGenerateResume(session?.user?.name || '');
         }
       })
       .catch(() => {})
       .finally(() => setResumeLoaded(true));
   }, [session?.user?.email]);
+
+  // Auto-generate a full resume from onboarding/profile data
+  const autoGenerateResume = async (userName: string) => {
+    setAutoGenerating(true);
+    setIsFirstTime(false); // Don't show welcome screen — show loading state in editor
+    try {
+      // First check if there's a search profile or onboarding data to get target role
+      let targetRole = '';
+      try {
+        const profileRes = await fetch('/api/user/profile');
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          targetRole = profileData.targetRole || profileData.currentRole || '';
+        }
+      } catch {}
+
+      // If no target role from profile, try search profiles (loops)
+      if (!targetRole) {
+        try {
+          const loopsRes = await fetch('/api/user/loops');
+          if (loopsRes.ok) {
+            const loopsData = await loopsRes.json();
+            if (loopsData.profiles?.length > 0) {
+              targetRole = loopsData.profiles[0].jobTitle || '';
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback to a generic role
+      if (!targetRole) targetRole = 'Software Developer';
+
+      const res = await fetch('/api/ai/resume/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetRole,
+          yearsExperience: '1-3',
+          achievements: '',
+          tone: 'Professional',
+        }),
+      });
+
+      if (!res.ok) throw new Error('Generation failed');
+      const data = await res.json();
+      if (data.resume) {
+        setResume(prev => ({
+          ...prev,
+          ...data.resume,
+          contact: {
+            ...prev.contact,
+            ...(data.resume.contact || {}),
+            name: data.resume.contact?.name || userName || prev.contact.name,
+            email: data.resume.contact?.email || session?.user?.email || prev.contact.email,
+          },
+          experience: data.resume.experience || [],
+          education: data.resume.education || [],
+          skills: data.resume.skills || [],
+          skillDescriptions: data.resume.skillDescriptions || {},
+          certifications: data.resume.certifications || [],
+          projects: data.resume.projects || [],
+        }));
+        generateAISuggestions(data.resume);
+        showToast('AI generated your resume! Review and customize it.', 'success');
+      }
+    } catch {
+      // If AI generation fails, still show the editor with empty form
+      showToast('Could not auto-generate. Fill in your details manually.', 'error');
+    } finally {
+      setAutoGenerating(false);
+    }
+  };
+
+  // Generate AI suggestions for what's missing or could be improved
+  const generateAISuggestions = (resumeData: any) => {
+    const suggestions: string[] = [];
+    if (!resumeData.contact?.phone) suggestions.push('Add your phone number for recruiters to reach you');
+    if (!resumeData.contact?.linkedin) suggestions.push('Add your LinkedIn profile URL — recruiters check this first');
+    if (!resumeData.contact?.portfolio) suggestions.push('Create a portfolio to showcase your work (use the Portfolio tab)');
+    if (!resumeData.contact?.location) suggestions.push('Add your location — many jobs filter by location');
+    if (!resumeData.summary || resumeData.summary.length < 50) suggestions.push('Write a compelling 3-4 sentence professional summary');
+    if (!resumeData.experience || resumeData.experience.length === 0) suggestions.push('Add your work experience — even internships count');
+    if (resumeData.experience?.length > 0) {
+      const hasWeakBullets = resumeData.experience.some((e: any) => !e.bullets || e.bullets.length < 3);
+      if (hasWeakBullets) suggestions.push('Add more bullet points with measurable achievements to your experience');
+    }
+    if (!resumeData.education || resumeData.education.length === 0) suggestions.push('Add your education details');
+    if (!resumeData.skills || resumeData.skills.length < 5) suggestions.push('Add at least 10-15 relevant skills for ATS optimization');
+    if (!resumeData.projects || resumeData.projects.length === 0) suggestions.push('Add 2-3 projects to showcase your technical abilities');
+    if (!resumeData.certifications || resumeData.certifications.length === 0) suggestions.push('Add relevant certifications to stand out');
+    setAiSuggestions(suggestions);
+  };
 
   // Auto-save to DB with debounce
   useEffect(() => {
@@ -205,10 +350,71 @@ function AutopilotResume() {
     return () => clearTimeout(timer);
   }, [resume, resumeLoaded, resumeId]);
 
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
+  const handleAIGenerate = async () => {
+    if (!wizardForm.targetRole) return;
+    setWizardGenerating(true);
+    try {
+      const res = await fetch('/api/ai/resume/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(wizardForm),
+      });
+      if (!res.ok) throw new Error('Generation failed');
+      const data = await res.json();
+      if (data.resume) {
+        setResume(prev => ({
+          ...prev,
+          ...data.resume,
+          contact: { ...prev.contact, ...(data.resume.contact || {}) },
+          experience: data.resume.experience || [],
+          education: data.resume.education || [],
+          skills: data.resume.skills || [],
+          skillDescriptions: data.resume.skillDescriptions || {},
+          certifications: data.resume.certifications || [],
+          projects: data.resume.projects || [],
+        }));
+        setIsFirstTime(false);
+        setShowAIWizard(false);
+        showToast('Resume generated! Review and customize it.', 'success');
+      }
+    } catch { showToast('Failed to generate resume. Try again.', 'error'); }
+    finally { setWizardGenerating(false); }
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingResume(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/resume/parse', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        showToast('Resume upload coming soon! Use AI Generate instead.', 'error');
+        return;
+      }
+      const data = await res.json();
+      if (data.resume) {
+        setResume(prev => ({
+          ...prev,
+          ...data.resume,
+          contact: { ...prev.contact, ...(data.resume.contact || {}) },
+          experience: data.resume.experience || [],
+          education: data.resume.education || [],
+          skills: data.resume.skills || [],
+          skillDescriptions: data.resume.skillDescriptions || {},
+          certifications: data.resume.certifications || [],
+          projects: data.resume.projects || [],
+        }));
+        setIsFirstTime(false);
+        showToast('Resume parsed successfully!', 'success');
+      }
+    } catch { showToast('Failed to parse resume. Try AI Generate.', 'error'); }
+    finally { setUploadingResume(false); }
+  };
 
   const handleAIEnhance = async () => {
     setGenerating(true);
@@ -233,21 +439,143 @@ function AutopilotResume() {
       const res = await fetch('/api/resume/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resume, template: resume.template }),
+        body: JSON.stringify({
+          resumeData: {
+            contact: resume.contact,
+            summary: resume.summary,
+            experience: resume.experience,
+            education: resume.education,
+            skills: resume.skills,
+            skillDescriptions: resume.skillDescriptions,
+            certifications: resume.certifications,
+            projects: resume.projects,
+          },
+          template: resume.template,
+        }),
       });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${resume.title || 'resume'}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('Resume exported!', 'success');
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        if (err?.error === 'upgrade_required') {
+          window.location.href = '/pricing';
+          return;
+        }
+        throw new Error(err?.message ?? 'Export failed');
       }
+      // API returns HTML with auto-print script — open in new tab
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      showToast('Resume opened — use the print dialog to save as PDF.', 'success');
     } catch { showToast('Export failed.', 'error'); }
     finally { setExporting(false); }
   };
+
+  const handleATSCheck = async () => {
+    setAtsLoading(true);
+    setAtsResult(null);
+    try {
+      const res = await fetch('/api/ai/resume/ats-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume }),
+      });
+      if (!res.ok) throw new Error('ATS check failed');
+      const data = await res.json();
+      setAtsResult(data);
+      showToast('ATS analysis complete!', 'success');
+    } catch { showToast('ATS check failed. Try again.', 'error'); }
+    finally { setAtsLoading(false); }
+  };
+
+  const handleGenericCoverLetter = async () => {
+    setGenericCLLoading(true);
+    setGenericCoverLetter('');
+    try {
+      const res = await fetch('/api/ai/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume, jobDescription: '' }),
+      });
+      if (!res.ok) throw new Error('Generation failed');
+      const data = await res.json();
+      setGenericCoverLetter(data.coverLetter);
+    } catch { showToast('Failed to generate cover letter.', 'error'); }
+    finally { setGenericCLLoading(false); }
+  };
+
+  const handleJDCoverLetter = async () => {
+    if (!coverLetterJobDesc.trim()) {
+      showToast('Please paste a job description first.', 'error');
+      return;
+    }
+    setJdCLLoading(true);
+    setJdCoverLetter('');
+    try {
+      const res = await fetch('/api/ai/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume, jobDescription: coverLetterJobDesc }),
+      });
+      if (!res.ok) throw new Error('Generation failed');
+      const data = await res.json();
+      setJdCoverLetter(data.coverLetter);
+      showToast('Targeted cover letter generated!', 'success');
+    } catch { showToast('Failed to generate cover letter.', 'error'); }
+    finally { setJdCLLoading(false); }
+  };
+
+  const handleLinkedinSuggestions = async () => {
+    setLinkedinLoading(true);
+    setLinkedinSuggestions(null);
+    try {
+      const res = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: 'linkedin',
+          content: JSON.stringify({
+            name: resume.contact.name,
+            role: resume.experience?.[0]?.role || '',
+            summary: resume.summary,
+            skills: resume.skills,
+            experience: resume.experience?.map(e => `${e.role} at ${e.company}`).join(', '),
+          }),
+        }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      // Try to parse as JSON, otherwise generate structured suggestions
+      try {
+        const parsed = JSON.parse(data.enhanced);
+        setLinkedinSuggestions(parsed);
+      } catch {
+        // AI returned text — construct structured format
+        setLinkedinSuggestions({
+          headline: data.enhanced?.split('\n')?.[0] || `${resume.experience?.[0]?.role || 'Professional'} | ${resume.skills?.slice(0, 3).join(' • ')}`,
+          about: data.enhanced || resume.summary,
+        });
+      }
+      showToast('LinkedIn suggestions generated!', 'success');
+    } catch {
+      // Fallback — generate locally based on resume data
+      const role = resume.experience?.[0]?.role || 'Professional';
+      const topSkills = resume.skills?.slice(0, 5).join(' | ') || '';
+      setLinkedinSuggestions({
+        headline: `${role} | ${topSkills}`,
+        about: resume.summary || 'Update your LinkedIn About section based on your resume summary.',
+      });
+      showToast('Generated suggestions from your resume data.', 'success');
+    }
+    finally { setLinkedinLoading(false); }
+  };
+
+  // Auto-generate generic cover letter when tab is opened
+  useEffect(() => {
+    if (activeTab === 'cover-letter' && !genericCoverLetter && !genericCLLoading && resume.contact.name && !isFirstTime) {
+      handleGenericCoverLetter();
+    }
+  }, [activeTab, resume.contact.name, isFirstTime]);
 
   const sections = [
     { id: 'contact', label: 'Contact', icon: User },
@@ -271,6 +599,153 @@ function AutopilotResume() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <AnimatePresence>{toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}</AnimatePresence>
 
+      {/* Auto-generating loading state */}
+      {autoGenerating && (
+        <div className="max-w-md mx-auto py-20 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center mx-auto mb-5 animate-pulse">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">AI is building your resume...</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Using your profile data to create a professional, ATS-optimized resume.</p>
+          <Loader2 className="w-6 h-6 animate-spin text-purple-500 mx-auto" />
+        </div>
+      )}
+
+      {/* First-time fallback — only shows if auto-generate hasn't kicked in */}
+      {isFirstTime && resumeLoaded && !autoGenerating && !showAIWizard && (
+        <div className="max-w-2xl mx-auto py-16">
+          <div className="text-center mb-10">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Create Your Professional Resume</h1>
+            <p className="text-gray-500 dark:text-gray-400">Get started by uploading an existing resume or let AI create one for you.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="cursor-pointer group">
+              <input type="file" accept=".pdf,.docx,.doc" className="hidden" onChange={handleResumeUpload} disabled={uploadingResume} />
+              <div className="p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all bg-white dark:bg-gray-900 group-hover:shadow-lg text-center">
+                {uploadingResume ? (
+                  <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
+                ) : (
+                  <Download className="w-10 h-10 text-blue-500 mx-auto mb-3" />
+                )}
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Upload Resume</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">PDF or DOCX — we&apos;ll parse and import it</p>
+              </div>
+            </label>
+
+            <button onClick={() => setShowAIWizard(true)} className="text-left group">
+              <div className="p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all bg-white dark:bg-gray-900 group-hover:shadow-lg text-center">
+                <Sparkles className="w-10 h-10 text-purple-500 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Generate with AI</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Answer a few questions and AI builds it</p>
+              </div>
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
+            You can always edit everything after generation.
+          </p>
+        </div>
+      )}
+
+      {/* AI Resume Wizard */}
+      {showAIWizard && (
+        <div className="max-w-xl mx-auto py-10">
+          <button onClick={() => setShowAIWizard(false)} className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-6">
+            <ArrowRight className="w-4 h-4 rotate-180" /> Back
+          </button>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">AI Resume Generator</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Tell us about yourself and we'll create a professional resume</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Target Role *</label>
+              <input
+                value={wizardForm.targetRole}
+                onChange={(e) => setWizardForm(prev => ({ ...prev, targetRole: e.target.value }))}
+                placeholder="e.g., Senior Full-Stack Developer"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Years of Experience</label>
+              <select
+                value={wizardForm.yearsExperience}
+                onChange={(e) => setWizardForm(prev => ({ ...prev, yearsExperience: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              >
+                <option value="0-1">0-1 years (Entry Level)</option>
+                <option value="1-3">1-3 years (Junior)</option>
+                <option value="3-5">3-5 years (Mid-Level)</option>
+                <option value="5-8">5-8 years (Senior)</option>
+                <option value="8+">8+ years (Lead/Principal)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Key Achievements (optional)</label>
+              <textarea
+                value={wizardForm.achievements}
+                onChange={(e) => setWizardForm(prev => ({ ...prev, achievements: e.target.value }))}
+                placeholder="e.g., Led a team of 5, Reduced load time by 40%, Built microservices handling 1M+ requests..."
+                rows={3}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tone</label>
+              <div className="flex gap-2">
+                {['Professional', 'Technical', 'Executive', 'Creative'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setWizardForm(prev => ({ ...prev, tone: t }))}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                      wizardForm.tone === t
+                        ? 'border-purple-300 dark:border-purple-500/40 bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400'
+                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600',
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleAIGenerate}
+              disabled={wizardGenerating || !wizardForm.targetRole}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            >
+              {wizardGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating your resume...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate Resume
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isFirstTime && !showAIWizard && !autoGenerating && (<>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -321,6 +796,33 @@ function AutopilotResume() {
         </div>
       </div>
 
+      {/* AI Suggestions Banner */}
+      {aiSuggestions.length > 0 && (
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">AI Suggestions to Improve Your Resume</span>
+            </div>
+            <button onClick={() => setAiSuggestions([])} className="text-xs text-amber-500/60 hover:text-amber-500">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {aiSuggestions.slice(0, 4).map((s, i) => (
+              <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="w-3 h-3 shrink-0" />{s}
+              </span>
+            ))}
+            {aiSuggestions.length > 4 && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100/50 dark:bg-amber-500/5 text-[11px] text-amber-600/70 dark:text-amber-400/50">
+                +{aiSuggestions.length - 4} more suggestions
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Editor / Preview tabs */}
       <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-800">
         <button
@@ -340,6 +842,55 @@ function AutopilotResume() {
           )}
         >
           <Eye className="w-4 h-4 inline mr-1.5" />Preview
+        </button>
+        <button
+          onClick={() => setActiveTab('ats')}
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            activeTab === 'ats' ? 'border-green-600 text-green-600 dark:text-green-400' : 'border-transparent text-gray-500 dark:text-gray-400',
+          )}
+        >
+          <ShieldCheck className="w-4 h-4 inline mr-1.5" />ATS Check
+        </button>
+        <button
+          onClick={() => setActiveTab('cover-letter')}
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            activeTab === 'cover-letter' ? 'border-purple-600 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400',
+          )}
+        >
+          <FileEdit className="w-4 h-4 inline mr-1.5" />Cover Letter
+        </button>
+        <button
+          onClick={() => setActiveTab('linkedin')}
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            activeTab === 'linkedin' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400',
+          )}
+        >
+          <Linkedin className="w-4 h-4 inline mr-1.5" />LinkedIn
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('portfolio');
+            if (!portfolioFetched) {
+              setPortfolioLoading(true);
+              fetch('/api/portfolio')
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                  if (data) setPortfolio(data);
+                  setPortfolioFetched(true);
+                  setPortfolioLoading(false);
+                })
+                .catch(() => { setPortfolioLoading(false); setPortfolioFetched(true); });
+            }
+          }}
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            activeTab === 'portfolio' ? 'border-teal-600 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-gray-400',
+          )}
+        >
+          <Globe className="w-4 h-4 inline mr-1.5" />Portfolio
         </button>
       </div>
 
@@ -683,6 +1234,459 @@ function AutopilotResume() {
           </div>
         </div>
       )}
+
+      {activeTab === 'ats' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">ATS Compatibility Check</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Analyze your resume against ATS systems and get actionable feedback.</p>
+              </div>
+              <button
+                onClick={handleATSCheck}
+                disabled={atsLoading || !resume.contact.name}
+                className="px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {atsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                {atsLoading ? 'Analyzing...' : 'Run ATS Check'}
+              </button>
+            </div>
+
+            {!atsResult && !atsLoading && (
+              <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+                <ShieldCheck className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Click &quot;Run ATS Check&quot; to analyze your resume compatibility.</p>
+              </div>
+            )}
+
+            {atsResult && (
+              <div className="space-y-6">
+                {/* Score overview */}
+                <div className="flex items-center gap-6 p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                  <div className="flex-shrink-0 w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold border-4"
+                    style={{
+                      borderColor: atsResult.score >= 80 ? '#22c55e' : atsResult.score >= 60 ? '#eab308' : '#ef4444',
+                      color: atsResult.score >= 80 ? '#22c55e' : atsResult.score >= 60 ? '#eab308' : '#ef4444',
+                    }}
+                  >
+                    {atsResult.score}
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">Grade: {atsResult.grade}</div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {atsResult.score >= 80 ? 'Your resume is well-optimized for ATS systems.' : atsResult.score >= 60 ? 'Good start, but there are areas to improve.' : 'Significant improvements needed for ATS compatibility.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Category breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(atsResult.feedback || []).map((item: any, i: number) => (
+                    <div key={i} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{item.category}</span>
+                        <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full',
+                          item.status === 'good' ? 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400'
+                          : item.status === 'warning' ? 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                          : 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400'
+                        )}>
+                          {item.score}/{item.maxScore}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-2">
+                        <div
+                          className="h-1.5 rounded-full transition-all"
+                          style={{
+                            width: `${(item.score / item.maxScore) * 100}%`,
+                            backgroundColor: item.status === 'good' ? '#22c55e' : item.status === 'warning' ? '#eab308' : '#ef4444',
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.message}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Suggestions */}
+                {atsResult.suggestions && atsResult.suggestions.length > 0 && (
+                  <div className="p-5 rounded-xl bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20">
+                    <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-3 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" /> Improvement Suggestions
+                    </h4>
+                    <ul className="space-y-2">
+                      {atsResult.suggestions.map((s: string, i: number) => (
+                        <li key={i} className="text-sm text-blue-600 dark:text-blue-300 flex items-start gap-2">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'cover-letter' && (
+        <div className="space-y-6">
+          {/* Generic Cover Letter — Auto-generated */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Generic Cover Letter</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-generated based on your resume — ready to use for any application.</p>
+              </div>
+              <button
+                onClick={handleGenericCoverLetter}
+                disabled={genericCLLoading || !resume.contact.name}
+                className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/30 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors flex items-center gap-1.5"
+              >
+                {genericCLLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {genericCLLoading ? 'Generating...' : 'Regenerate'}
+              </button>
+            </div>
+
+            {genericCLLoading && !genericCoverLetter && (
+              <div className="flex items-center justify-center py-10 text-gray-400 dark:text-gray-500">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" /> Generating your cover letter...
+              </div>
+            )}
+
+            {genericCoverLetter && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-end">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(genericCoverLetter); showToast('Copied to clipboard!', 'success'); }}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
+                  >
+                    <ClipboardCopy className="w-3.5 h-3.5" /> Copy
+                  </button>
+                </div>
+                <div className="p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                  <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{genericCoverLetter}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* JD-Based Cover Letter */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Targeted Cover Letter</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Paste a job description to generate a cover letter tailored to a specific role.</p>
+
+            <div className="space-y-4">
+              <textarea
+                value={coverLetterJobDesc}
+                onChange={(e) => setCoverLetterJobDesc(e.target.value)}
+                placeholder="Paste the job description here..."
+                rows={5}
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 resize-none"
+              />
+              <button
+                onClick={handleJDCoverLetter}
+                disabled={jdCLLoading || !resume.contact.name || !coverLetterJobDesc.trim()}
+                className="px-5 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {jdCLLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {jdCLLoading ? 'Generating...' : 'Generate Targeted Letter'}
+              </button>
+            </div>
+
+            {jdCoverLetter && (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Targeted Cover Letter</h4>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(jdCoverLetter); showToast('Copied to clipboard!', 'success'); }}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
+                  >
+                    <ClipboardCopy className="w-3.5 h-3.5" /> Copy
+                  </button>
+                </div>
+                <div className="p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                  <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{jdCoverLetter}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'linkedin' && (
+        <div className="space-y-6">
+          {/* LinkedIn Suggestions */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
+                  <Linkedin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">LinkedIn Optimization</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">AI-generated suggestions to make your LinkedIn profile stand out.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLinkedinSuggestions}
+                disabled={linkedinLoading || !resume.contact.name}
+                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {linkedinLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {linkedinLoading ? 'Analyzing...' : 'Generate Suggestions'}
+              </button>
+            </div>
+
+            {!linkedinSuggestions && !linkedinLoading && (
+              <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+                <Linkedin className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Click &quot;Generate Suggestions&quot; to get AI-powered LinkedIn optimization tips.</p>
+              </div>
+            )}
+
+            {linkedinSuggestions && (
+              <div className="space-y-5 mt-4">
+                {/* Headline suggestion */}
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-400">Suggested Headline</h4>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(linkedinSuggestions.headline || ''); showToast('Headline copied!', 'success'); }}
+                      className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
+                    >
+                      <ClipboardCopy className="w-3 h-3" /> Copy
+                    </button>
+                  </div>
+                  <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">{linkedinSuggestions.headline}</p>
+                </div>
+
+                {/* About section suggestion */}
+                <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-500/5 border border-purple-200 dark:border-purple-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400">Suggested About Section</h4>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(linkedinSuggestions.about || ''); showToast('About section copied!', 'success'); }}
+                      className="text-xs text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 flex items-center gap-1"
+                    >
+                      <ClipboardCopy className="w-3 h-3" /> Copy
+                    </button>
+                  </div>
+                  <p className="text-sm text-purple-800 dark:text-purple-300 whitespace-pre-wrap leading-relaxed">{linkedinSuggestions.about}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* LinkedIn Profile Checklist */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">LinkedIn Profile Checklist</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Make sure your LinkedIn profile is fully optimized. Check off each item as you complete it.</p>
+
+            <div className="space-y-3">
+              {[
+                { key: 'headline', label: 'Update your headline as per the suggestion above', desc: 'Use the AI-generated headline that highlights your role and key skills' },
+                { key: 'photo', label: 'Upload a professional profile photo and cover banner', desc: 'Profiles with photos get 21x more views and 9x more connection requests' },
+                { key: 'about', label: 'Enhance the About section as per the suggestion above', desc: 'Copy the AI-generated About section and personalize it on LinkedIn' },
+                { key: 'openToWork', label: 'Enable "Open to Work" status', desc: 'Let recruiters know you\'re actively looking for opportunities' },
+                { key: 'experience', label: 'Update Experience and Education sections in line with your latest CV', desc: 'Ensure your LinkedIn matches your resume — consistency matters to recruiters' },
+                { key: 'skills', label: 'Add key skills from your resume', desc: resume.skills?.length ? `Suggested: ${resume.skills.slice(0, 6).join(', ')}` : 'Add your top technical and professional skills' },
+                { key: 'location', label: 'Update your location', desc: 'Make sure your location matches where you\'re seeking opportunities' },
+                { key: 'uploadCV', label: 'Upload your latest CV to LinkedIn, CV Library, Indeed, and Naukri', desc: 'Maximize visibility across multiple job platforms' },
+              ].map(item => (
+                <label key={item.key} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+                  <div className="pt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={linkedinChecklist[item.key] || false}
+                      onChange={(e) => setLinkedinChecklist(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500/20 bg-white dark:bg-gray-800"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={cn(
+                      'text-sm font-medium transition-all',
+                      linkedinChecklist[item.key]
+                        ? 'text-gray-400 dark:text-gray-500 line-through'
+                        : 'text-gray-900 dark:text-white',
+                    )}>
+                      {item.label}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.desc}</p>
+                  </div>
+                  {linkedinChecklist[item.key] && (
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  )}
+                </label>
+              ))}
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Profile Completion</span>
+                <span className="text-xs font-bold text-gray-900 dark:text-white">
+                  {Object.values(linkedinChecklist).filter(Boolean).length}/{Object.keys(linkedinChecklist).length} completed
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500"
+                  style={{ width: `${(Object.values(linkedinChecklist).filter(Boolean).length / Object.keys(linkedinChecklist).length) * 100}%` }}
+                />
+              </div>
+              {Object.values(linkedinChecklist).every(Boolean) && (
+                <p className="text-xs text-green-500 mt-2 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Your LinkedIn profile is fully optimized!
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'portfolio' && (
+        <div className="space-y-6">
+          {portfolioLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            </div>
+          ) : portfolio ? (
+            <>
+              {/* Portfolio Preview Card */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-500/10 flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{portfolio.title || 'My Portfolio'}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Theme: <span className="capitalize font-medium">{portfolio.theme || 'midnight'}</span>
+                        {portfolio.isPublic && (
+                          <span className="ml-2 text-green-500">
+                            <CheckCircle2 className="w-3 h-3 inline mr-0.5" />Published
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/dashboard/portfolio"
+                    className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+                  >
+                    <Edit3 className="w-4 h-4" /> Edit Portfolio
+                  </Link>
+                </div>
+
+                {portfolio.bio && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{portfolio.bio}</p>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{portfolio.projects?.length || 0}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Projects</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{portfolio.skills?.length || 0}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Skills</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
+                    <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{portfolio.theme || 'midnight'}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Theme</p>
+                  </div>
+                </div>
+
+                {/* Public URL */}
+                {portfolio.isPublic && portfolio.slug && (
+                  <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-500/5 border border-teal-200 dark:border-teal-500/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-teal-700 dark:text-teal-400 font-medium mb-1">Public URL</p>
+                        <p className="text-sm text-teal-800 dark:text-teal-300 font-mono">
+                          {typeof window !== 'undefined' ? window.location.origin : ''}/p/{portfolio.slug}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/p/${portfolio.slug}`);
+                          showToast('Portfolio URL copied!', 'success');
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-500/10 rounded-lg transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5 inline mr-1" />Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add to resume prompt */}
+                {portfolio.isPublic && portfolio.slug && !resume.contact.portfolio && (
+                  <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Add portfolio link to your resume?</p>
+                        <p className="text-xs text-blue-600/70 dark:text-blue-400/60 mt-0.5">
+                          This will add your public portfolio URL to your resume contact info.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const portfolioUrl = `${window.location.origin}/p/${portfolio.slug}`;
+                            setResume(prev => ({
+                              ...prev,
+                              contact: { ...prev.contact, portfolio: portfolioUrl },
+                            }));
+                            showToast('Portfolio link added to resume!', 'success');
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Yes, Add It
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {portfolio.isPublic && portfolio.slug && resume.contact.portfolio && (
+                  <div className="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-500/5 border border-green-200 dark:border-green-500/20">
+                    <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Portfolio link is included in your resume.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* No portfolio yet */
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-teal-100 dark:bg-teal-500/10 flex items-center justify-center mx-auto mb-4">
+                <Globe className="w-8 h-8 text-teal-500 dark:text-teal-400 opacity-50" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Create Your Portfolio</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+                Build a beautiful portfolio page with multiple themes. Showcase your projects and skills with a public URL you can share with recruiters.
+              </p>
+              <Link
+                href="/dashboard/portfolio"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-700 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" /> Create Portfolio
+              </Link>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+                5 beautiful themes available: Midnight, Arctic, Sunset, Forest & Neon
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      </>)}
     </div>
   );
 }

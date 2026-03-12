@@ -27,7 +27,7 @@ export interface ReviewResultSummary {
 export interface ApplicationSummary {
   jobTitle: string;
   company: string;
-  method: 'email' | 'portal' | 'ats_api';
+  method: 'email' | 'portal' | 'ats_api' | 'user_email' | 'extension';
   status: 'sent' | 'queued' | 'failed';
 }
 

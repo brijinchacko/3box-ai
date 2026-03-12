@@ -6,13 +6,13 @@ import { buildResumeHTML } from '@/lib/resume/buildHTML';
 
 /**
  * Resume PDF Export API
- * - BASIC plan: blocked (403 upgrade_required)
+ * - FREE plan: blocked (403 upgrade_required)
  * - STARTER plan: export with watermark
  * - PRO / ULTRA plan: clean export
  *
- * Returns structured HTML that the client opens in a new tab for
- * browser print-to-PDF. The Content-Disposition header hints at a
- * filename but the real PDF conversion happens client-side.
+ * Returns structured HTML that the client opens in a new tab.
+ * The HTML includes an auto-print script that triggers the
+ * browser's print dialog (Save as PDF) on load.
  */
 export async function POST(req: Request) {
   try {
@@ -38,10 +38,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const plan = (user.plan ?? 'BASIC').toUpperCase();
+    const plan = (user.plan ?? 'FREE').toUpperCase();
 
     // ── 3. Plan gate ─────────────────────────────
-    if (plan === 'BASIC') {
+    if (plan === 'FREE' || plan === 'BASIC') {
       return NextResponse.json(
         {
           error: 'upgrade_required',
@@ -91,11 +91,15 @@ export async function POST(req: Request) {
       showWatermark,
     });
 
-    return new Response(html, {
+    // Inject auto-print script right before </body> so the browser
+    // print dialog (Save as PDF) opens automatically on load.
+    const autoPrintScript = `<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},500);});</script>`;
+    const htmlWithPrint = html.replace('</body>', `${autoPrintScript}\n</body>`);
+
+    return new Response(htmlWithPrint, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="resume.pdf"',
       },
     });
   } catch (error) {

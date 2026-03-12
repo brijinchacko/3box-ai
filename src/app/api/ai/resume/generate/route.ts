@@ -38,20 +38,37 @@ export async function POST(request: Request) {
     // Get full user context
     const userContext = await getUserContextString(session.user.id);
 
-    const systemPrompt = `You are an expert professional resume writer. Generate a complete, ATS-optimized resume as a JSON object.
+    const systemPrompt = `You are an expert professional resume writer specializing in ATS-optimized, technically dense resumes. Generate a complete resume as a JSON object.
 
 ${userContext}
 
-IMPORTANT RULES:
+CRITICAL RULES:
 - Use the user's REAL name, email, phone, location from their profile context above
-- Create realistic, impressive content tailored to the target role
-- Use strong action verbs and quantifiable achievements
-- Make the summary compelling and role-specific
-- Generate 2-3 relevant work experiences if none exist in profile
-- Include 8-12 relevant skills for the role
+- The resume MUST fill at least one full page. For candidates with 3+ years experience, generate enough content to fill TWO full pages
+- Use strong action verbs and quantifiable achievements with specific metrics (%, $, numbers)
+- Make the summary compelling, 3-4 sentences, packed with technical keywords
+- Generate 3-5 relevant work experiences (more detailed bullets for recent roles, fewer for older)
+- Each experience MUST have 4-6 bullet points with measurable impact
+- Include 15-25 relevant technical skills for the role
+- For EACH skill, provide a brief technical description (5-12 words)
+- Generate 2-3 relevant projects with technologies used
 - All content should be professional and tailored to the "${tone || 'Professional'}" tone
 - Target role: ${targetRole}
 - Experience level: ${yearsExperience || '1-3'} years
+
+TECHNICAL RESUME RULES:
+- Maximize technical terminology in every bullet point
+- Include specific technologies, frameworks, tools, and methodologies
+- Use industry-standard abbreviations (CI/CD, REST API, GraphQL, ORM, etc.)
+- Reference design patterns, architectures, and best practices
+- Mention cloud platforms, databases, and infrastructure tools specifically
+- Skills section should be comprehensive with technical depth
+
+CONTENT VOLUME RULES:
+- For 0-2 years experience: Generate content to fill 1 full page (3 experiences, 4 bullets each, 15 skills)
+- For 3+ years experience: Generate content to fill 2 full pages (4-5 experiences, 5-6 bullets each, 20-25 skills, 2-3 projects)
+- Summary should be 3-4 substantive sentences
+- Each bullet point should be 1-2 lines of detailed technical achievement
 
 Return ONLY valid JSON with this exact structure (no markdown, no code fences):
 {
@@ -63,7 +80,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
     "linkedin": "string",
     "portfolio": "string"
   },
-  "summary": "A compelling 2-3 sentence professional summary",
+  "summary": "A compelling 3-4 sentence professional summary packed with technical keywords",
   "experience": [
     {
       "id": "exp_1",
@@ -73,7 +90,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
       "startDate": "YYYY-MM",
       "endDate": "YYYY-MM or Present",
       "current": false,
-      "bullets": ["Achievement 1 with metrics", "Achievement 2 with metrics", "Achievement 3"]
+      "bullets": ["Detailed achievement with metrics and specific technologies used", "Another achievement with quantifiable impact"]
     }
   ],
   "education": [
@@ -87,7 +104,13 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
       "gpa": ""
     }
   ],
-  "skills": ["Skill 1", "Skill 2"],
+  "skills": ["React.js", "Node.js", "Python", "AWS"],
+  "skillDescriptions": {
+    "React.js": "Component-based UI framework for dynamic web applications",
+    "Node.js": "Server-side JavaScript runtime for scalable backend services",
+    "Python": "High-level language for data science and automation",
+    "AWS": "Cloud computing platform for scalable infrastructure"
+  },
   "certifications": [
     {
       "id": "cert_1",
@@ -101,9 +124,9 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
     {
       "id": "proj_1",
       "name": "Project Name",
-      "description": "Brief description with impact",
+      "description": "Detailed description with technical architecture and measurable impact",
       "url": "",
-      "technologies": ["Tech 1", "Tech 2"]
+      "technologies": ["Tech 1", "Tech 2", "Tech 3"]
     }
   ]
 }`;
@@ -125,7 +148,7 @@ Use my real profile information where available. Fill in realistic content for a
       model: model.id,
       temperature: 0.6,
       jsonMode: model.supportsJsonMode,
-      maxTokens: 4096,
+      maxTokens: 8192,
     });
 
     // Parse AI response
@@ -135,6 +158,11 @@ Use my real profile information where available. Fill in realistic content for a
     } catch (parseErr) {
       console.error('[AI Resume Generate] Failed to parse AI response:', parseErr);
       return NextResponse.json({ error: 'AI generated invalid response. Please try again.' }, { status: 500 });
+    }
+
+    // Ensure skillDescriptions is always present
+    if (!resumeData.skillDescriptions && Array.isArray(resumeData.skills)) {
+      resumeData.skillDescriptions = {};
     }
 
     return NextResponse.json({ resume: resumeData });
