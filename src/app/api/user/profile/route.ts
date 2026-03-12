@@ -76,9 +76,9 @@ export async function GET(request: NextRequest) {
       dailyCap: {
         used: dailyCap.used,
         limit: dailyCap.limit,
-        remaining: dailyCap.isUnlimited ? -1 : dailyCap.remaining,
-        isUnlimited: dailyCap.isUnlimited,
-        resetsAt: dailyCap.resetsAt.toISOString(),
+        remaining: dailyCap.remaining,
+        limitType: dailyCap.limitType,
+        resetsAt: dailyCap.resetsAt?.toISOString() ?? null,
       },
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

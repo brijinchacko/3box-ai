@@ -6,12 +6,14 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import VariationsResult from '@/components/tools/VariationsResult';
 import ResumeInput from '@/components/tools/ResumeInput';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface RecommendationResult {
   recommendations: { label: string; content: string; meta?: string }[];
 }
 
 export default function LinkedInRecommendationClient() {
+  const agent = getAgentForTool('linkedin-recommendation-generator');
   const [resumeText, setResumeText] = useState('');
   const [form, setForm] = useState({
     personName: '',
@@ -42,6 +44,11 @@ export default function LinkedInRecommendationClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="LinkedIn Recommendation Writer"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="linkedin-recommendation-generator"
     >
       {/* ── Form ──────────────────────────────────── */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -126,7 +133,7 @@ export default function LinkedInRecommendationClient() {
           ) : (
             <Award className="w-4 h-4" />
           )}
-          {loading ? 'Generating...' : 'Generate Recommendations'}
+          {loading ? 'Agent Cortex is writing your recommendation...' : 'Generate Recommendations'}
         </button>
       </form>
 

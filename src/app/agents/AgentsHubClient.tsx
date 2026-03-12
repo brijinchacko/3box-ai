@@ -206,7 +206,7 @@ export default function AgentsHubClient() {
             <h2 className="text-3xl font-bold mb-4">{firstName ? `${firstName}, Ready` : 'Ready'} to Activate Your Agent Team?</h2>
             <p className="text-white/40 mb-8">Set your career goals and let 6 AI agents handle the rest.</p>
             <Link href="/get-started" className="btn-primary text-sm inline-flex items-center gap-2">
-              Get Started Free <ArrowRight className="w-4 h-4" />
+              Get Started <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         </div>

@@ -6,12 +6,14 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import VariationsResult from '@/components/tools/VariationsResult';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface ResumeSummaryResult {
   summaries: { label: string; content: string }[];
 }
 
 export default function ResumeSummaryClient() {
+  const agent = getAgentForTool('resume-summary-generator');
   const [form, setForm] = useState({
     jobTitle: '',
     experience: '',
@@ -41,6 +43,11 @@ export default function ResumeSummaryClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Resume Summary Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="resume-summary-generator"
     >
       {/* -- Form ---------------------------------------- */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -103,7 +110,7 @@ export default function ResumeSummaryClient() {
           ) : (
             <FileText className="w-4 h-4" />
           )}
-          {loading ? 'Generating...' : 'Generate Summaries'}
+          {loading ? 'Agent Forge is writing your summary...' : 'Generate Summaries'}
         </button>
       </form>
 

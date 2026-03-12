@@ -46,8 +46,6 @@ export function organizationSchema() {
       'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/',
       'https://www.facebook.com/61586302726912',
       'https://www.instagram.com/3box.ai',
-      'https://twitter.com/3boxai',
-      'https://github.com/brijinchacko',
     ],
   };
 }

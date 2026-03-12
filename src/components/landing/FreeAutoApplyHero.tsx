@@ -608,14 +608,6 @@ export default function FreeAutoApplyHero() {
                       <Share2 className="w-4 h-4" /> WhatsApp
                     </a>
                     <a
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-medium hover:bg-white/10 transition-colors"
-                    >
-                      <Share2 className="w-4 h-4" /> Twitter
-                    </a>
-                    <a
                       href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
                       target="_blank"
                       rel="noopener noreferrer"

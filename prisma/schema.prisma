@@ -60,9 +60,12 @@ model OtpToken {
 // ─── Users ─────────────────────────────────────
 
 enum PlanTier {
+  FREE
+  PRO
+  MAX
+  // Legacy values kept temporarily for migration
   BASIC
   STARTER
-  PRO
   ULTRA
 }
 
@@ -73,16 +76,18 @@ model User {
   emailVerified   DateTime?
   image           String?
   hashedPassword  String?
-  plan            PlanTier  @default(BASIC)
+  plan            PlanTier  @default(FREE)
   isOforoInternal Boolean   @default(false)
   isStudent       Boolean   @default(false)
   stripeCustomerId String?  @unique
   stripeSubId     String?
   stripePriceId   String?
+  totalAppsUsed    Int       @default(0)     // Lifetime application counter (for FREE plan)
+  dailyAppsUsed    Int       @default(0)     // Daily application counter (for PRO/MAX plans)
+  dailyAppsResetAt DateTime  @default(now()) // Daily counter reset timestamp
+  // Legacy fields kept for backward compatibility during migration
   aiCreditsUsed   Int       @default(0)
   aiCreditsLimit  Int       @default(10)
-  dailyAppsUsed    Int       @default(0)
-  dailyAppsResetAt DateTime  @default(now())
   hasUnlimitedDaily Boolean  @default(false)
   onboardingDone  Boolean   @default(false)
   referralCode    String?   @unique
@@ -116,6 +121,7 @@ model User {
   tickets         SupportTicket[]
   scoutJobs       ScoutJob[]
   chatMessages    AgentChatMessage[]
+  searchProfiles  SearchProfile[]
 
   @@index([email])
   @@index([referralCode])
@@ -531,6 +537,11 @@ model AutoApplyConfig {
   // ── Per-Agent Independent Scheduling ──
   scoutEnabled        Boolean   @default(false)
   scoutInterval       Int       @default(24)      // Hours between runs: 1, 2, 4, 6, 12, 24
+  scoutJobsPerSearch  Int       @default(10)      // Jobs to search per interval (5–50)
+  scoutDailyCap       Int       @default(50)      // Max applications per day (max 100)
+  scoutDailyCount     Int       @default(0)       // Applications today (reset daily)
+  scoutDailyResetAt   DateTime?                   // When daily count was last reset
+  scoutAutoMode       Boolean   @default(false)   // Auto-hunt toggle
   scoutLastRunAt      DateTime?
 
   forgeEnabled        Boolean   @default(false)
@@ -600,6 +611,35 @@ model AgentChatMessage {
 
   @@index([userId, agentId, createdAt])
   @@index([userId, agentId])
+}
+
+// ─── Search Profiles (user-configured job search loops) ──
+
+model SearchProfile {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  jobTitle        String
+  location        String?
+  remote          Boolean  @default(false)
+  experienceLevel String?
+  boards          Json?    // string[] of board IDs
+  includeKeywords String?
+  excludeKeywords String?
+  excludeCompanies String?
+  matchTolerance  Int      @default(70)
+  autoApply       Boolean  @default(false)
+  autoSearch      Boolean  @default(true)
+  active          Boolean  @default(true)
+  jobsFound       Int      @default(0)
+  appliedCount    Int      @default(0)
+  lastRunAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, active])
 }
 
 // ─── Scout Job Store (persistent discovered jobs) ──

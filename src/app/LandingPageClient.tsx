@@ -18,7 +18,7 @@ const steps = [
 ];
 
 const faqItems = [
-  { q: 'Do I really get 20 free applications?', a: 'Yes. Upload your resume, pick your target role, and our AI agents find 20 matching jobs and apply to each one with a tailored cover letter. No credit card needed.' },
+  { q: 'Is there a money-back guarantee?', a: 'Yes. All paid plans include a 7-day money-back guarantee. If you\'re not satisfied, request a full refund within 7 days of purchase — subject to our usage conditions. See our Refund Policy for details.' },
   { q: 'How does the AI actually apply?', a: 'Agent Archer generates a unique cover letter for each job, then submits through job portals or sends a professional email to HR. Every application is tracked in your dashboard.' },
   { q: 'Will it send wrong or spammy applications?', a: 'No. Agent Sentinel reviews every application for quality before it goes out. Each has a unique, tailored cover letter \u2014 not a template.' },
   { q: 'Is my data safe?', a: 'All data is encrypted in transit and at rest. We never sell your information. You can delete your account and all data anytime.' },
@@ -67,9 +67,9 @@ export default function LandingPageClient() {
               href="/get-started"
               className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
             >
-              Get Started Free <ArrowRight className="w-5 h-5" />
+              Get Started <ArrowRight className="w-5 h-5" />
             </Link>
-            <p className="text-xs text-white/30">20 free applications &middot; No credit card</p>
+            <p className="text-xs text-white/30">7-day money-back guarantee &middot; Cancel anytime</p>
           </motion.div>
         </div>
       </section>
@@ -90,23 +90,31 @@ export default function LandingPageClient() {
           </motion.div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 relative">
-            <div className="hidden lg:block absolute top-1/2 left-[12%] right-[12%] h-px bg-gradient-to-r from-neon-blue/30 via-neon-purple/30 to-neon-green/30 -translate-y-1/2 z-0" aria-hidden="true" />
             {steps.map((item, i) => (
               <motion.div
                 key={item.num}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
+                transition={{ delay: i * 0.12, duration: 0.5 }}
                 className="relative z-10 text-center"
               >
-                <div className="glass p-5 sm:p-6 flex flex-col items-center hover:border-white/15 transition-all duration-300 group h-full">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                    <item.icon className="w-5 h-5 text-white" />
+                {/* Connecting arrow between cards (desktop only, hidden on first) */}
+                {i > 0 && (
+                  <div className="hidden lg:block absolute -left-3 lg:-left-4 top-1/2 -translate-y-1/2 -translate-x-full z-0">
+                    <ArrowRight className={`w-4 h-4 ${i === 1 ? 'text-neon-purple/40' : i === 2 ? 'text-amber-400/40' : 'text-neon-green/40'}`} />
                   </div>
-                  <div className="text-[10px] text-white/30 font-medium uppercase tracking-wider mb-1">Step {item.num}</div>
-                  <h3 className="text-sm font-semibold mb-1">{item.title}</h3>
-                  <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+                )}
+                <div className={`relative p-5 sm:p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] flex flex-col items-center hover:border-white/15 hover:bg-white/[0.04] transition-all duration-300 group h-full overflow-hidden`}>
+                  {/* Subtle gradient glow behind icon */}
+                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-32 h-20 bg-gradient-to-b ${item.gradient} opacity-[0.06] blur-2xl pointer-events-none`} />
+                  {/* Step number badge */}
+                  <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-105 transition-transform`}>
+                    <item.icon className="w-6 h-6 text-white" />
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface-50 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">{i + 1}</span>
+                  </div>
+                  <h3 className="text-sm font-bold mb-1.5 text-white">{item.title}</h3>
+                  <p className="text-xs text-white/45 leading-relaxed">{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -220,12 +228,12 @@ export default function LandingPageClient() {
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Ready to hire your <span className="gradient-text">AI team</span>?
             </h2>
-            <p className="text-white/40 mb-8">Start free. 20 applications. No credit card.</p>
+            <p className="text-white/40 mb-8">7-day money-back guarantee. No risk.</p>
             <Link
               href="/get-started"
               className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20"
             >
-              Get Started Free <ArrowRight className="w-5 h-5" />
+              Get Started <ArrowRight className="w-5 h-5" />
             </Link>
 
             {/* Mini agent row */}

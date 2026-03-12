@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db/prisma';
 import { discoverJobs, DiscoveredJob } from '@/lib/jobs/discovery';
 import { filterScamJobs } from '@/lib/jobs/scamDetector';
 import { type AgentContext, getContextSummary, logActivity } from './context';
-import { TOKEN_COSTS } from '@/lib/tokens/pricing';
+// Token system removed — AI operations are unlimited, only applications are limited.
 
 export interface ScoutConfig {
   userId: string;
@@ -255,11 +255,7 @@ export async function runIndependentScout(
     // 3. Persist to ScoutJob table with dedup
     const { newCount, dupCount } = await persistScoutJobs(userId, scoutResult.jobs, run.id);
 
-    // 4. Calculate token cost
-    const platformCount = config.platforms?.length || 6;
-    const tokenCost = platformCount * TOKEN_COSTS.scout_search_per_platform;
-
-    // 5. Update run record + deduct tokens + update lastRunAt
+    // 4. Update run record + lastRunAt
     await Promise.all([
       prisma.autoApplyRun.update({
         where: { id: run.id },
@@ -267,7 +263,7 @@ export async function runIndependentScout(
           status: 'completed',
           completedAt: new Date(),
           jobsFound: scoutResult.totalFound,
-          creditsUsed: tokenCost,
+          creditsUsed: 0,
           summary: `Scout found ${scoutResult.totalFound} jobs, ${newCount} new, ${dupCount} duplicates (${scoutResult.scamJobsFiltered} scam filtered) from ${scoutResult.sources.join(', ')}`,
           details: JSON.parse(JSON.stringify({
             totalFound: scoutResult.totalFound,
@@ -282,10 +278,6 @@ export async function runIndependentScout(
         where: { userId },
         data: { scoutLastRunAt: new Date() },
       }),
-      prisma.user.update({
-        where: { id: userId },
-        data: { aiCreditsUsed: { increment: tokenCost } },
-      }),
     ]);
 
     return {
@@ -293,7 +285,7 @@ export async function runIndependentScout(
       jobsDiscovered: scoutResult.totalFound,
       jobsNew: newCount,
       jobsDuplicate: dupCount,
-      creditsUsed: tokenCost,
+      creditsUsed: 0,
       sources: scoutResult.sources,
     };
   } catch (err) {

@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Chrome, KeyRound, ShieldCheck, Linkedin } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 
@@ -21,6 +21,16 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export default function LoginPageClient() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { status } = useSession();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [status, router]);
+
   const [mode, setMode] = useState<AuthMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -247,6 +257,11 @@ export default function LoginPageClient() {
   const handleLinkedInSignIn = () => {
     signIn('linkedin', { callbackUrl: '/dashboard' });
   };
+
+  // Show blank screen while checking auth or redirecting (prevents flash)
+  if (status === 'loading' || status === 'authenticated') {
+    return <div className="min-h-screen bg-surface" />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface bg-grid relative">

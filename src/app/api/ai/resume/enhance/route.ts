@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
-
-import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
+import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -26,21 +25,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const gate = await checkFeatureGate(session.user.id);
+    if (gate.locked) {
+      return NextResponse.json({ error: gate.reason || 'Free plan limit reached. Please upgrade.' }, { status: 403 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Check token balance
-    const cost = TOKEN_COSTS.resume_enhance;
-    if (!canAfford(user.aiCreditsUsed, user.aiCreditsLimit, cost)) {
-      return NextResponse.json(
-        { error: 'Insufficient tokens', code: 'INSUFFICIENT_TOKENS', required: cost, remaining: Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed) },
-        { status: 402 },
-      );
     }
 
     const body = await req.json();
@@ -144,16 +139,6 @@ export async function POST(req: Request) {
       result = (enhancementMap[section] || enhancementMap.full)(content);
       result.suggestions.unshift('[Demo Mode] AI enhancement is running with sample suggestions. Configure OpenRouter API key for full AI-powered optimization.');
     }
-
-    // Deduct tokens
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { aiCreditsUsed: { increment: cost } },
-    });
-
-    // Check for low credit alert (non-blocking)
-    const { checkAndAlertLowCredits } = require('@/lib/credits');
-    checkAndAlertLowCredits(session.user.id).catch(() => {});
 
     return NextResponse.json({
       enhanced: result.enhanced,

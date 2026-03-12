@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { targetRole, interests, profile, agentName } = body;
+    const { targetRole, interests, profile, agentName, resumeText } = body;
 
     if (!targetRole) {
       return NextResponse.json(
@@ -113,6 +113,66 @@ export async function POST(request: NextRequest) {
         hireProb: 0,
       },
     });
+
+    // Create a Resume record from onboarding data in the editor-compatible shape
+    // so the dashboard resume builder can load and edit it immediately.
+    if (profile) {
+      try {
+        const editorResume = {
+          id: '1',
+          title: `${targetRole} Resume`,
+          template: 'modern',
+          contact: {
+            name: profile.fullName || '',
+            email: session.user.email || '',
+            phone: profile.phone || '',
+            location: profile.location || '',
+            linkedin: profile.linkedin || '',
+            portfolio: '',
+          },
+          summary: profile.bio || '',
+          experience: (profile.experiences || []).map((e: any, i: number) => ({
+            id: String(i + 1),
+            company: e.company || '',
+            role: e.title || '',
+            location: '',
+            startDate: e.duration?.split('-')[0]?.trim() || '',
+            endDate: e.duration?.split('-')[1]?.trim() || '',
+            current: false,
+            bullets: e.description ? [e.description] : [],
+          })),
+          education: profile.educationLevel ? [{
+            id: '1',
+            institution: profile.institution || '',
+            degree: profile.educationLevel || '',
+            field: profile.fieldOfStudy || '',
+            startDate: '',
+            endDate: profile.graduationYear || '',
+            gpa: '',
+          }] : [],
+          skills: profile.skills || [],
+          certifications: [],
+          projects: [],
+        };
+
+        await prisma.resume.create({
+          data: {
+            userId: session.user.id,
+            title: `${targetRole} Resume`,
+            content: editorResume,
+            template: 'modern',
+            targetJob: targetRole,
+            sourceType: 'onboarding',
+            isFinalized: true,
+            approvalStatus: 'approved',
+            approvedAt: new Date(),
+          },
+        });
+      } catch (resumeErr) {
+        // Non-blocking — don't fail onboarding if resume save fails
+        console.warn('[Onboarding] Resume save failed:', resumeErr);
+      }
+    }
 
     // Upsert CoachSettings with agent name if provided
     if (agentName && typeof agentName === 'string' && agentName.trim().length > 0) {

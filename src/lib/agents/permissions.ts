@@ -1,77 +1,67 @@
 import { AgentId, AGENTS, AGENT_LIST, AgentDefinition } from './registry';
 
-export type PlanTier = 'BASIC' | 'STARTER' | 'PRO' | 'ULTRA';
+export type PlanTier = 'FREE' | 'PRO' | 'MAX';
 
-const PLAN_HIERARCHY: Record<PlanTier, number> = {
-  BASIC: 0,
-  STARTER: 1,
-  PRO: 2,
-  ULTRA: 3,
-};
-
-const MIN_PLAN_LEVEL: Record<string, number> = {
-  STARTER: 1,
-  PRO: 2,
-  ULTRA: 3,
+// Legacy plan mapping for backward compatibility
+export const LEGACY_PLAN_MAP: Record<string, PlanTier> = {
+  BASIC: 'FREE',
+  STARTER: 'PRO',
+  PRO: 'PRO',
+  ULTRA: 'MAX',
+  FREE: 'FREE',
+  MAX: 'MAX',
 };
 
 /**
- * Check if a specific agent is available on the given plan
+ * All agents are available on all plans.
+ * The only limit is job applications (FREE=10 lifetime, PRO=20/day, MAX=50/day).
  */
-export function isAgentAvailable(agentId: AgentId, plan: PlanTier): boolean {
-  const agent = AGENTS[agentId];
-  if (!agent) return false;
-  const userLevel = PLAN_HIERARCHY[plan] ?? 0;
-  const requiredLevel = PLAN_HIERARCHY[agent.minPlan as PlanTier] ?? 3;
-  return userLevel >= requiredLevel;
+export function isAgentAvailable(_agentId: AgentId, _plan: PlanTier): boolean {
+  return true;
 }
 
 /**
- * Get all agents available on the given plan
+ * Get all agents — all are available on every plan.
  */
-export function getActiveAgents(plan: PlanTier): AgentDefinition[] {
-  return AGENT_LIST.filter(agent => isAgentAvailable(agent.id, plan));
+export function getActiveAgents(_plan: PlanTier): AgentDefinition[] {
+  return AGENT_LIST;
 }
 
 /**
- * Get all agents with their locked/unlocked status for the given plan
+ * Get all agents with their locked/unlocked status — none are locked.
  */
-export function getAgentsWithStatus(plan: PlanTier): (AgentDefinition & { locked: boolean })[] {
+export function getAgentsWithStatus(_plan: PlanTier): (AgentDefinition & { locked: boolean })[] {
   return AGENT_LIST.map(agent => ({
     ...agent,
-    locked: !isAgentAvailable(agent.id, plan),
+    locked: false,
   }));
 }
 
 /**
- * Get the number of active agents for a plan
+ * Get the number of active agents for a plan — always all agents.
  */
-export function getAgentCount(plan: PlanTier): number {
-  return getActiveAgents(plan).length;
+export function getAgentCount(_plan: PlanTier): number {
+  return AGENT_LIST.length;
 }
 
 /**
- * Get the plan needed to unlock a specific agent
+ * Get the plan needed to unlock a specific agent — always FREE (all unlocked).
  */
-export function getPlanForAgent(agentId: AgentId): string {
-  const agent = AGENTS[agentId];
-  return agent?.minPlan || 'ULTRA';
+export function getPlanForAgent(_agentId: AgentId): string {
+  return 'FREE';
 }
 
 /**
- * Agent counts per plan:
- * BASIC: 0, STARTER: 2 (Scout+Forge), PRO: 4 (+Archer+Atlas), ULTRA: 6 (all)
+ * Agent counts per plan — all plans get all 6 agents.
  */
 export const PLAN_AGENT_COUNTS: Record<PlanTier, number> = {
-  BASIC: 0,
-  STARTER: 2,
-  PRO: 4,
-  ULTRA: 6,
+  FREE: 6,
+  PRO: 6,
+  MAX: 6,
 };
 
 /**
  * Check if an agent is allowed to run in burst mode (free auto-apply).
- * Burst mode bypasses plan checks for a limited set of agents.
  */
 export function isBurstModeAllowed(agentId: AgentId): boolean {
   return ['scout', 'archer'].includes(agentId);

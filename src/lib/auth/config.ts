@@ -148,8 +148,6 @@ export const authOptions: NextAuthOptions = {
             token.onboardingDone = dbUser.onboardingDone;
             token.referralCode = dbUser.referralCode;
             token.stripeCustomerId = dbUser.stripeCustomerId;
-            token.aiCreditsUsed = dbUser.aiCreditsUsed;
-            token.aiCreditsLimit = dbUser.aiCreditsLimit;
           }
         } catch (err) {
           console.error('[NextAuth] jwt callback DB error:', err);
@@ -166,8 +164,6 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).onboardingDone = token.onboardingDone;
         (session.user as any).referralCode = token.referralCode;
         (session.user as any).stripeCustomerId = token.stripeCustomerId;
-        (session.user as any).aiCreditsUsed = token.aiCreditsUsed;
-        (session.user as any).aiCreditsLimit = token.aiCreditsLimit;
       }
       return session;
     },
@@ -176,7 +172,7 @@ export const authOptions: NextAuthOptions = {
         const prisma = getPrisma();
         await prisma.user.update({
           where: { email: user.email },
-          data: { isOforoInternal: true, plan: 'ULTRA', aiCreditsLimit: -1 },
+          data: { isOforoInternal: true, plan: 'MAX' },
         }).catch(() => {}); // user might not exist yet
       }
       return true;

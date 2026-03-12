@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
-import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
+import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -57,6 +57,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const gate = await checkFeatureGate(session.user.id);
+    if (gate.locked) {
+      return NextResponse.json({ error: gate.reason || 'Free plan limit reached. Please upgrade.' }, { status: 403 });
+    }
+
     const userId = session.user.id;
 
     // Fetch user data in parallel
@@ -101,17 +106,6 @@ export async function GET() {
         careerScore: 0,
         weeklyTip:
           'Start by completing a skills assessment to unlock personalized career insights and recommendations.',
-      });
-    }
-
-    // Token check for AI-powered insights
-    const insightCost = TOKEN_COSTS.ai_insights;
-    if (!canAfford(user.aiCreditsUsed ?? 0, user.aiCreditsLimit ?? 0, insightCost)) {
-      // Not enough tokens — return static fallback instead of erroring
-      return NextResponse.json({
-        insights: [{ type: 'action' as const, title: 'Token Limit Reached', description: 'Buy more tokens to unlock AI-powered career insights.', action: '/pricing', priority: 'high' as const }],
-        careerScore: 0,
-        weeklyTip: 'Purchase additional tokens to continue receiving personalized career insights.',
       });
     }
 
@@ -207,12 +201,6 @@ Generate 3-5 relevant insights. Prioritize actionable items. Be encouraging but 
           'Consistency is key. Spend 15 minutes each day working on your career development goals.',
       };
     }
-
-    // Deduct tokens
-    await prisma.user.update({
-      where: { id: userId },
-      data: { aiCreditsUsed: { increment: insightCost } },
-    });
 
     return NextResponse.json({
       insights: insightsData.insights || [],

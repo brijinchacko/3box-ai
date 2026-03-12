@@ -38,8 +38,8 @@ export interface ComparisonData {
   features: FeatureRow[];
   boxAiPrice: string;
   competitorPrice: string;
-  boxAiFreeTier: string;
-  competitorFreeTier: string;
+  boxAiEntryPlan: string;
+  competitorEntryPlan: string;
   boxAiRating: string;
   competitorRating: string;
   boxAiReviewCount: string;
@@ -171,14 +171,14 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                     </td>
                   </tr>
 
-                  {/* Free tier row */}
+                  {/* Entry plan row */}
                   <tr className="border-b border-white/5">
-                    <td className="px-6 py-4 text-sm font-medium">Free Tier</td>
+                    <td className="px-6 py-4 text-sm font-medium">Entry Plan</td>
                     <td className="px-6 py-4 text-center border-x border-neon-blue/20 bg-neon-blue/[0.03]">
-                      <span className="text-neon-green text-sm">{data.boxAiFreeTier}</span>
+                      <span className="text-neon-green text-sm">{data.boxAiEntryPlan}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-white/40 text-sm">{data.competitorFreeTier}</span>
+                      <span className="text-white/40 text-sm">{data.competitorEntryPlan}</span>
                     </td>
                   </tr>
 
@@ -292,11 +292,11 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
             </h2>
             <p className="text-white/50 mb-8 max-w-lg mx-auto">
               Join thousands of professionals who chose the all-in-one AI career platform.
-              Start free — no credit card required.
+              7-day money-back guarantee on all plans.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-                Try 3BOX AI Free <ArrowRight className="w-4 h-4" />
+                Try 3BOX AI <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/pricing"

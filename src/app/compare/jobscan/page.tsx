@@ -59,8 +59,8 @@ const data: ComparisonData = {
   ],
   boxAiPrice: '$12/mo',
   competitorPrice: '$49.95/mo',
-  boxAiFreeTier: 'Yes — AI resume builder, 2 assessments, 50 AI credits',
-  competitorFreeTier: 'Limited — 5 scans/mo',
+  boxAiEntryPlan: 'Starter Duo — $12/mo with 100 AI credits, 7-day money-back guarantee',
+  competitorEntryPlan: 'Limited — 5 scans/mo',
   boxAiRating: '4.8',
   competitorRating: '4.4',
   boxAiReviewCount: '2,847',
@@ -110,7 +110,7 @@ const data: ComparisonData = {
     {
       question: 'Can I switch from Jobscan to 3BOX AI easily?',
       answer:
-        'Yes. Sign up for 3BOX AI free, upload your existing resume, and you\'ll immediately have access to ATS checking plus all the additional career tools. No migration needed.',
+        'Yes. Sign up for 3BOX AI, upload your existing resume, and you\'ll immediately have access to ATS checking plus all the additional career tools. 7-day money-back guarantee included.',
     },
     {
       question: 'Does 3BOX AI work for all industries?',

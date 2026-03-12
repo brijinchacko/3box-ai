@@ -933,7 +933,7 @@ export default function GetStartedClient() {
                         className="space-y-5"
                       >
                         <p className="text-sm text-white/30">
-                          Free forever. No credit card required.
+                          7-day money-back guarantee on all plans.
                         </p>
 
                         {signupError && (

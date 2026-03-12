@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { canAfford as checkAfford, tokensRemaining, tokenUsagePercent } from '@/lib/tokens/pricing';
 
-interface DailyCapData {
+interface ApplicationCapData {
   used: number;
   limit: number;
   remaining: number;
-  isUnlimited: boolean;
-  resetsAt: string; // ISO string
+  limitType: 'lifetime' | 'daily';
+  allowed: boolean;
+  resetsAt: string | null;
 }
 
 interface TokenData {
@@ -18,18 +18,23 @@ interface TokenData {
   percentUsed: number;
   loading: boolean;
   error: string | null;
-  // Daily application cap
-  dailyCap: DailyCapData;
+  // Application cap (replaces old dailyCap)
+  dailyCap: ApplicationCapData;
 }
 
-const DEFAULT_DAILY_CAP: DailyCapData = {
+const DEFAULT_CAP: ApplicationCapData = {
   used: 0,
-  limit: 30,
-  remaining: 30,
-  isUnlimited: false,
-  resetsAt: '',
+  limit: 10,
+  remaining: 10,
+  limitType: 'lifetime',
+  allowed: true,
+  resetsAt: null,
 };
 
+/**
+ * Hook for application limits (replaces old token system).
+ * AI operations are unlimited — this only tracks application limits.
+ */
 export function useTokens(pollInterval = 30000) {
   const [data, setData] = useState<TokenData>({
     used: 0,
@@ -38,54 +43,53 @@ export function useTokens(pollInterval = 30000) {
     percentUsed: 0,
     loading: true,
     error: null,
-    dailyCap: DEFAULT_DAILY_CAP,
+    dailyCap: DEFAULT_CAP,
   });
 
   const fetchTokens = useCallback(async () => {
     try {
-      const res = await fetch('/api/user/profile');
-      if (!res.ok) throw new Error('Failed to fetch token data');
-      const profile = await res.json();
+      const res = await fetch('/api/user/application-cap');
+      if (!res.ok) throw new Error('Failed to fetch application cap');
+      const cap = await res.json();
 
-      const used = profile.aiCreditsUsed ?? 0;
-      const limit = profile.aiCreditsLimit ?? 0;
+      const appCap: ApplicationCapData = {
+        used: cap.used ?? 0,
+        limit: cap.limit ?? 10,
+        remaining: cap.remaining ?? 0,
+        limitType: cap.limitType ?? 'lifetime',
+        allowed: cap.allowed ?? true,
+        resetsAt: cap.resetsAt ?? null,
+      };
 
-      // Parse daily cap from profile response
-      const dc = profile.dailyCap;
-      const dailyCap: DailyCapData = dc
-        ? {
-            used: dc.used ?? 0,
-            limit: dc.limit ?? 30,
-            remaining: dc.isUnlimited ? Infinity : (dc.remaining ?? 30),
-            isUnlimited: dc.isUnlimited ?? false,
-            resetsAt: dc.resetsAt ?? '',
-          }
-        : DEFAULT_DAILY_CAP;
+      const percentUsed = appCap.limit > 0
+        ? Math.min(100, Math.round((appCap.used / appCap.limit) * 100))
+        : 0;
 
       setData({
-        used,
-        limit,
-        remaining: tokensRemaining(used, limit),
-        percentUsed: tokenUsagePercent(used, limit),
+        used: appCap.used,
+        limit: appCap.limit,
+        remaining: appCap.remaining,
+        percentUsed,
         loading: false,
         error: null,
-        dailyCap,
+        dailyCap: appCap,
       });
     } catch (err: any) {
       setData(prev => ({ ...prev, loading: false, error: err.message }));
     }
   }, []);
 
-  // Initial fetch + polling
   useEffect(() => {
     fetchTokens();
     const interval = setInterval(fetchTokens, pollInterval);
     return () => clearInterval(interval);
   }, [fetchTokens, pollInterval]);
 
+  // canAfford is now always true for AI operations (they're unlimited)
+  // Application limits are checked separately via the cap
   const canAfford = useCallback(
-    (cost: number) => checkAfford(data.used, data.limit, cost),
-    [data.used, data.limit]
+    (_cost: number) => data.dailyCap.allowed,
+    [data.dailyCap.allowed]
   );
 
   return {

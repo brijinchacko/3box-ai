@@ -23,14 +23,228 @@ import {
   ArrowRight,
   Inbox,
   Zap,
+  Filter,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentConfigPanel from '@/components/dashboard/AgentConfigPanel';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { notifyAgentStarted, notifyAgentCompleted, notifyAgentError } from '@/lib/notifications/toast';
+import { cn } from '@/lib/utils';
+
+// ── Autopilot Mode — Clean Applications List ──────────
+const AUTOPILOT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  QUEUED:    { label: 'Queued',    color: 'text-gray-500 dark:text-gray-400',   bg: 'bg-gray-100 dark:bg-gray-800' },
+  EMAILED:   { label: 'Emailed',   color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+  APPLIED:   { label: 'Applied',   color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
+  VIEWED:    { label: 'Viewed',    color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+  INTERVIEW: { label: 'Interview', color: 'text-purple-700 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10' },
+  OFFER:     { label: 'Offer',     color: 'text-blue-700 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-500/10' },
+  REJECTED:  { label: 'Rejected',  color: 'text-red-700 dark:text-red-400',     bg: 'bg-red-50 dark:bg-red-500/10' },
+  WITHDRAWN: { label: 'Withdrawn', color: 'text-gray-500 dark:text-gray-400',   bg: 'bg-gray-100 dark:bg-gray-800' },
+};
+
+function AutopilotApplications() {
+  const [apps, setApps] = useState<ApplicationEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<{ total: number; queued: number; emailed: number; applied: number; interview: number; offer: number; rejected: number } | null>(null);
+
+  const fetchApps = useCallback(async (status: string, pg: number) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (status !== 'all') params.set('status', status);
+      params.set('page', String(pg));
+      params.set('limit', '20');
+      const res = await fetch(`/api/applications?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      setApps(data.applications || []);
+      setStats(data.stats || null);
+      setTotal(data.total || 0);
+      setTotalPages(data.totalPages || 1);
+    } catch {
+      setApps([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApps(statusFilter, page);
+  }, [statusFilter, page, fetchApps]);
+
+  const handleFilterChange = (f: string) => { setStatusFilter(f); setPage(1); };
+
+  const filtered = searchQuery
+    ? apps.filter(a => a.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))
+    : apps;
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Applications</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          {total > 0 ? `${total} applications tracked` : 'Track all your job applications in one place.'}
+        </p>
+      </div>
+
+      {/* Stats row */}
+      {stats && stats.total > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 text-center">
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 text-center">
+            <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.applied + stats.interview + stats.offer}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 text-center">
+            <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{stats.interview}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Interviews</p>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 text-center">
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.offer}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Offers</p>
+          </div>
+        </div>
+      )}
+
+      {/* Filters bar */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search by title or company..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => handleFilterChange(e.target.value)}
+          className="text-sm border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        >
+          <option value="all">All Status</option>
+          <option value="APPLIED">Applied</option>
+          <option value="EMAILED">Emailed</option>
+          <option value="INTERVIEW">Interview</option>
+          <option value="OFFER">Offer</option>
+          <option value="QUEUED">Queued</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 text-gray-400 dark:text-gray-500 animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20">
+          <Inbox className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">
+            {total === 0 ? 'No applications yet. Start applying to jobs!' : 'No applications match your filters.'}
+          </p>
+          {total === 0 && (
+            <Link href="/dashboard/jobs" className="inline-flex items-center gap-1.5 mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+              <Search className="w-4 h-4" /> Search for Jobs
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Position</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden md:table-cell">Company</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden lg:table-cell">Location</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Match</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden sm:table-cell">Date</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((app) => {
+                const sc = AUTOPILOT_STATUS_CONFIG[app.status] || AUTOPILOT_STATUS_CONFIG.QUEUED;
+                return (
+                  <tr key={app.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900 dark:text-white line-clamp-1">{app.jobTitle}</span>
+                      <span className="text-gray-500 dark:text-gray-400 md:hidden text-xs block">{app.company}</span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{app.company}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      {app.location ? (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          <span className="line-clamp-1">{app.location}</span>
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {app.matchScore != null ? (
+                        <span className={cn(
+                          'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold',
+                          app.matchScore >= 80 ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400' :
+                          app.matchScore >= 60 ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' :
+                          'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
+                        )}>
+                          {app.matchScore}%
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={cn('inline-block px-2 py-0.5 rounded text-xs font-medium', sc.bg, sc.color)}>
+                        {sc.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-400 dark:text-gray-500 hidden sm:table-cell">
+                      {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {app.jobUrl && (
+                        <a href={app.jobUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400" />
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-3 border-t border-gray-100 dark:border-gray-800">
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">
+                <ChevronLeft className="w-4 h-4 text-gray-500" />
+              </button>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{page} / {totalPages}</span>
+              <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Types ──────────────────────────────────────────────
 interface ApplicationEntry {
@@ -137,8 +351,12 @@ function timeAgo(dateStr: string): string {
 // ── Main Page ──────────────────────────────────────────
 export default function ApplicationsPage() {
   const { data: session } = useSession();
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const { isAutopilot } = useDashboardMode();
+  const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase() as PlanTier;
   const agentLocked = !isAgentAvailable('archer', userPlan);
+
+  // In Autopilot mode, render clean applications list
+  if (isAutopilot) return <AutopilotApplications />;
 
   const [apps, setApps] = useState<ApplicationEntry[]>([]);
   const [stats, setStats] = useState<ApplicationsResponse['stats'] | null>(null);

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
-import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
+import { getAgentsWithStatus } from '@/lib/agents/permissions';
+import { normalizePlan } from '@/lib/tokens/pricing';
 import type { AgentId } from '@/lib/agents/registry';
 
 export async function GET() {
@@ -16,7 +17,7 @@ export async function GET() {
       where: { id: session.user.id },
       select: { plan: true },
     });
-    const plan = (user?.plan || 'BASIC') as PlanTier;
+    const plan = normalizePlan(user?.plan || 'FREE');
     const agents = getAgentsWithStatus(plan);
 
     // Check for any running AutoApplyRun (Scout missions)

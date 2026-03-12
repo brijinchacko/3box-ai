@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { runScout, persistScoutJobs } from '@/lib/agents/scout';
-import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
-import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
+// All agents are unlocked for all plans
 
 export async function POST(request: Request) {
   try {
@@ -26,13 +25,9 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, aiCreditsUsed: true, aiCreditsLimit: true },
+      select: { plan: true },
     });
-    const plan = (user?.plan || 'BASIC') as PlanTier;
-
-    if (!isAgentAvailable('scout', plan)) {
-      return NextResponse.json({ error: 'Scout requires Starter plan or above' }, { status: 403 });
-    }
+    // All agents are available on all plans — no plan gate needed
 
     // Parse body early so we can calculate token cost
     const body = await request.json();
@@ -54,20 +49,6 @@ export async function POST(request: Request) {
       limit?: number;
     };
 
-    // Token check — cost depends on number of platforms
-    const platformCount = platforms?.length || 6;
-    const tokenCost = platformCount * TOKEN_COSTS.scout_search_per_platform;
-
-    if (!canAfford(user?.aiCreditsUsed ?? 0, user?.aiCreditsLimit ?? 0, tokenCost)) {
-      const remaining = Math.max(0, (user?.aiCreditsLimit ?? 0) - (user?.aiCreditsUsed ?? 0));
-      return NextResponse.json({
-        error: 'Insufficient tokens',
-        code: 'INSUFFICIENT_TOKENS',
-        required: tokenCost,
-        remaining,
-      }, { status: 402 });
-    }
-
     // Check no concurrent run
     const activeRun = await prisma.autoApplyRun.findFirst({
       where: { userId: session.user.id, status: 'running' },
@@ -76,8 +57,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'An agent run is already in progress' }, { status: 409 });
     }
 
-    if (!targetRole) {
-      return NextResponse.json({ error: 'Target role is required' }, { status: 400 });
+    // Fallback: pull target role from user profile if not provided in request
+    let resolvedTargetRole = targetRole;
+    let resolvedLocation = location;
+    if (!resolvedTargetRole) {
+      const twin = await prisma.careerTwin.findUnique({ where: { userId: session.user.id } });
+      const roles = twin?.targetRoles as any;
+      resolvedTargetRole = Array.isArray(roles) && roles.length > 0
+        ? (typeof roles[0] === 'string' ? roles[0] : roles[0]?.title || '')
+        : '';
+      if (!resolvedLocation) {
+        const snap = twin?.skillSnapshot as any;
+        resolvedLocation = snap?._profile?.location || '';
+      }
+    }
+    if (!resolvedTargetRole) {
+      return NextResponse.json({ error: 'Target role is required. Please set it in your agent configuration.' }, { status: 400 });
     }
 
     // Create a run record
@@ -89,15 +84,15 @@ export async function POST(request: Request) {
         jobsApplied: 0,
         jobsSkipped: 0,
         creditsUsed: 0,
-        summary: `Scout mission: ${targetRole} in ${location || 'anywhere'}`,
+        summary: `Scout mission: ${resolvedTargetRole} in ${resolvedLocation || 'anywhere'}`,
       },
     });
 
     // Run Scout
     const result = await runScout({
       userId: session.user.id,
-      targetRoles: [targetRole],
-      targetLocations: location ? [location] : [],
+      targetRoles: [resolvedTargetRole],
+      targetLocations: resolvedLocation ? [resolvedLocation] : [],
       preferRemote: workMode === 'remote',
       minMatchScore: 20, // Low threshold — show all reasonable matches
       excludeCompanies: [],
@@ -119,7 +114,7 @@ export async function POST(request: Request) {
           agentType: 'scout',
           jobsFound: result.totalFound,
           jobsSkipped: result.scamJobsFiltered,
-          creditsUsed: tokenCost,
+          creditsUsed: 0,
           summary: `Scout found ${result.totalFound} jobs, ${result.totalFiltered} qualified, ${newCount} new, ${dupCount} duplicates (${result.scamJobsFiltered} scam filtered) from ${result.sources.join(', ')}`,
           details: JSON.parse(JSON.stringify({
             jobs: result.jobs,
@@ -132,10 +127,6 @@ export async function POST(request: Request) {
             missionParams: { targetRole, location, workMode, salaryExpectation, experienceLevel, platforms },
           })),
         },
-      }),
-      prisma.user.update({
-        where: { id: session.user.id },
-        data: { aiCreditsUsed: { increment: tokenCost } },
       }),
     ]);
 

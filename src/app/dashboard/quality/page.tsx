@@ -19,6 +19,8 @@ import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentLoader from '@/components/brand/AgentLoader';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
+import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
 
 // -- Types ------------------------------------------------------------------
 
@@ -200,8 +202,12 @@ function StatCardSkeleton() {
 
 export default function QualityReviewPage() {
   const { data: session } = useSession();
+  const { isAgentic } = useDashboardMode();
   const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
   const agentLocked = !isAgentAvailable('sentinel', userPlan);
+
+  // In Agentic mode, render Cortex-style agent workspace for Sentinel
+  if (isAgentic) return <AgenticWorkspace agentId="sentinel" />;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'rejected'>('all');

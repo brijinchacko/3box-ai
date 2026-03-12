@@ -1,10 +1,10 @@
 /**
  * Stripe Webhook Handler
- * Processes Stripe events for subscriptions, credit packs, and payment failures
+ * Processes Stripe events for subscriptions and payment failures
  */
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { stripe, getPlanFromPriceId, CREDIT_PACKS } from '@/lib/stripe';
+import { stripe, getPlanFromPriceId } from '@/lib/stripe';
 import { prisma } from '@/lib/db/prisma';
 import {
   sendSubscriptionConfirmEmail,
@@ -14,15 +14,6 @@ import {
 
 // Force dynamic rendering — required for webhook handling
 export const dynamic = 'force-dynamic';
-
-// Token limits per plan tier (monthly allocation)
-import { PLAN_TOKEN_LIMITS } from '@/lib/tokens/pricing';
-
-const PLAN_CREDIT_LIMITS: Record<string, number> = {
-  STARTER: PLAN_TOKEN_LIMITS.STARTER,  // 200
-  PRO: PLAN_TOKEN_LIMITS.PRO,          // 600
-  ULTRA: PLAN_TOKEN_LIMITS.ULTRA,      // 2000
-};
 
 // ─── Webhook Signature Verification ──────────────
 
@@ -51,13 +42,6 @@ async function handleCheckoutSessionCompleted(
 
   if (session.mode === 'subscription') {
     await handleSubscriptionCheckout(session, userId);
-  } else if (session.mode === 'payment') {
-    // Check if this is an unlimited daily purchase
-    if (session.metadata?.type === 'unlimited_daily') {
-      await handleUnlimitedDailyCheckout(session, userId);
-    } else {
-      await handleCreditPackCheckout(session, userId);
-    }
   }
 }
 
@@ -86,7 +70,6 @@ async function handleSubscriptionCheckout(
   }
 
   const { plan, interval } = planInfo;
-  const creditLimit = PLAN_CREDIT_LIMITS[plan] ?? PLAN_TOKEN_LIMITS.BASIC;
   const customerId = session.customer as string;
 
   // Create Subscription record
@@ -123,8 +106,6 @@ async function handleSubscriptionCheckout(
       stripeSubId: subscriptionId,
       stripePriceId: priceId,
       stripeCustomerId: customerId,
-      aiCreditsLimit: creditLimit,
-      aiCreditsUsed: 0, // Reset usage on new subscription
     },
   });
 
@@ -139,78 +120,6 @@ async function handleSubscriptionCheckout(
   }
 
   console.log(`[Webhook] Subscription activated: user=${userId} plan=${plan} interval=${interval}`);
-}
-
-async function handleUnlimitedDailyCheckout(
-  session: Stripe.Checkout.Session,
-  userId: string
-): Promise<void> {
-  const paymentIntentId = session.payment_intent as string;
-
-  // Enable unlimited daily applications
-  await prisma.user.update({
-    where: { id: userId },
-    data: { hasUnlimitedDaily: true },
-  });
-
-  // Record as a credit purchase for audit trail
-  await prisma.creditPurchase.create({
-    data: {
-      userId,
-      credits: 0, // Not a credit pack — it's a feature unlock
-      amountPaid: 14900,
-      stripePaymentId: paymentIntentId || null,
-    },
-  });
-
-  console.log(`[Webhook] Unlimited daily applications activated: user=${userId}`);
-}
-
-async function handleCreditPackCheckout(
-  session: Stripe.Checkout.Session,
-  userId: string
-): Promise<void> {
-  const packId = session.metadata?.packId as keyof typeof CREDIT_PACKS | undefined;
-  const creditsStr = session.metadata?.credits;
-
-  if (!packId || !creditsStr) {
-    console.error('[Webhook] Credit pack checkout missing packId or credits in metadata');
-    return;
-  }
-
-  const credits = parseInt(creditsStr, 10);
-  if (isNaN(credits) || credits <= 0) {
-    console.error('[Webhook] Invalid credits value:', creditsStr);
-    return;
-  }
-
-  const pack = CREDIT_PACKS[packId];
-  if (!pack) {
-    console.error('[Webhook] Unknown pack ID:', packId);
-    return;
-  }
-
-  const paymentIntentId = session.payment_intent as string;
-
-  // Create CreditPurchase record
-  await prisma.creditPurchase.create({
-    data: {
-      userId,
-      credits,
-      amountPaid: pack.price,
-      stripePaymentId: paymentIntentId || null,
-    },
-  });
-
-  // Increment user's credit limit
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      aiCreditsLimit: { increment: credits },
-    },
-  });
-
-  console.log(`[Webhook] Credit pack purchased: user=${userId} pack=${packId} credits=${credits}`);
 }
 
 async function handleSubscriptionUpdated(
@@ -231,7 +140,6 @@ async function handleSubscriptionUpdated(
   }
 
   const { plan, interval } = planInfo;
-  const creditLimit = PLAN_CREDIT_LIMITS[plan] ?? PLAN_TOKEN_LIMITS.BASIC;
 
   // Map Stripe status to our enum
   const statusMap: Record<string, string> = {
@@ -275,7 +183,6 @@ async function handleSubscriptionUpdated(
     data: {
       plan,
       stripePriceId: priceId,
-      aiCreditsLimit: creditLimit,
     },
   });
 
@@ -305,15 +212,13 @@ async function handleSubscriptionDeleted(
     },
   });
 
-  // Reset User to BASIC plan
+  // Reset User to FREE plan
   const user = await prisma.user.update({
     where: { id: existingSub.userId },
     data: {
-      plan: 'BASIC',
+      plan: 'FREE',
       stripeSubId: null,
       stripePriceId: null,
-      aiCreditsLimit: PLAN_TOKEN_LIMITS.BASIC, // 15
-      aiCreditsUsed: 0,
     },
   });
 

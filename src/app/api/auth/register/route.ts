@@ -34,8 +34,7 @@ export async function POST(req: Request) {
         hashedPassword,
         isOforoInternal: isOforo,
         isStudent,
-        plan: isOforo ? 'ULTRA' : 'BASIC',
-        aiCreditsLimit: isOforo ? -1 : 10,
+        plan: isOforo ? 'MAX' : 'FREE',
         referralCode,
       },
     });

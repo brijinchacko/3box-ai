@@ -6,6 +6,7 @@ import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import TextResultCard from '@/components/tools/TextResultCard';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface CoverLetterResult {
   text: string;
@@ -14,6 +15,7 @@ interface CoverLetterResult {
 const toneOptions = ['Professional', 'Enthusiastic', 'Confident', 'Conversational'];
 
 export default function CoverLetterClient() {
+  const agent = getAgentForTool('cover-letter-generator');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -56,6 +58,11 @@ export default function CoverLetterClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Cover Letter Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="cover-letter-generator"
     >
       {/* Error display */}
       {error && (
@@ -154,7 +161,7 @@ export default function CoverLetterClient() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating...
+              Agent Archer is writing your cover letter...
             </>
           ) : (
             <>

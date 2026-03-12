@@ -133,9 +133,9 @@ const faqs = [
       '3BOX AI is the only platform that includes all 8 core career features: AI resume builder, ATS checker, career coaching, salary estimator, skills assessment, portfolio builder, job matching, and interview prep. No other competitor offers all of these in a single platform.',
   },
   {
-    question: 'Is there a free AI resume builder that includes career coaching?',
+    question: 'Is there an affordable AI career platform that includes career coaching?',
     answer:
-      'Yes. 3BOX AI offers a free plan that includes an AI resume builder, 2 skill assessments, and 50 AI credits per month. The Pro plan at $12/mo unlocks unlimited access to all features including AI career coaching.',
+      'Yes. 3BOX AI Starter Duo plan starts at $12/mo and includes AI resume building, skill assessments, and 100 AI credits per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
   },
   {
     question: 'What makes 3BOX AI different from other AI resume builders?',
@@ -391,9 +391,9 @@ export default function CompareAllClient() {
                   'At $12/mo, 3BOX AI is 50-76% cheaper than competitors while offering significantly more features. Jobscan charges $49.95/mo for just ATS scanning.',
               },
               {
-                title: 'Free Tier Available',
+                title: '7-Day Money-Back Guarantee',
                 description:
-                  'Start free with an AI resume builder, 2 skill assessments, and 50 AI credits per month. No credit card required.',
+                  'Start with confidence. All plans include a 7-day money-back guarantee, subject to usage limits.',
               },
               {
                 title: 'AI Career Coaching',
@@ -480,11 +480,11 @@ export default function CompareAllClient() {
             </h2>
             <p className="text-white/50 mb-8 max-w-lg mx-auto">
               Stop paying for 5 different tools. 3BOX AI combines everything into one
-              powerful AI career platform. Start free today.
+              powerful AI career platform. Get started today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-                Try 3BOX AI Free <ArrowRight className="w-4 h-4" />
+                Try 3BOX AI <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/pricing"

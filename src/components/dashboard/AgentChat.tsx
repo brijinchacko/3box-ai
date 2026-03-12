@@ -6,10 +6,13 @@ import {
   Send, Search, Hammer, Target, Compass, BookOpen, Shield,
   Loader2, Briefcase, FileText, Star, AlertTriangle, ExternalLink, Zap,
   Bookmark, BookmarkCheck, ArrowRight, MapPin, DollarSign, ChevronDown, ChevronUp,
+  Info, CheckCircle2, X, Settings2,
 } from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import FeedbackButtons from '@/components/dashboard/FeedbackButtons';
+import AgentConfigTab from '@/components/dashboard/AgentConfigTab';
 import { AGENTS, COORDINATOR, type AgentId } from '@/lib/agents/registry';
+import { AGENT_PAGES } from '@/lib/agents/agentContent';
 
 /* ── Message Types ── */
 export interface ChatMessage {
@@ -20,6 +23,7 @@ export interface ChatMessage {
   data?: any;
   feedback?: 'up' | 'down' | null;
   timestamp: number;
+  agentId?: string; // present in unified (Cortex) mode
 }
 
 /* ── Quick Actions per Agent ── */
@@ -33,6 +37,27 @@ const QUICK_ACTIONS: Record<AgentId | 'cortex', { label: string; icon: any; acti
   cortex:   [{ label: 'Team Status', icon: Briefcase, action: 'status' }, { label: 'Run Pipeline', icon: Zap, action: 'pipeline' }],
 };
 
+/* ── Agent badge colors for unified mode ── */
+const AGENT_BADGE_COLORS: Record<string, string> = {
+  scout:    'bg-blue-400/10 text-blue-400',
+  forge:    'bg-orange-400/10 text-orange-400',
+  archer:   'bg-green-400/10 text-green-400',
+  atlas:    'bg-purple-400/10 text-purple-400',
+  sage:     'bg-teal-400/10 text-teal-400',
+  sentinel: 'bg-rose-400/10 text-rose-400',
+  cortex:   'bg-cyan-400/10 text-cyan-400',
+};
+
+function AgentBadge({ agentId }: { agentId: string }) {
+  const label = (AGENTS[agentId as AgentId]?.name) || (agentId === 'cortex' ? COORDINATOR.name : agentId);
+  const colors = AGENT_BADGE_COLORS[agentId] || 'bg-white/5 text-white/40';
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${colors}`}>
+      {label}
+    </span>
+  );
+}
+
 /* ── Props ── */
 interface AgentChatProps {
   agentId: AgentId | 'cortex';
@@ -44,10 +69,16 @@ interface AgentChatProps {
   onSaveJob?: (job: any) => void;
   savedJobIds?: Set<string>;
   isWorking: boolean;
+  /** Unified timeline mode — shows all agents with attribution badges */
+  unifiedMode?: boolean;
   /** Optional panel content rendered above messages (e.g. Interview Prep for Atlas) */
   panelSlot?: React.ReactNode;
   /** Optional toolbar rendered sticky between header and messages (e.g. ScoutToolbar) */
   toolbarSlot?: React.ReactNode;
+  /** Increment to programmatically open the Configure tab (from external triggers like ScoutToolbar) */
+  openConfigTrigger?: number;
+  /** Auto-hunt toggle callback (Scout only) */
+  onAutoModeChange?: (enabled: boolean) => void;
 }
 
 /* ── Inline Output Renderers ── */
@@ -315,15 +346,79 @@ export default function AgentChat({
   onSaveJob,
   savedJobIds,
   isWorking,
+  unifiedMode,
   panelSlot,
   toolbarSlot,
+  openConfigTrigger,
+  onAutoModeChange,
 }: AgentChatProps) {
   const [input, setInput] = useState('');
+  const [showInfo, setShowInfo] = useState(false);
+  const [infoTab, setInfoTab] = useState<'capabilities' | 'howItWorks' | 'configure'>('capabilities');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // ── Auto-Hunt state (Scout only) ──
+  const [autoMode, setAutoMode] = useState(false);
+  const [autoToggling, setAutoToggling] = useState(false);
+  const [autoConfigLoaded, setAutoConfigLoaded] = useState(false);
+  const [autoTargetRole, setAutoTargetRole] = useState('');
+  const [showAutoWarning, setShowAutoWarning] = useState(false);
+
+  useEffect(() => {
+    if (agentId !== 'scout') return;
+    async function loadAutoState() {
+      try {
+        const [configRes, profileRes] = await Promise.all([
+          fetch('/api/agents/config'),
+          fetch('/api/user/profile'),
+        ]);
+        const config = configRes.ok ? await configRes.json() : {};
+        const profile = profileRes.ok ? await profileRes.json() : {};
+        setAutoMode(config.scoutAutoMode ?? false);
+        setAutoTargetRole(profile.targetRole || '');
+        setAutoConfigLoaded(true);
+      } catch {
+        setAutoConfigLoaded(true);
+      }
+    }
+    loadAutoState();
+  }, [agentId]);
+
+  const handleAutoToggle = async () => {
+    if (!autoConfigLoaded) return;
+
+    // When enabling: ALWAYS force config panel open + show usage warning
+    if (!autoMode) {
+      setShowInfo(true);
+      setInfoTab('configure');
+      setShowAutoWarning(true);
+      setTimeout(() => setShowAutoWarning(false), 6000);
+
+      // If no target role, don't enable — just show config
+      if (!autoTargetRole?.trim()) return;
+    }
+
+    setAutoToggling(true);
+    const newValue = !autoMode;
+    try {
+      await fetch('/api/agents/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scoutAutoMode: newValue }),
+      });
+      setAutoMode(newValue);
+      onAutoModeChange?.(newValue);
+    } catch {}
+    setAutoToggling(false);
+  };
   const agent = agentId === 'cortex'
     ? { name: COORDINATOR.name, role: COORDINATOR.role, shortDescription: COORDINATOR.description }
     : AGENTS[agentId];
   const quickActions = QUICK_ACTIONS[agentId] || [];
+  const agentDef = agentId !== 'cortex' ? AGENTS[agentId] : null;
+  const agentPage = AGENT_PAGES[agentId];
+  const howItWorksSteps = agentPage?.howItWorks || [];
+  const capabilities = agentDef?.capabilities || [];
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -331,6 +426,14 @@ export default function AgentChat({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages.length]);
+
+  // Open config tab when triggered externally (e.g. from ScoutToolbar)
+  useEffect(() => {
+    if (openConfigTrigger && openConfigTrigger > 0) {
+      setShowInfo(true);
+      setInfoTab('configure');
+    }
+  }, [openConfigTrigger]);
 
   const handleSend = () => {
     const text = input.trim();
@@ -342,32 +445,184 @@ export default function AgentChat({
   return (
     <div className="flex flex-col h-full min-h-[400px] rounded-xl border border-white/5 bg-white/[0.015] overflow-hidden">
       {/* ── Chat Header ── */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.02]">
-        <AgentAvatar agentId={agentId} size={28} pulse={isWorking} />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">{agent.name}</p>
-          <p className="text-[10px] text-white/25">{agent.role}</p>
-        </div>
-        {isWorking && (
-          <div className="flex items-center gap-1.5 text-neon-blue">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span className="text-[10px] font-medium">Working...</span>
+      <div className="border-b border-white/5 bg-white/[0.02]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <AgentAvatar agentId={agentId} size={28} pulse={isWorking} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">{agent.name}</p>
+            <p className="text-[10px] text-white/25">
+              {unifiedMode ? 'All agent conversations' : agent.role}
+            </p>
           </div>
-        )}
+          {isWorking && (
+            <div className="flex items-center gap-1.5 text-neon-blue">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span className="text-[10px] font-medium">Working...</span>
+            </div>
+          )}
+          {/* Scout Auto Hunt toggle */}
+          {agentId === 'scout' && autoConfigLoaded && (
+            <button
+              onClick={handleAutoToggle}
+              disabled={autoToggling}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all hover:bg-white/5"
+              title={autoMode ? 'Disable auto-hunting' : 'Enable auto-hunting'}
+            >
+              <Zap className={`w-3.5 h-3.5 ${autoMode ? 'text-neon-green' : 'text-white/20'}`} />
+              <span className={`text-[10px] font-medium ${autoMode ? 'text-neon-green/80' : 'text-white/30'}`}>
+                Auto
+              </span>
+              <div className={`w-7 h-4 rounded-full transition-colors relative ${
+                autoMode ? 'bg-neon-green/30' : 'bg-white/10'
+              }`}>
+                <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${
+                  autoMode
+                    ? 'left-[14px] bg-neon-green shadow-sm shadow-neon-green/30'
+                    : 'left-0.5 bg-white/30'
+                }`} />
+              </div>
+              {autoToggling && <Loader2 className="w-3 h-3 text-white/30 animate-spin" />}
+            </button>
+          )}
+          {/* Info toggle — shows capabilities & how it works */}
+          {agentId !== 'cortex' && (
+            <button
+              onClick={() => setShowInfo(!showInfo)}
+              className={`p-1.5 rounded-lg transition-all ${
+                showInfo
+                  ? 'bg-white/10 text-white/70'
+                  : 'text-white/25 hover:text-white/50 hover:bg-white/5'
+              }`}
+              title={showInfo ? 'Hide agent info' : 'What can this agent do?'}
+            >
+              {showInfo ? <X className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
+
+        {/* ── Auto-Hunt Usage Warning ── */}
+        <AnimatePresence>
+          {showAutoWarning && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-start gap-2 px-4 py-2.5 bg-amber-400/5 border-t border-amber-400/10">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-amber-400/80 font-medium">Auto-Hunt will increase token usage</p>
+                  <p className="text-[9px] text-amber-400/50 mt-0.5 leading-relaxed">
+                    Scout will run automatically on your schedule and consume tokens each time.
+                    {!autoTargetRole?.trim() && ' Please set your Target Role below before enabling.'}
+                    {' '}Review your Daily Limit and Hunt Frequency below.
+                  </p>
+                </div>
+                <button onClick={() => setShowAutoWarning(false)} className="text-amber-400/30 hover:text-amber-400/60 p-0.5 flex-shrink-0">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Agent Info Dropdown ── */}
+        <AnimatePresence>
+          {showInfo && agentId !== 'cortex' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-3 border-t border-white/5 max-h-[50vh] overflow-y-auto">
+                {/* Tab Selector */}
+                <div className="flex items-center gap-1 pt-2.5 mb-2.5">
+                  {([
+                    { id: 'capabilities' as const, label: 'Capabilities', Icon: CheckCircle2 },
+                    { id: 'howItWorks' as const, label: 'How It Works', Icon: Zap },
+                    { id: 'configure' as const, label: 'Configure', Icon: Settings2 },
+                  ]).map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setInfoTab(tab.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        infoTab === tab.id
+                          ? 'bg-white/[0.08] text-white/80'
+                          : 'text-white/30 hover:text-white/50 hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      <tab.Icon className="w-3 h-3" />
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Capabilities */}
+                {infoTab === 'capabilities' && (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {capabilities.map((cap) => (
+                      <div key={cap} className="flex items-center gap-2 text-xs text-white/50">
+                        <CheckCircle2 className="w-3 h-3 flex-shrink-0" style={{ color: agentDef?.colorHex || '#22d3ee' }} />
+                        {cap}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* How It Works */}
+                {infoTab === 'howItWorks' && howItWorksSteps.length > 0 && (
+                  <div className="relative">
+                    <div className="absolute left-[7px] top-2 bottom-2 w-px bg-white/10" />
+                    <div className="space-y-2.5">
+                      {howItWorksSteps.map((step, i) => (
+                        <div key={step.step} className="flex gap-3 relative">
+                          <div
+                            className="relative z-10 flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold mt-0.5"
+                            style={{
+                              background: `${agentDef?.colorHex || '#22d3ee'}20`,
+                              color: agentDef?.colorHex || '#22d3ee',
+                              border: `1px solid ${agentDef?.colorHex || '#22d3ee'}40`,
+                            }}
+                          >
+                            {i + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-white/70">{step.title}</p>
+                            <p className="text-[10px] text-white/40 leading-relaxed line-clamp-2">
+                              {step.description}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Configure */}
+                {infoTab === 'configure' && (
+                  <AgentConfigTab agentId={agentId as AgentId} />
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Toolbar Slot (sticky, between header and messages) ── */}
       {toolbarSlot}
 
-      {/* ── Panel Slot + Messages ── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {/* Embedded panel (e.g. Interview Prep, Learning Path, Quality Review) */}
-        {panelSlot && (
-          <div className="mb-2 -mx-4 -mt-3">
-            {panelSlot}
-          </div>
-        )}
+      {/* ── Sticky Panel Slot (pinned above chat, doesn't scroll away) ── */}
+      {panelSlot && (
+        <div className="border-b border-white/5 bg-white/[0.02] max-h-[45vh] overflow-y-auto">
+          {panelSlot}
+        </div>
+      )}
 
+      {/* ── Messages ── */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && !panelSlot ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <AgentAvatar agentId={agentId} size={48} />
@@ -378,7 +633,9 @@ export default function AgentChat({
           </div>
         ) : (
           <AnimatePresence initial={false}>
-            {messages.map(msg => (
+            {messages.map(msg => {
+              const msgAgent = (unifiedMode && msg.agentId) ? msg.agentId : agentId;
+              return (
               <motion.div
                 key={msg.id}
                 initial={{ opacity: 0, y: 8 }}
@@ -388,7 +645,7 @@ export default function AgentChat({
                 }`}
               >
                 {msg.role === 'agent' && (
-                  <AgentAvatar agentId={agentId} size={20} />
+                  <AgentAvatar agentId={msgAgent as AgentId | 'cortex'} size={20} />
                 )}
 
                 <div className={`max-w-[85%] ${
@@ -398,6 +655,12 @@ export default function AgentChat({
                       ? 'text-center'
                       : 'rounded-2xl rounded-tl-sm bg-white/[0.04] border border-white/5 px-3 py-2'
                 }`}>
+                  {/* Agent badge in unified mode */}
+                  {unifiedMode && msg.role === 'agent' && msg.agentId && (
+                    <div className="mb-1">
+                      <AgentBadge agentId={msg.agentId} />
+                    </div>
+                  )}
                   <p className={`text-xs leading-relaxed ${
                     msg.role === 'system' ? 'text-white/20 text-[10px]' : 'text-white/60'
                   }`}>
@@ -422,7 +685,8 @@ export default function AgentChat({
                   )}
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         )}
 
@@ -451,7 +715,7 @@ export default function AgentChat({
       {/* ── Quick Actions + Input ── */}
       <div className="border-t border-white/5 bg-white/[0.02]">
         {/* Quick action buttons */}
-        <div className="flex gap-1.5 px-3 pt-2.5 overflow-x-auto scrollbar-none">
+        <div data-tour="quick-actions" className="flex gap-1.5 px-3 pt-2.5 overflow-x-auto scrollbar-none">
           {quickActions.map(qa => {
             const Icon = qa.icon;
             return (

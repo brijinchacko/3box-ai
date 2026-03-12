@@ -25,6 +25,7 @@ import { processApplicationsBatch, type ApplicationJobData, type ApplicationJobR
 import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
 import { canSendApplication, recordApplicationSent, getApplicationDelay, uniquifyCoverLetter } from './humanBehavior';
 import { calculateApplicationQuality, type ApplicationQualityScore } from '@/lib/jobs/qualityScore';
+import { checkApplicationCap, consumeApplicationSlot } from '@/lib/tokens/dailyCap';
 
 // ─── Types ──────────────────────────────────────────
 
@@ -178,6 +179,15 @@ export async function applyToJob(
   options?: { burstMode?: boolean },
 ): Promise<ApplicationResult> {
   const burstMode = options?.burstMode ?? false;
+
+  // ── Application cap check (skip in burst mode) ──
+  if (!burstMode) {
+    const cap = await checkApplicationCap(userId);
+    if (!cap.allowed) {
+      if (ctx) logActivity(ctx, 'archer', 'cap_reached', `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType})`);
+      return { success: false, method: 'none', channel: 'portal_queue', strategy: 'standard', details: `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType === 'lifetime' ? 'total' : 'today'})` };
+    }
+  }
 
   // ── Rate limit check (skip in burst mode) ──
   if (!burstMode) {
@@ -415,6 +425,24 @@ export async function applyToJobsBatch(
   const routingStats = { ats_api: 0, cold_email: 0, portal_queue: 0 };
   const coverLetterStats = { priority: 0, standard: 0, quick: 0, cached: 0 };
 
+  // ── Application cap check (skip in burst mode) ──
+  if (!burstMode) {
+    const cap = await checkApplicationCap(userId);
+    if (!cap.allowed) {
+      if (ctx) logActivity(ctx, 'archer', 'cap_reached', `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType})`);
+      return {
+        total: jobs.length, applied: 0, emailed: 0, queued: 0, skipped: jobs.length, failed: 0,
+        results: [], coverLetterStats, routingStats, durationMs: Date.now() - startTime,
+      };
+    }
+    // Trim jobs to remaining allowance
+    const remaining = cap.remaining === Infinity ? jobs.length : cap.remaining;
+    if (remaining < jobs.length) {
+      if (ctx) logActivity(ctx, 'archer', 'cap_trimmed', `Trimming batch from ${jobs.length} to ${remaining} (daily cap)`);
+      jobs = jobs.slice(0, remaining);
+    }
+  }
+
   if (ctx) logActivity(ctx, 'archer', 'batch_start', `Starting batch application for ${jobs.length} jobs`);
 
   // ── Step 1: Find verified emails for all unique companies (parallel) ──
@@ -617,6 +645,11 @@ async function recordApplication(
   burstMode?: boolean,
 ): Promise<string | undefined> {
   if (burstMode) return undefined;
+
+  // Consume an application slot for non-burst applications
+  if (status !== 'QUEUED') {
+    await consumeApplicationSlot(userId).catch(() => {});
+  }
 
   try {
     const application = await prisma.jobApplication.create({
@@ -864,10 +897,8 @@ export async function runIndependentArcher(
         where: { userId },
         data: { archerLastRunAt: new Date() },
       }),
-      ...(creditsUsed > 0 ? [prisma.user.update({
-        where: { id: userId },
-        data: { aiCreditsUsed: { increment: creditsUsed } },
-      })] : []),
+      // NOTE: Application slots are already consumed in recordApplication()
+      // — no additional consumption needed here to avoid double-counting.
     ]);
 
     return {

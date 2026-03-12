@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { handleToolRequest } from '@/lib/tools/apiHelper';
+import { getToolPrompt } from '@/lib/tools/toolPrompts';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
     cookieName: '3box-thankyou-uses',
     requiredFields: ['interviewerName', 'company', 'position'],
-    systemPrompt: `You are a career communications expert. Write a post-interview thank you email that is genuine, specific, and professional. Reference the interview highlights if provided. The email should reinforce the candidate's interest and qualifications. Return JSON: { subject: string, body: string }`,
+    systemPrompt: getToolPrompt('thank-you-email-generator'),
     buildUserPrompt: (body) => {
       let prompt = `Interviewer Name: ${body.interviewerName}`;
       prompt += `\nCompany: ${body.company}`;

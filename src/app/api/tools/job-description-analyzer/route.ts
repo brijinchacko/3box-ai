@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
 import { handleToolRequest } from '@/lib/tools/apiHelper';
+import { getToolPrompt } from '@/lib/tools/toolPrompts';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
     cookieName: '3box-jdanalyzer-uses',
     requiredFields: ['jobDescription'],
-    systemPrompt:
-      'You are an expert job market analyst and career advisor. Analyze the job description thoroughly and extract key information. Return JSON: { "title": string, "company": string, "level": string, "requirements": { "mustHave": string[], "niceToHave": string[] }, "skills": { "technical": string[], "soft": string[] }, "keywords": string[], "redFlags": string[], "hiddenExpectations": string[], "salaryHints": string, "cultureFit": string[], "tips": string[] }',
+    systemPrompt: getToolPrompt('job-description-analyzer'),
     buildUserPrompt: (body) => {
       return `Analyze the following job description thoroughly:\n\n${body.jobDescription}`;
     },

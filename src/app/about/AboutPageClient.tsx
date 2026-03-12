@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   Sparkles, Users, Target, Zap, Heart, Globe, ArrowRight,
-  Mail, Twitter, Linkedin, Github, Youtube, Facebook, Instagram
+  Mail, Linkedin, Youtube, Facebook, Instagram
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -17,7 +17,7 @@ const values = [
   { icon: Target, title: 'Mission-Driven', description: 'Every feature exists to help people land their dream jobs faster and with more confidence.' },
   { icon: Heart, title: 'User-First', description: 'We build what users need, not what looks good in demos. Real outcomes over vanity metrics.' },
   { icon: Zap, title: 'AI-Native', description: 'AI isn\'t an add-on — it\'s the core of every workflow, from assessment to application.' },
-  { icon: Globe, title: 'Accessible', description: 'Career advancement tools should be available to everyone, everywhere. Free tier included.' },
+  { icon: Globe, title: 'Accessible', description: 'Career advancement tools should be available to everyone, everywhere. Plans for every budget.' },
 ];
 
 export default function AboutPageClient() {
@@ -97,8 +97,6 @@ export default function AboutPageClient() {
               <a href="https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Youtube className="w-4 h-4" /></a>
               <a href="https://www.facebook.com/61586302726912" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Facebook className="w-4 h-4" /></a>
               <a href="https://www.instagram.com/3box.ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Instagram className="w-4 h-4" /></a>
-              <a href="https://x.com/oforoai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Twitter className="w-4 h-4" /></a>
-              <a href="https://github.com/oforo-ai" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Github className="w-4 h-4" /></a>
             </div>
           </motion.div>
         </div>

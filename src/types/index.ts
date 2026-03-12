@@ -1,9 +1,12 @@
 // ─── Plan types ────────────────────────────────
-export type PlanTier = 'BASIC' | 'STARTER' | 'PRO' | 'ULTRA';
+export type PlanTier = 'FREE' | 'PRO' | 'MAX';
+
+/** @deprecated Legacy plan names kept for migration only */
+export type LegacyPlanTier = 'BASIC' | 'STARTER' | 'ULTRA';
 
 export interface PlanFeatures {
-  aiCredits: number;
-  assessments: number;
+  applications: number;      // Daily limit (PRO/MAX) or lifetime limit (FREE)
+  applicationType: 'lifetime' | 'daily';
   resumes: number;
   exports: number;
 }
@@ -26,12 +29,7 @@ export interface ReferralData {
   referralLink: string;
 }
 
-// ─── Credit Pack types ────────────────────────
-export interface CreditPack {
-  id: string;
-  credits: number;
-  price: number;
-}
+// ─── (Credit Pack types removed — replaced by application limits) ──
 
 // ─── Blog types ───────────────────────────────
 export interface BlogPostData {
@@ -82,8 +80,8 @@ export interface UserProfile {
   image?: string;
   plan: PlanTier;
   isOforoInternal: boolean;
-  aiCreditsUsed: number;
-  aiCreditsLimit: number;
+  totalAppsUsed: number;
+  dailyAppsUsed: number;
   onboardingDone: boolean;
   referralCode: string;
   stripeCustomerId?: string;

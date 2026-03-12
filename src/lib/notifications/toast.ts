@@ -3,12 +3,13 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import type { AgentId } from '@/lib/agents/registry';
 
 const AGENT_LABELS: Record<string, string> = {
-  scout: 'Scout',
-  forge: 'Forge',
-  archer: 'Archer',
-  atlas: 'Atlas',
-  sage: 'Sage',
-  sentinel: 'Sentinel',
+  scout: 'Agent Scout',
+  forge: 'Agent Forge',
+  archer: 'Agent Archer',
+  atlas: 'Agent Atlas',
+  sage: 'Agent Sage',
+  sentinel: 'Agent Sentinel',
+  cortex: 'Agent Cortex',
 };
 
 export function notifyAgentStarted(agent: AgentId, message: string) {

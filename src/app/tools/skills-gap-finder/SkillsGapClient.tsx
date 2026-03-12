@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Loader2, GitCompareArrows } from 'lucide-react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 /* ── Result types ───────────────────────────────── */
 
@@ -38,6 +39,7 @@ const importanceBadge: Record<string, { bg: string; text: string; border: string
 /* ── Component ──────────────────────────────────── */
 
 export default function SkillsGapClient() {
+  const agent = getAgentForTool('skills-gap-finder');
   const [form, setForm] = useState({
     resumeText: '',
     jobDescription: '',
@@ -68,6 +70,11 @@ export default function SkillsGapClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Skills Gap Finder"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="skills-gap-finder"
     >
       {/* ── Form ──────────────────────────────────── */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -114,7 +121,7 @@ export default function SkillsGapClient() {
           ) : (
             <GitCompareArrows className="w-4 h-4" />
           )}
-          {loading ? 'Analyzing...' : 'Find Skills Gap'}
+          {loading ? 'Agent Sage is analyzing your skill gaps...' : 'Find Skills Gap'}
         </button>
       </form>
 

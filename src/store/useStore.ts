@@ -11,6 +11,7 @@ import type {
   SubscriptionData,
   ReferralData,
 } from '@/types';
+import { normalizePlan } from '@/lib/tokens/pricing';
 
 interface AppState {
   // User
@@ -62,11 +63,11 @@ export const useStore = create<AppState>((set, get) => ({
   setUser: (user) => set({ user }),
   effectivePlan: () => {
     const user = get().user;
-    if (!user) return 'BASIC';
-    if (user.isOforoInternal) return 'ULTRA';
+    if (!user) return 'FREE';
+    if (user.isOforoInternal) return 'MAX';
     const sub = get().subscription;
-    if (sub && sub.status === 'active') return sub.plan;
-    return user.plan;
+    if (sub && sub.status === 'active') return normalizePlan(sub.plan);
+    return normalizePlan(user.plan);
   },
 
   // Subscription

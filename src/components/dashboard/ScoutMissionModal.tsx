@@ -7,7 +7,9 @@ import AgentAvatar from '@/components/brand/AgentAvatar';
 import AgentLoader from '@/components/brand/AgentLoader';
 import { getInsightsForRole, type JobInsight } from '@/lib/data/jobMarketInsights';
 import { useTokens } from '@/hooks/useTokens';
-import { TOKEN_COSTS, estimateScoutCost } from '@/lib/tokens/pricing';
+// Token system removed — AI operations are now unlimited
+const TOKEN_COSTS = { scout_search_per_platform: 0 } as const;
+const estimateScoutCost = (_count: number) => 0;
 import { notifyAgentStarted, notifyAgentError } from '@/lib/notifications/toast';
 
 interface ScoutMissionModalProps {

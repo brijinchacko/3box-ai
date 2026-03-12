@@ -52,7 +52,7 @@ export interface AgentDefinition {
   colorHex: string; // hex color for SVG gradients
   colorHexEnd: string; // gradient end hex
   gradient: string; // gradient classes for cards
-  minPlan: 'STARTER' | 'PRO' | 'ULTRA';
+  minPlan: 'FREE' | 'PRO' | 'MAX';
   capabilities: string[];
   actions: string[];
   linkedPage: string; // dashboard page this agent is linked to
@@ -72,7 +72,7 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     colorHex: '#3b82f6',
     colorHexEnd: '#06b6d4',
     gradient: 'from-blue-500/20 to-cyan-500/20',
-    minPlan: 'STARTER',
+    minPlan: 'FREE',
     capabilities: ['Multi-source job scanning', 'Match scoring', 'Smart filtering', 'Exclusion rules'],
     actions: ['discovered_jobs', 'scored_matches', 'filtered_results'],
     linkedPage: '/dashboard/jobs',
@@ -90,7 +90,7 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     colorHex: '#f97316',
     colorHexEnd: '#eab308',
     gradient: 'from-orange-500/20 to-amber-500/20',
-    minPlan: 'STARTER',
+    minPlan: 'FREE',
     capabilities: ['ATS keyword optimization', 'Job-specific variants', 'Score analysis', 'Section enhancement'],
     actions: ['optimized_resume', 'ats_analysis', 'keyword_enhancement'],
     linkedPage: '/dashboard/resume',
@@ -108,7 +108,7 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     colorHex: '#22c55e',
     colorHexEnd: '#10b981',
     gradient: 'from-green-500/20 to-emerald-500/20',
-    minPlan: 'PRO',
+    minPlan: 'FREE',
     capabilities: ['AI cover letters', 'Portal applications', 'Cold email outreach', 'Application tracking'],
     actions: ['generated_cover_letter', 'sent_application', 'sent_email', 'queued_portal'],
     linkedPage: '/dashboard/agents',
@@ -126,7 +126,7 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     colorHex: '#a855f7',
     colorHexEnd: '#7c3aed',
     gradient: 'from-purple-500/20 to-violet-500/20',
-    minPlan: 'PRO',
+    minPlan: 'FREE',
     capabilities: ['Company-specific questions', 'Practice scenarios', 'JD analysis', 'Feedback loops'],
     actions: ['generated_questions', 'created_scenario', 'analyzed_jd'],
     linkedPage: '/dashboard/interview',
@@ -144,7 +144,7 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     colorHex: '#14b8a6',
     colorHexEnd: '#06b6d4',
     gradient: 'from-teal-500/20 to-cyan-500/20',
-    minPlan: 'ULTRA',
+    minPlan: 'FREE',
     capabilities: ['Skill gap analysis', 'Learning recommendations', 'Growth tracking', 'Market trend analysis'],
     actions: ['identified_gaps', 'recommended_learning', 'tracked_growth'],
     linkedPage: '/dashboard/learning',
@@ -162,7 +162,7 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     colorHex: '#f43f5e',
     colorHexEnd: '#ec4899',
     gradient: 'from-rose-500/20 to-pink-500/20',
-    minPlan: 'ULTRA',
+    minPlan: 'FREE',
     capabilities: ['Quality scoring', 'Fabrication detection', 'Relevance check', 'Spam prevention'],
     actions: ['reviewed_application', 'approved_application', 'rejected_application'],
     linkedPage: '/dashboard/quality',

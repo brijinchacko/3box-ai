@@ -6,12 +6,14 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import VariationsResult from '@/components/tools/VariationsResult';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface LinkedInHeadlineResult {
   headlines: { label: string; content: string }[];
 }
 
 export default function LinkedInHeadlineClient() {
+  const agent = getAgentForTool('linkedin-headline-generator');
   const [form, setForm] = useState({
     currentRole: '',
     skills: '',
@@ -41,6 +43,11 @@ export default function LinkedInHeadlineClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="LinkedIn Headline Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="linkedin-headline-generator"
     >
       {/* -- Form ---------------------------------------- */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -103,7 +110,7 @@ export default function LinkedInHeadlineClient() {
           ) : (
             <Linkedin className="w-4 h-4" />
           )}
-          {loading ? 'Generating...' : 'Generate Headlines'}
+          {loading ? 'Agent Cortex is crafting your headline...' : 'Generate Headlines'}
         </button>
       </form>
 

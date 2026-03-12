@@ -6,6 +6,7 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import CopyButton from '@/components/tools/CopyButton';
 import ResumeInput from '@/components/tools/ResumeInput';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface HashtagCategory {
   name: string;
@@ -18,6 +19,7 @@ interface LinkedInHashtagResult {
 }
 
 export default function LinkedInHashtagClient() {
+  const agent = getAgentForTool('linkedin-hashtag-generator');
   const [resumeText, setResumeText] = useState('');
   const [form, setForm] = useState({
     topic: '',
@@ -46,6 +48,11 @@ export default function LinkedInHashtagClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="LinkedIn Hashtag Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="linkedin-hashtag-generator"
     >
       {/* ── Form ──────────────────────────────────── */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -96,7 +103,7 @@ export default function LinkedInHashtagClient() {
           ) : (
             <Hash className="w-4 h-4" />
           )}
-          {loading ? 'Generating...' : 'Generate Hashtags'}
+          {loading ? 'Agent Cortex is finding your hashtags...' : 'Generate Hashtags'}
         </button>
       </form>
 

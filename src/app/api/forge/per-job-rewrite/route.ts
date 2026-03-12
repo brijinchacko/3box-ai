@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { analyzeResumeForJob, generateOptimizedResume } from '@/lib/agents/forge';
-import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
+import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -17,6 +17,12 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const gate = await checkFeatureGate(session.user.id);
+    if (gate.locked) {
+      return NextResponse.json({ error: gate.reason || 'Free plan limit reached. Please upgrade.' }, { status: 403 });
+    }
+
     const userId = session.user.id;
 
     const body = await request.json();
@@ -31,23 +37,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'resumeId, jobTitle, company, and jobDescription are required' },
         { status: 400 }
-      );
-    }
-
-    // ── Token check ──
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { aiCreditsUsed: true, aiCreditsLimit: true },
-    });
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const cost = TOKEN_COSTS.resume_enhance; // 2 tokens
-    if (!canAfford(user.aiCreditsUsed, user.aiCreditsLimit, cost)) {
-      return NextResponse.json(
-        { error: `Not enough tokens. Per-job rewrite costs ${cost} tokens. You have ${Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed)} remaining.` },
-        { status: 402 }
       );
     }
 
@@ -77,12 +66,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // ── Deduct tokens ──
-    await prisma.user.update({
-      where: { id: userId },
-      data: { aiCreditsUsed: { increment: cost } },
-    });
-
     // Check auto-approve setting
     const autoConfig = await prisma.autoApplyConfig.findUnique({
       where: { userId },
@@ -102,8 +85,6 @@ export async function POST(request: NextRequest) {
         suggestions: analysis.suggestions,
       },
       autoApproved: autoConfig?.perJobAutoApprove ?? false,
-      tokensUsed: cost,
-      tokensRemaining: Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed - cost),
     });
   } catch (error) {
     console.error('[Forge Per-Job Rewrite] Error:', error);

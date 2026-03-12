@@ -479,7 +479,7 @@ export default function TeacherClient() {
               </Link>
             </div>
             <p className="text-white/30 text-sm mt-6">
-              No credit card required. Free plan includes AI resume builder + ATS checker.
+              7-day money-back guarantee. Plans include AI resume builder + ATS checker.
             </p>
           </motion.div>
         </div>

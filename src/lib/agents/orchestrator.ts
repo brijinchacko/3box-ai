@@ -15,6 +15,7 @@ import { reviewApplication, verifyJobAlignment } from './sentinel';
 import { generateNetworkingSuggestions } from './networkSuggester';
 import { calculateApplicationQuality } from '@/lib/jobs/qualityScore';
 import { checkDailyCap, consumeDailySlot } from '@/lib/tokens/dailyCap';
+import { normalizePlan } from '@/lib/tokens/pricing';
 import { detectScamSignals } from '@/lib/jobs/scamDetector';
 import { aiChatWithFallback } from '@/lib/ai/openrouter';
 import {
@@ -28,7 +29,7 @@ import type { AutomationMode, AgentId } from './registry';
 
 interface PipelineConfig {
   userId: string;
-  plan: 'BASIC' | 'STARTER' | 'PRO' | 'ULTRA';
+  plan: string; // May contain legacy DB values; normalized via normalizePlan()
   automationMode?: AutomationMode;
 }
 
@@ -194,7 +195,8 @@ function buildPipelineSteps(ctx: import('./context').AgentContext, scoutSource: 
 }
 
 export async function runAgentPipeline(config: PipelineConfig): Promise<PipelineResult> {
-  const { userId, plan, automationMode = 'copilot' } = config;
+  const { userId, plan: rawPlan, automationMode = 'copilot' } = config;
+  const plan = normalizePlan(rawPlan);
 
   // Get user's auto-apply config
   const autoConfig = await prisma.autoApplyConfig.findUnique({ where: { userId } });
@@ -282,7 +284,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
   let scoutSource: 'reused' | 'fresh' = 'fresh';
 
   try {
-    // ── Step 1: Scout discovers jobs (STARTER+) ──
+    // ── Step 1: Scout discovers jobs ──
     // First check for recent Scout-only run results to reuse
     // If none found, auto-trigger Scout fresh (dependency resolution)
     let discoveredJobs: any[] = [];
@@ -362,7 +364,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
     // Limit to maxAppliesPerRun
     const jobsToProcess = discoveredJobs.slice(0, autoConfig.maxAppliesPerRun);
 
-    // ── Step 2: Forge optimizes resume + Quality Gate (STARTER+) ──
+    // ── Step 2: Forge optimizes resume + Quality Gate ──
     // Runs automatically in autopilot + full-agent; produces suggestions in copilot
     // Respects perJobResumeRewrite setting — if OFF, only runs free ATS check
     const shouldRewritePerJob = autoConfig.perJobResumeRewrite ?? false;
@@ -659,7 +661,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
           continue;
         }
 
-        // Sentinel review if available (ULTRA)
+        // Sentinel review if available
         let approved = true;
         if (isAgentAvailable('sentinel', plan) && shouldAutoRun('sentinel', automationMode)) {
           try {
@@ -720,7 +722,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
             jobsSkipped += approvedJobs.length;
             approvedJobs.length = 0;
             dailyCapReached = true;
-          } else if (!dailyCap.isUnlimited) {
+          } else {
             const slotsAvailable = dailyCap.remaining;
             if (approvedJobs.length > slotsAvailable) {
               const trimmed = approvedJobs.length - slotsAvailable;
@@ -871,7 +873,7 @@ export async function runAgentPipeline(config: PipelineConfig): Promise<Pipeline
       logActivity(ctx, 'atlas', 'suggestion', `Atlas available for interview prep — waiting for user approval (${automationMode} mode)`);
     }
 
-    // ── Step 5: Sage identifies skill gaps (ULTRA) ──
+    // ── Step 5: Sage identifies skill gaps ──
     if (isAgentAvailable('sage', plan) && shouldAutoRun('sage', automationMode)) {
       try {
         // Context handoff: Scout -> Sage

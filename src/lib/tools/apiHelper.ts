@@ -106,7 +106,7 @@ export async function handleToolRequest(
           temperature: config.temperature ?? 0.7,
           maxTokens: config.maxTokens ?? 2048,
         },
-        'free'
+        'premium'
       );
     } catch (err) {
       console.error(`[Tool API] AI call failed for ${config.cookieName}:`, err);

@@ -198,6 +198,12 @@ export const PAGE_SEO = {
     keywords: '3BOX AI GDPR, data rights, GDPR compliance, data protection officer, right to erasure',
     canonical: '/gdpr',
   },
+  refundPolicy: {
+    title: 'Refund Policy — 3BOX AI | 7-Day Money-Back Guarantee',
+    description: '3BOX AI refund policy. 7-day money-back guarantee on all paid plans. Learn about eligibility conditions, usage limits, and how to request a refund.',
+    keywords: '3BOX AI refund policy, money-back guarantee, 3BOX AI refund, cancel subscription, 7-day guarantee',
+    canonical: '/refund-policy',
+  },
   // ─── Comparison Pages (High-Intent SEO) ──────────────
   compareHub: {
     title: '3BOX AI vs Competitors — See How We Compare',
@@ -270,8 +276,6 @@ export const SCHEMA_ORG = {
       'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/',
       'https://www.facebook.com/61586302726912',
       'https://www.instagram.com/3box.ai',
-      'https://twitter.com/3boxai',
-      'https://github.com/brijinchacko',
     ],
   },
   website: {

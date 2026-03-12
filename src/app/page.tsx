@@ -7,7 +7,7 @@ export const metadata: Metadata = generatePageMetadata(PAGE_SEO.home);
 
 export default function LandingPage() {
   const faqData = [
-    { question: 'Do I really get 20 free applications?', answer: 'Yes. Upload your resume, pick your target role, and our AI finds 20 matching jobs and applies to each one with a tailored cover letter. No credit card. No catch.' },
+    { question: 'Is there a money-back guarantee?', answer: 'Yes. All paid plans include a 7-day money-back guarantee. If you\'re not satisfied, request a full refund within 7 days of purchase, subject to our usage conditions.' },
     { question: 'Will AI send wrong or spammy applications?', answer: 'No. Each application is individually crafted by Agent Forge with a unique cover letter, tailored resume, and quality-checked by Sentinel before sending.' },
     { question: 'How does the AI actually apply?', answer: 'Archer generates a unique cover letter for each job, then submits through job portals directly or sends a professional cold email to company HR. Every application is tracked in your dashboard.' },
     { question: 'Is my data safe?', answer: 'All data is encrypted in transit and at rest. We never sell or share your information. You can delete your account and all data anytime. GDPR compliant.' },

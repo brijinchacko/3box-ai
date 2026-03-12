@@ -27,6 +27,11 @@ export async function GET() {
         // Per-agent scheduling defaults
         scoutEnabled: false,
         scoutInterval: 24,
+        scoutJobsPerSearch: 10,
+        scoutDailyCap: 50,
+        scoutDailyCount: 0,
+        scoutDailyResetAt: null,
+        scoutAutoMode: false,
         scoutLastRunAt: null,
         forgeEnabled: false,
         forgeInterval: 24,
@@ -63,7 +68,7 @@ export async function PUT(request: NextRequest) {
       minMatchScore, maxAppliesPerRun, excludeCompanies, excludeKeywords,
       scheduleTime, preferRemote,
       // Per-agent scheduling fields
-      scoutEnabled, scoutInterval,
+      scoutEnabled, scoutInterval, scoutJobsPerSearch, scoutDailyCap, scoutAutoMode,
       forgeEnabled, forgeInterval, forgeMode,
       archerEnabled, archerInterval, archerMaxPerRun,
     } = body;
@@ -98,6 +103,9 @@ export async function PUT(request: NextRequest) {
 
     if (typeof scoutEnabled === 'boolean') data.scoutEnabled = scoutEnabled;
     if (typeof scoutInterval === 'number' && VALID_INTERVALS.includes(scoutInterval)) data.scoutInterval = scoutInterval;
+    if (typeof scoutJobsPerSearch === 'number') data.scoutJobsPerSearch = Math.min(50, Math.max(5, scoutJobsPerSearch));
+    if (typeof scoutDailyCap === 'number') data.scoutDailyCap = Math.min(100, Math.max(5, scoutDailyCap));
+    if (typeof scoutAutoMode === 'boolean') data.scoutAutoMode = scoutAutoMode;
 
     if (typeof forgeEnabled === 'boolean') data.forgeEnabled = forgeEnabled;
     if (typeof forgeInterval === 'number' && VALID_INTERVALS.includes(forgeInterval)) data.forgeInterval = forgeInterval;

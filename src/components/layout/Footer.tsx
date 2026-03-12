@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Linkedin, Youtube, Facebook, Instagram, Twitter, Github } from 'lucide-react';
+import { Linkedin, Youtube, Facebook, Instagram } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 
 const socialLinks = [
@@ -9,8 +9,6 @@ const socialLinks = [
   { icon: Youtube, href: 'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/', label: 'YouTube' },
   { icon: Facebook, href: 'https://www.facebook.com/61586302726912', label: 'Facebook' },
   { icon: Instagram, href: 'https://www.instagram.com/3box.ai', label: 'Instagram' },
-  { icon: Twitter, href: 'https://x.com/oforoai', label: 'Twitter' },
-  { icon: Github, href: 'https://github.com/oforo-ai', label: 'GitHub' },
 ];
 
 const footerLinks = {
@@ -38,6 +36,7 @@ const footerLinks = {
   Legal: [
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
+    { label: 'Refund Policy', href: '/refund-policy' },
     { label: 'Security', href: '/security' },
     { label: 'GDPR', href: '/gdpr' },
   ],

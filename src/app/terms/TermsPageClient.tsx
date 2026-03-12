@@ -13,10 +13,10 @@ const sections = [
     icon: Info,
     title: 'Service Description',
     content: [
-      { text: '3BOX AI provides AI-powered career development tools including skill assessments, personalized career planning, resume building, portfolio creation, job matching, and interview preparation.' },
+      { text: '3BOX AI provides an AI-powered career operating system featuring 7 specialized AI agents (Scout, Forge, Archer, Atlas, Sage, Sentinel, and Cortex) that work together to find jobs, optimize resumes, send applications, prepare for interviews, and coach your career development.' },
       { text: 'The platform is provided "as is" and we continuously improve features.' },
-      { text: 'Some features require a paid subscription (Starter, Pro, or Ultra plan).' },
-      { text: 'Free tier includes limited access to all core features.' },
+      { text: 'Some features require a paid subscription (Starter, Pro, or Ultra plan). See the Pricing page for current plan pricing in your region.' },
+      { text: 'All paid plans include a 7-day money-back guarantee subject to usage conditions. See our Refund Policy for details.' },
     ],
   },
   {
@@ -46,11 +46,11 @@ const sections = [
     icon: CreditCard,
     title: 'Subscription & Billing',
     content: [
-      { heading: 'Free plan', text: 'Basic access at no cost, forever.' },
-      { heading: 'Paid plans (Starter $10/mo, Pro $24/mo, Ultra $49/mo)', text: 'Billed monthly or yearly as selected.' },
+      { heading: 'Money-back guarantee', text: 'All paid plans include a 7-day money-back guarantee on initial purchase, subject to usage limits.' },
+      { heading: 'Paid plans (Starter, Pro, Ultra)', text: 'Pricing varies by region. Billed monthly or yearly as selected. See our Pricing page for current rates.' },
       { text: 'Yearly billing saves 20% compared to monthly.' },
       { text: 'You can upgrade, downgrade, or cancel anytime from Settings.' },
-      { text: 'Refunds available within 14 days of initial purchase.' },
+      { text: '7-day money-back guarantee on initial purchase, subject to usage limits (max 30 applications, max 50% credit usage). See Refund Policy for full terms.' },
       { text: 'Plan changes take effect immediately with prorated billing.' },
       { text: 'Failed payments may result in temporary service suspension.' },
     ],
@@ -60,7 +60,7 @@ const sections = [
     title: 'AI Credits & Usage',
     content: [
       { text: 'AI features consume credits based on complexity (assessments, career plans, interview prep, resume AI enhancements).' },
-      { text: 'Free plan includes 10 AI credits per month.' },
+      { text: 'Each plan includes a monthly AI credit allocation (see Pricing page).' },
       { text: 'Paid plans include higher credit allocations (see Pricing page).' },
       { text: 'Additional credit packs can be purchased separately.' },
       { text: 'Unused credits do not roll over between billing periods.' },
@@ -71,11 +71,12 @@ const sections = [
     icon: Bot,
     title: 'Automation Disclaimer',
     content: [
-      { text: 'Ultra plan automation features (auto-apply) act on your behalf on third-party job platforms.' },
-      { text: 'You are responsible for reviewing and configuring automation settings.' },
+      { text: 'AI agents (Scout, Archer, Forge, Sentinel) may search for jobs, tailor resumes, and send applications on your behalf across third-party job platforms.' },
+      { text: 'Usage limits apply per plan. See Pricing page for details on application and credit allocations.' },
+      { text: 'You are responsible for reviewing and configuring agent preferences and automation settings.' },
       { text: 'You must maintain compliance with third-party job platform terms of service.' },
       { text: '3BOX AI provides career tools and does not guarantee employment outcomes.' },
-      { text: 'We are not liable for actions taken by automated systems on external platforms.' },
+      { text: 'We are not liable for actions taken by AI agents on external platforms.' },
     ],
   },
   {

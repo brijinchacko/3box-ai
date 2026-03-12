@@ -1,90 +1,131 @@
 /**
- * Token Pricing — Central source of truth for all token costs and plan allocations.
- * Every agent operation has a defined token cost. Every plan has a finite allowance.
+ * Application Limits — Central source of truth for plan-based application caps.
+ *
+ * The token/credit system is replaced by simple application limits:
+ * - FREE: 10 total lifetime applications (all agents unlocked)
+ * - PRO:  20 applications per day (resets at midnight UTC)
+ * - MAX:  50 applications per day (resets at midnight UTC)
+ *
+ * All AI operations (resume gen, cover letters, interview prep, etc.) are UNLIMITED.
  */
-import { type PlanTier } from '@/lib/agents/permissions';
 
-// ─── Plan Token Allocations (monthly) ──────────────────────
-export const PLAN_TOKEN_LIMITS: Record<PlanTier, number> = {
-  BASIC: 15,       // Demo — 1 Scout run + 1 resume gen
-  STARTER: 200,    // ~15 Scout runs or mix of operations
-  PRO: 600,        // Heavy usage
-  ULTRA: 2000,     // Power users — high but NOT unlimited
+// ─── Plan Types ──────────────────────────────────────────────
+export type PlanTier = 'FREE' | 'PRO' | 'MAX';
+
+// ─── Legacy mapping (for migration period) ───────────────────
+export const LEGACY_PLAN_MAP: Record<string, PlanTier> = {
+  BASIC: 'FREE',
+  STARTER: 'PRO',
+  PRO: 'PRO',
+  ULTRA: 'MAX',
+  FREE: 'FREE',
+  MAX: 'MAX',
 };
 
-// ─── Token Costs Per Operation ─────────────────────────────
-export const TOKEN_COSTS = {
-  // Scout Agent — per-platform cost
-  scout_search_per_platform: 2,  // 6 platforms = 12 tokens
-
-  // Forge Agent
-  resume_generate: 3,
-  resume_enhance: 2,
-  resume_analyze: 2,
-  forge_auto_generate: 5,  // First resume from profile (3 resume + 2 cover letter)
-  per_job_rewrite: 2,      // Per-job ATS-optimized variant
-
-  // Archer Agent
-  cover_letter: 2,
-  application_send: 1,
-
-  // Atlas Agent
-  interview_prep: 2,
-  interview_evaluate: 1,
-
-  // Sage Agent
-  skill_gap_analysis: 2,
-
-  // Sentinel Agent
-  application_review: 1,
-
-  // Career Plan
-  career_plan: 3,
-
-  // Dashboard Insights
-  ai_insights: 1,
-} as const;
-
-export type TokenOperation = keyof typeof TOKEN_COSTS;
-
-// ─── Token Cost Reference (for UI display) ─────────────────
-export const TOKEN_COST_LABELS: { operation: string; cost: string; description: string }[] = [
-  { operation: 'Scout Search', cost: '2/platform', description: '6 platforms = 12 tokens' },
-  { operation: 'Resume Generation', cost: '3', description: 'AI-powered full resume' },
-  { operation: 'Auto-Generate from Profile', cost: '5', description: 'Resume + cover letter from onboarding' },
-  { operation: 'Per-Job Rewrite', cost: '2', description: 'ATS-tailored variant per job' },
-  { operation: 'Resume Enhancement', cost: '2', description: 'Section optimization' },
-  { operation: 'Cover Letter', cost: '2', description: 'Per job application' },
-  { operation: 'Interview Prep', cost: '2', description: 'Company-specific questions' },
-  { operation: 'Interview Eval', cost: '1', description: 'Answer feedback' },
-  { operation: 'Career Plan', cost: '3', description: 'Full roadmap generation' },
-  { operation: 'Application Send', cost: '1', description: 'Portal or email' },
-  { operation: 'Skill Gap Analysis', cost: '2', description: 'Learning recommendations' },
-  { operation: 'Application Review', cost: '1', description: 'Quality check' },
-];
-
-// ─── Helpers ───────────────────────────────────────────────
-
-/** Estimate Scout token cost based on selected platform count */
-export function estimateScoutCost(platformCount: number): number {
-  return platformCount * TOKEN_COSTS.scout_search_per_platform;
+/** Normalize any plan tier (including legacy) to the new 3-tier system */
+export function normalizePlan(plan: string): PlanTier {
+  return LEGACY_PLAN_MAP[plan] ?? 'FREE';
 }
 
-/** Check if user can afford an operation (handles legacy unlimited -1) */
-export function canAfford(used: number, limit: number, cost: number): boolean {
-  if (limit < 0) return true; // Legacy unlimited users
-  return (used + cost) <= limit;
+// ─── Application Limits ─────────────────────────────────────
+export type LimitType = 'lifetime' | 'daily';
+
+export interface PlanLimit {
+  type: LimitType;
+  total?: number;   // For lifetime limits (FREE plan)
+  perDay?: number;  // For daily limits (PRO/MAX plans)
 }
 
-/** Tokens remaining (handles legacy unlimited -1) */
-export function tokensRemaining(used: number, limit: number): number {
-  if (limit < 0) return Infinity;
-  return Math.max(0, limit - used);
+export const APP_LIMITS: Record<PlanTier, PlanLimit> = {
+  FREE: { type: 'lifetime', total: 10 },
+  PRO:  { type: 'daily', perDay: 20 },
+  MAX:  { type: 'daily', perDay: 50 },
+};
+
+// ─── Core Functions ─────────────────────────────────────────
+
+/**
+ * Check if the user can send another application.
+ *
+ * @param plan - User's current plan (FREE, PRO, MAX)
+ * @param totalAppsUsed - Lifetime total applications (for FREE plan)
+ * @param dailyAppsUsed - Applications sent today (for PRO/MAX plans)
+ */
+export function canApply(
+  plan: PlanTier,
+  totalAppsUsed: number,
+  dailyAppsUsed: number
+): boolean {
+  const limit = APP_LIMITS[plan];
+
+  if (limit.type === 'lifetime') {
+    return totalAppsUsed < (limit.total ?? 0);
+  }
+
+  // Daily limit (PRO/MAX)
+  return dailyAppsUsed < (limit.perDay ?? 0);
 }
 
-/** Percentage of tokens used (0-100, handles legacy unlimited) */
-export function tokenUsagePercent(used: number, limit: number): number {
-  if (limit < 0) return 0; // Unlimited — show as 0% used
-  if (limit === 0) return 100;
-  return Math.min(100, Math.round((used / limit) * 100));
+/**
+ * Get the number of applications remaining for the user.
+ */
+export function getApplicationsRemaining(
+  plan: PlanTier,
+  totalAppsUsed: number,
+  dailyAppsUsed: number
+): number {
+  const limit = APP_LIMITS[plan];
+
+  if (limit.type === 'lifetime') {
+    return Math.max(0, (limit.total ?? 0) - totalAppsUsed);
+  }
+
+  return Math.max(0, (limit.perDay ?? 0) - dailyAppsUsed);
 }
+
+/**
+ * Get usage percentage (0–100) for progress bars.
+ */
+export function getUsagePercent(
+  plan: PlanTier,
+  totalAppsUsed: number,
+  dailyAppsUsed: number
+): number {
+  const limit = APP_LIMITS[plan];
+
+  if (limit.type === 'lifetime') {
+    const cap = limit.total ?? 1;
+    return Math.min(100, Math.round((totalAppsUsed / cap) * 100));
+  }
+
+  const cap = limit.perDay ?? 1;
+  return Math.min(100, Math.round((dailyAppsUsed / cap) * 100));
+}
+
+/**
+ * Get the total limit value for a plan (for UI display).
+ */
+export function getPlanLimit(plan: PlanTier): number {
+  const limit = APP_LIMITS[plan];
+  return limit.type === 'lifetime' ? (limit.total ?? 0) : (limit.perDay ?? 0);
+}
+
+/**
+ * Get a human-readable description of the plan's application limit.
+ */
+export function getPlanLimitLabel(plan: PlanTier): string {
+  const limit = APP_LIMITS[plan];
+
+  if (limit.type === 'lifetime') {
+    return `${limit.total} applications total`;
+  }
+
+  return `${limit.perDay} applications per day`;
+}
+
+// ─── Plan Pricing (for UI display) ──────────────────────────
+export const PLAN_PRICING: Record<PlanTier, { monthly: number; yearly: number; name: string }> = {
+  FREE: { monthly: 0, yearly: 0, name: 'Free' },
+  PRO:  { monthly: 29, yearly: 290, name: 'Pro' },
+  MAX:  { monthly: 59, yearly: 590, name: 'Max' },
+};

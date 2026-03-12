@@ -440,7 +440,7 @@ export default function CaseStudiesClient() {
               href="/get-started"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity text-lg"
             >
-              Get Started Free <ArrowRight className="w-5 h-5" />
+              Get Started <ArrowRight className="w-5 h-5" />
             </Link>
           </motion.div>
         </div>

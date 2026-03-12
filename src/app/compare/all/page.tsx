@@ -54,9 +54,9 @@ const faqs = [
       '3BOX AI is the only platform that includes all 8 core career features: AI resume builder, ATS checker, career coaching, salary estimator, skills assessment, portfolio builder, job matching, and interview prep.',
   },
   {
-    question: 'Is there a free AI resume builder that includes career coaching?',
+    question: 'Is there an affordable AI career platform that includes career coaching?',
     answer:
-      'Yes. 3BOX AI offers a free plan that includes an AI resume builder, 2 skill assessments, and 50 AI credits per month. The Pro plan at $12/mo unlocks unlimited access to all features including AI career coaching.',
+      'Yes. 3BOX AI Starter Duo plan starts at $12/mo and includes AI resume building, skill assessments, and 100 AI credits per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
   },
   {
     question: 'What makes 3BOX AI different from other AI resume builders?',

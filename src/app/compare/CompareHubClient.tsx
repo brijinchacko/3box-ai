@@ -136,7 +136,7 @@ export default function CompareHubClient() {
               salary estimator, skills assessment, portfolio builder, and job matching — all in one.
             </p>
             <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-              Start Free Today <ArrowRight className="w-4 h-4" />
+              Get Started Today <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         </div>

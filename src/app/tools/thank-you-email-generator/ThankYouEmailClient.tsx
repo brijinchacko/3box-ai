@@ -6,6 +6,7 @@ import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import EmailResult from '@/components/tools/EmailResult';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface ThankYouEmailResult {
   subject: string;
@@ -15,6 +16,7 @@ interface ThankYouEmailResult {
 const toneOptions = ['Professional', 'Warm & Friendly', 'Enthusiastic', 'Formal'];
 
 export default function ThankYouEmailClient() {
+  const agent = getAgentForTool('thank-you-email-generator');
   const [interviewerName, setInterviewerName] = useState('');
   const [company, setCompany] = useState('');
   const [position, setPosition] = useState('');
@@ -57,6 +59,11 @@ export default function ThankYouEmailClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Thank You Email Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="thank-you-email-generator"
     >
       {/* Error display */}
       {error && (
@@ -152,7 +159,7 @@ export default function ThankYouEmailClient() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating...
+              Agent Archer is writing your thank you email...
             </>
           ) : (
             <>

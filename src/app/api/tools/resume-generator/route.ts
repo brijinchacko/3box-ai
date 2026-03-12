@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { handleToolRequest } from '@/lib/tools/apiHelper';
+import { getToolPrompt } from '@/lib/tools/toolPrompts';
 
 export async function POST(request: NextRequest) {
   return handleToolRequest(request, {
     cookieName: '3box-resumegen-uses',
     requiredFields: ['fullName', 'currentRole', 'targetRole', 'skills'],
-    systemPrompt: `You are an expert resume writer. Generate a complete, ATS-optimized resume. Return JSON: { "summary": "string", "experience": [{ "title": "string", "company": "string", "duration": "string", "bullets": ["string"] }], "skills": { "technical": ["string"], "soft": ["string"] }, "education": [{ "degree": "string", "institution": "string", "year": "string" }], "certifications": ["string"] }. If specific company names aren't provided, use realistic placeholder names. Make bullet points achievement-oriented with metrics.`,
+    systemPrompt: getToolPrompt('resume-generator'),
     buildUserPrompt: (body) => {
       let prompt = `Full Name: ${body.fullName}`;
       prompt += `\nCurrent/Most Recent Job Title: ${body.currentRole}`;

@@ -1,22 +1,24 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Search, Hammer, Target, Compass, BookOpen, Shield,
-  Brain, Rocket, Lock, ChevronDown, ChevronRight, Settings2,
-  Play, Clock, CheckCircle2, XCircle, AlertTriangle,
-  ArrowRight, RefreshCw, Zap, Crown, Activity,
-  MapPin, Building2, Filter, Timer, ToggleLeft, ToggleRight,
-  TrendingUp, Send, Eye, FileCheck, GraduationCap, ShieldCheck
+  Search, Brain, Rocket, Lock, ChevronDown, ChevronRight, Settings2,
+  Clock, CheckCircle2, XCircle, AlertTriangle,
+  ArrowRight, RefreshCw, Crown, Activity,
+  Timer, ToggleLeft, ToggleRight,
+  TrendingUp, Send, FileCheck, GraduationCap, ShieldCheck
 } from 'lucide-react';
 import AgentAvatar, { AgentAvatarMini } from '@/components/brand/AgentAvatar';
 import CortexLoader from '@/components/brand/CortexLoader';
 import CortexAvatar from '@/components/brand/CortexAvatar';
-import { AGENTS, AGENT_LIST, COORDINATOR, type AgentId, AUTOMATION_MODES, AUTOMATION_MODE_LIST } from '@/lib/agents/registry';
+import { AGENTS, AGENT_LIST, COORDINATOR, type AgentId } from '@/lib/agents/registry';
 import AgentConfigPanel from '@/components/dashboard/AgentConfigPanel';
-import { INTERVAL_OPTIONS, humanizeAgo, nextRunLabel } from '@/lib/agents/configUtils';
+import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
+import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
 
 const PIPELINE_STAGES: Array<{
   key: string;
@@ -45,6 +47,7 @@ interface AgentDef {
   gradient: string;
   minPlan: string;
   capabilities: string[];
+  colorHex: string;
   locked: boolean;
 }
 
@@ -106,8 +109,24 @@ const fadeUp = {
 };
 
 export default function AgentDashboardPage() {
+  /* ── Session: plan available instantly from JWT (prevents lock flash) ── */
+  const { data: session } = useSession();
+  const { isAutopilot, isAgentic } = useDashboardMode();
+  const router = useRouter();
+  const sessionPlan = (session?.user?.plan as string) || 'FREE';
+
+  // Redirect to dashboard if in Autopilot mode (Agents page is Agentic-only)
+  useEffect(() => {
+    if (isAutopilot) {
+      router.replace('/dashboard');
+    }
+  }, [isAutopilot, router]);
+
+  // In Agentic mode, render Cortex-style agent workspace for Archer
+  if (isAgentic) return <AgenticWorkspace agentId="archer" />;
+
   const [agents, setAgents] = useState<AgentDef[]>([]);
-  const [userPlan, setUserPlan] = useState('BASIC');
+  const [userPlan, setUserPlan] = useState('FREE');
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<AgentConfig>({
@@ -150,25 +169,28 @@ export default function AgentDashboardPage() {
   const [excludeCompaniesInput, setExcludeCompaniesInput] = useState('');
   const [excludeKeywordsInput, setExcludeKeywordsInput] = useState('');
 
+  /* ── Sync session plan immediately (prevents lock flash for Ultra users) ── */
+  useEffect(() => {
+    if (session?.user?.plan) {
+      setUserPlan(session.user.plan);
+      setAgents(buildAgentList(session.user.plan));
+    }
+  }, [session]);
+
   // Fetch everything on mount
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const [profileRes, configRes, runsRes, activityRes] = await Promise.all([
-          fetch('/api/user/profile'),
+        const [configRes, runsRes, activityRes] = await Promise.all([
           fetch('/api/agents/config'),
           fetch('/api/agents/run?limit=10'),
           fetch('/api/agents/activity?limit=20'),
         ]);
 
-        if (profileRes.ok) {
-          const profile = await profileRes.json();
-          setUserPlan(profile.plan || 'BASIC');
-
-          // Build agents with status
-          const agentDefs = buildAgentList(profile.plan || 'BASIC');
-          setAgents(agentDefs);
+        // Use session plan if API hasn't loaded yet — already set above via useEffect
+        if (agents.length === 0 && sessionPlan) {
+          setAgents(buildAgentList(sessionPlan));
         }
 
         if (configRes.ok) {
@@ -199,7 +221,7 @@ export default function AgentDashboardPage() {
   }, []);
 
   function buildAgentList(plan: string): AgentDef[] {
-    const PLAN_LEVELS: Record<string, number> = { BASIC: 0, STARTER: 1, PRO: 2, ULTRA: 3 };
+    const PLAN_LEVELS: Record<string, number> = { BASIC: 0, FREE: 0, STARTER: 1, PRO: 2, ULTRA: 3, MAX: 3 };
     const userLevel = PLAN_LEVELS[plan] || 0;
 
     return AGENT_LIST.map(a => ({
@@ -214,11 +236,10 @@ export default function AgentDashboardPage() {
       gradient: a.gradient,
       minPlan: a.minPlan,
       capabilities: a.capabilities,
+      colorHex: a.colorHex,
       locked: userLevel < (PLAN_LEVELS[a.minPlan] || 0),
     }));
   }
-
-  // INTERVAL_OPTIONS, humanizeAgo, nextRunLabel imported from configUtils
 
   const saveConfig = async () => {
     setSavingConfig(true);
@@ -296,6 +317,7 @@ export default function AgentDashboardPage() {
     } catch {}
   };
 
+  const effectivePlan = userPlan !== 'FREE' ? userPlan : sessionPlan;
   const activeAgentCount = agents.filter(a => !a.locked).length;
   const latestRun = runs.length > 0 ? runs[0] : null;
 
@@ -314,7 +336,7 @@ export default function AgentDashboardPage() {
             <p className="text-white/40 text-sm">
               One command activates all agents &middot;{' '}
               <span className="text-neon-green">{activeAgentCount} agents active</span>
-              {userPlan === 'BASIC' && <span className="text-white/30"> — Upgrade to unlock agents</span>}
+              {effectivePlan === 'FREE' && <span className="text-white/30"> — Upgrade to unlock agents</span>}
             </p>
           </div>
         </div>
@@ -384,21 +406,18 @@ export default function AgentDashboardPage() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="mt-3 pt-3 border-t border-white/5"
+                      className="mt-3 pt-3 border-t border-white/5 space-y-1.5"
                     >
-                      <p className="text-xs text-white/30 mb-2 uppercase tracking-wider">Capabilities</p>
-                      <div className="space-y-1.5">
-                        {agent.capabilities.map((cap) => (
-                          <div key={cap} className="flex items-center gap-2 text-xs text-white/50">
-                            <CheckCircle2 className="w-3 h-3 text-neon-green flex-shrink-0" />
-                            {cap}
-                          </div>
-                        ))}
-                      </div>
+                      {agent.capabilities.map((cap) => (
+                        <div key={cap} className="flex items-center gap-2 text-xs text-white/50">
+                          <CheckCircle2 className="w-3 h-3 text-neon-green flex-shrink-0" />
+                          {cap}
+                        </div>
+                      ))}
                       {agent.locked && (
                         <Link
                           href="/pricing"
-                          className="mt-3 inline-flex items-center gap-1 text-xs text-neon-blue hover:underline"
+                          className="mt-2 inline-flex items-center gap-1 text-xs text-neon-blue hover:underline"
                           onClick={e => e.stopPropagation()}
                         >
                           Upgrade to {agent.minPlan} <ArrowRight className="w-3 h-3" />
@@ -428,7 +447,7 @@ export default function AgentDashboardPage() {
           )}
         </div>
 
-        {userPlan === 'BASIC' ? (
+        {effectivePlan === 'FREE' ? (
           <div className="text-center py-6">
             <Lock className="w-8 h-8 text-white/20 mx-auto mb-2" />
             <p className="text-sm text-white/40 mb-3">Upgrade to Starter or higher to run your AI agents</p>
@@ -795,7 +814,7 @@ export default function AgentDashboardPage() {
       </div>
 
       {/* ── Schedule CTA ── */}
-      {userPlan !== 'BASIC' && !config.scheduleTime && !config.scoutEnabled && !config.archerEnabled && (
+      {effectivePlan !== 'BASIC' && !config.scheduleTime && !config.scoutEnabled && !config.archerEnabled && (
         <motion.div custom={10} variants={fadeUp} initial="hidden" animate="visible">
           <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
             <div className="flex items-center gap-4">

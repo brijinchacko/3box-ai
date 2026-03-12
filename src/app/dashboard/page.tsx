@@ -1,757 +1,211 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import CortexAvatar from '@/components/brand/CortexAvatar';
-import AgentTeamStrip from '@/components/dashboard/AgentTeamStrip';
-import AgentChat, { type ChatMessage } from '@/components/dashboard/AgentChat';
-import InterviewPrepPanel from '@/components/dashboard/InterviewPrepPanel';
-import LearningPathPanel from '@/components/dashboard/LearningPathPanel';
-import QualityReviewPanel from '@/components/dashboard/QualityReviewPanel';
-import ScoutToolbar, { type ScoutTab } from '@/components/dashboard/ScoutToolbar';
-import ForgeToolbar, { type ForgeTab } from '@/components/dashboard/ForgeToolbar';
-import ArcherToolbar, { type ArcherFilter } from '@/components/dashboard/ArcherToolbar';
-import CortexToolbar, { DEFAULT_STEPS, type JourneyStep } from '@/components/dashboard/CortexToolbar';
-import AtlasToolbar, { type AtlasTab } from '@/components/dashboard/AtlasToolbar';
-import SageToolbar, { type SageTab } from '@/components/dashboard/SageToolbar';
-import SentinelToolbar, { type SentinelTab } from '@/components/dashboard/SentinelToolbar';
-import DailyTimeline, { type TimelineEntry } from '@/components/dashboard/DailyTimeline';
-import MetricsBar from '@/components/dashboard/MetricsBar';
-import UserMenu from '@/components/dashboard/UserMenu';
-import { AGENTS, COORDINATOR, type AgentId } from '@/lib/agents/registry';
-import { getAgentsWithStatus, type PlanTier } from '@/lib/agents/permissions';
-import { getInitials } from '@/lib/utils';
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
+import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
+import { Plus, Search, MapPin, Pause, Play, Trash2, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-/* ── Types ── */
-interface Metrics { jobsFound: number; appsSent: number; interviews: number; responseRate: number }
+/* ── Autopilot imports ── */
+import StatsCards from '@/components/dashboard/overview/StatsCards';
+import QuickActions from '@/components/dashboard/overview/QuickActions';
+import RecentActivity from '@/components/dashboard/overview/RecentActivity';
+import ApplicationLimitBar from '@/components/dashboard/shared/ApplicationLimitBar';
+import SearchProfileWizard from '@/components/dashboard/jobs/SearchProfileWizard';
 
-const planBadges: Record<string, { label: string; color: string }> = {
-  BASIC:   { label: 'Free',    color: 'text-white/40 bg-white/5' },
-  STARTER: { label: 'Starter', color: 'text-neon-green bg-neon-green/10' },
-  PRO:     { label: 'Pro',     color: 'text-neon-blue bg-neon-blue/10' },
-  ULTRA:   { label: 'Ultra',   color: 'text-neon-purple bg-neon-purple/10' },
-};
+interface SearchProfile {
+  id: string;
+  name: string;
+  jobTitle: string;
+  location: string;
+  remote?: boolean;
+  active: boolean;
+  jobsFound: number;
+  appliedCount: number;
+  createdAt: string;
+}
 
-/* ── Selected agent can include cortex ── */
-type SelectedAgentId = AgentId | 'cortex';
+export default function DashboardOverviewPage() {
+  const { data: session } = useSession();
+  const { isAutopilot } = useDashboardMode();
+  const firstName = session?.user?.name?.split(' ')[0] || 'there';
 
-/* ── Welcome messages per agent ── */
-const WELCOME: Record<SelectedAgentId, string> = {
-  scout: "I'm ready to hunt for jobs matching your profile. Hit 'Search Jobs' or tell me what role you're looking for.",
-  forge: "I'll optimize your resume for any job. Use 'Optimize Resume' or paste a job description and I'll tailor it.",
-  archer: "I can send applications with tailored cover letters. Hit 'Apply to Top Matches' to get started.",
-  atlas: "Let me prepare you for interviews. Pick a company or use 'Practice Interview' to start a mock session.",
-  sage: "I'll analyze your skill gaps and recommend learning paths. Hit 'Find Skill Gaps' to begin.",
-  sentinel: "I review applications for quality and catch issues before they go out. Use 'Review Queue' to check pending items.",
-  cortex: "I'm Cortex — your AI team coordinator. I oversee all six agents and can give you a status report or run the full pipeline. What would you like to do?",
-};
-
-export default function DashboardPage() {
-  const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userImage, setUserImage] = useState<string | null>(null);
-  const [plan, setPlan] = useState<PlanTier>('STARTER');
-  const [selectedAgent, setSelectedAgent] = useState<SelectedAgentId>('cortex');
-  const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
-  const [recentlyDone, setRecentlyDone] = useState<Set<string>>(new Set());
-  const [agentChats, setAgentChats] = useState<Record<string, ChatMessage[]>>({});
-  const [activities, setActivities] = useState<TimelineEntry[]>([]);
-  const [metrics, setMetrics] = useState<Metrics>({ jobsFound: 0, appsSent: 0, interviews: 0, responseRate: 0 });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [resumeReady, setResumeReady] = useState(false);
-  const [resumeFinalized, setResumeFinalized] = useState(false);
-  const [savedJobs, setSavedJobs] = useState<any[]>([]);
-
-  const loadedAgents = useRef<Set<string>>(new Set());
-  const handleRunPipelineRef = useRef<(() => void) | null>(null);
-
-  /* ── Initial data fetch ── */
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/user/profile').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/agents/activity?limit=30').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/agents/pipeline-stats').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/forge/status').then(r => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([profile, actData, stats, forgeStatus]) => {
-      if (profile) {
-        setUserName(profile.name || '');
-        setUserEmail(profile.email || null);
-        setUserImage(profile.image || null);
-        setPlan((profile.plan as PlanTier) || 'STARTER');
-      }
-      if (actData) {
-        const list: any[] = Array.isArray(actData) ? actData : actData.activities ?? [];
-        setActivities(list.slice(0, 30).map((a: any) => ({
-          id: a.id || String(Math.random()),
-          agentId: a.agent || a.agentId || '',
-          action: a.action || '',
-          summary: a.summary || a.action || '',
-          timestamp: a.createdAt || a.timestamp || '',
-        })));
-      }
-      if (stats) {
-        setMetrics({
-          jobsFound: stats.jobsFound ?? stats.totalJobsFound ?? 0,
-          appsSent: stats.applicationsSent ?? stats.totalApplied ?? 0,
-          interviews: stats.interviews ?? stats.interviewsScheduled ?? 0,
-          responseRate: stats.responseRate ?? 0,
-        });
-      }
-      if (forgeStatus) {
-        setResumeReady(!!forgeStatus.hasResume || !!forgeStatus.resume || !!forgeStatus.atsScore);
-        setResumeFinalized(!!forgeStatus.finalized || !!forgeStatus.isFinalized || (forgeStatus.atsScore && forgeStatus.atsScore >= 70));
-      }
-      setLoading(false);
-    });
-  }, []);
-
-  const agents = getAgentsWithStatus(plan);
-  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
-  const initials = getInitials(userName || 'User');
-  const badge = planBadges[plan] || planBadges.BASIC;
-  const savedJobIds = new Set(savedJobs.map(j => j.id));
-
-  /* ── Job search intent keywords ── */
-  const JOB_SEARCH_KEYWORDS = /\b(find|search|look\s?for|discover|hunt|get\s?me|show\s?me|any)\b.*\b(job|jobs|role|roles|position|positions|opening|openings|vacancy|vacancies|work|gig|opportunity|opportunities)\b/i;
-
-  /* ── Persist a message to DB (fire-and-forget) ── */
-  const persistMsg = useCallback((agentId: string, msg: ChatMessage) => {
-    if (msg.role === 'system') return;
-    fetch('/api/agents/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId, role: msg.role, content: msg.content, type: msg.type, data: msg.data }),
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(saved => {
-        if (saved?.id) {
-          setAgentChats(prev => ({
-            ...prev,
-            [agentId]: (prev[agentId] || []).map(m => m.id === msg.id ? { ...m, id: saved.id } : m),
-          }));
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  /* ── Chat helpers ── */
-  const addMessage = useCallback((agentId: SelectedAgentId, msg: ChatMessage) => {
-    setAgentChats(prev => ({ ...prev, [agentId]: [...(prev[agentId] || []), msg] }));
-    persistMsg(agentId, msg);
-  }, [persistMsg]);
-
-  const createMsg = (agentId: SelectedAgentId, role: 'agent' | 'user' | 'system', content: string, type: ChatMessage['type'] = 'text', data?: any): ChatMessage => ({
-    id: `${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    role, content, type, data, feedback: null, timestamp: Date.now(),
-  });
-
-  /* ── Load chat history from DB ── */
-  useEffect(() => {
-    if (!selectedAgent) return;
-    if (loadedAgents.current.has(selectedAgent)) return;
-    loadedAgents.current.add(selectedAgent);
-
-    fetch(`/api/agents/chat?agentId=${selectedAgent}&limit=50`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.messages?.length) {
-          setAgentChats(prev => ({ ...prev, [selectedAgent]: data.messages }));
-        } else {
-          const welcome = WELCOME[selectedAgent as SelectedAgentId];
-          if (welcome) {
-            const msg: ChatMessage = { id: `welcome-${selectedAgent}`, role: 'agent', content: welcome, type: 'text', feedback: null, timestamp: Date.now() };
-            setAgentChats(prev => ({ ...prev, [selectedAgent]: [msg] }));
-            persistMsg(selectedAgent, msg);
-          }
-        }
-      })
-      .catch(() => {
-        const welcome = WELCOME[selectedAgent as SelectedAgentId];
-        if (welcome) {
-          setAgentChats(prev => ({ ...prev, [selectedAgent]: [{ id: `welcome-${selectedAgent}`, role: 'agent', content: welcome, type: 'text', feedback: null, timestamp: Date.now() }] }));
-        }
-      });
-  }, [selectedAgent, persistMsg]);
-
-  /* ── Agent run handler ── */
-  const handleRunAgent = useCallback(async (agentId: AgentId) => {
-    const agent = AGENTS[agentId];
-    if (!agent) return;
-    setRunningAgents(prev => new Set(prev).add(agentId));
-    addMessage(agentId, createMsg(agentId, 'system', `${agent.name} started working...`));
-
-    try {
-      const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId }) });
-      const data = await res.json().catch(() => null);
-      if (data?.error) addMessage(agentId, createMsg(agentId, 'agent', data.error || 'Something went wrong.'));
-      else addMessage(agentId, createMsg(agentId, 'agent', data?.summary || `Done! ${agent.name} completed the task.`));
-    } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
-
-    setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
-    setRecentlyDone(prev => new Set(prev).add(agentId));
-    setTimeout(() => { setRecentlyDone(prev => { const n = new Set(prev); n.delete(agentId); return n; }); }, 30000);
-
-    fetch('/api/agents/activity?limit=30').then(r => r.ok ? r.json() : null).then(actData => {
-      if (actData) {
-        const list: any[] = Array.isArray(actData) ? actData : actData.activities ?? [];
-        setActivities(list.slice(0, 30).map((a: any) => ({ id: a.id || String(Math.random()), agentId: a.agent || a.agentId || '', action: a.action || '', summary: a.summary || a.action || '', timestamp: a.createdAt || a.timestamp || '' })));
-      }
-    }).catch(() => {});
-  }, [addMessage]);
-
-  /* ── Quick action handler ── */
-  const handleQuickAction = useCallback(async (agentId: SelectedAgentId, action: string) => {
-    /* Cortex-specific quick actions */
-    if (agentId === 'cortex') {
-      if (action === 'pipeline') {
-        addMessage('cortex', createMsg('cortex', 'system', 'Running full pipeline...'));
-        handleRunPipelineRef.current?.();
-        return;
-      }
-      if (action === 'status') {
-        const unlocked = agents.filter(a => !a.locked);
-        const running = [...runningAgents];
-        const status = unlocked.map(a => `• ${AGENTS[a.id as AgentId].name}: ${running.includes(a.id) ? '🔄 Working' : '✅ Ready'}`).join('\n');
-        addMessage('cortex', createMsg('cortex', 'agent', `Team status:\n${status}`));
-        return;
-      }
-      return;
-    }
-
-    const agent = AGENTS[agentId];
-    if (!agent) return;
-
-    const apiMap: Record<string, { url: string; method: string; body?: any; label: string }> = {
-      'scout:search':    { url: '/api/agents/scout/run', method: 'POST', body: {}, label: 'Searching for jobs...' },
-      'scout:linkedin':  { url: '/api/agents/scout/run', method: 'POST', body: { platforms: ['linkedin'] }, label: 'Scanning LinkedIn...' },
-      'forge:optimize':  { url: '/api/forge/auto-generate', method: 'POST', body: {}, label: 'Optimizing your resume...' },
-      'forge:ats':       { url: '/api/forge/status', method: 'GET', label: 'Checking ATS score...' },
-      'archer:apply':    { url: '/api/agents/run', method: 'POST', body: { agentId: 'archer' }, label: 'Applying to top matches...' },
-      'archer:cover':    { url: '/api/agents/run', method: 'POST', body: { agentId: 'archer', coverOnly: true }, label: 'Generating cover letters...' },
-      'atlas:practice':  { url: '/api/ai/interview', method: 'POST', body: { mode: 'practice' }, label: 'Preparing interview questions...' },
-      'atlas:research':  { url: '/api/ai/interview', method: 'POST', body: { mode: 'research' }, label: 'Researching company...' },
-      'sage:gaps':       { url: '/api/agents/skill-gaps', method: 'GET', label: 'Analyzing skill gaps...' },
-      'sage:learn':      { url: '/api/agents/skill-gaps', method: 'GET', label: 'Building learning path...' },
-      'sentinel:review': { url: '/api/agents/run', method: 'POST', body: { agentId: 'sentinel' }, label: 'Reviewing application queue...' },
-      'sentinel:report': { url: '/api/agents/run', method: 'POST', body: { agentId: 'sentinel' }, label: 'Generating quality report...' },
-    };
-
-    const key = `${agentId}:${action}`;
-    const api = apiMap[key];
-    if (!api) { addMessage(agentId, createMsg(agentId, 'agent', `I don't know how to handle "${action}" yet.`)); return; }
-
-    setRunningAgents(prev => new Set(prev).add(agentId));
-    addMessage(agentId, createMsg(agentId, 'system', api.label));
-
-    try {
-      const opts: RequestInit = { method: api.method, headers: { 'Content-Type': 'application/json' } };
-      if (api.method === 'POST' && api.body) opts.body = JSON.stringify(api.body);
-      const res = await fetch(api.url, opts);
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) addMessage(agentId, createMsg(agentId, 'agent', data?.error || `Something went wrong (${res.status}).`));
-      else if (agentId === 'scout' && (data?.jobs || data?.results)) { const jobs = data.jobs || data.results || []; addMessage(agentId, createMsg(agentId, 'agent', `Found ${jobs.length} jobs matching your profile!`, 'job-cards', jobs)); }
-      else if (agentId === 'forge' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Resume optimized successfully!', 'resume-preview', data));
-      else if (agentId === 'archer' && (data?.applications || data?.applied)) { const apps = data.applications || data.applied || []; addMessage(agentId, createMsg(agentId, 'agent', `Sent ${apps.length} applications!`, 'application-status', apps)); }
-      else if (agentId === 'atlas' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Here are your interview prep questions:', 'interview-prep', data));
-      else if (agentId === 'sage' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Skill gap analysis complete:', 'skill-gaps', data));
-      else if (agentId === 'sentinel' && data) addMessage(agentId, createMsg(agentId, 'agent', 'Quality review complete:', 'quality-report', data));
-      else addMessage(agentId, createMsg(agentId, 'agent', data?.summary || data?.message || 'Done!'));
-    } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
-
-    setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
-    setRecentlyDone(prev => new Set(prev).add(agentId));
-    setTimeout(() => { setRecentlyDone(prev => { const n = new Set(prev); n.delete(agentId); return n; }); }, 30000);
-  }, [addMessage]);
-
-  /* ── Send text message (with smart intent detection) ── */
-  const handleSendMessage = useCallback(async (agentId: SelectedAgentId, content: string) => {
-    addMessage(agentId, createMsg(agentId, 'user', content));
-    setRunningAgents(prev => new Set(prev).add(agentId));
-
-    /* ── Scout: detect job search intent and return structured cards ── */
-    if (agentId === 'scout' && JOB_SEARCH_KEYWORDS.test(content)) {
-      addMessage('scout', createMsg('scout', 'system', 'Searching for matching jobs...'));
-      try {
-        const query = content.replace(JOB_SEARCH_KEYWORDS, '').trim() || '';
-        const searchParams = new URLSearchParams({ query, limit: '10' });
-        const res = await fetch(`/api/jobs/search?${searchParams}`);
-        const data = await res.json().catch(() => null);
-        const jobs = data?.jobs || data?.results || [];
-        if (jobs.length > 0) {
-          addMessage('scout', createMsg('scout', 'agent', `Found ${jobs.length} jobs matching your search!`, 'job-cards', jobs));
-        } else {
-          addMessage('scout', createMsg('scout', 'agent', 'No jobs found for that query. Try broadening your search or use a different keyword.'));
-        }
-      } catch {
-        addMessage('scout', createMsg('scout', 'agent', 'Connection error while searching. Please try again.'));
-      }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
-      return;
-    }
-
-    /* ── Forge: detect resume-related intent ── */
-    if (agentId === 'forge' && /\b(optimize|improve|update|build|create|generate)\b.*\b(resume|cv)\b/i.test(content)) {
-      addMessage('forge', createMsg('forge', 'system', 'Working on your resume...'));
-      try {
-        const res = await fetch('/api/forge/auto-generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-        const data = await res.json().catch(() => null);
-        if (data) {
-          addMessage('forge', createMsg('forge', 'agent', 'Resume optimized successfully!', 'resume-preview', data));
-          setResumeReady(true);
-        } else {
-          addMessage('forge', createMsg('forge', 'agent', "I'll need your profile data to optimize your resume. Please upload your resume first or fill in your profile."));
-        }
-      } catch {
-        addMessage('forge', createMsg('forge', 'agent', 'Connection error. Please try again.'));
-      }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
-      return;
-    }
-
-    /* ── Default: AI chat ── */
-    const agentName = agentId === 'cortex' ? COORDINATOR.name : AGENTS[agentId].name;
-    const agentRole = agentId === 'cortex' ? COORDINATOR.role : AGENTS[agentId].role;
-    try {
-      const res = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: content, context: { agentId, agentName, agentRole } }) });
-      const data = await res.json().catch(() => null);
-      addMessage(agentId, createMsg(agentId, 'agent', data?.reply || data?.message || "I'm not sure how to help with that. Try using one of the quick actions above."));
-    } catch { addMessage(agentId, createMsg(agentId, 'agent', 'Connection error. Please try again.')); }
-    setRunningAgents(prev => { const n = new Set(prev); n.delete(agentId); return n; });
-  }, [addMessage]);
-
-  /* ── Feedback handler ── */
-  const handleFeedback = useCallback((agentId: SelectedAgentId, messageId: string, fb: 'up' | 'down' | null) => {
-    setAgentChats(prev => ({ ...prev, [agentId]: (prev[agentId] || []).map(m => m.id === messageId ? { ...m, feedback: fb } : m) }));
-    fetch(`/api/agents/chat/${messageId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feedback: fb }) }).catch(() => {});
-  }, []);
-
-  /* ── Run full pipeline ── */
-  const handleRunPipeline = useCallback(async () => {
-    const unlocked = agents.filter(a => !a.locked);
-    for (const agent of unlocked) {
-      setSelectedAgent(agent.id as AgentId);
-      await handleRunAgent(agent.id as AgentId);
-      await new Promise(r => setTimeout(r, 400));
-    }
-  }, [agents, handleRunAgent]);
-  handleRunPipelineRef.current = handleRunPipeline;
-
-  /* ── Agent strip data ── */
-  const agentStripData = agents.map(a => ({
-    id: a.id as AgentId,
-    name: AGENTS[a.id as AgentId].name,
-    role: AGENTS[a.id as AgentId].role,
-    locked: a.locked,
-    colorHex: AGENTS[a.id as AgentId].colorHex,
-  }));
-
-  /* ── Last message per agent ── */
-  const lastMessages: Record<string, string> = {};
-  for (const [agentId, msgs] of Object.entries(agentChats)) {
-    const last = [...msgs].reverse().find(m => m.role !== 'system');
-    if (last) lastMessages[agentId] = last.content.slice(0, 60);
+  if (isAutopilot) {
+    return <AutopilotDashboard firstName={firstName} />;
   }
 
-  /* ── Apply job → switch to Archer ── */
-  const handleApplyJob = useCallback((job: any) => {
-    setSavedJobs(prev => prev.some(j => j.id === job.id) ? prev : [...prev, job]);
-    setSelectedAgent('archer');
-    addMessage('archer', createMsg('archer', 'system', `Preparing application for ${job.title} at ${job.company}...`));
-    setTimeout(async () => {
-      setRunningAgents(prev => new Set(prev).add('archer'));
-      try {
-        const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: 'archer', jobId: job.id, jobTitle: job.title, company: job.company, jobUrl: job.url || job.jobUrl }) });
-        const data = await res.json().catch(() => null);
-        if (data?.applications || data?.applied) {
-          const apps = data.applications || data.applied || [];
-          addMessage('archer', createMsg('archer', 'agent', `Application sent for ${job.title} at ${job.company}!`, 'application-status', apps));
-        } else {
-          addMessage('archer', createMsg('archer', 'agent', data?.summary || `Application for ${job.title} at ${job.company} has been queued. I'll process it shortly.`));
-        }
-      } catch {
-        addMessage('archer', createMsg('archer', 'agent', `I've queued the application for ${job.title} at ${job.company}. I'll process it when connectivity is restored.`));
-      }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete('archer'); return n; });
-    }, 300);
-  }, [addMessage]);
+  /* Agentic mode — render Cortex workspace (same as /dashboard/chat) */
+  return <AgenticWorkspace agentId="cortex" />;
+}
 
-  /* ── Save/unsave job ── */
-  const handleSaveJob = useCallback((job: any) => {
-    setSavedJobs(prev => {
-      const exists = prev.some(j => j.id === job.id);
-      return exists ? prev.filter(j => j.id !== job.id) : [...prev, job];
-    });
+/* ═══════════════════════════════════════════════════════
+   AUTOPILOT DASHBOARD — Clean, minimal overview
+   ═══════════════════════════════════════════════════════ */
+function AutopilotDashboard({ firstName }: { firstName: string }) {
+  const [showWizard, setShowWizard] = useState(false);
+  const [profiles, setProfiles] = useState<SearchProfile[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const fetchProfiles = useCallback(() => {
+    fetch('/api/user/loops')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.profiles) setProfiles(data.profiles);
+        setLoadingProfiles(false);
+      })
+      .catch(() => setLoadingProfiles(false));
   }, []);
 
-  /* ── Toolbar tab handlers ── */
-  const handleScoutTab = useCallback(async (tab: ScoutTab) => {
-    if (tab === 'report') {
-      setRunningAgents(prev => new Set(prev).add('scout'));
-      addMessage('scout', createMsg('scout', 'system', 'Loading Scout report...'));
-      try {
-        const res = await fetch('/api/agents/scout/results');
-        const data = await res.json().catch(() => null);
-        const jobs = data?.jobs || data?.results || [];
-        if (jobs.length > 0) {
-          addMessage('scout', createMsg('scout', 'agent', `📊 Scout Report: Found ${jobs.length} jobs from your last search.`, 'job-cards', jobs));
-        } else {
-          addMessage('scout', createMsg('scout', 'agent', 'No previous search results. Deploy Scout or search for jobs to see your report.'));
-        }
-      } catch { addMessage('scout', createMsg('scout', 'agent', 'Could not load report. Try deploying Scout first.')); }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete('scout'); return n; });
-    } else if (tab === 'discover') {
-      setRunningAgents(prev => new Set(prev).add('scout'));
-      addMessage('scout', createMsg('scout', 'system', 'Discovering new jobs...'));
-      try {
-        const res = await fetch('/api/jobs/search?limit=10');
-        const data = await res.json().catch(() => null);
-        const jobs = data?.jobs || data?.results || [];
-        if (jobs.length > 0) {
-          addMessage('scout', createMsg('scout', 'agent', `🔍 Found ${jobs.length} new opportunities:`, 'job-cards', jobs));
-        } else {
-          addMessage('scout', createMsg('scout', 'agent', 'No new jobs discovered. Check back later or adjust your profile targets.'));
-        }
-      } catch { addMessage('scout', createMsg('scout', 'agent', 'Connection error while discovering jobs.')); }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete('scout'); return n; });
-    } else if (tab === 'saved') {
-      if (savedJobs.length > 0) {
-        addMessage('scout', createMsg('scout', 'agent', `📌 You have ${savedJobs.length} saved jobs:`, 'job-cards', savedJobs));
-      } else {
-        addMessage('scout', createMsg('scout', 'agent', 'No saved jobs yet. Search for jobs and click "Save" to bookmark them here.'));
-      }
-    }
-  }, [addMessage, savedJobs]);
+  useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
-  const handleForgeTab = useCallback(async (tab: ForgeTab) => {
-    if (tab === 'resume') {
-      setRunningAgents(prev => new Set(prev).add('forge'));
-      addMessage('forge', createMsg('forge', 'system', 'Loading resume status...'));
-      try {
-        const res = await fetch('/api/forge/status');
-        const data = await res.json().catch(() => null);
-        if (data?.atsScore || data?.hasResume) {
-          addMessage('forge', createMsg('forge', 'agent', 'Here is your current resume status:', 'resume-preview', data));
-          setResumeReady(true);
-          if (data.atsScore >= 70) setResumeFinalized(true);
-        } else {
-          addMessage('forge', createMsg('forge', 'agent', 'No resume on file yet. Use "Optimize Resume" to create one, or paste a job description to start.'));
-        }
-      } catch { addMessage('forge', createMsg('forge', 'agent', 'Could not load resume status.')); }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete('forge'); return n; });
-    } else if (tab === 'cover') {
-      addMessage('forge', createMsg('forge', 'agent', 'Ready to generate a cover letter! Paste a job description or tell me the company and role, and I\'ll craft a personalized cover letter.'));
-    } else if (tab === 'linkedin') {
-      addMessage('forge', createMsg('forge', 'agent', 'I can optimize your LinkedIn profile. Tell me your target role and I\'ll suggest headline, summary, and skill improvements.'));
-    }
-  }, [addMessage]);
-
-  const handleArcherTab = useCallback(async (tab: ArcherFilter) => {
-    setRunningAgents(prev => new Set(prev).add('archer'));
-    addMessage('archer', createMsg('archer', 'system', `Loading ${tab === 'all' ? 'all applications' : tab + ' applications'}...`));
+  const toggleProfile = async (id: string, active: boolean) => {
+    setTogglingId(id);
     try {
-      const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: 'archer', filter: tab }) });
-      const data = await res.json().catch(() => null);
-      if (data?.applications || data?.applied) {
-        const apps = data.applications || data.applied || [];
-        const filtered = tab === 'all' ? apps : apps.filter((a: any) => a.status === tab);
-        addMessage('archer', createMsg('archer', 'agent', `${filtered.length} ${tab === 'all' ? '' : tab + ' '}applications:`, 'application-status', filtered));
-      } else {
-        addMessage('archer', createMsg('archer', 'agent', data?.summary || `No ${tab === 'all' ? '' : tab + ' '}applications found. Use "Apply to Top Matches" to get started.`));
-      }
-    } catch { addMessage('archer', createMsg('archer', 'agent', 'Could not load applications.')); }
-    setRunningAgents(prev => { const n = new Set(prev); n.delete('archer'); return n; });
-  }, [addMessage]);
+      await fetch(`/api/user/loops/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !active }),
+      });
+      setProfiles(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
+    } catch {}
+    setTogglingId(null);
+  };
 
-  const handleAtlasTab = useCallback(async (tab: AtlasTab) => {
-    if (tab === 'practice') {
-      addMessage('atlas', createMsg('atlas', 'agent', 'Ready for practice! Tell me the role and company, or say "start" for general interview practice.'));
-    } else if (tab === 'mock') {
-      setRunningAgents(prev => new Set(prev).add('atlas'));
-      addMessage('atlas', createMsg('atlas', 'system', 'Setting up mock interview...'));
-      try {
-        const res = await fetch('/api/ai/interview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'mock' }) });
-        const data = await res.json().catch(() => null);
-        if (data) addMessage('atlas', createMsg('atlas', 'agent', 'Mock interview ready! Here are your questions:', 'interview-prep', data));
-        else addMessage('atlas', createMsg('atlas', 'agent', 'Ready for a mock interview. Tell me the role you\'re preparing for.'));
-      } catch { addMessage('atlas', createMsg('atlas', 'agent', 'Could not start mock interview. Please try again.')); }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete('atlas'); return n; });
-    } else if (tab === 'company') {
-      addMessage('atlas', createMsg('atlas', 'agent', 'Tell me the company name and I\'ll research their interview style, culture, and common questions.'));
-    } else if (tab === 'results') {
-      addMessage('atlas', createMsg('atlas', 'agent', 'Your interview practice results will appear here after completing sessions. Start a practice session to begin tracking.'));
-    }
-  }, [addMessage]);
-
-  const handleSageTab = useCallback(async (tab: SageTab) => {
-    if (tab === 'gaps') {
-      setRunningAgents(prev => new Set(prev).add('sage'));
-      addMessage('sage', createMsg('sage', 'system', 'Analyzing skill gaps...'));
-      try {
-        const res = await fetch('/api/agents/skill-gaps');
-        const data = await res.json().catch(() => null);
-        if (data) addMessage('sage', createMsg('sage', 'agent', 'Skill gap analysis:', 'skill-gaps', data));
-        else addMessage('sage', createMsg('sage', 'agent', 'Upload your resume or set a target role to analyze skill gaps.'));
-      } catch { addMessage('sage', createMsg('sage', 'agent', 'Could not analyze skill gaps.')); }
-      setRunningAgents(prev => { const n = new Set(prev); n.delete('sage'); return n; });
-    } else if (tab === 'path') {
-      addMessage('sage', createMsg('sage', 'agent', 'Your personalized learning path is shown above. Complete modules to unlock new skills and improve your market readiness.'));
-    } else if (tab === 'courses') {
-      addMessage('sage', createMsg('sage', 'agent', 'Tell me which skill you want to improve and I\'ll recommend the best courses, tutorials, and resources.'));
-    } else if (tab === 'trends') {
-      addMessage('sage', createMsg('sage', 'agent', 'I track market trends for your target roles — demand shifts, salary movements, and emerging skills. Ask me about trends in any field.'));
-    }
-  }, [addMessage]);
-
-  const handleSentinelTab = useCallback(async (tab: SentinelTab) => {
-    setRunningAgents(prev => new Set(prev).add('sentinel'));
-    addMessage('sentinel', createMsg('sentinel', 'system', `Loading ${tab} items...`));
+  const deleteProfile = async (id: string) => {
     try {
-      const res = await fetch('/api/agents/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: 'sentinel', filter: tab }) });
-      const data = await res.json().catch(() => null);
-      if (data) addMessage('sentinel', createMsg('sentinel', 'agent', `${tab.charAt(0).toUpperCase() + tab.slice(1)} review:`, 'quality-report', data));
-      else addMessage('sentinel', createMsg('sentinel', 'agent', `No ${tab} items found.`));
-    } catch { addMessage('sentinel', createMsg('sentinel', 'agent', 'Could not load review items.')); }
-    setRunningAgents(prev => { const n = new Set(prev); n.delete('sentinel'); return n; });
-  }, [addMessage]);
-
-  /* ── Cortex journey steps (derived from current state) ── */
-  const journeySteps: JourneyStep[] = DEFAULT_STEPS.map(s => {
-    switch (s.id) {
-      case 'resume':
-        return { ...s, done: resumeFinalized, detail: resumeFinalized ? 'Finalized' : resumeReady ? 'Draft' : undefined };
-      case 'scout':
-        return { ...s, done: metrics.jobsFound > 0, detail: metrics.jobsFound > 0 ? `${metrics.jobsFound} found` : undefined };
-      case 'save':
-        return { ...s, done: metrics.jobsFound > 5, detail: metrics.jobsFound > 5 ? 'Reviewed' : undefined };
-      case 'apply':
-        return { ...s, done: metrics.appsSent > 0, detail: metrics.appsSent > 0 ? `${metrics.appsSent} sent` : undefined };
-      case 'interview':
-        return { ...s, done: metrics.interviews > 0, detail: metrics.interviews > 0 ? `${metrics.interviews} scheduled` : undefined };
-      default:
-        return { ...s, done: false };
-    }
-  });
-
-  /* ── Sidebar dimensions ── */
-  const SIDEBAR_EXPANDED = 260;
-  const SIDEBAR_COLLAPSED = 60;
+      await fetch(`/api/user/loops/${id}`, { method: 'DELETE' });
+      setProfiles(prev => prev.filter(p => p.id !== id));
+    } catch {}
+  };
 
   return (
-    <div className="flex h-screen">
-
-      {/* ═══ LEFT SIDEBAR (desktop, always visible — expanded / icon-only) ═══ */}
-      <motion.aside
-        animate={{ width: sidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED }}
-        transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className="relative flex-shrink-0 border-r border-white/5 bg-white/[0.01] hidden lg:flex flex-col overflow-hidden"
-      >
-        {/* Sidebar top — Cortex branding (clickable → opens Cortex chat) */}
-        {sidebarOpen ? (
-          <button
-            onClick={() => setSelectedAgent('cortex')}
-            className={`w-full px-4 py-3 border-b border-white/5 flex items-center gap-2.5 flex-shrink-0 text-left transition-all hover:bg-white/[0.03] ${
-              selectedAgent === 'cortex' ? 'bg-white/[0.05]' : ''
-            }`}
-          >
-            <CortexAvatar size={32} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white/70 truncate">
-                {loading ? <span className="inline-block w-20 h-3 bg-white/5 rounded animate-pulse" /> : <>{COORDINATOR.name}</>}
-              </p>
-              <p className="text-[9px] text-white/20">{COORDINATOR.role}</p>
-            </div>
-          </button>
-        ) : (
-          <button
-            onClick={() => setSelectedAgent('cortex')}
-            className={`w-full flex justify-center py-3 border-b border-white/5 flex-shrink-0 transition-all hover:bg-white/[0.03] ${
-              selectedAgent === 'cortex' ? 'bg-white/[0.05]' : ''
-            }`}
-            title="Cortex"
-          >
-            <CortexAvatar size={28} />
-          </button>
-        )}
-
-        {/* Agent team + UserMenu at bottom */}
-        <AgentTeamStrip
-          vertical
-          collapsed={!sidebarOpen}
-          agents={agentStripData}
-          selectedAgent={selectedAgent === 'cortex' ? null : selectedAgent}
-          runningAgents={runningAgents}
-          recentlyDone={recentlyDone}
-          onSelect={(id) => setSelectedAgent(id)}
-          lastMessages={lastMessages}
-          onRunPipeline={handleRunPipeline}
-          bottomSlot={
-            <UserMenu
-              userName={userName || 'User'}
-              userEmail={userEmail}
-              userImage={userImage}
-              initials={initials}
-              planBadge={badge}
-              collapsed={false}
-            />
-          }
-          bottomSlotCollapsed={
-            <UserMenu
-              userName={userName || 'User'}
-              userEmail={userEmail}
-              userImage={userImage}
-              initials={initials}
-              planBadge={badge}
-              collapsed={true}
-            />
-          }
-        />
-
-        {/* ── Toggle arrow — fixed at the edge ── */}
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Welcome back, {firstName}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Here&apos;s what&apos;s happening with your job search.
+          </p>
+        </div>
         <button
-          onClick={() => setSidebarOpen(prev => !prev)}
-          className="absolute top-3 -right-3 z-50 w-6 h-6 rounded-full
-                     bg-surface border border-white/10 flex items-center justify-center
-                     text-white/40 hover:text-white/70 hover:border-white/20
-                     shadow-lg transition-all"
-          title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          onClick={() => setShowWizard(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
         >
-          {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          <Plus className="w-4 h-4" />
+          New Search Profile
         </button>
-      </motion.aside>
+      </div>
 
-      {/* ═══ RIGHT MAIN AREA ═══ */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <StatsCards />
 
-        {/* Top bar — mobile greeting + Run All */}
-        <div className="px-4 sm:px-6 py-2.5 border-b border-white/5 flex items-center gap-3 flex-shrink-0">
-          {/* Cortex greeting — mobile only (clickable → opens Cortex chat) */}
-          <button
-            onClick={() => setSelectedAgent('cortex')}
-            className="lg:hidden flex items-center gap-2.5 flex-1 min-w-0 text-left"
-          >
-            <CortexAvatar size={26} pulse />
-            <div className="min-w-0">
-              <span className="text-sm font-semibold">
-                {loading ? <span className="inline-block w-28 h-4 bg-white/5 rounded animate-pulse" /> : <>{COORDINATOR.name}</>}
-              </span>
-              <p className="text-[10px] text-white/20">{COORDINATOR.role}</p>
-            </div>
-          </button>
-
-          {/* Desktop: empty spacer */}
-          <div className="hidden lg:flex flex-1" />
-
-          {/* Run All — mobile only */}
-          <button
-            onClick={handleRunPipeline}
-            disabled={runningAgents.size > 0}
-            className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                       bg-gradient-to-r from-neon-blue to-neon-purple text-white
-                       disabled:opacity-50 transition-all"
-          >
-            {runningAgents.size > 0 ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            {runningAgents.size > 0 ? 'Running...' : 'Run All'}
-          </button>
-        </div>
-
-        {/* Mobile agent strip */}
-        <div className="lg:hidden px-4 py-2 border-b border-white/5">
-          <AgentTeamStrip
-            agents={agentStripData}
-            selectedAgent={selectedAgent === 'cortex' ? null : selectedAgent}
-            runningAgents={runningAgents}
-            recentlyDone={recentlyDone}
-            onSelect={(id) => setSelectedAgent(id)}
-          />
-        </div>
-
-        {/* Workspace: Chat + Timeline/Metrics */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-
-          {/* Agent workspace area */}
-          <div className="flex-1 min-w-0 flex flex-col">
-            {selectedAgent !== 'cortex' && agents.find(a => a.id === selectedAgent)?.locked ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="rounded-xl border border-dashed border-white/5 flex-1 flex flex-col items-center justify-center m-4 sm:m-6"
-              >
-                <p className="text-sm text-white/25">This agent is locked</p>
-                <p className="text-xs text-white/15 mt-1">
-                  Upgrade your plan to unlock this agent
-                </p>
-              </motion.div>
-            ) : (
-              <div className="flex-1 flex flex-col p-4 sm:p-6">
-                <AgentChat
-                  agentId={selectedAgent}
-                  messages={agentChats[selectedAgent] || []}
-                  onSendMessage={(content) => handleSendMessage(selectedAgent, content)}
-                  onQuickAction={(action) => handleQuickAction(selectedAgent, action)}
-                  onFeedback={(msgId, fb) => handleFeedback(selectedAgent, msgId, fb)}
-                  onApplyJob={handleApplyJob}
-                  onSaveJob={handleSaveJob}
-                  savedJobIds={savedJobIds}
-                  isWorking={runningAgents.has(selectedAgent)}
-                  toolbarSlot={
-                    selectedAgent === 'cortex' ? (
-                      <CortexToolbar
-                        steps={journeySteps}
-                        onNavigate={(id) => setSelectedAgent(id as SelectedAgentId)}
-                      />
-                    ) :
-                    selectedAgent === 'scout' ? (
-                      <ScoutToolbar
-                        onDeploy={() => handleQuickAction('scout', 'search')}
-                        onTabChange={handleScoutTab}
-                        isWorking={runningAgents.has('scout')}
-                        savedCount={savedJobs.length}
-                      />
-                    ) :
-                    selectedAgent === 'forge' ? (
-                      <ForgeToolbar
-                        hasResume={resumeReady}
-                        isFinalized={resumeFinalized}
-                        onTabChange={handleForgeTab}
-                      />
-                    ) :
-                    selectedAgent === 'archer' ? (
-                      <ArcherToolbar onTabChange={handleArcherTab} />
-                    ) :
-                    selectedAgent === 'atlas' ? (
-                      <AtlasToolbar onTabChange={handleAtlasTab} />
-                    ) :
-                    selectedAgent === 'sage' ? (
-                      <SageToolbar onTabChange={handleSageTab} />
-                    ) :
-                    selectedAgent === 'sentinel' ? (
-                      <SentinelToolbar onTabChange={handleSentinelTab} />
-                    ) :
-                    undefined
-                  }
-                  panelSlot={
-                    selectedAgent === 'atlas' ? <InterviewPrepPanel /> :
-                    selectedAgent === 'sage' ? <LearningPathPanel /> :
-                    selectedAgent === 'sentinel' ? <QualityReviewPanel /> :
-                    undefined
-                  }
-                />
-              </div>
-            )}
+      {/* Search Profiles section */}
+      {(profiles.length > 0 || loadingProfiles) && (
+        <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Active Search Profiles
+            </h3>
+            <span className="text-xs text-gray-400">
+              {profiles.filter(p => p.active).length} active
+            </span>
           </div>
 
-          {/* Right sidebar — Timeline + Metrics */}
-          <div className="lg:w-72 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 p-4 overflow-y-auto">
-            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 mb-4">
-              <DailyTimeline entries={activities} loading={loading} />
+          {loadingProfiles ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
             </div>
-            <MetricsBar metrics={metrics} loading={loading} />
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {profiles.map((profile) => (
+                <div
+                  key={profile.id}
+                  className={cn(
+                    'flex items-center justify-between p-3 rounded-lg border transition-all',
+                    profile.active
+                      ? 'border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5'
+                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-60',
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={cn(
+                      'w-8 h-8 rounded-lg flex items-center justify-center',
+                      profile.active
+                        ? 'bg-blue-100 dark:bg-blue-500/10'
+                        : 'bg-gray-200 dark:bg-gray-700',
+                    )}>
+                      <Search className={cn(
+                        'w-4 h-4',
+                        profile.active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400',
+                      )} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{profile.jobTitle}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {profile.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {profile.location}
+                          </span>
+                        )}
+                        <span>{profile.jobsFound} found</span>
+                        <span>{profile.appliedCount} applied</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => toggleProfile(profile.id, profile.active)}
+                      disabled={togglingId === profile.id}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      title={profile.active ? 'Pause' : 'Resume'}
+                    >
+                      {togglingId === profile.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : profile.active ? (
+                        <Pause className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteProfile(profile.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="lg:col-span-2 space-y-6">
+          <QuickActions />
+          <RecentActivity />
+        </div>
+        <div className="space-y-6">
+          <ApplicationLimitBar />
         </div>
       </div>
+
+      {/* Search Profile Wizard Modal */}
+      {showWizard && (
+        <SearchProfileWizard
+          onClose={() => setShowWizard(false)}
+          onComplete={() => {
+            setShowWizard(false);
+            fetchProfiles();
+          }}
+        />
+      )}
     </div>
   );
 }

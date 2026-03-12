@@ -7,6 +7,7 @@ import type { LucideIcon } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import UpgradeModal from '@/components/ui/UpgradeModal';
+import LoadingEngagement from '@/components/tools/LoadingEngagement';
 
 interface ToolPageLayoutProps {
   title: string;
@@ -21,6 +22,14 @@ interface ToolPageLayoutProps {
   onCloseUpgrade: () => void;
   /** Service name for upgrade modal */
   serviceName: string;
+  /** Agent attribution — which agent powers this tool */
+  agentName?: string;
+  agentColor?: string;
+  agentGradient?: string;
+  /** Loading state — shows engaging loading UX when true */
+  loading?: boolean;
+  /** Tool slug for loading tips (e.g. 'cold-email-generator') */
+  toolSlug?: string;
   children: React.ReactNode;
 }
 
@@ -34,6 +43,11 @@ export default function ToolPageLayout({
   showUpgrade,
   onCloseUpgrade,
   serviceName,
+  agentName,
+  agentColor,
+  agentGradient,
+  loading,
+  toolSlug,
   children,
 }: ToolPageLayoutProps) {
   return (
@@ -66,11 +80,38 @@ export default function ToolPageLayout({
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold mb-3">{title}</h1>
             <p className="text-white/40 text-lg max-w-xl mx-auto">{subtitle}</p>
+
+            {/* Agent attribution */}
+            {agentName && (
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${agentGradient || gradient} flex items-center justify-center`}>
+                  <span className="text-[9px] font-bold text-white">{agentName[0]}</span>
+                </div>
+                <span className="text-sm text-white/40">
+                  Powered by <span className={`font-semibold ${agentColor || 'text-white'}`}>Agent {agentName}</span>
+                </span>
+              </div>
+            )}
+
             <span className="badge-neon text-xs mt-4 inline-flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
               2 Free Uses
             </span>
           </motion.div>
+
+          {/* Loading engagement overlay */}
+          {loading && toolSlug && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card mb-6"
+            >
+              <LoadingEngagement
+                toolSlug={toolSlug}
+                agentName={agentName ? `Agent ${agentName}` : undefined}
+              />
+            </motion.div>
+          )}
 
           {/* Tool content */}
           {children}

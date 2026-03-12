@@ -1,6 +1,6 @@
 /**
  * Stripe Integration Layer
- * Handles subscriptions, checkout, billing portal, and credit pack purchases
+ * Handles subscriptions, checkout, and billing portal
  */
 import Stripe from 'stripe';
 
@@ -12,38 +12,21 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 // ─── Price Configuration ────────────────────────
 
 export const PRICE_IDS = {
-  STARTER: {
-    monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID || '',
-    yearly: process.env.STRIPE_STARTER_YEARLY_PRICE_ID || '',
-  },
   PRO: {
     monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
     yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || '',
   },
-  ULTRA: {
-    monthly: process.env.STRIPE_ULTRA_MONTHLY_PRICE_ID || '',
-    yearly: process.env.STRIPE_ULTRA_YEARLY_PRICE_ID || '',
+  MAX: {
+    monthly: process.env.STRIPE_MAX_MONTHLY_PRICE_ID || '',
+    yearly: process.env.STRIPE_MAX_YEARLY_PRICE_ID || '',
   },
 } as const;
 
-// Credit pack one-time prices
-export const CREDIT_PACK_PRICES = {
-  pack_100: process.env.STRIPE_CREDITS_100_PRICE_ID || '',
-  pack_500: process.env.STRIPE_CREDITS_500_PRICE_ID || '',
-  pack_1000: process.env.STRIPE_CREDITS_1000_PRICE_ID || '',
-} as const;
-
-export const CREDIT_PACKS = {
-  pack_100: { credits: 100, price: 500 },   // $5.00
-  pack_500: { credits: 500, price: 1500 },  // $15.00
-  pack_1000: { credits: 1000, price: 2500 }, // $25.00
-} as const;
-
 // Map Stripe price IDs back to plan tiers
-export function getPlanFromPriceId(priceId: string): { plan: 'STARTER' | 'PRO' | 'ULTRA'; interval: 'month' | 'year' } | null {
+export function getPlanFromPriceId(priceId: string): { plan: 'PRO' | 'MAX'; interval: 'month' | 'year' } | null {
   for (const [plan, prices] of Object.entries(PRICE_IDS)) {
-    if (prices.monthly === priceId) return { plan: plan as any, interval: 'month' };
-    if (prices.yearly === priceId) return { plan: plan as any, interval: 'year' };
+    if (prices.monthly === priceId) return { plan: plan as 'PRO' | 'MAX', interval: 'month' };
+    if (prices.yearly === priceId) return { plan: plan as 'PRO' | 'MAX', interval: 'year' };
   }
   return null;
 }
@@ -112,95 +95,6 @@ export async function createCheckoutSession({
   };
 
   return stripe.checkout.sessions.create(params);
-}
-
-// ─── Credit Pack Purchase ───────────────────────
-
-export async function createCreditPackCheckout({
-  userId,
-  email,
-  name,
-  packId,
-  successUrl,
-  cancelUrl,
-}: {
-  userId: string;
-  email: string;
-  name?: string;
-  packId: keyof typeof CREDIT_PACK_PRICES;
-  successUrl: string;
-  cancelUrl: string;
-}): Promise<Stripe.Checkout.Session> {
-  const customerId = await getOrCreateCustomer(userId, email, name);
-  const pack = CREDIT_PACKS[packId];
-
-  return stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'payment',
-    payment_method_types: ['card'],
-    line_items: [{
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: `${pack.credits} AI Credits`,
-          description: `One-time purchase of ${pack.credits} AI credits for 3BOX AI`,
-        },
-        unit_amount: pack.price,
-      },
-      quantity: 1,
-    }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: { userId, packId, credits: pack.credits.toString() },
-  });
-}
-
-// ─── Unlimited Daily Applications (One-Time) ────
-
-export const UNLIMITED_DAILY_PRICE_ID = process.env.STRIPE_UNLIMITED_DAILY_PRICE_ID || '';
-
-export const UNLIMITED_DAILY_PACK = {
-  name: 'Unlimited Daily Applications',
-  price: 14900, // $149 USD base — regional pricing overrides this in the UI
-} as const;
-
-export async function createUnlimitedDailyCheckout({
-  userId,
-  email,
-  name,
-  successUrl,
-  cancelUrl,
-  priceOverride,
-}: {
-  userId: string;
-  email: string;
-  name?: string;
-  successUrl: string;
-  cancelUrl: string;
-  priceOverride?: number; // For regional pricing (cents)
-}): Promise<Stripe.Checkout.Session> {
-  const customerId = await getOrCreateCustomer(userId, email, name);
-  const price = priceOverride || UNLIMITED_DAILY_PACK.price;
-
-  return stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'payment',
-    payment_method_types: ['card'],
-    line_items: [{
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: UNLIMITED_DAILY_PACK.name,
-          description: 'Remove the 30/day application limit permanently. One-time purchase, never expires.',
-        },
-        unit_amount: price,
-      },
-      quantity: 1,
-    }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: { userId, type: 'unlimited_daily' },
-  });
 }
 
 // ─── Billing Portal ─────────────────────────────

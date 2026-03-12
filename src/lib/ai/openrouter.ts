@@ -76,63 +76,28 @@ const FALLBACK_CHAIN: Record<ModelTier, ModelTier[]> = {
  * Maps user plan + feature to the appropriate model tier.
  * Higher plans get more capable models for critical features.
  */
+// All plans use Claude Sonnet (premium) for best experience — no limits.
+// Cost is monitored post-launch. Fallback chain handles outages gracefully.
+const ALL_PREMIUM: Record<AIFeature, ModelTier> = {
+  'assessment': 'premium',
+  'career-plan': 'premium',
+  'learning-path': 'premium',
+  'resume': 'premium',
+  'cover-letter': 'premium',
+  'job-matching': 'premium',
+  'interview': 'premium',
+  'coach': 'premium',
+  'dashboard-insights': 'premium',
+  'ats-checker': 'premium',
+  'salary-estimator': 'premium',
+  'tools-general': 'premium',
+};
+
 const MODEL_ROUTING: Record<PlanTier, Record<AIFeature, ModelTier>> = {
-  BASIC: {
-    'assessment': 'free',
-    'career-plan': 'free',
-    'learning-path': 'free',
-    'resume': 'free',
-    'cover-letter': 'free',
-    'job-matching': 'free',
-    'interview': 'free',
-    'coach': 'free',
-    'dashboard-insights': 'free',
-    'ats-checker': 'free',
-    'salary-estimator': 'free',
-    'tools-general': 'free',
-  },
-  STARTER: {
-    'assessment': 'standard',
-    'career-plan': 'standard',
-    'learning-path': 'standard',
-    'resume': 'standard',
-    'cover-letter': 'standard',
-    'job-matching': 'standard',
-    'interview': 'standard',
-    'coach': 'free',
-    'dashboard-insights': 'free',
-    'ats-checker': 'standard',
-    'salary-estimator': 'free',
-    'tools-general': 'standard',
-  },
-  PRO: {
-    'assessment': 'standard',
-    'career-plan': 'reasoning',
-    'learning-path': 'standard',
-    'resume': 'reasoning',
-    'cover-letter': 'reasoning',
-    'job-matching': 'standard',
-    'interview': 'reasoning',
-    'coach': 'standard',
-    'dashboard-insights': 'standard',
-    'ats-checker': 'standard',
-    'salary-estimator': 'standard',
-    'tools-general': 'standard',
-  },
-  ULTRA: {
-    'assessment': 'reasoning',
-    'career-plan': 'premium',
-    'learning-path': 'reasoning',
-    'resume': 'premium',
-    'cover-letter': 'premium',
-    'job-matching': 'reasoning',
-    'interview': 'premium',
-    'coach': 'reasoning',
-    'dashboard-insights': 'standard',
-    'ats-checker': 'reasoning',
-    'salary-estimator': 'standard',
-    'tools-general': 'reasoning',
-  },
+  BASIC: ALL_PREMIUM,
+  STARTER: ALL_PREMIUM,
+  PRO: ALL_PREMIUM,
+  ULTRA: ALL_PREMIUM,
 };
 
 export function getModelForFeature(feature: AIFeature, userPlan: PlanTier = 'BASIC'): AIModelConfig {
@@ -275,6 +240,68 @@ export async function aiChatWithFallback(
   }
 
   throw new Error('All AI models unavailable. Please try again later.');
+}
+
+// ─── Streaming AI Chat Function ───────────────
+
+/**
+ * Stream AI chat completions via SSE. Returns a ReadableStream of text chunks.
+ * Falls back to non-streaming if streaming fails.
+ */
+export async function aiChatStream(
+  request: ChatCompletionRequest,
+  startTier: ModelTier = 'free'
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    // Fallback to non-streaming for demo mode
+    const text = simulateAIResponse(request.messages);
+    return new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
+  }
+
+  const modelId = AI_MODELS[startTier].id;
+
+  const body: Record<string, any> = {
+    model: modelId,
+    messages: request.messages,
+    temperature: request.temperature ?? 0.7,
+    max_tokens: request.maxTokens ?? 2048,
+    stream: true,
+  };
+
+  const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://3box.ai',
+      'X-Title': '3BOX AI',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok || !response.body) {
+    // Fallback to non-streaming
+    console.warn(`[AI] Streaming failed for ${startTier}, falling back to non-streaming`);
+    const text = await aiChatWithFallback(request, startTier);
+    return new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
+  }
+
+  return response.body;
 }
 
 // ─── Context injection helper ─────────────────
@@ -515,6 +542,7 @@ ${userContextBlock}
 - Reference their specific skills, gaps, and progress when giving advice.
 - If a feature requires a higher plan, mention it naturally without being pushy.
 - If the user seems stuck, proactively suggest next steps based on their actual progress data.
+- CRITICAL FORMATTING RULE: NEVER use markdown formatting in your responses. No asterisks for bold or italic, no hash symbols for headings, no backtick code blocks, no angle brackets for quotes. Write in plain, natural text only. Use numbered lists (1. 2. 3.) or dashes for lists, but NEVER wrap words in asterisks or any other markdown syntax. Your responses must be clean plain text.
 
 ## PROFILE UPDATE CAPABILITY
 You can update the user's profile when they ask. Supported fields: name, phone, location, linkedin, bio, targetRole.
@@ -555,22 +583,22 @@ Available pages: /dashboard, /dashboard/jobs, /dashboard/resume, /dashboard/agen
 ## About 3BOX AI
 3BOX AI (3box.ai) is an AI-driven career platform that combines artificial intelligence with real human expertise to help people land their dream jobs. The platform offers:
 
-### Core Features:
-1. **AI Skill Assessment** — Adaptive tests that analyze your skills against target roles. Generates skill scores, gap analysis, and market readiness percentage.
-2. **Career Plan Generator** — AI creates personalized career roadmaps with milestones, timelines, and proof-of-work projects.
-3. **Adaptive Learning Paths** — AI-curated courses, projects, and resources tailored to fill your skill gaps.
-4. **AI Resume Builder** — Create ATS-optimized resumes. AI enhances bullet points, writes summaries, and tailors content to specific job descriptions.
-5. **Free ATS Resume Checker** — Paste resume text and get instant ATS compatibility score.
-6. **AI Interview Prep** — Generate role-specific interview questions with AI feedback.
-7. **Job Matching** — Discover jobs matching your skills via real job market data.
-8. **Portfolio Builder** — Showcase projects with AI-generated descriptions.
-9. **AI Career Coach (You!)** — Always-available AI coach for career questions.
-10. **Salary Estimator** — Free AI-powered salary range estimation.
-11. **Cover Letter Generator** — AI writes personalized cover letters.
+Core Features:
+1. AI Skill Assessment — Adaptive tests that analyze your skills against target roles. Generates skill scores, gap analysis, and market readiness percentage.
+2. Career Plan Generator — AI creates personalized career roadmaps with milestones, timelines, and proof-of-work projects.
+3. Adaptive Learning Paths — AI-curated courses, projects, and resources tailored to fill your skill gaps.
+4. AI Resume Builder — Create ATS-optimized resumes. AI enhances bullet points, writes summaries, and tailors content to specific job descriptions.
+5. Free ATS Resume Checker — Paste resume text and get instant ATS compatibility score.
+6. AI Interview Prep — Generate role-specific interview questions with AI feedback.
+7. Job Matching — Discover jobs matching your skills via real job market data.
+8. Portfolio Builder — Showcase projects with AI-generated descriptions.
+9. AI Career Coach (You!) — Always-available AI coach for career questions.
+10. Salary Estimator — Free AI-powered salary range estimation.
+11. Cover Letter Generator — AI writes personalized cover letters.
 
-### Plans: Basic (Free) | Starter ($12/mo) | Pro ($29/mo + human experts) | Ultra ($59/mo + dedicated mentor)
+Plans: Basic (Free) | Starter ($12/mo) | Pro ($29/mo + human experts) | Ultra ($59/mo + dedicated mentor)
 
-### Navigation: /dashboard, /dashboard/assessment, /dashboard/career-plan, /dashboard/learning, /dashboard/resume, /dashboard/jobs, /dashboard/interview, /dashboard/portfolio, /dashboard/settings, /pricing, /tools/ats-checker, /tools/resume-builder, /tools/salary-estimator
+Navigation: /dashboard, /dashboard/assessment, /dashboard/career-plan, /dashboard/learning, /dashboard/resume, /dashboard/jobs, /dashboard/interview, /dashboard/portfolio, /dashboard/settings, /pricing, /tools/ats-checker, /tools/resume-builder, /tools/salary-estimator
 ${userContextBlock}
 
 ## Your Personality
@@ -582,6 +610,7 @@ ${userContextBlock}
 - If a feature requires a higher plan, mention it naturally without being pushy
 - You can help with: resume writing, interview prep, career advice, skill development, job search, salary negotiation, networking
 - If the user seems stuck, proactively suggest next steps based on their actual progress data
+- CRITICAL FORMATTING RULE: NEVER use markdown formatting in your responses. No asterisks for bold or italic, no hash symbols for headings, no backtick code blocks, no angle brackets for quotes. Write in plain, natural text only. Use numbered lists (1. 2. 3.) or dashes for lists, but NEVER wrap words in asterisks or any other markdown syntax. Your responses must be clean plain text.
 
 ## PROFILE UPDATE CAPABILITY
 You can update the user's profile when they ask. Supported fields:
@@ -846,24 +875,24 @@ function simulateAIResponse(messages: { role: string; content: string }[]): stri
 
   // ── Coach Chat (fallback for chat messages) ───
   if (lastMessage.includes('resume')) {
-    return "Great question about your resume! Here are my top tips:\n\n1. **Start bullets with action verbs** — Led, Built, Improved, Designed\n2. **Quantify achievements** — Include numbers, percentages, and metrics\n3. **Tailor to each job** — Match keywords from the job description\n4. **Keep it to 1-2 pages** — Recruiters spend ~7 seconds on initial scan\n\nWant me to help you enhance a specific section? You can also use our AI Resume Builder at /dashboard/resume for automated optimization!";
+    return "Great question about your resume! Here are my top tips:\n\n1. Start bullets with action verbs — Led, Built, Improved, Designed\n2. Quantify achievements — Include numbers, percentages, and metrics\n3. Tailor to each job — Match keywords from the job description\n4. Keep it to 1-2 pages — Recruiters spend about 7 seconds on initial scan\n\nWant me to help you enhance a specific section? You can also use our AI Resume Builder at /dashboard/resume for automated optimization!";
   }
 
   if (lastMessage.includes('interview')) {
-    return "Interview prep is crucial! Here's how I'd recommend preparing:\n\n1. **Practice the STAR method** for behavioral questions (Situation, Task, Action, Result)\n2. **Research the company** — Know their products, culture, and recent news\n3. **Prepare 3-5 questions** to ask the interviewer\n4. **Do mock interviews** — Our Interview Prep tool at /dashboard/interview generates role-specific questions with AI feedback\n\nPro & Ultra plans also include mock interviews with real industry experts. Would you like to practice a specific type of question?";
+    return "Interview prep is crucial! Here's how I'd recommend preparing:\n\n1. Practice the STAR method for behavioral questions (Situation, Task, Action, Result)\n2. Research the company — Know their products, culture, and recent news\n3. Prepare 3-5 questions to ask the interviewer\n4. Do mock interviews — Our Interview Prep tool at /dashboard/interview generates role-specific questions with AI feedback\n\nPro and Ultra plans also include mock interviews with real industry experts. Would you like to practice a specific type of question?";
   }
 
   if (lastMessage.includes('job') || lastMessage.includes('find') || lastMessage.includes('search')) {
-    return "I can help with your job search! Here's what I recommend:\n\n1. **Check our Job Matching** at /dashboard/jobs — it finds opportunities matching your skills\n2. **Optimize your resume** for each application using our ATS checker\n3. **Build your portfolio** to showcase your projects\n4. **Network actively** — 70% of jobs are filled through networking\n\nHave you completed your skill assessment yet? That helps me give you better job recommendations!";
+    return "I can help with your job search! Here's what I recommend:\n\n1. Check our Job Matching at /dashboard/jobs — it finds opportunities matching your skills\n2. Optimize your resume for each application using our ATS checker\n3. Build your portfolio to showcase your projects\n4. Network actively — 70% of jobs are filled through networking\n\nHave you completed your skill assessment yet? That helps me give you better job recommendations!";
   }
 
   if (lastMessage.includes('salary') || lastMessage.includes('negotiat')) {
-    return "Salary negotiation is an important skill! Here are key tips:\n\n1. **Research market rates** — Use our Salary Estimator at /tools/salary-estimator\n2. **Never give the first number** — Let the employer make an offer first\n3. **Consider total compensation** — Benefits, equity, remote work, PTO all have value\n4. **Practice your pitch** — Be confident and prepared with data\n\nWant me to help you prepare for a specific negotiation?";
+    return "Salary negotiation is an important skill! Here are key tips:\n\n1. Research market rates — Use our Salary Estimator at /tools/salary-estimator\n2. Never give the first number — Let the employer make an offer first\n3. Consider total compensation — Benefits, equity, remote work, PTO all have value\n4. Practice your pitch — Be confident and prepared with data\n\nWant me to help you prepare for a specific negotiation?";
   }
 
   if (lastMessage.includes('learn') || lastMessage.includes('study') || lastMessage.includes('skill')) {
-    return "Let's build your learning plan! Here's what I suggest:\n\n1. **Take a skill assessment** at /dashboard/assessment to identify your gaps\n2. **Check your Learning Path** at /dashboard/learning for AI-curated courses\n3. **Build projects** — Hands-on experience matters more than certificates\n4. **Stay consistent** — Even 30 minutes daily makes a huge difference\n\nWhat specific skills are you looking to develop?";
+    return "Let's build your learning plan! Here's what I suggest:\n\n1. Take a skill assessment at /dashboard/assessment to identify your gaps\n2. Check your Learning Path at /dashboard/learning for AI-curated courses\n3. Build projects — Hands-on experience matters more than certificates\n4. Stay consistent — Even 30 minutes daily makes a huge difference\n\nWhat specific skills are you looking to develop?";
   }
 
-  return "Hey! I'm Cortex, your AI coordinator at 3BOX AI. I lead a team of 6 specialized agents that work while you sleep:\n\n• **Agent Scout** — Discovers jobs matching your profile 24/7\n• **Agent Forge** — Optimizes your resume for each opportunity\n• **Agent Archer** — Sends applications & cover letters\n• **Agent Atlas** — Preps you for interviews\n• **Agent Sage** — Identifies skill gaps & learning paths\n• **Agent Sentinel** — Reviews everything for quality\n\nWhat would you like to work on today?";
+  return "Hey! I'm Cortex, your AI coordinator at 3BOX AI. I lead a team of 6 specialized agents that work while you sleep:\n\n- Agent Scout — Discovers jobs matching your profile 24/7\n- Agent Forge — Optimizes your resume for each opportunity\n- Agent Archer — Sends applications and cover letters\n- Agent Atlas — Preps you for interviews\n- Agent Sage — Identifies skill gaps and learning paths\n- Agent Sentinel — Reviews everything for quality\n\nWhat would you like to work on today?";
 }

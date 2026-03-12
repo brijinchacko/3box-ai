@@ -326,7 +326,7 @@ export default function SignupPageClient() {
                   exit={{ opacity: 0, x: -20 }}
                 >
                   <h1 className="text-2xl font-bold text-center mb-2">Create your account</h1>
-                  <p className="text-sm text-white/40 text-center mb-8">Free forever. No credit card required.</p>
+                  <p className="text-sm text-white/40 text-center mb-8">7-day money-back guarantee on all plans.</p>
 
                   {error && (
                     <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">

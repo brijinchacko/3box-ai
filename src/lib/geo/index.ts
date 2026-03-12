@@ -8,7 +8,6 @@ export {
   type RegionConfig,
   type RegionPricing,
   type PlanPricing,
-  type CreditPricing,
   getRegionByCountryCode,
   getRegionConfig,
   formatPrice,

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 import { getFreeUseCount, incrementFreeUse, hasFreeTrial } from '@/lib/usage/freeUsageTracker';
 import UpgradeModal from '@/components/ui/UpgradeModal';
 
@@ -87,6 +88,7 @@ function ScoreCircle({ score }: { score: number }) {
 }
 
 export default function ATSCheckerPage() {
+  const agent = getAgentForTool('ats-checker');
   const [resumeText, setResumeText] = useState('');
   const [targetJob, setTargetJob] = useState('');
   const [inputMode, setInputMode] = useState<'title' | 'description'>('title');
@@ -260,7 +262,7 @@ export default function ATSCheckerPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Analyzing...
+                    Agent Forge is analyzing your resume...
                   </>
                 ) : (
                   <>

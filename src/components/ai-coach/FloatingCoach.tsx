@@ -463,7 +463,7 @@ export default function FloatingCoach() {
                     onClick={(e) => e.stopPropagation()}
                     className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 border border-white/10 text-sm font-medium text-white hover:from-neon-blue/30 hover:to-neon-purple/30 transition-all"
                   >
-                    Get Started Free <ArrowRight className="w-3.5 h-3.5" />
+                    Get Started <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               )}

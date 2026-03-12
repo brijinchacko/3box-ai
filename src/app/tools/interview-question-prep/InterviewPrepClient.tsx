@@ -5,6 +5,7 @@ import { MessageSquare, Loader2 } from 'lucide-react';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface InterviewQuestion {
   id: number;
@@ -23,6 +24,7 @@ const typeOptions = ['General', 'Behavioral', 'Technical', 'System Design', 'Cas
 const levelOptions = ['Junior', 'Mid-Level', 'Senior', 'Lead/Staff', 'Executive'];
 
 export default function InterviewPrepClient() {
+  const agent = getAgentForTool('interview-question-prep');
   const [role, setRole] = useState('');
   const [company, setCompany] = useState('');
   const [type, setType] = useState('General');
@@ -77,6 +79,11 @@ export default function InterviewPrepClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Interview Question Prep"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="interview-question-prep"
     >
       {/* Error display */}
       {error && (
@@ -209,7 +216,7 @@ export default function InterviewPrepClient() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating Questions...
+              Agent Atlas is preparing your interview questions...
             </>
           ) : (
             <>

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   Mail, MessageSquare, Handshake, HelpCircle,
-  Activity, Shield, Twitter, Linkedin, Github, ArrowRight,
+  Activity, Shield, Linkedin, ArrowRight,
   Youtube, Facebook, Instagram
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -40,8 +40,6 @@ const socials = [
   { icon: Youtube, href: 'https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/', label: 'YouTube' },
   { icon: Facebook, href: 'https://www.facebook.com/61586302726912', label: 'Facebook' },
   { icon: Instagram, href: 'https://www.instagram.com/3box.ai', label: 'Instagram' },
-  { icon: Twitter, href: 'https://x.com/oforoai', label: 'Twitter' },
-  { icon: Github, href: 'https://github.com/oforo-ai', label: 'GitHub' },
 ];
 
 const quickLinks = [

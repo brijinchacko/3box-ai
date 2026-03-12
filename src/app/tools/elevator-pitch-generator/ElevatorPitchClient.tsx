@@ -6,6 +6,7 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import VariationsResult from '@/components/tools/VariationsResult';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface ElevatorPitchResult {
   pitches: { label: string; content: string; meta?: string }[];
@@ -19,6 +20,7 @@ const CONTEXT_OPTIONS = [
 ] as const;
 
 export default function ElevatorPitchClient() {
+  const agent = getAgentForTool('elevator-pitch-generator');
   const [form, setForm] = useState({
     name: '',
     currentRole: '',
@@ -50,6 +52,11 @@ export default function ElevatorPitchClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Elevator Pitch Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="elevator-pitch-generator"
     >
       {/* -- Form ---------------------------------------- */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -149,7 +156,7 @@ export default function ElevatorPitchClient() {
           ) : (
             <Mic className="w-4 h-4" />
           )}
-          {loading ? 'Generating...' : 'Generate Pitches'}
+          {loading ? 'Agent Atlas is crafting your elevator pitch...' : 'Generate Pitches'}
         </button>
       </form>
 

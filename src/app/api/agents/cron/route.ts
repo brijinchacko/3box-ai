@@ -4,8 +4,9 @@ import { runAgentPipeline } from '@/lib/agents/orchestrator';
 import { runIndependentScout } from '@/lib/agents/scout';
 import { runIndependentForge } from '@/lib/agents/forge';
 import { runIndependentArcher } from '@/lib/agents/archer';
-import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
-import { checkDailyCap } from '@/lib/tokens/dailyCap';
+import { checkApplicationCap } from '@/lib/tokens/dailyCap';
+import { normalizePlan } from '@/lib/tokens/pricing';
+import { sendAgentRunSummaryEmail } from '@/lib/email';
 
 /**
  * Cron endpoint — called hourly by external cron job
@@ -74,39 +75,20 @@ export async function GET(request: NextRequest) {
         ],
       },
       include: {
-        user: { select: { id: true, plan: true, aiCreditsUsed: true, aiCreditsLimit: true } },
+        user: { select: { id: true, email: true, name: true, plan: true } },
       },
     });
 
     const results: DispatchResult[] = [];
 
     for (const config of configs) {
-      // Skip BASIC plan users
-      if (config.user.plan === 'BASIC') continue;
+      // Skip FREE plan users from cron automation
+      if (normalizePlan(config.user.plan) === 'FREE') continue;
 
-      // Skip if no credits remaining — log depletion event once per day
-      if (config.user.aiCreditsLimit >= 0 && config.user.aiCreditsUsed >= config.user.aiCreditsLimit) {
-        console.log(`[Cron] Agents paused for user ${config.userId}: credits depleted (${config.user.aiCreditsUsed}/${config.user.aiCreditsLimit})`);
-        try {
-          const todayStart = new Date(now);
-          todayStart.setHours(0, 0, 0, 0);
-          const alreadyLogged = await prisma.agentActivity.findFirst({
-            where: { userId: config.userId, agent: 'cortex', action: 'credits_depleted', createdAt: { gte: todayStart } },
-          });
-          if (!alreadyLogged) {
-            await prisma.agentActivity.create({
-              data: {
-                userId: config.userId,
-                agent: 'cortex',
-                action: 'credits_depleted',
-                summary: `Agents paused: ${config.user.aiCreditsUsed}/${config.user.aiCreditsLimit} tokens used. Agents will resume on token reset.`,
-                creditsUsed: 0,
-              },
-            });
-          }
-        } catch (logErr) {
-          console.error(`[Cron] Failed to log credit depletion for ${config.userId}:`, logErr);
-        }
+      // Check application cap (only applications are limited, AI operations are unlimited)
+      const appCap = await checkApplicationCap(config.userId);
+      if (!appCap.allowed) {
+        console.log(`[Cron] Agents paused for user ${config.userId}: application cap reached (${appCap.used}/${appCap.limit})`);
         continue;
       }
 
@@ -116,7 +98,7 @@ export async function GET(request: NextRequest) {
       });
       if (activeRun) continue;
 
-      const plan = config.user.plan as PlanTier;
+      const plan = normalizePlan(config.user.plan);
       const hasPerAgentConfig = config.scoutEnabled || config.forgeEnabled || config.archerEnabled;
 
       // ── Legacy path: old-style scheduleTime pipeline ──
@@ -151,61 +133,92 @@ export async function GET(request: NextRequest) {
 
       // ── Per-Agent Independent Dispatch ──
 
-      // Scout
+      // Scout — all agents unlocked for all plans
       if (config.scoutEnabled && shouldRunAgent(config.scoutLastRunAt, config.scoutInterval, now)) {
-        if (isAgentAvailable('scout', plan)) {
-          try {
-            const result = await runIndependentScout(config.userId, {
-              targetRoles: (config.targetRoles as string[]) || [],
-              targetLocations: (config.targetLocations as string[]) || [],
-              preferRemote: config.preferRemote,
-              minMatchScore: config.minMatchScore,
-              excludeCompanies: (config.excludeCompanies as string[]) || [],
-              excludeKeywords: (config.excludeKeywords as string[]) || [],
-            });
-            results.push({ userId: config.userId, agent: 'scout', status: 'completed', jobsNew: result.jobsNew });
-          } catch (err: any) {
-            results.push({ userId: config.userId, agent: 'scout', status: 'failed', error: err.message });
-          }
+        try {
+          const result = await runIndependentScout(config.userId, {
+            targetRoles: (config.targetRoles as string[]) || [],
+            targetLocations: (config.targetLocations as string[]) || [],
+            preferRemote: config.preferRemote,
+            minMatchScore: config.minMatchScore,
+            excludeCompanies: (config.excludeCompanies as string[]) || [],
+            excludeKeywords: (config.excludeKeywords as string[]) || [],
+          });
+          results.push({ userId: config.userId, agent: 'scout', status: 'completed', jobsNew: result.jobsNew });
+        } catch (err: any) {
+          results.push({ userId: config.userId, agent: 'scout', status: 'failed', error: err.message });
         }
       }
 
       // Forge (skip on_demand mode — only runs when manually triggered)
       if (config.forgeEnabled && config.forgeMode !== 'on_demand' && shouldRunAgent(config.forgeLastRunAt, config.forgeInterval, now)) {
-        if (isAgentAvailable('forge', plan)) {
+        try {
+          const result = await runIndependentForge(config.userId, {
+            forgeMode: config.forgeMode as any,
+            resumeId: config.resumeId || undefined,
+          });
+          results.push({ userId: config.userId, agent: 'forge', status: 'completed', jobsProcessed: result.jobsProcessed });
+        } catch (err: any) {
+          results.push({ userId: config.userId, agent: 'forge', status: 'failed', error: err.message });
+        }
+      }
+
+      // Archer — check application cap before dispatching
+      if (config.archerEnabled && shouldRunAgent(config.archerLastRunAt, config.archerInterval, now)) {
+        const appCapCheck = await checkApplicationCap(config.userId);
+        if (!appCapCheck.allowed) {
+          console.log(`[Cron] Archer app cap for ${config.userId}: ${appCapCheck.used}/${appCapCheck.limit}`);
+          results.push({ userId: config.userId, agent: 'archer', status: 'daily_cap_reached' });
+        } else {
           try {
-            const result = await runIndependentForge(config.userId, {
-              forgeMode: config.forgeMode as any,
+            const result = await runIndependentArcher(config.userId, {
+              maxPerRun: config.archerMaxPerRun,
               resumeId: config.resumeId || undefined,
+              forgeEnabled: config.forgeEnabled,
+              forgeMode: config.forgeMode,
             });
-            results.push({ userId: config.userId, agent: 'forge', status: 'completed', jobsProcessed: result.jobsProcessed });
+            results.push({ userId: config.userId, agent: 'archer', status: 'completed', jobsApplied: result.jobsApplied });
           } catch (err: any) {
-            results.push({ userId: config.userId, agent: 'forge', status: 'failed', error: err.message });
+            results.push({ userId: config.userId, agent: 'archer', status: 'failed', error: err.message });
           }
         }
       }
 
-      // Archer — also check daily application cap
-      if (config.archerEnabled && shouldRunAgent(config.archerLastRunAt, config.archerInterval, now)) {
-        if (isAgentAvailable('archer', plan)) {
-          // Check daily application cap before dispatching
-          const dailyCap = await checkDailyCap(config.userId);
-          if (!dailyCap.allowed) {
-            console.log(`[Cron] Archer daily cap for ${config.userId}: ${dailyCap.used}/${dailyCap.limit}`);
-            results.push({ userId: config.userId, agent: 'archer', status: 'daily_cap_reached' });
-          } else {
-            try {
-              const result = await runIndependentArcher(config.userId, {
-                maxPerRun: config.archerMaxPerRun,
-                resumeId: config.resumeId || undefined,
-                forgeEnabled: config.forgeEnabled,
-                forgeMode: config.forgeMode,
-              });
-              results.push({ userId: config.userId, agent: 'archer', status: 'completed', jobsApplied: result.jobsApplied });
-            } catch (err: any) {
-              results.push({ userId: config.userId, agent: 'archer', status: 'failed', error: err.message });
+      // ── Send Email Notification ──
+      // Only send if at least one agent actually ran for this user in this cycle
+      const userResults = results.filter(r => r.userId === config.userId && r.status === 'completed');
+      if (userResults.length > 0 && config.user.email) {
+        try {
+          const jobsFound = userResults.reduce((sum, r) => sum + (r.jobsNew || 0), 0);
+          const jobsApplied = userResults.reduce((sum, r) => sum + (r.jobsApplied || 0), 0);
+          const agentsUsed = userResults.map(r => r.agent.charAt(0).toUpperCase() + r.agent.slice(1));
+
+          // Fetch top recent matches for the email
+          const topMatches = await prisma.scoutJob.findMany({
+            where: { userId: config.userId, status: { in: ['NEW', 'READY', 'FORGE_READY'] } },
+            orderBy: { matchScore: 'desc' },
+            take: 5,
+            select: { title: true, company: true, matchScore: true },
+          });
+
+          await sendAgentRunSummaryEmail(
+            config.user.email,
+            config.user.name || 'there',
+            {
+              jobsFound,
+              jobsApplied,
+              topMatches: topMatches.map(j => ({
+                title: j.title,
+                company: j.company,
+                matchScore: j.matchScore || 0,
+              })),
+              agentsUsed,
+              creditsUsed: 0, // Credits tracked separately per agent
             }
-          }
+          );
+          console.log(`[Cron] Email sent to ${config.user.email} — ${agentsUsed.join(', ')} completed`);
+        } catch (emailErr) {
+          console.error(`[Cron] Failed to send email to ${config.user.email}:`, emailErr);
         }
       }
     }

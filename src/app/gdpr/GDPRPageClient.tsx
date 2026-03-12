@@ -32,7 +32,7 @@ const rights = [
     icon: FileOutput,
     title: 'Right to Data Portability',
     description:
-      'You can download your data in standard, machine-readable formats (JSON, PDF). This includes your profile, assessments, career plans, resumes, and portfolio data.',
+      'You can download your data in standard, machine-readable formats (JSON, PDF). This includes your profile, assessments, career plans, resumes, portfolio data, and AI agent activity history.',
   },
   {
     icon: Ban,
@@ -117,7 +117,7 @@ export default function GDPRPageClient() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Contract</h3>
-                <p>To provide the career development services you signed up for (assessments, career plans, job matching).</p>
+                <p>To provide career development services including AI agent-powered job searching, resume optimization, application sending, and interview preparation.</p>
               </div>
               <div>
                 <h3 className="text-white font-semibold">Legitimate Interest</h3>

@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { aiChat, AI_MODELS } from '@/lib/ai/openrouter';
+import { aiChatWithFallback, AI_MODELS } from '@/lib/ai/openrouter';
 import { checkFreeUsage, buildUsageCookie } from '@/lib/usage/serverUsageCheck';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
@@ -149,15 +149,17 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
     }
 
     try {
-      const aiResponse = await aiChat({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        model: AI_MODELS.free.id,
-        temperature: 0.3,
-        maxTokens: 3000,
-      });
+      const aiResponse = await aiChatWithFallback(
+        {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3,
+          maxTokens: 3000,
+        },
+        'premium'
+      );
 
       // Try to parse AI response
       let analysis;

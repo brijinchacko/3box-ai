@@ -3,20 +3,27 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 
-/* GET /api/agents/chat?agentId=scout&limit=50&before=<ISO> */
+/* GET /api/agents/chat?agentId=scout&limit=50&before=<ISO>
+   GET /api/agents/chat?mode=unified&limit=100  — all agents chronologically */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
+    const mode = searchParams.get('mode');
     const agentId = searchParams.get('agentId');
-    if (!agentId) return NextResponse.json({ error: 'agentId is required' }, { status: 400 });
+    const isUnified = mode === 'unified';
 
-    const limit = Math.min(100, parseInt(searchParams.get('limit') || '50', 10));
+    if (!isUnified && !agentId) {
+      return NextResponse.json({ error: 'agentId is required' }, { status: 400 });
+    }
+
+    const limit = Math.min(200, parseInt(searchParams.get('limit') || '50', 10));
     const before = searchParams.get('before');
 
-    const where: any = { userId: session.user.id, agentId };
+    const where: any = { userId: session.user.id };
+    if (!isUnified) where.agentId = agentId;
     if (before) where.createdAt = { lt: new Date(before) };
 
     const messages = await prisma.agentChatMessage.findMany({
@@ -34,6 +41,7 @@ export async function GET(request: NextRequest) {
         data: m.data,
         feedback: m.feedback,
         timestamp: m.createdAt.getTime(),
+        ...(isUnified ? { agentId: m.agentId } : {}),
       })),
       hasMore: messages.length === limit,
     });

@@ -59,8 +59,8 @@ const data: ComparisonData = {
   ],
   boxAiPrice: '$12/mo',
   competitorPrice: '$29/mo (Pro+)',
-  boxAiFreeTier: 'Yes — AI resume builder, 2 assessments, 50 AI credits',
-  competitorFreeTier: 'Yes — limited resume builder, job tracker',
+  boxAiEntryPlan: 'Starter Duo — $12/mo with 100 AI credits, 7-day money-back guarantee',
+  competitorEntryPlan: 'Yes — limited resume builder, job tracker',
   boxAiRating: '4.8',
   competitorRating: '4.5',
   boxAiReviewCount: '2,847',
@@ -110,7 +110,7 @@ const data: ComparisonData = {
     {
       question: 'Can I import my Teal data to 3BOX AI?',
       answer:
-        'You can upload your resume to 3BOX AI and our AI will parse all your experience, skills, and education automatically. Sign up free to get started.',
+        'You can upload your resume to 3BOX AI and our AI will parse all your experience, skills, and education automatically. 7-day money-back guarantee included.',
     },
     {
       question: 'Is 3BOX AI better for career changers than Teal?',

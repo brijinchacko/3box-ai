@@ -6,7 +6,7 @@ const { prisma } = require('@/lib/db/prisma');
 
 /**
  * GET /api/forge/status
- * Get the current Forge state: latest resume, approval status, settings, token balance.
+ * Get the current Forge state: latest resume, approval status, settings.
  * Used by the dashboard to determine which view to render.
  */
 export async function GET() {
@@ -22,8 +22,6 @@ export async function GET() {
       prisma.user.findUnique({
         where: { id: userId },
         select: {
-          aiCreditsUsed: true,
-          aiCreditsLimit: true,
           plan: true,
           onboardingDone: true,
           name: true,
@@ -81,8 +79,6 @@ export async function GET() {
 
     // Determine if profile exists from CareerTwin
     const hasProfile = !!(twin?.skillSnapshot && (twin.skillSnapshot as any)._profile);
-    const tokensRemaining = Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed);
-
     // Determine dashboard state
     let dashboardState: 'no_resume' | 'pending_approval' | 'approved' | 'editing' = 'no_resume';
     if (latestResume) {
@@ -105,11 +101,6 @@ export async function GET() {
       settings: {
         perJobResumeRewrite: autoConfig?.perJobResumeRewrite ?? false,
         perJobAutoApprove: autoConfig?.perJobAutoApprove ?? false,
-      },
-      tokens: {
-        used: user.aiCreditsUsed,
-        limit: user.aiCreditsLimit,
-        remaining: tokensRemaining,
       },
       plan: user.plan,
       hasProfile,

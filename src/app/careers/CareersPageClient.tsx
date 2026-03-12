@@ -32,7 +32,7 @@ const values = [
     icon: Globe,
     color: 'text-neon-purple',
     title: 'Accessible',
-    description: 'Career advancement tools should be available to everyone, everywhere. Free tier included.',
+    description: 'Career advancement tools should be available to everyone, everywhere. Plans for every budget.',
   },
 ];
 

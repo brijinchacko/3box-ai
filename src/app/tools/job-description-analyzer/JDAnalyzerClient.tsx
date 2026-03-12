@@ -5,6 +5,7 @@ import { Loader2, Search } from 'lucide-react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 /* ── Result type ────────────────────────────────── */
 
@@ -31,6 +32,7 @@ interface JDAnalyzerResult {
 /* ── Component ──────────────────────────────────── */
 
 export default function JDAnalyzerClient() {
+  const agent = getAgentForTool('job-description-analyzer');
   const [form, setForm] = useState({
     jobDescription: '',
   });
@@ -58,6 +60,11 @@ export default function JDAnalyzerClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Job Description Analyzer"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="job-description-analyzer"
     >
       {/* ── Form ──────────────────────────────────── */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -90,7 +97,7 @@ export default function JDAnalyzerClient() {
           ) : (
             <Search className="w-4 h-4" />
           )}
-          {loading ? 'Analyzing...' : 'Analyze Job Description'}
+          {loading ? 'Agent Scout is analyzing the job description...' : 'Analyze Job Description'}
         </button>
       </form>
 

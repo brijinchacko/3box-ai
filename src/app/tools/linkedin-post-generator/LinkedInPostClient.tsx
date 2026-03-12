@@ -6,12 +6,14 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import TextResultCard from '@/components/tools/TextResultCard';
 import ResumeInput from '@/components/tools/ResumeInput';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface LinkedInPostResult {
   text: string;
 }
 
 export default function LinkedInPostClient() {
+  const agent = getAgentForTool('linkedin-post-generator');
   const [resumeText, setResumeText] = useState('');
   const [form, setForm] = useState({
     topic: '',
@@ -42,6 +44,11 @@ export default function LinkedInPostClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="LinkedIn Post Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="linkedin-post-generator"
     >
       {/* ── Form ──────────────────────────────────── */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -128,7 +135,7 @@ export default function LinkedInPostClient() {
           ) : (
             <Megaphone className="w-4 h-4" />
           )}
-          {loading ? 'Generating...' : 'Generate Post'}
+          {loading ? 'Agent Cortex is crafting your post...' : 'Generate Post'}
         </button>
       </form>
 

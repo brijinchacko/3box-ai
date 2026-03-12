@@ -62,10 +62,10 @@ export default function SecurityPageClient() {
               <p>We collect information you provide directly: name, email, career profile data, assessment responses, resume content, and job preferences. We also collect usage analytics to improve the platform.</p>
 
               <h3 className="text-white font-semibold">How We Use Your Data</h3>
-              <p>Your data is used exclusively to power your career features: assessments, career plans, resume generation, job matching, and AI coaching. We never sell your personal data to third parties.</p>
+              <p>Your data powers your 7 AI career agents for job searching, resume optimization, application sending, interview prep, and career coaching. We never sell your personal data to third parties.</p>
 
               <h3 className="text-white font-semibold">AI Processing</h3>
-              <p>Your data may be processed by AI models (via OpenRouter) to generate assessments, career plans, and recommendations. PII is redacted from AI interaction logs. You can opt out of AI features at any time.</p>
+              <p>Your data is processed by AI models (via OpenRouter) to power your agent team. PII is redacted from AI interaction logs. You can opt out of AI features at any time.</p>
 
               <h3 className="text-white font-semibold">Data Retention</h3>
               <p>Your data is retained as long as your account is active. You can request data deletion at any time through Settings or by contacting privacy@oforo.ai.</p>
@@ -80,16 +80,16 @@ export default function SecurityPageClient() {
             <h2 className="text-2xl font-bold mb-6">Terms of Service</h2>
             <div className="space-y-4 text-sm text-white/50 leading-relaxed">
               <h3 className="text-white font-semibold">Service Description</h3>
-              <p>3BOX AI provides AI-powered career development tools including skill assessments, career planning, resume building, and job matching. The platform is provided &quot;as is&quot; and we continuously improve features.</p>
+              <p>3BOX AI provides an AI-powered career operating system with 7 specialized AI agents that find jobs, optimize resumes, send applications, prepare for interviews, and coach your career. The platform is provided &quot;as is&quot; and we continuously improve features.</p>
 
               <h3 className="text-white font-semibold">User Responsibilities</h3>
               <p>You agree to provide accurate information, maintain the security of your account, and use the platform in compliance with applicable laws. Automated access without permission is prohibited.</p>
 
               <h3 className="text-white font-semibold">Subscription & Billing</h3>
-              <p>Paid plans are billed monthly or yearly as selected. You can cancel anytime. Refunds are available within 14 days of purchase. Plan changes take effect immediately with prorated billing.</p>
+              <p>Paid plans are billed monthly or yearly as selected. You can cancel anytime. 7-day money-back guarantee on initial purchase, subject to usage limits. Plan changes take effect immediately with prorated billing.</p>
 
-              <h3 className="text-white font-semibold">Automation Disclaimer</h3>
-              <p>Ultra automation features apply to jobs on your behalf. You are responsible for reviewing automation settings and maintaining compliance with job platform terms. 3BOX AI provides tools, not guarantees of employment.</p>
+              <h3 className="text-white font-semibold">AI Agents &amp; Automation</h3>
+              <p>AI agents search for jobs, tailor resumes, and send applications on your behalf. Usage limits apply per plan tier. You are responsible for reviewing agent settings and maintaining compliance with job platform terms. 3BOX AI provides tools, not guarantees of employment.</p>
 
               <h3 className="text-white font-semibold">Intellectual Property</h3>
               <p>You retain ownership of all content you create (resumes, portfolios, etc). We retain rights to the platform, AI models, and proprietary algorithms.</p>

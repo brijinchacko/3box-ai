@@ -13,6 +13,8 @@ import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentLoader from '@/components/brand/AgentLoader';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
+import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
+import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
 import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
 // ─── Application Gap Types ─────────────────────
@@ -345,8 +347,12 @@ function EmptyState({
 // ─── Main Page ──────────────────────────────────
 export default function LearningPathPage() {
   const { data: session } = useSession();
+  const { isAgentic } = useDashboardMode();
   const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
   const sageLocked = !isAgentAvailable('sage', userPlan);
+
+  // In Agentic mode, render Cortex-style agent workspace for Sage
+  if (isAgentic) return <AgenticWorkspace agentId="sage" />;
   const [filter, setFilter] = useState<string>('all');
   const [learningPath, setLearningPath] = useState<LearningPathData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

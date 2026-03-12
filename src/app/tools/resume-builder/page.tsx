@@ -35,6 +35,7 @@ import UpgradeModal from '@/components/ui/UpgradeModal';
 import { getFreeUseCount, incrementFreeUse, hasFreeTrial } from '@/lib/usage/freeUsageTracker';
 import { detectGibberish } from '@/lib/validation/gibberishDetector';
 import { buildResumeHTML } from '@/lib/resume/buildHTML';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 // ── Types ──────────────────────────────────────
 
@@ -162,6 +163,7 @@ const pageVariants = {
 // ═══════════════════════════════════════════════
 
 export default function FreeResumeBuilderPage() {
+  const agent = getAgentForTool('resume-builder');
   // ── State ──────────────────────────────────────
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<'jd' | 'manual' | null>(null);
@@ -851,7 +853,7 @@ export default function FreeResumeBuilderPage() {
           {generating ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating Resume...
+              Agent Forge is building your resume...
             </>
           ) : (
             <>
@@ -1535,7 +1537,7 @@ export default function FreeResumeBuilderPage() {
                 {exporting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
+                    Agent Forge is generating your PDF...
                   </>
                 ) : (
                   <>

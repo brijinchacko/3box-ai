@@ -15,10 +15,10 @@ export default function ResumePreviewSection() {
   const [show, setShow] = useState(false);
   const [resumeReady, setResumeReady] = useState(false);
 
-  // Delay before showing the section
+  // Delay before showing the section (reduced from 4s to 1.5s for faster perceived performance)
   useEffect(() => {
     if (!firstName) return;
-    const timer = setTimeout(() => setShow(true), 4000);
+    const timer = setTimeout(() => setShow(true), 1500);
     return () => clearTimeout(timer);
   }, [firstName]);
 
@@ -86,11 +86,10 @@ export default function ResumePreviewSection() {
     return buildResumeHTML(params);
   }, [show, firstName]);
 
-  // Animate resume appearing after HTML is built
+  // Show resume immediately after HTML is built (removed 600ms delay)
   useEffect(() => {
     if (resumeHTML) {
-      const timer = setTimeout(() => setResumeReady(true), 600);
-      return () => clearTimeout(timer);
+      setResumeReady(true);
     }
   }, [resumeHTML]);
 
@@ -123,9 +122,9 @@ export default function ResumePreviewSection() {
 
         {/* Forge agent badge */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
           className="flex items-center justify-center gap-3 mb-6"
         >
           <AgentAvatar agentId="forge" size={32} />
@@ -143,9 +142,9 @@ export default function ResumePreviewSection() {
         <AnimatePresence>
           {resumeReady && (
             <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
               className="relative mx-auto max-w-2xl"
             >
               {/* Glow border */}
@@ -180,7 +179,7 @@ export default function ResumePreviewSection() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
+          transition={{ delay: 0.4 }}
           className="text-center mt-8"
         >
           <Link

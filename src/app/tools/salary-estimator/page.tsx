@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 import LocationInput from '@/components/ui/LocationInput';
 import UpgradeModal from '@/components/ui/UpgradeModal';
 import { getFreeUseCount, incrementFreeUse, hasFreeTrial } from '@/lib/usage/freeUsageTracker';
@@ -79,6 +80,7 @@ function SalaryBar({ low, median, high, currency }: { low: number; median: numbe
 }
 
 export default function SalaryEstimatorPage() {
+  const agent = getAgentForTool('salary-estimator');
   const [role, setRole] = useState('');
   const [location, setLocation] = useState('');
   const [experience, setExperience] = useState('');
@@ -254,7 +256,7 @@ export default function SalaryEstimatorPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Estimating...
+                  Agent Scout is estimating your salary...
                 </>
               ) : (
                 <>
@@ -363,7 +365,7 @@ export default function SalaryEstimatorPage() {
                   Get a personalized career plan with salary growth projections, skill roadmaps, and job matching.
                 </p>
                 <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
-                  Get Started Free <ArrowRight className="w-4 h-4" />
+                  Get Started <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </motion.div>

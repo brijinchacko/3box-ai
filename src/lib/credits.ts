@@ -1,50 +1,57 @@
 /**
- * AI Credit utility — checks if user is running low and sends email alerts
+ * Application limit utility — checks if user is approaching their application limit
+ * and sends email alerts.
+ *
+ * FREE plan: 10 lifetime applications
+ * PRO plan:  20 applications / day
+ * MAX plan:  50 applications / day
  */
 import { prisma } from '@/lib/db/prisma';
 import { sendCreditLowEmail } from '@/lib/email';
+import { normalizePlan, APP_LIMITS, getApplicationsRemaining } from '@/lib/tokens/pricing';
 
-const LOW_CREDIT_THRESHOLDS = [3, 1]; // Send alert at 3 and 1 credits remaining
+const LOW_REMAINING_THRESHOLDS = [3, 1]; // Send alert at 3 and 1 remaining
 
-export async function checkAndAlertLowCredits(userId: string) {
+export async function checkAndAlertLowApplications(userId: string) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true, aiCreditsUsed: true, aiCreditsLimit: true, plan: true },
+      select: { email: true, name: true, plan: true, totalAppsUsed: true, dailyAppsUsed: true },
     });
 
-    if (!user?.email || !user.aiCreditsLimit || user.aiCreditsLimit < 0) return; // unlimited
+    if (!user?.email) return;
 
-    const remaining = user.aiCreditsLimit - user.aiCreditsUsed;
+    const plan = normalizePlan(user.plan);
+    const remaining = getApplicationsRemaining(plan, user.totalAppsUsed, user.dailyAppsUsed);
 
-    if (!LOW_CREDIT_THRESHOLDS.includes(remaining)) return;
+    if (!LOW_REMAINING_THRESHOLDS.includes(remaining)) return;
 
-    // Check if we already sent a low credit email today
+    // Check if we already sent an alert today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const alreadySent = await prisma.emailLog.findFirst({
       where: {
         userId,
-        type: 'CREDIT_LOW',
+        type: 'CREDIT_LOW' as any,
         createdAt: { gte: today },
       },
     });
 
     if (alreadySent) return;
 
+    const limitLabel = APP_LIMITS[plan].type === 'lifetime' ? 'lifetime' : 'daily';
     await sendCreditLowEmail(user.email, user.name || 'there', remaining);
 
-    // Log the email
     await prisma.emailLog.create({
       data: {
         userId,
-        type: 'CREDIT_LOW',
-        subject: `You have ${remaining} AI credits remaining`,
+        type: 'CREDIT_LOW' as any,
+        subject: `You have ${remaining} ${limitLabel} job applications remaining`,
         to: user.email,
         status: 'sent',
       },
     });
   } catch (err) {
-    console.error('[Credits] Low credit check failed:', err);
+    console.error('[Applications] Low application limit check failed:', err);
   }
 }

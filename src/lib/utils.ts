@@ -37,83 +37,60 @@ export function generateReferralCode(): string {
 // ─── Plan Configuration ─────────────────────────
 
 export const PLAN_LIMITS = {
-  BASIC:   { aiCredits: 10,  assessments: 1,  resumes: 1, exports: 0,  price: 0,  priceYearly: 0 },
-  STARTER: { aiCredits: 100, assessments: 5,  resumes: 3, exports: 5,  price: 12, priceYearly: 10 },
-  PRO:     { aiCredits: 500, assessments: -1, resumes: -1, exports: -1, price: 29, priceYearly: 24 },
-  ULTRA:   { aiCredits: -1,  assessments: -1, resumes: -1, exports: -1, price: 59, priceYearly: 49 },
+  FREE: { applicationsPerDay: 0, applicationsLifetime: 10, price: 0,  priceYearly: 0 },
+  PRO:  { applicationsPerDay: 20, applicationsLifetime: -1, price: 29, priceYearly: 24 },
+  MAX:  { applicationsPerDay: 50, applicationsLifetime: -1, price: 59, priceYearly: 49 },
 } as const;
 
 export type PlanTierKey = keyof typeof PLAN_LIMITS;
 
 export const PLAN_FEATURES = {
-  BASIC: {
-    name: 'Basic',
+  FREE: {
+    name: 'Free',
     description: 'Get started with AI career tools',
     badge: 'Free Forever',
     features: [
-      { label: '1 skill assessment', included: true },
-      { label: '10 AI credits / month', included: true },
-      { label: '1 resume (watermarked)', included: true },
-      { label: 'Basic career plan', included: true },
-      { label: 'AI coach (limited)', included: true },
-      { label: 'PDF resume export', included: false },
-      { label: 'Full assessment suite', included: false },
-      { label: 'Job matching', included: false },
-      { label: 'Automation agent', included: false },
-    ],
-  },
-  STARTER: {
-    name: 'Starter',
-    description: 'For students and casual job seekers',
-    badge: 'Best for Students',
-    features: [
-      { label: '5 skill assessments / month', included: true },
-      { label: '100 AI credits / month', included: true },
-      { label: '3 resume templates', included: true },
-      { label: '5 PDF exports / month', included: true },
+      { label: 'All AI agents unlocked', included: true },
+      { label: 'Unlimited AI operations', included: true },
+      { label: 'All resume templates', included: true },
+      { label: 'Unlimited PDF exports', included: true },
       { label: 'Full career plan', included: true },
       { label: 'AI coach (full access)', included: true },
-      { label: 'Learning path', included: true },
-      { label: 'Portfolio builder', included: false },
-      { label: 'Job matching', included: false },
-      { label: 'Automation agent', included: false },
+      { label: '10 job applications (lifetime)', included: true },
+      { label: 'Daily application limit', included: false },
+      { label: 'Priority support', included: false },
     ],
   },
   PRO: {
     name: 'Pro',
-    description: 'Full career toolkit for serious job seekers',
+    description: 'For active job seekers',
     badge: 'Most Popular',
     features: [
-      { label: 'Unlimited assessments', included: true },
-      { label: '500 AI credits / month', included: true },
+      { label: 'All AI agents unlocked', included: true },
+      { label: 'Unlimited AI operations', included: true },
       { label: 'All resume templates', included: true },
       { label: 'Unlimited PDF exports', included: true },
       { label: 'Full career plan + timeline', included: true },
       { label: 'AI coach (full access)', included: true },
-      { label: 'Adaptive learning path', included: true },
-      { label: 'Portfolio builder', included: true },
+      { label: '20 job applications / day', included: true },
       { label: 'Job matching + fit reports', included: true },
       { label: 'Interview prep + mock interviews', included: true },
-      { label: 'Automation agent', included: false },
+      { label: 'Priority support', included: false },
     ],
   },
-  ULTRA: {
-    name: 'Ultra',
-    description: 'Maximum automation and intelligence',
+  MAX: {
+    name: 'Max',
+    description: 'Maximum power for serious job seekers',
     badge: 'Maximum Power',
     features: [
       { label: 'Everything in Pro', included: true },
-      { label: 'Unlimited AI credits', included: true },
-      { label: 'Automation agent', included: true },
+      { label: '50 job applications / day', included: true },
       { label: 'Auto-apply to jobs', included: true },
       { label: 'Advanced analytics', included: true },
       { label: 'Priority AI processing', included: true },
       { label: 'LinkedIn optimizer', included: true },
-      { label: 'Cover letter generator', included: true },
-      { label: 'Role simulator', included: true },
       { label: 'Market readiness forecasting', included: true },
-      { label: 'Verified credentials', included: true },
-      { label: 'Premium support', included: true },
+      { label: 'Priority support', included: true },
     ],
   },
 } as const;
@@ -131,32 +108,44 @@ export function isStudentEmail(email: string): boolean {
 }
 
 export function canAccessFeature(plan: PlanTierKey, feature: string): boolean {
-  const tierOrder: PlanTierKey[] = ['BASIC', 'STARTER', 'PRO', 'ULTRA'];
+  const tierOrder: PlanTierKey[] = ['FREE', 'PRO', 'MAX'];
   const featureMinPlan: Record<string, PlanTierKey> = {
-    assessment: 'BASIC',
-    career_plan: 'BASIC',
-    ai_coach: 'BASIC',
-    resume_builder: 'BASIC',
-    pdf_export: 'STARTER',
-    learning_path: 'STARTER',
-    portfolio: 'PRO',
+    assessment: 'FREE',
+    career_plan: 'FREE',
+    ai_coach: 'FREE',
+    resume_builder: 'FREE',
+    pdf_export: 'FREE',
+    learning_path: 'FREE',
+    portfolio: 'FREE',
     job_matching: 'PRO',
     interview_prep: 'PRO',
-    auto_apply: 'ULTRA',
-    role_simulator: 'ULTRA',
-    priority_ai: 'ULTRA',
+    auto_apply: 'MAX',
+    priority_ai: 'MAX',
   };
 
-  const minPlan = featureMinPlan[feature] || 'BASIC';
+  const minPlan = featureMinPlan[feature] || 'FREE';
   return tierOrder.indexOf(plan) >= tierOrder.indexOf(minPlan);
 }
 
-export function getCreditsRemaining(used: number, limit: number): number {
-  if (limit === -1) return Infinity;
-  return Math.max(0, limit - used);
+export function getApplicationsRemaining(used: number, plan: PlanTierKey): number {
+  const limits = PLAN_LIMITS[plan];
+  const daily = limits.applicationsPerDay as number;
+  const lifetime = limits.applicationsLifetime as number;
+  if (daily === -1 || daily > 0) {
+    // Paid plans: daily limit (used = today's count)
+    if (daily === -1) return Infinity;
+    return Math.max(0, daily - used);
+  }
+  // FREE plan: lifetime limit
+  if (lifetime === -1) return Infinity;
+  return Math.max(0, lifetime - used);
 }
 
-export function getCreditUsagePercent(used: number, limit: number): number {
+export function getApplicationUsagePercent(used: number, plan: PlanTierKey): number {
+  const limits = PLAN_LIMITS[plan];
+  const daily = limits.applicationsPerDay as number;
+  const lifetime = limits.applicationsLifetime as number;
+  const limit = daily > 0 ? daily : lifetime;
   if (limit === -1) return 0;
   if (limit === 0) return 100;
   return Math.min(100, Math.round((used / limit) * 100));

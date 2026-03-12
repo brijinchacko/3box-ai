@@ -13,6 +13,8 @@ import type { FreeService } from '@/lib/usage/freeUsageTracker';
 
 export type ToolCategory = 'resume' | 'linkedin' | 'job-search' | 'interview';
 
+export type ToolAgentId = 'scout' | 'forge' | 'archer' | 'atlas' | 'sage' | 'cortex';
+
 export interface ToolDefinition {
   slug: string;
   title: string;
@@ -25,8 +27,19 @@ export interface ToolDefinition {
   borderHover: string;
   category: ToolCategory;
   freeServiceKey: FreeService;
+  agentId: ToolAgentId;
   isNew?: boolean;
 }
+
+/** Agent display metadata for tool pages */
+export const TOOL_AGENT_META: Record<ToolAgentId, { displayName: string; color: string; gradient: string; colorHex: string }> = {
+  scout:    { displayName: 'Agent Scout',    color: 'text-blue-400',   gradient: 'from-blue-500/20 to-cyan-500/20',     colorHex: '#3b82f6' },
+  forge:    { displayName: 'Agent Forge',    color: 'text-orange-400', gradient: 'from-orange-500/20 to-amber-500/20',   colorHex: '#f97316' },
+  archer:   { displayName: 'Agent Archer',   color: 'text-green-400',  gradient: 'from-green-500/20 to-emerald-500/20',  colorHex: '#22c55e' },
+  atlas:    { displayName: 'Agent Atlas',    color: 'text-purple-400', gradient: 'from-purple-500/20 to-violet-500/20',  colorHex: '#a855f7' },
+  sage:     { displayName: 'Agent Sage',     color: 'text-pink-400',   gradient: 'from-pink-500/20 to-rose-500/20',     colorHex: '#ec4899' },
+  cortex:   { displayName: 'Agent Cortex',   color: 'text-cyan-400',   gradient: 'from-cyan-500/20 to-blue-500/20',     colorHex: '#00d4ff' },
+};
 
 export const TOOL_CATEGORIES: { key: ToolCategory; label: string; description: string }[] = [
   { key: 'resume', label: 'Resume Tools', description: 'Build, optimize, and score your resume' },
@@ -49,6 +62,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-blue/30',
     category: 'resume',
     freeServiceKey: 'ats_checker',
+    agentId: 'forge',
   },
   {
     slug: 'resume-builder',
@@ -62,6 +76,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-green/30',
     category: 'resume',
     freeServiceKey: 'resume_builder',
+    agentId: 'forge',
   },
   {
     slug: 'resume-generator',
@@ -75,6 +90,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-green/30',
     category: 'resume',
     freeServiceKey: 'resume_generator',
+    agentId: 'forge',
     isNew: true,
   },
   {
@@ -89,6 +105,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-blue/30',
     category: 'resume',
     freeServiceKey: 'resume_score',
+    agentId: 'forge',
     isNew: true,
   },
   {
@@ -103,6 +120,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-green/30',
     category: 'resume',
     freeServiceKey: 'resume_summary',
+    agentId: 'forge',
     isNew: true,
   },
 
@@ -119,6 +137,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-purple/30',
     category: 'linkedin',
     freeServiceKey: 'linkedin_post',
+    agentId: 'cortex',
     isNew: true,
   },
   {
@@ -133,6 +152,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-orange/30',
     category: 'linkedin',
     freeServiceKey: 'linkedin_headline',
+    agentId: 'cortex',
     isNew: true,
   },
   {
@@ -147,6 +167,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-blue/30',
     category: 'linkedin',
     freeServiceKey: 'linkedin_hashtags',
+    agentId: 'cortex',
     isNew: true,
   },
   {
@@ -161,6 +182,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-pink/30',
     category: 'linkedin',
     freeServiceKey: 'linkedin_recommendation',
+    agentId: 'cortex',
     isNew: true,
   },
 
@@ -177,6 +199,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-orange/30',
     category: 'job-search',
     freeServiceKey: 'salary_estimator',
+    agentId: 'scout',
   },
   {
     slug: 'cover-letter-generator',
@@ -190,6 +213,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-blue/30',
     category: 'job-search',
     freeServiceKey: 'cover_letter',
+    agentId: 'archer',
     isNew: true,
   },
   {
@@ -204,6 +228,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-green/30',
     category: 'job-search',
     freeServiceKey: 'jd_analyzer',
+    agentId: 'scout',
     isNew: true,
   },
   {
@@ -218,6 +243,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-purple/30',
     category: 'job-search',
     freeServiceKey: 'skills_gap',
+    agentId: 'sage',
     isNew: true,
   },
   {
@@ -232,6 +258,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-blue/30',
     category: 'job-search',
     freeServiceKey: 'cold_email',
+    agentId: 'archer',
     isNew: true,
   },
 
@@ -248,6 +275,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-green/30',
     category: 'interview',
     freeServiceKey: 'interview_prep',
+    agentId: 'atlas',
     isNew: true,
   },
   {
@@ -262,6 +290,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-pink/30',
     category: 'interview',
     freeServiceKey: 'thank_you_email',
+    agentId: 'archer',
     isNew: true,
   },
   {
@@ -276,6 +305,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     borderHover: 'hover:border-neon-orange/30',
     category: 'interview',
     freeServiceKey: 'elevator_pitch',
+    agentId: 'atlas',
     isNew: true,
   },
 ];
@@ -288,4 +318,11 @@ export function getToolsByCategory(category: ToolCategory): ToolDefinition[] {
 /** Get a single tool by slug */
 export function getToolBySlug(slug: string): ToolDefinition | undefined {
   return ALL_TOOLS.find((t) => t.slug === slug);
+}
+
+/** Get agent display metadata for a tool */
+export function getAgentForTool(slug: string): { displayName: string; color: string; gradient: string; colorHex: string } | null {
+  const tool = getToolBySlug(slug);
+  if (!tool) return null;
+  return TOOL_AGENT_META[tool.agentId] || null;
 }

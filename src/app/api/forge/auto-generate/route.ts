@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { generateResumeFromProfile, type OnboardingProfile } from '@/lib/agents/forge';
-import { TOKEN_COSTS, canAfford } from '@/lib/tokens/pricing';
+import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
 const { prisma } = require('@/lib/db/prisma');
 
@@ -18,23 +18,20 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const gate = await checkFeatureGate(session.user.id);
+    if (gate.locked) {
+      return NextResponse.json({ error: gate.reason || 'Free plan limit reached. Please upgrade.' }, { status: 403 });
+    }
+
     const userId = session.user.id;
 
-    // ── Check token budget ──
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { aiCreditsUsed: true, aiCreditsLimit: true, plan: true, email: true, name: true },
+      select: { plan: true, email: true, name: true },
     });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const totalCost = TOKEN_COSTS.resume_generate + TOKEN_COSTS.cover_letter; // 3 + 2 = 5
-    if (!canAfford(user.aiCreditsUsed, user.aiCreditsLimit, totalCost)) {
-      return NextResponse.json(
-        { error: `Not enough tokens. This costs ${totalCost} tokens. You have ${Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed)} remaining.` },
-        { status: 402 }
-      );
     }
 
     // ── Get profile data ──
@@ -126,20 +123,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // ── Deduct tokens ──
-    await prisma.user.update({
-      where: { id: userId },
-      data: { aiCreditsUsed: { increment: totalCost } },
-    });
-
     return NextResponse.json({
       success: true,
       resumeId: savedResume.id,
       resume,
       coverLetter,
       atsScore,
-      tokensUsed: totalCost,
-      tokensRemaining: Math.max(0, user.aiCreditsLimit - user.aiCreditsUsed - totalCost),
     });
   } catch (error) {
     console.error('[Forge Auto-Generate] Error:', error);

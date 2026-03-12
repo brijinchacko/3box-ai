@@ -18,6 +18,9 @@ import AgentLoader from '@/components/brand/AgentLoader';
 import ForgeAutoGenerate from '@/components/forge/ForgeAutoGenerate';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { notifyAgentCompleted } from '@/lib/notifications/toast';
+import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
+import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
+import { cn } from '@/lib/utils';
 
 const RESUME_STORAGE_KEY = '3box_resume_data';
 
@@ -86,7 +89,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 function HumanExpertBanner({ userPlan }: { userPlan: string }) {
   const [requested, setRequested] = useState(false);
   const [loading, setLoading] = useState(false);
-  const hasAccess = userPlan === 'PRO' || userPlan === 'ULTRA';
+  const hasAccess = userPlan === 'PRO' || userPlan === 'MAX';
 
   const handleRequest = async () => {
     setLoading(true);
@@ -117,7 +120,7 @@ function HumanExpertBanner({ userPlan }: { userPlan: string }) {
         <p className="text-xs text-white/40">
           {hasAccess
             ? 'Get your resume reviewed and verified by professional recruiters'
-            : 'Pro & Ultra plans include professional resume review by real recruiters'}
+            : 'Pro & Max plans include professional resume review by real recruiters'}
         </p>
       </div>
       {hasAccess ? (
@@ -144,9 +147,549 @@ function HumanExpertBanner({ userPlan }: { userPlan: string }) {
   );
 }
 
-export default function ResumePage() {
+// ── Autopilot Mode — Clean Resume Builder ────────────────
+function AutopilotResume() {
   const { data: session } = useSession();
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const [resume, setResume] = useState(emptyResume);
+  const [resumeId, setResumeId] = useState<string | null>(null);
+  const [resumeLoaded, setResumeLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
+  const [activeSection, setActiveSection] = useState('contact');
+  const [generating, setGenerating] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Load resume from DB (includes onboarding data, CareerTwin fallback)
+  useEffect(() => {
+    fetch('/api/user/resume')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.resume) {
+          setResume(prev => ({
+            ...prev,
+            ...data.resume,
+            contact: { ...prev.contact, ...(data.resume.contact || {}), email: data.resume.contact?.email || session?.user?.email || '' },
+            experience: data.resume.experience || [],
+            education: data.resume.education || [],
+            skills: data.resume.skills || [],
+            certifications: data.resume.certifications || [],
+            projects: data.resume.projects || [],
+          }));
+          if (data.resumeId) setResumeId(data.resumeId);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setResumeLoaded(true));
+  }, [session?.user?.email]);
+
+  // Auto-save to DB with debounce
+  useEffect(() => {
+    if (!resumeLoaded || !resume.contact.name) return;
+    const timer = setTimeout(() => {
+      setSaving(true);
+      fetch('/api/user/resume', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeId, resume, template: resume.template }),
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.resumeId && !resumeId) setResumeId(data.resumeId);
+          setLastSaved(new Date().toLocaleTimeString());
+        })
+        .catch(() => {})
+        .finally(() => setSaving(false));
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [resume, resumeLoaded, resumeId]);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  const handleAIEnhance = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/ai/resume/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section: 'summary', content: resume.summary }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.enhanced) setResume(prev => ({ ...prev, summary: data.enhanced }));
+        showToast('Summary enhanced!', 'success');
+      }
+    } catch { showToast('Failed to enhance. Please try again.', 'error'); }
+    finally { setGenerating(false); }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/resume/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume, template: resume.template }),
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${resume.title || 'resume'}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Resume exported!', 'success');
+      }
+    } catch { showToast('Export failed.', 'error'); }
+    finally { setExporting(false); }
+  };
+
+  const sections = [
+    { id: 'contact', label: 'Contact', icon: User },
+    { id: 'summary', label: 'Summary', icon: FileText },
+    { id: 'experience', label: 'Experience', icon: Briefcase },
+    { id: 'education', label: 'Education', icon: GraduationCap },
+    { id: 'skills', label: 'Skills', icon: Code },
+    { id: 'certifications', label: 'Certifications', icon: Award },
+  ];
+
+  const templateAccents: Record<string, string> = {
+    modern: '#2563eb',
+    classic: '#1e293b',
+    minimal: '#374151',
+    creative: '#7c3aed',
+  };
+
+  const accent = templateAccents[resume.template] || '#2563eb';
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AnimatePresence>{toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}</AnimatePresence>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Resume Builder</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Create and customize your professional resume.
+            {lastSaved && <span className="ml-2 text-xs text-green-500">{saving ? 'Saving...' : `Saved ${lastSaved}`}</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleAIEnhance}
+            disabled={generating}
+            className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/30 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors flex items-center gap-1.5"
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            AI Enhance
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Export PDF
+          </button>
+        </div>
+      </div>
+
+      {/* Template selector */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 mb-6">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Template</h3>
+        <div className="flex gap-2">
+          {templates.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setResume(prev => ({ ...prev, template: t.id }))}
+              className={cn(
+                'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                resume.template === t.id
+                  ? 'border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600',
+              )}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Editor / Preview tabs */}
+      <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-800">
+        <button
+          onClick={() => setActiveTab('editor')}
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            activeTab === 'editor' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400',
+          )}
+        >
+          <Edit3 className="w-4 h-4 inline mr-1.5" />Editor
+        </button>
+        <button
+          onClick={() => setActiveTab('preview')}
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            activeTab === 'preview' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400',
+          )}
+        >
+          <Eye className="w-4 h-4 inline mr-1.5" />Preview
+        </button>
+      </div>
+
+      {activeTab === 'editor' && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Section nav */}
+          <div className="lg:col-span-1">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 space-y-1">
+              {sections.map(s => {
+                const filled = s.id === 'contact' ? !!resume.contact.name
+                  : s.id === 'summary' ? !!resume.summary
+                  : s.id === 'experience' ? resume.experience.length > 0
+                  : s.id === 'education' ? resume.education.length > 0
+                  : s.id === 'skills' ? resume.skills.length > 0
+                  : resume.certifications.length > 0;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setActiveSection(s.id)}
+                    className={cn(
+                      'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
+                      activeSection === s.id
+                        ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800',
+                    )}
+                  >
+                    <s.icon className="w-4 h-4" />
+                    {s.label}
+                    {filled && <CheckCircle2 className="w-3 h-3 text-green-500 ml-auto" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Editor content */}
+          <div className="lg:col-span-3">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+              {activeSection === 'contact' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Contact Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { key: 'name', label: 'Full Name', icon: User, placeholder: 'John Doe' },
+                      { key: 'email', label: 'Email', icon: Mail, placeholder: 'john@example.com' },
+                      { key: 'phone', label: 'Phone', icon: Phone, placeholder: '+1 (555) 123-4567' },
+                      { key: 'location', label: 'Location', icon: MapPin, placeholder: 'San Francisco, CA' },
+                      { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'linkedin.com/in/johndoe' },
+                      { key: 'portfolio', label: 'Portfolio', icon: Globe, placeholder: 'johndoe.dev' },
+                    ].map(field => (
+                      <div key={field.key}>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{field.label}</label>
+                        <input
+                          type="text"
+                          value={(resume.contact as any)[field.key] || ''}
+                          onChange={(e) => setResume(prev => ({ ...prev, contact: { ...prev.contact, [field.key]: e.target.value } }))}
+                          placeholder={field.placeholder}
+                          className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeSection === 'summary' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Professional Summary</h3>
+                    <button
+                      onClick={handleAIEnhance}
+                      disabled={generating}
+                      className="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" /> AI Enhance
+                    </button>
+                  </div>
+                  <textarea
+                    value={resume.summary}
+                    onChange={(e) => setResume(prev => ({ ...prev, summary: e.target.value }))}
+                    placeholder="Write a brief professional summary highlighting your key strengths and career objectives..."
+                    rows={5}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+                  />
+                </div>
+              )}
+
+              {activeSection === 'experience' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Work Experience</h3>
+                  {resume.experience.map((exp, i) => (
+                    <div key={exp.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{exp.role || 'New Role'}</span>
+                        <button onClick={() => setResume(prev => ({ ...prev, experience: prev.experience.filter((_, idx) => idx !== i) }))} className="text-gray-400 hover:text-red-500">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input placeholder="Job Title" value={exp.role} onChange={(e) => { const updated = [...resume.experience]; updated[i] = { ...updated[i], role: e.target.value }; setResume(prev => ({ ...prev, experience: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input placeholder="Company" value={exp.company} onChange={(e) => { const updated = [...resume.experience]; updated[i] = { ...updated[i], company: e.target.value }; setResume(prev => ({ ...prev, experience: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input placeholder="Location" value={exp.location} onChange={(e) => { const updated = [...resume.experience]; updated[i] = { ...updated[i], location: e.target.value }; setResume(prev => ({ ...prev, experience: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <div className="flex gap-2">
+                          <input placeholder="Start" value={exp.startDate} onChange={(e) => { const updated = [...resume.experience]; updated[i] = { ...updated[i], startDate: e.target.value }; setResume(prev => ({ ...prev, experience: updated })); }} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                          <input placeholder="End" value={exp.endDate} onChange={(e) => { const updated = [...resume.experience]; updated[i] = { ...updated[i], endDate: e.target.value }; setResume(prev => ({ ...prev, experience: updated })); }} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        </div>
+                      </div>
+                      {/* Bullet points */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Key Achievements</label>
+                        {(exp.bullets || []).map((bullet, bi) => (
+                          <div key={bi} className="flex items-center gap-2">
+                            <span className="text-gray-400 text-xs">•</span>
+                            <input
+                              value={bullet}
+                              onChange={(e) => { const updated = [...resume.experience]; const bullets = [...(updated[i].bullets || [])]; bullets[bi] = e.target.value; updated[i] = { ...updated[i], bullets }; setResume(prev => ({ ...prev, experience: updated })); }}
+                              placeholder="Describe a key achievement..."
+                              className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                            <button onClick={() => { const updated = [...resume.experience]; updated[i] = { ...updated[i], bullets: updated[i].bullets.filter((_, idx) => idx !== bi) }; setResume(prev => ({ ...prev, experience: updated })); }} className="text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                          </div>
+                        ))}
+                        <button onClick={() => { const updated = [...resume.experience]; updated[i] = { ...updated[i], bullets: [...(updated[i].bullets || []), ''] }; setResume(prev => ({ ...prev, experience: updated })); }} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> Add bullet point
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setResume(prev => ({ ...prev, experience: [...prev.experience, { id: Date.now().toString(), company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [] }] }))}
+                    className="w-full py-3 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Add Experience
+                  </button>
+                </div>
+              )}
+
+              {activeSection === 'education' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Education</h3>
+                  {resume.education.map((edu, i) => (
+                    <div key={edu.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{edu.degree || 'New Degree'}</span>
+                        <button onClick={() => setResume(prev => ({ ...prev, education: prev.education.filter((_, idx) => idx !== i) }))} className="text-gray-400 hover:text-red-500">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input placeholder="Institution" value={edu.institution} onChange={(e) => { const updated = [...resume.education]; updated[i] = { ...updated[i], institution: e.target.value }; setResume(prev => ({ ...prev, education: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input placeholder="Degree" value={edu.degree} onChange={(e) => { const updated = [...resume.education]; updated[i] = { ...updated[i], degree: e.target.value }; setResume(prev => ({ ...prev, education: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input placeholder="Field of Study" value={edu.field} onChange={(e) => { const updated = [...resume.education]; updated[i] = { ...updated[i], field: e.target.value }; setResume(prev => ({ ...prev, education: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input placeholder="GPA" value={edu.gpa} onChange={(e) => { const updated = [...resume.education]; updated[i] = { ...updated[i], gpa: e.target.value }; setResume(prev => ({ ...prev, education: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setResume(prev => ({ ...prev, education: [...prev.education, { id: Date.now().toString(), institution: '', degree: '', field: '', startDate: '', endDate: '', gpa: '' }] }))}
+                    className="w-full py-3 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Add Education
+                  </button>
+                </div>
+              )}
+
+              {activeSection === 'skills' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {resume.skills.map(skill => (
+                      <span key={skill} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-medium">
+                        {skill}
+                        <button onClick={() => setResume(prev => ({ ...prev, skills: prev.skills.filter(s => s !== skill) }))} className="text-blue-400 hover:text-red-500 ml-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const input = (e.target as HTMLFormElement).elements.namedItem('skill') as HTMLInputElement;
+                    const val = input.value.trim();
+                    if (val && !resume.skills.includes(val)) {
+                      setResume(prev => ({ ...prev, skills: [...prev.skills, val] }));
+                      input.value = '';
+                    }
+                  }}>
+                    <input
+                      name="skill"
+                      placeholder="Type a skill and press Enter..."
+                      className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                    />
+                  </form>
+                </div>
+              )}
+
+              {activeSection === 'certifications' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Certifications</h3>
+                  {resume.certifications.map((cert, i) => (
+                    <div key={cert.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{cert.name || 'New Certification'}</span>
+                        <button onClick={() => setResume(prev => ({ ...prev, certifications: prev.certifications.filter((_, idx) => idx !== i) }))} className="text-gray-400 hover:text-red-500">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input placeholder="Certification Name" value={cert.name} onChange={(e) => { const updated = [...resume.certifications]; updated[i] = { ...updated[i], name: e.target.value }; setResume(prev => ({ ...prev, certifications: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input placeholder="Issuer" value={cert.issuer} onChange={(e) => { const updated = [...resume.certifications]; updated[i] = { ...updated[i], issuer: e.target.value }; setResume(prev => ({ ...prev, certifications: updated })); }} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setResume(prev => ({ ...prev, certifications: [...prev.certifications, { id: Date.now().toString(), name: '', issuer: '', date: '', verified: false }] }))}
+                    className="w-full py-3 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Add Certification
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Professional Resume Preview ────────────────── */}
+      {activeTab === 'preview' && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden" style={{ maxWidth: 816 }}>
+          {/* A4-like resume preview */}
+          <div className="p-10" style={{ minHeight: 1056, fontFamily: resume.template === 'creative' ? 'Inter, sans-serif' : resume.template === 'classic' ? 'Georgia, serif' : 'system-ui, sans-serif' }}>
+
+            {/* Header / Contact */}
+            {resume.template === 'creative' ? (
+              <div className="rounded-xl p-6 mb-6" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }}>
+                <h1 className="text-2xl font-bold text-white">{resume.contact.name || 'Your Name'}</h1>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-white/80">
+                  {resume.contact.email && <span>{resume.contact.email}</span>}
+                  {resume.contact.phone && <span>{resume.contact.phone}</span>}
+                  {resume.contact.location && <span>{resume.contact.location}</span>}
+                  {resume.contact.linkedin && <span>{resume.contact.linkedin}</span>}
+                  {resume.contact.portfolio && <span>{resume.contact.portfolio}</span>}
+                </div>
+              </div>
+            ) : (
+              <div className={cn('pb-4 mb-6', resume.template === 'modern' ? 'border-b-2' : 'border-b')} style={{ borderColor: accent }}>
+                <h1 className="text-2xl font-bold" style={{ color: resume.template === 'modern' ? accent : '#111827' }}>
+                  {resume.contact.name || 'Your Name'}
+                </h1>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-gray-600">
+                  {resume.contact.email && <span>{resume.contact.email}</span>}
+                  {resume.contact.phone && <span>{resume.contact.phone}</span>}
+                  {resume.contact.location && <span>{resume.contact.location}</span>}
+                  {resume.contact.linkedin && <span>{resume.contact.linkedin}</span>}
+                  {resume.contact.portfolio && <span>{resume.contact.portfolio}</span>}
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            {resume.summary && (
+              <div className="mb-6">
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>Professional Summary</h2>
+                <p className="text-sm text-gray-700 leading-relaxed">{resume.summary}</p>
+              </div>
+            )}
+
+            {/* Experience */}
+            {resume.experience.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: accent }}>Work Experience</h2>
+                <div className="space-y-4">
+                  {resume.experience.map(exp => (
+                    <div key={exp.id}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900">{exp.role}</h3>
+                          <p className="text-sm text-gray-600">{exp.company}{exp.location ? ` \u2022 ${exp.location}` : ''}</p>
+                        </div>
+                        <span className="text-xs text-gray-500 flex-shrink-0 ml-4">{exp.startDate}{exp.startDate || exp.endDate ? ' \u2014 ' : ''}{exp.endDate || (exp.startDate ? 'Present' : '')}</span>
+                      </div>
+                      {exp.bullets && exp.bullets.length > 0 && (
+                        <ul className="mt-1.5 space-y-1">
+                          {exp.bullets.filter(Boolean).map((b, bi) => (
+                            <li key={bi} className="text-sm text-gray-700 flex items-start gap-2">
+                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: accent }} />
+                              {b}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Education */}
+            {resume.education.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: accent }}>Education</h2>
+                {resume.education.map(edu => (
+                  <div key={edu.id} className="mb-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900">{edu.degree}{edu.field ? ` in ${edu.field}` : ''}</h3>
+                        <p className="text-sm text-gray-600">{edu.institution}{edu.gpa ? ` \u2022 GPA: ${edu.gpa}` : ''}</p>
+                      </div>
+                      {edu.endDate && <span className="text-xs text-gray-500 flex-shrink-0 ml-4">{edu.endDate}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skills */}
+            {resume.skills.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>Skills</h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {resume.skills.map(s => (
+                    <span key={s} className="text-xs px-2.5 py-1 rounded-full border text-gray-700" style={{ borderColor: `${accent}40`, backgroundColor: `${accent}08` }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Certifications */}
+            {resume.certifications.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>Certifications</h2>
+                {resume.certifications.map(cert => (
+                  <div key={cert.id} className="text-sm text-gray-700 mb-1">
+                    <span className="font-semibold text-gray-900">{cert.name}</span>{cert.issuer ? ` \u2014 ${cert.issuer}` : ''}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgenticResumePage() {
+  const { data: session } = useSession();
+  const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase() as PlanTier;
   const forgeLocked = !isAgentAvailable('forge', userPlan);
   const [showEditor, setShowEditor] = useState(false);
   const [forgeKey, setForgeKey] = useState(0); // Used to re-render ForgeAutoGenerate
@@ -237,8 +780,7 @@ export default function ResumePage() {
     } catch {}
   }, []);
 
-  const isBasic = userPlan === 'BASIC';
-  const isStarter = userPlan === 'STARTER';
+  const isFree = userPlan === 'FREE';
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -246,14 +788,14 @@ export default function ResumePage() {
   }, []);
 
   const checkAILimit = useCallback((): boolean => {
-    if (!isBasic) return true;
+    if (!isFree) return true;
     const uses = getAIUses();
     if (uses >= AI_FREE_LIMIT) {
       showToast(`Free Forge limit reached (${AI_FREE_LIMIT}/${AI_FREE_LIMIT}). Upgrade to continue.`, 'error');
       return false;
     }
     return true;
-  }, [isBasic, showToast]);
+  }, [isFree, showToast]);
 
   // ── AI Enhance (full resume) ───────────────────
   const handleAIEnhance = async () => {
@@ -311,7 +853,7 @@ export default function ResumePage() {
         experience: enhancedExperience,
       }));
 
-      if (isBasic) incrementAIUses();
+      if (isFree) incrementAIUses();
       showToast('Resume enhanced by Forge!', 'success');
       notifyAgentCompleted('forge', 'Forge enhanced your resume', '/dashboard/resume');
     } catch (error) {
@@ -349,7 +891,7 @@ export default function ResumePage() {
       const data = await res.json();
 
       setResume((prev) => ({ ...prev, summary: data.enhanced || prev.summary }));
-      if (isBasic) incrementAIUses();
+      if (isFree) incrementAIUses();
       showToast('Forge-generated summary applied!', 'success');
       notifyAgentCompleted('forge', 'Forge wrote your professional summary', '/dashboard/resume');
     } catch (error) {
@@ -452,7 +994,7 @@ export default function ResumePage() {
             }));
           }
         }
-        if (isBasic) incrementAIUses();
+        if (isFree) incrementAIUses();
         showToast(`Enhanced education entry!`, 'success');
       }
     } catch (error) {
@@ -497,7 +1039,7 @@ export default function ResumePage() {
           ...prev,
           skills: [...prev.skills, ...suggestedSkills.slice(0, 10)],
         }));
-        if (isBasic) incrementAIUses();
+        if (isFree) incrementAIUses();
         showToast(`Added ${Math.min(suggestedSkills.length, 10)} suggested skills!`, 'success');
       } else {
         showToast('No new skills suggested — your skill set looks comprehensive!', 'success');
@@ -584,7 +1126,7 @@ export default function ResumePage() {
         }
       }
 
-      if (isBasic) incrementAIUses();
+      if (isFree) incrementAIUses();
       showToast('Resume tailored to job description!', 'success');
     } catch (error) {
       console.error('Tailor error:', error);
@@ -628,7 +1170,7 @@ export default function ResumePage() {
       if (!res.ok) throw new Error('Failed to generate cover letter');
       const data = await res.json();
       setCoverLetter(data.coverLetter || '');
-      if (isBasic) incrementAIUses();
+      if (isFree) incrementAIUses();
       showToast(generic ? 'Generic cover letter generated!' : 'Cover letter generated!', 'success');
     } catch (error) {
       console.error('Cover letter error:', error);
@@ -644,7 +1186,7 @@ export default function ResumePage() {
   };
 
   const handleExportPDF = async () => {
-    if (isBasic) {
+    if (isFree) {
       window.location.href = '/pricing';
       return;
     }
@@ -718,7 +1260,7 @@ export default function ResumePage() {
 
       const data = await res.json();
       setWizardResult(data.resume);
-      if (isBasic) incrementAIUses();
+      if (isFree) incrementAIUses();
       setWizardStep(3);
     } catch (err: any) {
       console.error('[AI Resume Wizard]', err);
@@ -888,7 +1430,7 @@ export default function ResumePage() {
                 </>
               )}
 
-              {isBasic && (
+              {isFree && (
                 <p className="text-xs text-white/30 mt-4">
                   Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} Forge uses remaining
                 </p>
@@ -1096,8 +1638,8 @@ export default function ResumePage() {
 
       {/* ── Editor Section (only shown when user enters editor) ── */}
       {showEditor && (<>
-      {/* ── Paywall Banner (BASIC plan) ─────────────────────── */}
-      {isBasic && (
+      {/* ── Paywall Banner (FREE plan) ─────────────────────── */}
+      {isFree && (
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1116,7 +1658,7 @@ export default function ResumePage() {
                   Upgrade to export your resume as PDF
                 </h3>
                 <p className="text-sm text-white/50 mt-0.5">
-                  Free users can edit and preview. Upgrade to Starter ($12/mo) to export PDF.
+                  Free users can edit and preview. Upgrade to Pro to export PDF.
                 </p>
               </div>
             </div>
@@ -1185,12 +1727,12 @@ export default function ResumePage() {
                 onClick={handleExportPDF}
                 disabled={exporting}
                 className={`text-sm flex items-center gap-2 ${
-                  isBasic
+                  isFree
                     ? 'btn-secondary opacity-80 cursor-not-allowed'
                     : 'btn-primary'
                 }`}
               >
-                {isBasic ? (
+                {isFree ? (
                   <Lock className="w-4 h-4" />
                 ) : (
                   <Download className="w-4 h-4" />
@@ -1198,7 +1740,7 @@ export default function ResumePage() {
                 {exporting ? 'Exporting...' : 'Export PDF'}
               </button>
 
-              {isStarter && (
+              {isFree && (
                 <span className="text-xs text-white/40 hidden sm:inline">
                   Exported with 3BOX AI watermark
                 </span>
@@ -1254,8 +1796,8 @@ export default function ResumePage() {
                   </button>
                 ))}
 
-                {/* AI uses counter for BASIC plan */}
-                {isBasic && (
+                {/* AI uses counter for FREE plan */}
+                {isFree && (
                   <div className="mt-4 pt-3 border-t border-white/5">
                     <p className="text-xs text-white/30 flex items-center gap-1">
                       <Sparkles className="w-3 h-3" />
@@ -1386,7 +1928,7 @@ export default function ResumePage() {
                                       e.id === exp.id ? { ...e, bullets: lines } : e
                                     ),
                                   }));
-                                  if (isBasic) incrementAIUses();
+                                  if (isFree) incrementAIUses();
                                   showToast(`Enhanced ${exp.role} bullets!`, 'success');
                                 }
                               } catch (error) {
@@ -1502,7 +2044,7 @@ export default function ResumePage() {
                       </>
                     )}
                   </button>
-                  {isBasic && (
+                  {isFree && (
                     <p className="text-xs text-white/30 mt-3">
                       Free plan: {Math.max(0, AI_FREE_LIMIT - getAIUses())} Forge uses remaining
                     </p>
@@ -1634,7 +2176,7 @@ export default function ResumePage() {
                           }
                           throw new Error('Generation failed');
                         }
-                        if (isBasic) incrementAIUses();
+                        if (isFree) incrementAIUses();
                         showToast('Forge generated education content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
@@ -1739,7 +2281,7 @@ export default function ResumePage() {
                           }
                           throw new Error('Generation failed');
                         }
-                        if (isBasic) incrementAIUses();
+                        if (isFree) incrementAIUses();
                         showToast('Forge generated certification content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
@@ -1853,7 +2395,7 @@ export default function ResumePage() {
                           }
                           throw new Error('Generation failed');
                         }
-                        if (isBasic) incrementAIUses();
+                        if (isFree) incrementAIUses();
                         showToast('Forge generated projects content!', 'success');
                       } catch (error) {
                         console.error('AI Generate error:', error);
@@ -2040,4 +2582,11 @@ export default function ResumePage() {
       </>)}
     </div>
   );
+}
+
+export default function ResumePage() {
+  const { isAutopilot, isAgentic } = useDashboardMode();
+  if (isAutopilot) return <AutopilotResume />;
+  if (isAgentic) return <AgenticWorkspace agentId="forge" />;
+  return <AgenticResumePage />;
 }

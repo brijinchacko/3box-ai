@@ -9,11 +9,14 @@ import {
   DollarSign, FileText, Upload, ClipboardPaste, Zap, CheckCircle2,
   ToggleLeft, ToggleRight, AlertTriangle, Clock, Target,
 } from 'lucide-react';
+import ResumeInsightsPanel, { type ResumeInsightsData } from '@/components/onboarding/ResumeInsightsPanel';
 import {
   SCHEDULE_PRESETS, type SchedulePreset,
-  estimateTotalMonthlyTokens, getTokenWarningLevel,
 } from '@/lib/agents/configUtils';
-import { PLAN_TOKEN_LIMITS } from '@/lib/tokens/pricing';
+// Token system removed — AI operations are unlimited
+const estimateTotalMonthlyTokens = (..._args: any[]) => 0;
+const getTokenWarningLevel = (..._args: any[]): { level: 'none' | 'warning' | 'error'; message: string } => ({ level: 'none', message: '' });
+const PLAN_TOKEN_LIMITS: Record<string, number> = { FREE: 999, PRO: 999, MAX: 999 };
 
 // ─── Types ──────────────────────────────────────
 interface ExperienceEntry {
@@ -110,6 +113,90 @@ const genericSkills = [
   'Problem Solving', 'Leadership', 'Data Analysis', 'Machine Learning', 'Excel',
 ];
 
+// Static salary data (numeric) for instant insights generation
+const roleSalaryNumeric: Record<string, { low: number; median: number; high: number; growth: number }> = {
+  'Software Engineer': { low: 78_000, median: 130_000, high: 200_000, growth: 25 },
+  'Full Stack Developer': { low: 75_000, median: 125_000, high: 185_000, growth: 23 },
+  'Frontend Developer': { low: 70_000, median: 115_000, high: 175_000, growth: 20 },
+  'Backend Developer': { low: 80_000, median: 130_000, high: 195_000, growth: 22 },
+  'Data Scientist': { low: 85_000, median: 108_000, high: 180_000, growth: 35 },
+  'ML Engineer': { low: 95_000, median: 140_000, high: 230_000, growth: 40 },
+  'DevOps Engineer': { low: 80_000, median: 125_000, high: 180_000, growth: 20 },
+  'Cloud Architect': { low: 100_000, median: 150_000, high: 225_000, growth: 25 },
+  'Product Manager': { low: 90_000, median: 130_000, high: 190_000, growth: 12 },
+  'UX Designer': { low: 65_000, median: 100_000, high: 155_000, growth: 15 },
+  'Cybersecurity Analyst': { low: 75_000, median: 110_000, high: 170_000, growth: 32 },
+  'Mobile Developer': { low: 72_000, median: 118_000, high: 170_000, growth: 18 },
+  'Business Analyst': { low: 60_000, median: 90_000, high: 135_000, growth: 10 },
+  'Marketing Manager': { low: 60_000, median: 95_000, high: 150_000, growth: 8 },
+  'Project Manager': { low: 70_000, median: 105_000, high: 160_000, growth: 6 },
+  'QA Engineer': { low: 60_000, median: 90_000, high: 145_000, growth: 15 },
+};
+
+// Experience multipliers for salary adjustment
+const expMultipliers: Record<string, number> = {
+  fresher: 0.60, '0-1': 0.70, '1-3': 0.85, '3-5': 1.0, '5-10': 1.25, '10+': 1.50,
+};
+
+/**
+ * Generate instant static insights from parsed resume data.
+ * No API call needed — uses local data for immediate display.
+ */
+function generateStaticInsights(parsed: OnboardingData): ResumeInsightsData {
+  const role = parsed.targetRole || 'Software Engineer';
+  const salary = roleSalaryNumeric[role] || { low: 50_000, median: 80_000, high: 150_000, growth: 15 };
+  const mult = expMultipliers[parsed.experienceLevel] || 1.0;
+
+  const low = Math.round(salary.low * mult);
+  const median = Math.round(salary.median * mult);
+  const high = Math.round(salary.high * mult);
+  const growth = salary.growth;
+
+  // Determine demand based on growth rate
+  const demandLevel: 'high' | 'medium' | 'low' = growth > 20 ? 'high' : growth > 10 ? 'medium' : 'low';
+  const marketTrend: 'growing' | 'stable' | 'declining' = growth > 10 ? 'growing' : 'stable';
+
+  // Generate matching roles based on skills
+  const userSkills = parsed.skills || [];
+  const matchingRoles = [role];
+  if (userSkills.some(s => /react|vue|angular|frontend|css/i.test(s))) matchingRoles.push('Frontend Developer');
+  if (userSkills.some(s => /node|python|java|backend|api/i.test(s))) matchingRoles.push('Backend Developer');
+  if (userSkills.some(s => /data|sql|tableau|analytics/i.test(s))) matchingRoles.push('Data Analyst');
+  if (userSkills.some(s => /cloud|aws|azure|gcp|docker|kubernetes/i.test(s))) matchingRoles.push('Cloud Engineer');
+  if (userSkills.some(s => /machine learning|tensorflow|pytorch|ml/i.test(s))) matchingRoles.push('ML Engineer');
+  // Deduplicate
+  const uniqueRoles = [...new Set(matchingRoles)].slice(0, 5);
+
+  // Determine skill gaps based on role requirements
+  const requiredSkills = roleSkillMap[role] || genericSkills.slice(0, 8);
+  const skillGaps = requiredSkills
+    .filter(s => !userSkills.some(us => us.toLowerCase() === s.toLowerCase()))
+    .slice(0, 3);
+
+  const expLabel = parsed.experienceLevel === 'fresher' ? 'entry-level' :
+    parsed.experienceLevel === '10+' ? 'veteran' :
+    `${parsed.experienceLevel} years experience`;
+
+  return {
+    salary: { low, median, high, currency: 'USD', growthRate: growth },
+    market: {
+      demandLevel,
+      marketTrend,
+      topCompanies: [], // Will be filled by AI
+      matchingRoles: uniqueRoles,
+    },
+    insights: {
+      keyInsight: `${role} roles are in ${demandLevel} demand with ${growth}% projected growth. Your ${expLabel} profile positions you well in this market.`,
+      resumeStrength: `Resume captured with ${userSkills.length} skills and ${parsed.experiences.length} experience entries.`,
+      forgeRecommendation: `Agent Forge can tailor your resume with ATS-optimized keywords for ${role} positions, potentially increasing your interview callback rate by 40%.`,
+      topSkillGaps: skillGaps,
+      competitiveEdge: parsed.experiences.length > 0
+        ? `Your experience at ${parsed.experiences[0].company || 'previous roles'} gives you practical expertise that employers value.`
+        : `Your ${parsed.educationLevel || 'academic'} background in ${parsed.fieldOfStudy || 'your field'} provides a strong foundation.`,
+    },
+  };
+}
+
 const STEPS = [
   { icon: FileText, label: 'Resume' },
   { icon: User, label: 'About You' },
@@ -146,6 +233,9 @@ export default function OnboardingPage() {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Resume insights state (shown instantly after parsing — no loading needed)
+  const [insightsData, setInsightsData] = useState<ResumeInsightsData | null>(null);
 
   const [data, setData] = useState<OnboardingData>({
     fullName: '',
@@ -291,11 +381,60 @@ export default function OnboardingPage() {
 
       setResumeParsed(true);
 
-      // Auto-advance to next step after short delay
-      setTimeout(() => {
-        setDirection(1);
-        setStep(1);
-      }, 1500);
+      // Save raw resume text to localStorage so agents can reference it
+      if (mode === 'text' && resumeText) {
+        localStorage.setItem('3box_resume_raw_text', resumeText);
+      } else if (mode === 'file') {
+        localStorage.setItem('3box_resume_raw_text', parsed.bio || '');
+      }
+
+      // ── Generate INSTANT static insights from parsed data (no API call) ──
+      const parsedWithData: OnboardingData = {
+        fullName: parsed.fullName || '',
+        phone: parsed.phone || '',
+        location: parsed.location || '',
+        linkedin: parsed.linkedin || '',
+        targetRole: parsed.targetRole || '',
+        experienceLevel: parsed.experienceLevel || '',
+        currentStatus: parsed.currentStatus || 'job-searching',
+        experiences: parsed.experiences || [],
+        educationLevel: parsed.educationLevel || '',
+        fieldOfStudy: parsed.fieldOfStudy || '',
+        institution: parsed.institution || '',
+        graduationYear: parsed.graduationYear || '',
+        skills: parsed.skills || [],
+        bio: parsed.bio || '',
+      };
+      const staticInsights = generateStaticInsights(parsedWithData);
+      setInsightsData(staticInsights);
+
+      // ── Enhance with AI-powered insights in background (non-blocking) ──
+      fetch('/api/ai/resume-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetRole: parsed.targetRole || '',
+          location: parsed.location || '',
+          experienceLevel: parsed.experienceLevel || '',
+          skills: parsed.skills || [],
+          experiences: parsed.experiences || [],
+          educationLevel: parsed.educationLevel || '',
+          currentStatus: parsed.currentStatus || 'job-searching',
+        }),
+      })
+        .then((r) => r.json())
+        .then((result) => {
+          if (result.success && result.data) {
+            // Merge AI data with static — AI data takes priority
+            setInsightsData(result.data);
+          }
+        })
+        .catch(() => {
+          // Static insights already showing — no action needed
+        });
+
+      // Don't auto-advance — let user see insights first
+      // They'll click "Continue" on the insights panel
     } catch (err: any) {
       setError(err.message || 'Failed to parse resume. Please try again or fill in manually.');
     } finally {
@@ -320,12 +459,16 @@ export default function OnboardingPage() {
     setLoading(true);
     setError('');
     try {
+      // Retrieve raw resume text from localStorage if available
+      const savedResumeText = typeof window !== 'undefined' ? localStorage.getItem('3box_resume_raw_text') || '' : '';
+
       const res = await fetch('/api/user/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetRole: data.targetRole,
           interests: data.skills.slice(0, 5),
+          resumeText: savedResumeText,
           profile: {
             fullName: data.fullName,
             phone: data.phone,
@@ -466,28 +609,32 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Success state */}
-                {resumeParsed && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="p-6 rounded-2xl bg-gradient-to-br from-neon-green/10 to-emerald-500/5 border border-neon-green/20 text-center"
-                  >
-                    <CheckCircle2 className="w-12 h-12 text-neon-green mx-auto mb-3" />
-                    <h3 className="text-base font-bold text-white mb-1">Resume Parsed Successfully!</h3>
-                    <p className="text-xs text-white/50 mb-3">
-                      {filledCount} fields auto-filled. Review and edit in the next steps.
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {data.fullName && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">Name</span>}
-                      {data.location && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">Location</span>}
-                      {data.targetRole && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">Target Role</span>}
-                      {data.experienceLevel && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">Experience</span>}
-                      {data.educationLevel && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">Education</span>}
-                      {data.skills.length > 0 && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">{data.skills.length} Skills</span>}
-                      {data.experiences.length > 0 && <span className="px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px]">{data.experiences.length} Experiences</span>}
-                    </div>
-                  </motion.div>
+                {/* Success state: Resume parsed → show career market insights */}
+                {resumeParsed && insightsData && (
+                  <div>
+                    {/* Quick confirmation bar */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 mb-3 p-2 rounded-xl bg-neon-green/5 border border-neon-green/10"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-neon-green flex-shrink-0" />
+                      <span className="text-xs text-neon-green font-medium">Resume parsed — {filledCount} fields extracted</span>
+                      <div className="flex flex-wrap gap-1 ml-auto">
+                        {data.skills.length > 0 && <span className="px-1.5 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[9px]">{data.skills.length} Skills</span>}
+                        {data.experiences.length > 0 && <span className="px-1.5 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[9px]">{data.experiences.length} Exp</span>}
+                      </div>
+                    </motion.div>
+
+                    {/* Career Market Insights Panel — shows instantly with static data,
+                        then auto-enhances with AI-powered data in background */}
+                    <ResumeInsightsPanel
+                      data={insightsData}
+                      targetRole={data.targetRole}
+                      location={data.location}
+                      onContinue={goNext}
+                    />
+                  </div>
                 )}
 
                 {/* Parsing state */}
@@ -618,13 +765,15 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* Skip button */}
-                <button
-                  onClick={goNext}
-                  className="w-full mt-4 py-2.5 text-xs text-white/30 hover:text-white/50 transition-colors text-center"
-                >
-                  {resumeParsed ? 'Continue to review details \u2192' : 'Skip \u2014 I\u2019ll fill in manually'}
-                </button>
+                {/* Skip button — hidden when insights panel is showing (it has its own CTA) */}
+                {!(resumeParsed && insightsData) && (
+                  <button
+                    onClick={goNext}
+                    className="w-full mt-4 py-2.5 text-xs text-white/30 hover:text-white/50 transition-colors text-center"
+                  >
+                    {resumeParsed ? 'Continue to review details \u2192' : 'Skip \u2014 I\u2019ll fill in manually'}
+                  </button>
+                )}
               </motion.div>
             )}
 

@@ -1,9 +1,22 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import Providers from '@/components/providers/Providers';
 import PageTracker from '@/components/analytics/PageTracker';
 
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
 
@@ -79,10 +92,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" dir="ltr">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} dir="ltr" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Prevent flash of wrong theme — reads localStorage before paint */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('3box-dashboard-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()` }} />
         {/* Hreflang alternate links for geo-targeting */}
         <link rel="alternate" hrefLang="en-in" href="https://3box.ai" />
         <link rel="alternate" hrefLang="en-us" href="https://3box.ai" />

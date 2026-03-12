@@ -6,6 +6,7 @@ import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import EmailResult from '@/components/tools/EmailResult';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface ColdEmailResult {
   subject: string;
@@ -20,6 +21,7 @@ const purposeOptions = [
 ];
 
 export default function ColdEmailClient() {
+  const agent = getAgentForTool('cold-email-generator');
   const [resumeText, setResumeText] = useState('');
   const [recipientRole, setRecipientRole] = useState('');
   const [yourBackground, setYourBackground] = useState('');
@@ -62,6 +64,11 @@ export default function ColdEmailClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Cold Email Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="cold-email-generator"
     >
       {/* Error display */}
       {error && (
@@ -157,7 +164,7 @@ export default function ColdEmailClient() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating...
+              Agent Archer is writing your cold email...
             </>
           ) : (
             <>

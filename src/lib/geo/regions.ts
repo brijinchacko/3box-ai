@@ -23,18 +23,9 @@ export interface PlanPricing {
   yearly: number;
 }
 
-export interface CreditPricing {
-  pack100: number;
-  pack500: number;
-  pack1000: number;
-}
-
 export interface RegionPricing {
-  starter: PlanPricing;
   pro: PlanPricing;
-  ultra: PlanPricing;
-  credits: CreditPricing;
-  unlimitedDaily: number; // One-time purchase to remove 30/day cap
+  max: PlanPricing;
 }
 
 export interface RegionConfig {
@@ -62,11 +53,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '\u20B9',
     locale: 'en-IN',
     pricing: {
-      starter: { monthly: 249, yearly: 2499 },
       pro: { monthly: 699, yearly: 6999 },
-      ultra: { monthly: 1249, yearly: 12499 },
-      credits: { pack100: 99, pack500: 399, pack1000: 699 },
-      unlimitedDaily: 9999,
+      max: { monthly: 1249, yearly: 12499 },
     },
     studentDiscount: 50,
     tagline: "India's #1 AI Career Platform \u2014 Free Tools, No Signup Required",
@@ -80,11 +68,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '$',
     locale: 'en-US',
     pricing: {
-      starter: { monthly: 12, yearly: 99 },
       pro: { monthly: 29, yearly: 249 },
-      ultra: { monthly: 59, yearly: 499 },
-      credits: { pack100: 5, pack500: 20, pack1000: 35 },
-      unlimitedDaily: 149,
+      max: { monthly: 59, yearly: 499 },
     },
     studentDiscount: 40,
     tagline: 'The All-in-One AI Career Operating System',
@@ -98,11 +83,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '\u00A3',
     locale: 'en-GB',
     pricing: {
-      starter: { monthly: 10, yearly: 84 },
       pro: { monthly: 24, yearly: 199 },
-      ultra: { monthly: 49, yearly: 419 },
-      credits: { pack100: 4, pack500: 16, pack1000: 28 },
-      unlimitedDaily: 119,
+      max: { monthly: 49, yearly: 419 },
     },
     studentDiscount: 40,
     tagline: 'AI-Powered Career Tools Built for the UK Job Market',
@@ -116,11 +98,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: 'CA$',
     locale: 'en-CA',
     pricing: {
-      starter: { monthly: 15, yearly: 129 },
       pro: { monthly: 35, yearly: 299 },
-      ultra: { monthly: 69, yearly: 589 },
-      credits: { pack100: 6, pack500: 24, pack1000: 42 },
-      unlimitedDaily: 189,
+      max: { monthly: 69, yearly: 589 },
     },
     studentDiscount: 40,
     tagline: 'Your AI Career Co-Pilot \u2014 Tailored for Canada',
@@ -134,11 +113,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: 'AED',
     locale: 'en-AE',
     pricing: {
-      starter: { monthly: 45, yearly: 379 },
       pro: { monthly: 129, yearly: 1099 },
-      ultra: { monthly: 249, yearly: 2099 },
-      credits: { pack100: 18, pack500: 75, pack1000: 129 },
-      unlimitedDaily: 549,
+      max: { monthly: 249, yearly: 2099 },
     },
     studentDiscount: 35,
     tagline: 'AI Career Tools for the Gulf \u2014 Stand Out in MENA',
@@ -152,11 +128,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: 'S$',
     locale: 'en-SG',
     pricing: {
-      starter: { monthly: 15, yearly: 129 },
       pro: { monthly: 35, yearly: 299 },
-      ultra: { monthly: 69, yearly: 589 },
-      credits: { pack100: 6, pack500: 24, pack1000: 42 },
-      unlimitedDaily: 189,
+      max: { monthly: 69, yearly: 589 },
     },
     studentDiscount: 40,
     tagline: 'Smart AI Career Tools for Asia-Pacific Professionals',
@@ -170,11 +143,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: 'A$',
     locale: 'en-AU',
     pricing: {
-      starter: { monthly: 18, yearly: 149 },
       pro: { monthly: 39, yearly: 329 },
-      ultra: { monthly: 69, yearly: 589 },
-      credits: { pack100: 7, pack500: 28, pack1000: 49 },
-      unlimitedDaily: 219,
+      max: { monthly: 69, yearly: 589 },
     },
     studentDiscount: 40,
     tagline: 'AI Career Platform for Australia & New Zealand',
@@ -188,11 +158,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '\u20AC',
     locale: 'en-NL',
     pricing: {
-      starter: { monthly: 11, yearly: 89 },
       pro: { monthly: 27, yearly: 229 },
-      ultra: { monthly: 54, yearly: 459 },
-      credits: { pack100: 4, pack500: 18, pack1000: 32 },
-      unlimitedDaily: 139,
+      max: { monthly: 54, yearly: 459 },
     },
     studentDiscount: 40,
     tagline: 'AI Career Tools for European Professionals',
@@ -206,11 +173,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '$',
     locale: 'en-PH',
     pricing: {
-      starter: { monthly: 5, yearly: 42 },
       pro: { monthly: 12, yearly: 99 },
-      ultra: { monthly: 25, yearly: 209 },
-      credits: { pack100: 2, pack500: 8, pack1000: 14 },
-      unlimitedDaily: 59,
+      max: { monthly: 25, yearly: 209 },
     },
     studentDiscount: 50,
     tagline: 'Affordable AI Career Tools for Southeast Asia',
@@ -224,11 +188,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '$',
     locale: 'en-NG',
     pricing: {
-      starter: { monthly: 3, yearly: 25 },
       pro: { monthly: 8, yearly: 67 },
-      ultra: { monthly: 15, yearly: 125 },
-      credits: { pack100: 1, pack500: 4, pack1000: 7 },
-      unlimitedDaily: 35,
+      max: { monthly: 15, yearly: 125 },
     },
     studentDiscount: 60,
     tagline: 'AI Career Tools Built for Africa \u2014 Empowering the Next Generation',
@@ -242,11 +203,8 @@ const REGION_CONFIGS: Record<Region, RegionConfig> = {
     currencySymbol: '$',
     locale: 'en-US',
     pricing: {
-      starter: { monthly: 12, yearly: 99 },
       pro: { monthly: 29, yearly: 249 },
-      ultra: { monthly: 59, yearly: 499 },
-      credits: { pack100: 5, pack500: 20, pack1000: 35 },
-      unlimitedDaily: 149,
+      max: { monthly: 59, yearly: 499 },
     },
     studentDiscount: 40,
     tagline: 'The All-in-One AI Career Operating System',

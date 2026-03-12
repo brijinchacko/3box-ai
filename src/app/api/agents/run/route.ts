@@ -3,20 +3,30 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { runAgentPipeline } from '@/lib/agents/orchestrator';
+import { checkApplicationCap } from '@/lib/tokens/dailyCap';
 import type { AutomationMode } from '@/lib/agents/registry';
+import { normalizePlan } from '@/lib/tokens/pricing';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Check plan allows agents
+    // All agents are available on all plans — no plan gate needed
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, aiCreditsUsed: true, aiCreditsLimit: true },
+      select: { plan: true },
     });
-    if (!user || user.plan === 'BASIC') {
-      return NextResponse.json({ error: 'Upgrade your plan to use AI agents' }, { status: 403 });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check application cap (only applications are limited, AI operations are unlimited)
+    const appCap = await checkApplicationCap(session.user.id);
+    if (!appCap.allowed) {
+      return NextResponse.json({
+        error: `Application cap reached (${appCap.used}/${appCap.limit}). ${appCap.resetsAt ? 'Resets at ' + appCap.resetsAt.toISOString() : 'Lifetime limit reached.'}`,
+      }, { status: 429 });
     }
 
     // Check not already running

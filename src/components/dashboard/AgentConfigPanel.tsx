@@ -10,9 +10,11 @@ import { AgentAvatarMini } from '@/components/brand/AgentAvatar';
 import { useTokens } from '@/hooks/useTokens';
 import {
   INTERVAL_OPTIONS, humanizeAgo, nextRunLabel,
-  estimateMonthlyTokens, getTokenWarningLevel,
 } from '@/lib/agents/configUtils';
-import { PLAN_TOKEN_LIMITS } from '@/lib/tokens/pricing';
+// Token system removed — AI operations are unlimited
+const estimateMonthlyTokens = (..._args: any[]) => 0;
+const getTokenWarningLevel = (..._args: any[]): { level: 'none'; message: string } => ({ level: 'none', message: '' });
+const PLAN_TOKEN_LIMITS: Record<string, number> = { FREE: 999, PRO: 999, MAX: 999 };
 import Link from 'next/link';
 
 // ─── Types ──────────────────────────────────────────────────

@@ -129,7 +129,8 @@ export async function enqueueApplications(
     data,
     opts: {
       priority: data.priority,
-      delay: i * 2000, // Stagger by 2s to avoid bursts
+      // Human-like stagger: 20-40s between each, with occasional longer pauses
+      delay: i * (20_000 + Math.round(Math.random() * 20_000)) + (i % 5 === 4 ? 60_000 : 0),
     },
   }));
 
@@ -140,10 +141,14 @@ export async function enqueueApplications(
 // ─── In-Memory Fallback (no Redis) ──────────────────
 
 /**
- * Process applications in-memory using Promise.allSettled batching.
- * This is the fallback when Redis/BullMQ is not available.
+ * Process applications sequentially with human-like timing.
  *
- * Processes jobs in batches of BATCH_CONCURRENCY, with progress callbacks.
+ * Instead of firing 5 at once, we process ONE at a time with randomized
+ * delays (10-30s) between each application. This prevents bot detection
+ * and makes the application pattern look natural to ATS systems.
+ *
+ * Timing: 10-30s base delay per app, with occasional 1-2min "reading" pauses.
+ * A batch of 20 apps takes ~8-15 minutes (not instant).
  */
 export async function processApplicationsBatch(
   jobs: ApplicationJobData[],
@@ -156,47 +161,74 @@ export async function processApplicationsBatch(
   // Sort by priority (lower = higher priority)
   const sorted = [...jobs].sort((a, b) => a.priority - b.priority);
 
-  // Process in batches of BATCH_CONCURRENCY
-  for (let i = 0; i < sorted.length; i += BATCH_CONCURRENCY) {
-    const batch = sorted.slice(i, i + BATCH_CONCURRENCY);
+  // Process ONE AT A TIME with human-like delays
+  for (let i = 0; i < sorted.length; i++) {
+    const jobData = sorted[i];
 
-    const batchResults = await Promise.allSettled(
-      batch.map(async (jobData) => {
-        let lastError: Error | null = null;
-        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-          try {
-            return await processor(jobData);
-          } catch (err) {
-            lastError = err as Error;
-            if (attempt < MAX_RETRIES) {
-              await sleep(RETRY_DELAY_MS * (attempt + 1));
-            }
-          }
+    // Apply with retries
+    let result: ApplicationJobResult;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        result = await processor(jobData);
+        break;
+      } catch (err) {
+        lastError = err as Error;
+        if (attempt < MAX_RETRIES) {
+          await sleep(RETRY_DELAY_MS * (attempt + 1));
         }
-        return {
-          success: false,
-          jobId: jobData.job.id,
-          method: jobData.channel,
-          details: `Failed after ${MAX_RETRIES + 1} attempts: ${lastError?.message}`,
-        } as ApplicationJobResult;
-      }),
-    );
-
-    for (const result of batchResults) {
-      const res = result.status === 'fulfilled'
-        ? result.value
-        : { success: false, jobId: 'unknown', method: 'unknown', details: `Error: ${result.reason}` };
-      results.push(res);
-      onProgress?.(results.length, total, res);
+      }
     }
 
-    // Small delay between batches to respect rate limits
-    if (i + BATCH_CONCURRENCY < sorted.length) {
-      await sleep(3000);
+    result ??= {
+      success: false,
+      jobId: jobData.job.id,
+      method: jobData.channel,
+      details: `Failed after ${MAX_RETRIES + 1} attempts: ${lastError?.message}`,
+    };
+
+    results.push(result);
+    onProgress?.(results.length, total, result);
+
+    // Human-like delay before next application
+    if (i < sorted.length - 1) {
+      const delay = getHumanDelay(i, sorted.length);
+      await sleep(delay);
     }
   }
 
   return results;
+}
+
+/**
+ * Calculate a human-like delay between applications.
+ * - Base: 15-45 seconds (randomized)
+ * - Every 5th app: 60-180s "reading break"
+ * - Every 10th app: 2-5 min "coffee break"
+ *
+ * This makes 20 applications take ~12-20 minutes instead of instant.
+ */
+function getHumanDelay(index: number, total: number): number {
+  // Base delay: 15-45 seconds
+  const base = 15_000 + Math.random() * 30_000;
+
+  // Every 10th application: longer "coffee break" (2-5 min)
+  if ((index + 1) % 10 === 0 && index < total - 1) {
+    return Math.round(base + 120_000 + Math.random() * 180_000);
+  }
+
+  // Every 5th application: "reading break" (60-180s)
+  if ((index + 1) % 5 === 0 && index < total - 1) {
+    return Math.round(base + 45_000 + Math.random() * 135_000);
+  }
+
+  // Random 10% chance of a brief pause (30-90s)
+  if (Math.random() < 0.10) {
+    return Math.round(base + 30_000 + Math.random() * 60_000);
+  }
+
+  return Math.round(base);
 }
 
 // ─── Queue Status ───────────────────────────────────

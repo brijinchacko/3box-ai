@@ -1,25 +1,21 @@
 /**
  * Stripe Checkout API Route
- * Handles subscription checkout, credit pack purchases, and billing portal access
+ * Handles subscription checkout and billing portal access
  */
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import {
   PRICE_IDS,
-  CREDIT_PACK_PRICES,
   getOrCreateCustomer,
   createCheckoutSession,
-  createCreditPackCheckout,
-  createUnlimitedDailyCheckout,
   createBillingPortalSession,
 } from '@/lib/stripe';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://3box.ai';
 
-type PlanKey = 'STARTER' | 'PRO' | 'ULTRA';
+type PlanKey = 'PRO' | 'MAX';
 type IntervalKey = 'monthly' | 'yearly';
-type PackId = keyof typeof CREDIT_PACK_PRICES;
 
 interface CheckoutBody {
   action: 'checkout';
@@ -27,24 +23,14 @@ interface CheckoutBody {
   interval: string;
 }
 
-interface CreditPackBody {
-  action: 'credit-pack';
-  packId: string;
-}
-
 interface PortalBody {
   action: 'portal';
 }
 
-interface UnlimitedDailyBody {
-  action: 'unlimited-daily';
-}
+type RequestBody = CheckoutBody | PortalBody;
 
-type RequestBody = CheckoutBody | CreditPackBody | PortalBody | UnlimitedDailyBody;
-
-const VALID_PLANS: PlanKey[] = ['STARTER', 'PRO', 'ULTRA'];
+const VALID_PLANS: PlanKey[] = ['PRO', 'MAX'];
 const VALID_INTERVALS: IntervalKey[] = ['monthly', 'yearly'];
-const VALID_PACKS: PackId[] = ['pack_100', 'pack_500', 'pack_1000'];
 
 export async function POST(request: Request) {
   try {
@@ -122,42 +108,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ url: checkoutSession.url });
       }
 
-      // ─── Credit Pack Purchase ──────────────────
-      case 'credit-pack': {
-        const { packId } = body as CreditPackBody;
-
-        if (!packId || !VALID_PACKS.includes(packId as PackId)) {
-          return NextResponse.json(
-            { error: `Invalid packId. Must be one of: ${VALID_PACKS.join(', ')}` },
-            { status: 400 }
-          );
-        }
-
-        const creditSession = await createCreditPackCheckout({
-          userId,
-          email,
-          name: name || undefined,
-          packId: packId as PackId,
-          successUrl: `${APP_URL}/dashboard/settings?credits=success`,
-          cancelUrl: `${APP_URL}/dashboard/settings?credits=canceled`,
-        });
-
-        return NextResponse.json({ url: creditSession.url });
-      }
-
-      // ─── Unlimited Daily Applications ───────────
-      case 'unlimited-daily': {
-        const unlimitedSession = await createUnlimitedDailyCheckout({
-          userId,
-          email,
-          name: name || undefined,
-          successUrl: `${APP_URL}/dashboard/settings?unlimited=success`,
-          cancelUrl: `${APP_URL}/pricing?unlimited=canceled`,
-        });
-
-        return NextResponse.json({ url: unlimitedSession.url });
-      }
-
       // ─── Billing Portal ────────────────────────
       case 'portal': {
         const customerId = await getOrCreateCustomer(userId, email, name || undefined);
@@ -172,7 +122,7 @@ export async function POST(request: Request) {
 
       default:
         return NextResponse.json(
-          { error: `Unknown action: ${(body as any).action}. Must be one of: checkout, credit-pack, unlimited-daily, portal` },
+          { error: `Unknown action: ${(body as any).action}. Must be one of: checkout, portal` },
           { status: 400 }
         );
     }

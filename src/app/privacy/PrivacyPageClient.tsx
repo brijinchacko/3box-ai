@@ -11,17 +11,17 @@ const sections = [
     title: 'Data We Collect',
     content: [
       { heading: 'Personal Information', text: 'Name, email address, phone number (optional), profile photo, career goals and target roles.' },
-      { heading: 'Career Data', text: 'Resume content, portfolio projects, skill assessment responses, job preferences, application history.' },
+      { heading: 'Career Data', text: 'Resume content, portfolio projects, skill assessment responses, job preferences, application history, and AI agent interaction data.' },
       { heading: 'Usage Data', text: 'Pages visited, features used, time spent on platform, device information, IP address.' },
-      { heading: 'AI Interaction Data', text: 'Queries to career coach, generated content preferences (PII redacted from logs).' },
+      { heading: 'AI Agent Data', text: 'Interactions with 7 AI agents (Scout, Forge, Archer, Atlas, Sage, Sentinel, Cortex), generated content, and job application activity (PII redacted from logs).' },
     ],
   },
   {
     icon: Shield,
     title: 'How We Use Your Data',
     content: [
-      { text: 'Provide and personalize career development features (assessments, career plans, resume building, job matching).' },
-      { text: 'Generate AI-powered recommendations and coaching responses.' },
+      { text: 'Power your 7 AI career agents to provide personalized job searching, resume optimization, application sending, interview preparation, and career coaching.' },
+      { text: 'Generate AI-powered recommendations, job matches, and application materials through your agent team.' },
       { text: 'Improve platform accuracy through aggregated, anonymized analytics.' },
       { text: 'Send important account and service notifications.' },
       { text: 'Process payments and manage subscriptions via Stripe.' },
@@ -32,7 +32,7 @@ const sections = [
     icon: Brain,
     title: 'AI Processing',
     content: [
-      { text: 'Your data may be processed by AI models (via OpenRouter) to generate assessments, career plans, and recommendations.' },
+      { text: 'Your data is processed by AI models (via OpenRouter) to power your 7 AI agents including job searching, resume optimization, application sending, and interview preparation.' },
       { text: 'PII is automatically redacted from AI interaction logs before storage.' },
       { text: 'You can opt out of AI processing at any time in Settings.' },
       { text: 'AI-generated content (resumes, cover letters, career plans) belongs to you.' },

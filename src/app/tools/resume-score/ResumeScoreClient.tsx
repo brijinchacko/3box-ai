@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Loader2, BarChart } from 'lucide-react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import { useToolSubmit } from '@/hooks/useToolSubmit';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 /* ── Result type ────────────────────────────────── */
 
@@ -27,6 +28,7 @@ interface ResumeScoreResult {
 /* ── Component ──────────────────────────────────── */
 
 export default function ResumeScoreClient() {
+  const agent = getAgentForTool('resume-score');
   const [form, setForm] = useState({
     resumeText: '',
     targetRole: '',
@@ -57,6 +59,11 @@ export default function ResumeScoreClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="Resume Score"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="resume-score"
     >
       {/* ── Form ──────────────────────────────────── */}
       <form onSubmit={onSubmit} className="card space-y-5 mb-8">
@@ -102,7 +109,7 @@ export default function ResumeScoreClient() {
           ) : (
             <BarChart className="w-4 h-4" />
           )}
-          {loading ? 'Analyzing...' : 'Score My Resume'}
+          {loading ? 'Agent Forge is scoring your resume...' : 'Score My Resume'}
         </button>
       </form>
 

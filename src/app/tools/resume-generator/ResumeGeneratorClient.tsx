@@ -6,6 +6,7 @@ import { useToolSubmit } from '@/hooks/useToolSubmit';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import CopyButton from '@/components/tools/CopyButton';
 import ResumeInput from '@/components/tools/ResumeInput';
+import { getAgentForTool } from '@/lib/tools/toolsConfig';
 
 interface ExperienceEntry {
   title: string;
@@ -34,6 +35,7 @@ interface ResumeResult {
 const experienceOptions = ['0-1', '1-3', '3-5', '5-10', '10+'];
 
 export default function ResumeGeneratorClient() {
+  const agent = getAgentForTool('resume-generator');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -86,6 +88,11 @@ export default function ResumeGeneratorClient() {
       showUpgrade={showUpgrade}
       onCloseUpgrade={() => setShowUpgrade(false)}
       serviceName="AI Resume Generator"
+      agentName={agent?.displayName?.replace('Agent ', '') || ''}
+      agentColor={agent?.color}
+      agentGradient={agent?.gradient}
+      loading={loading}
+      toolSlug="resume-generator"
     >
       {/* Error display */}
       {error && (
@@ -336,7 +343,7 @@ export default function ResumeGeneratorClient() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating Resume...
+              Agent Forge is generating your resume...
             </>
           ) : (
             <>
