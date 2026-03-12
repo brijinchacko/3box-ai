@@ -14,3 +14,4 @@ npm-debug.log*
 prisma/*.db
 prisma/migrations/
 coverage/
+.claude/
