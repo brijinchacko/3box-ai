@@ -277,7 +277,7 @@ export default function LoginPageClient() {
         </Link>
 
         <div className="glass p-8">
-          <h1 className="text-2xl font-bold text-center mb-2">Welcome back</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">Welcome to 3BOX AI</h1>
           <p className="text-sm text-white/40 text-center mb-6">Sign in to continue your career journey</p>
 
           {/* Auth Mode Tabs */}

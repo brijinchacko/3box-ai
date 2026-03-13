@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import KanbanColumn from './KanbanColumn';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search, Briefcase, ArrowRight } from 'lucide-react';
 
 export interface KanbanJob {
   id: string;
@@ -59,6 +60,35 @@ export default function KanbanBoard() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 text-gray-400 dark:text-gray-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // Empty state when no jobs at all
+  if (jobs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center mb-5">
+          <Briefcase className="w-8 h-8 text-blue-400/60" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">No jobs on your board yet</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
+          Jobs you discover, save, and apply to will appear here organized by stage. Start by searching for jobs.
+        </p>
+        <Link
+          href="/dashboard/jobs"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Search className="w-4 h-4" /> Search Jobs <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+        {/* Show column labels as compact preview */}
+        <div className="flex flex-wrap justify-center gap-3 mt-10">
+          {COLUMNS.map((col) => (
+            <div key={col.id} className={`px-3 py-1.5 rounded-full border-t-2 ${col.color} bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700`}>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{col.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

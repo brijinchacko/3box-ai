@@ -250,7 +250,7 @@ function getSkillDescription(skill: string, descriptions?: Record<string, string
   for (const [key, val] of Object.entries(DEFAULT_SKILL_DESCRIPTIONS)) {
     if (key.toLowerCase() === lower) return val;
   }
-  return 'Professional proficiency in industry applications';
+  return '';
 }
 
 /* ─── Shared helpers ─────────────────────────────────────────── */
@@ -314,8 +314,12 @@ function buildSkillsSection(
   if (!skills.length) return '';
   return skills
     .map(
-      (s) =>
-        `<div class="${cssClass}"><span class="skill-name">${esc(s)}</span><span class="skill-desc"> &mdash; ${esc(getSkillDescription(s, skillDescriptions))}</span></div>`,
+      (s) => {
+        const desc = getSkillDescription(s, skillDescriptions);
+        return desc
+          ? `<div class="${cssClass}"><span class="skill-name">${esc(s)}</span><span class="skill-desc"> &mdash; ${esc(desc)}</span></div>`
+          : `<div class="${cssClass}"><span class="skill-name">${esc(s)}</span></div>`;
+      },
     )
     .join('');
 }
@@ -859,7 +863,9 @@ function buildCreative(p: BuildHTMLParams): string {
     .map((s, i) => {
       const c = tagColors[i % tagColors.length];
       const desc = getSkillDescription(s, skillDescriptions);
-      return `<div class="skill-row"><span class="skill-name" style="color:${c};">${esc(s)}</span><span class="skill-desc"> &mdash; ${esc(desc)}</span></div>`;
+      return desc
+        ? `<div class="skill-row"><span class="skill-name" style="color:${c};">${esc(s)}</span><span class="skill-desc"> &mdash; ${esc(desc)}</span></div>`
+        : `<div class="skill-row"><span class="skill-name" style="color:${c};">${esc(s)}</span></div>`;
     })
     .join('');
 

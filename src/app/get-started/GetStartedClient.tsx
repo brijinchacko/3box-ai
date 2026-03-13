@@ -82,7 +82,7 @@ interface OnboardingData {
   currentStatus: string;
   experienceLevel: string;
   targetRole: string;
-  industry: string;
+  industry: string[];
   skills: string[];
   bio: string;
 }
@@ -93,7 +93,7 @@ const initialData: OnboardingData = {
   currentStatus: '',
   experienceLevel: '',
   targetRole: '',
-  industry: '',
+  industry: [],
   skills: [],
   bio: '',
 };
@@ -145,7 +145,7 @@ export default function GetStartedClient() {
         currentStatus: d.currentStatus || profile.currentStatus || '',
         experienceLevel: d.experienceLevel || profile.experienceLevel || '',
         targetRole: d.targetRole || profile.targetRole || '',
-        industry: d.industry || profile.industry || '',
+        industry: d.industry.length > 0 ? d.industry : (Array.isArray(profile.industry) ? profile.industry : profile.industry ? [profile.industry] : []),
         skills: d.skills.length > 0 ? d.skills : (profile.skills || []),
         bio: d.bio || profile.bio || '',
       }));
@@ -797,9 +797,16 @@ export default function GetStartedClient() {
                       {industries.map((ind) => (
                         <button
                           key={ind}
-                          onClick={() => update('industry', ind)}
+                          onClick={() => {
+                            const current = data.industry;
+                            if (current.includes(ind)) {
+                              update('industry', current.filter((i) => i !== ind));
+                            } else {
+                              update('industry', [...current, ind]);
+                            }
+                          }}
                           className={`px-3 py-1.5 rounded-full text-xs transition-all ${
-                            data.industry === ind
+                            data.industry.includes(ind)
                               ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'
                               : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50 border border-white/5'
                           }`}
@@ -913,7 +920,7 @@ export default function GetStartedClient() {
                       {data.fullName && <div><span className="text-white/60 font-medium">{data.fullName}</span>{data.location && ` from ${data.location}`}</div>}
                       {data.currentStatus && <div>Status: {currentStatuses.find(s => s.value === data.currentStatus)?.label}</div>}
                       {data.experienceLevel && <div>Experience: {experienceLevels.find(e => e.value === data.experienceLevel)?.label}</div>}
-                      {data.targetRole && <div>Target: {data.targetRole}{data.industry && ` in ${data.industry}`}</div>}
+                      {data.targetRole && <div>Target: {data.targetRole}{data.industry.length > 0 && ` in ${data.industry.join(', ')}`}</div>}
                       {data.skills.length > 0 && <div>Skills: {data.skills.slice(0, 5).join(', ')}{data.skills.length > 5 && ` +${data.skills.length - 5} more`}</div>}
                     </div>
                   </div>

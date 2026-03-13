@@ -11,7 +11,7 @@ export interface UnifiedOnboardingProfile {
   currentStatus: string;
   experienceLevel: string;
   targetRole: string;
-  industry: string;
+  industry: string[];
   skills: string[];
   bio: string;
   educationLevel: string;
@@ -34,7 +34,7 @@ const KEYS = {
 
 const empty: UnifiedOnboardingProfile = {
   fullName: '', location: '', currentStatus: '', experienceLevel: '',
-  targetRole: '', industry: '', skills: [], bio: '',
+  targetRole: '', industry: [], skills: [], bio: '',
   educationLevel: '', fieldOfStudy: '', institution: '', graduationYear: '',
   phone: '', linkedin: '',
 };

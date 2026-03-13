@@ -179,7 +179,11 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q') || 'software engineer';
     const location = searchParams.get('location') || '';
     const page = parseInt(searchParams.get('page') || '1', 10);
-    const remoteOnly = searchParams.get('remote_only') === 'true';
+    const remoteOnly = searchParams.get('remote_only') === 'true' || searchParams.get('remote') === 'true';
+    const experienceLevel = searchParams.get('experience') || '';
+    const includeKeywords = searchParams.get('keywords') || '';
+    const excludeKeywords = searchParams.get('exclude') || '';
+    const sources = searchParams.get('sources') || '';
 
     // Get user profile for match scoring
     let userProfile = { targetRole: query, skills: [] as string[], location };
@@ -212,9 +216,10 @@ export async function GET(request: NextRequest) {
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     if (rapidApiKey) {
       try {
+        const expLabel = experienceLevel ? ` ${experienceLevel}` : '';
         const searchQuery = remoteOnly
-          ? `${query} remote${location ? ` in ${location}` : ''}`
-          : `${query}${location ? ` in ${location}` : ''}`;
+          ? `${query}${expLabel} remote${location ? ` in ${location}` : ''}`
+          : `${query}${expLabel}${location ? ` in ${location}` : ''}`;
 
         const apiUrl = new URL('https://jsearch.p.rapidapi.com/search');
         apiUrl.searchParams.set('query', searchQuery);
@@ -288,12 +293,59 @@ export async function GET(request: NextRequest) {
       source = 'Demo';
     }
 
+    // ── Apply keyword filtering ──
+    let filteredJobs = jobs;
+
+    // Include keywords: job must contain at least one
+    if (includeKeywords) {
+      const includes = includeKeywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+      if (includes.length > 0) {
+        filteredJobs = filteredJobs.filter(j => {
+          const text = `${j.title} ${j.description}`.toLowerCase();
+          return includes.some(kw => text.includes(kw));
+        });
+      }
+    }
+
+    // Exclude keywords: remove jobs containing any
+    if (excludeKeywords) {
+      const excludes = excludeKeywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+      if (excludes.length > 0) {
+        filteredJobs = filteredJobs.filter(j => {
+          const text = `${j.title} ${j.description}`.toLowerCase();
+          return !excludes.some(kw => text.includes(kw));
+        });
+      }
+    }
+
+    // Experience level filtering
+    if (experienceLevel) {
+      const expLower = experienceLevel.toLowerCase();
+      const expTermMap: Record<string, string[]> = {
+        'internship': ['intern', 'internship', 'trainee'],
+        'entry': ['entry level', 'junior', 'associate', 'entry-level', 'graduate', 'new grad'],
+        'mid': ['mid level', 'mid-level', 'intermediate'],
+        'senior': ['senior', 'sr.', 'sr ', 'lead', 'principal', 'staff'],
+        'lead': ['lead', 'manager', 'head of', 'director', 'vp'],
+        'executive': ['executive', 'c-level', 'cto', 'ceo', 'vp ', 'vice president', 'chief'],
+      };
+      const terms = expTermMap[expLower] || [];
+      if (terms.length > 0) {
+        // Boost matching jobs to top rather than hard-filter (some listings don't mention level)
+        filteredJobs = filteredJobs.sort((a, b) => {
+          const aMatch = terms.some(t => a.title.toLowerCase().includes(t)) ? 1 : 0;
+          const bMatch = terms.some(t => b.title.toLowerCase().includes(t)) ? 1 : 0;
+          return bMatch - aMatch;
+        });
+      }
+    }
+
     // ── Apply match scoring ──
-    const scoredJobs = rankJobs(jobs, userProfile);
+    const scoredJobs = rankJobs(filteredJobs, userProfile);
 
     return NextResponse.json({
       jobs: scoredJobs,
-      total,
+      total: filteredJobs.length,
       page,
       isDemo,
       source,

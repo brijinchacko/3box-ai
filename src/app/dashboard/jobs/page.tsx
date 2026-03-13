@@ -780,7 +780,22 @@ function AutopilotJobSearch() {
                   </button>
                 )}
                 <button
-                  onClick={() => { setShowCreateForm(false); setStep(1); }}
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setStep(1);
+                    // Reset all form fields so canceling doesn't leave stale data
+                    setJobTitle('');
+                    setLocation('');
+                    setRemoteOnly(false);
+                    setExperienceLevel('');
+                    setSelectedBoards(['linkedin', 'indeed', 'google']);
+                    setIncludeKeywords('');
+                    setExcludeKeywords('');
+                    setExcludeCompanies('');
+                    setMatchTolerance(70);
+                    setAutoApply(false);
+                    setAutoSearch(true);
+                  }}
                   className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   Cancel
@@ -798,7 +813,7 @@ function AutopilotJobSearch() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => { handleSearch(); }}
+                      onClick={() => { setShowCreateForm(false); handleSearch(); }}
                       disabled={!jobTitle.trim() || loading}
                       className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-1.5"
                     >
@@ -997,16 +1012,62 @@ function AutopilotJobSearch() {
                             </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <button className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                              Save
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await fetch('/api/user/board-jobs', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      title: job.title,
+                                      company: job.company,
+                                      jobUrl: job.url,
+                                      location: job.location,
+                                      source: job.source || 'Search',
+                                      matchScore: job.matchScore,
+                                      description: job.description,
+                                      status: 'SAVED',
+                                    }),
+                                  });
+                                  // Visual feedback — mark as saved in local state
+                                  setJobs(prev => prev.map(j => j.id === job.id ? { ...j, source: `${j.source || 'Search'} · Saved` } : j));
+                                } catch {}
+                              }}
+                              className={cn(
+                                'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+                                job.source?.includes('Saved')
+                                  ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                                  : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800',
+                              )}
+                            >
+                              <Bookmark className={cn('w-3.5 h-3.5 inline mr-1', job.source?.includes('Saved') ? 'fill-current' : '')} />
+                              {job.source?.includes('Saved') ? 'Saved' : 'Save'}
                             </button>
                             <a
                               href={job.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              onClick={async () => {
+                                try {
+                                  await fetch('/api/user/board-jobs', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      title: job.title,
+                                      company: job.company,
+                                      jobUrl: job.url,
+                                      location: job.location,
+                                      source: job.source || 'Search',
+                                      matchScore: job.matchScore,
+                                      description: job.description,
+                                      status: 'APPLIED',
+                                    }),
+                                  });
+                                } catch {}
+                              }}
+                              className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-1"
                             >
-                              Apply
+                              Apply <ExternalLink className="w-3 h-3" />
                             </a>
                           </div>
                         </div>

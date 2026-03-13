@@ -478,13 +478,22 @@ function AutopilotResume() {
       const res = await fetch('/api/ai/resume/ats-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resume }),
+        body: JSON.stringify({ resumeData: resume }),
       });
-      if (!res.ok) throw new Error('ATS check failed');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'ATS check failed');
+      }
       const data = await res.json();
       setAtsResult(data);
+      // If user navigated away from ATS tab, auto-switch back and notify
+      if (activeTab !== 'ats') {
+        setActiveTab('ats');
+      }
       showToast('ATS analysis complete!', 'success');
-    } catch { showToast('ATS check failed. Try again.', 'error'); }
+    } catch (err: any) {
+      showToast(err?.message || 'ATS check failed. Try again.', 'error');
+    }
     finally { setAtsLoading(false); }
   };
 
@@ -815,20 +824,24 @@ function AutopilotResume() {
               </span>
             ))}
             {aiSuggestions.length > 4 && (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100/50 dark:bg-amber-500/5 text-[11px] text-amber-600/70 dark:text-amber-400/50">
-                +{aiSuggestions.length - 4} more suggestions
-              </span>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 text-[11px] text-purple-600 dark:text-purple-400 hover:from-purple-500/20 hover:to-blue-500/20 transition-colors"
+              >
+                <Crown className="w-3 h-3" /> Upgrade to see {aiSuggestions.length - 4} more suggestions
+              </Link>
             )}
           </div>
         </div>
       )}
 
-      {/* Editor / Preview tabs */}
-      <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-800">
+      {/* Grouped navigation tabs */}
+      <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
+        {/* Resume Builder group */}
         <button
           onClick={() => setActiveTab('editor')}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
             activeTab === 'editor' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400',
           )}
         >
@@ -837,16 +850,21 @@ function AutopilotResume() {
         <button
           onClick={() => setActiveTab('preview')}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
             activeTab === 'preview' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400',
           )}
         >
           <Eye className="w-4 h-4 inline mr-1.5" />Preview
         </button>
+
+        {/* Separator */}
+        <span className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700 inline-block" />
+
+        {/* Optimization group */}
         <button
           onClick={() => setActiveTab('ats')}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
             activeTab === 'ats' ? 'border-green-600 text-green-600 dark:text-green-400' : 'border-transparent text-gray-500 dark:text-gray-400',
           )}
         >
@@ -855,16 +873,21 @@ function AutopilotResume() {
         <button
           onClick={() => setActiveTab('cover-letter')}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
             activeTab === 'cover-letter' ? 'border-purple-600 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400',
           )}
         >
           <FileEdit className="w-4 h-4 inline mr-1.5" />Cover Letter
         </button>
+
+        {/* Separator */}
+        <span className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700 inline-block" />
+
+        {/* Career Assets group */}
         <button
           onClick={() => setActiveTab('linkedin')}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
             activeTab === 'linkedin' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400',
           )}
         >
@@ -886,7 +909,7 @@ function AutopilotResume() {
             }
           }}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
             activeTab === 'portfolio' ? 'border-teal-600 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-gray-400',
           )}
         >
@@ -923,6 +946,38 @@ function AutopilotResume() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Resume File Management */}
+            <div className="mt-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">Resume File</h4>
+              <div className="space-y-1.5">
+                <label className="cursor-pointer w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.doc"
+                    className="hidden"
+                    onChange={handleResumeUpload}
+                    disabled={uploadingResume}
+                  />
+                  {uploadingResume ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {uploadingResume ? 'Parsing...' : 'Upload / Replace'}
+                </label>
+                <button
+                  onClick={() => {
+                    if (confirm('This will clear all resume data and start fresh. Are you sure?')) {
+                      setResume({ ...emptyResume });
+                      localStorage.removeItem(RESUME_STORAGE_KEY);
+                      setIsFirstTime(true);
+                      showToast('Resume data cleared.', 'success');
+                    }
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear Resume
+                </button>
+              </div>
             </div>
           </div>
 
@@ -998,24 +1053,22 @@ function AutopilotResume() {
                           <input placeholder="End" value={exp.endDate} onChange={(e) => { const updated = [...resume.experience]; updated[i] = { ...updated[i], endDate: e.target.value }; setResume(prev => ({ ...prev, experience: updated })); }} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                         </div>
                       </div>
-                      {/* Bullet points */}
-                      <div className="space-y-2">
+                      {/* Key Achievements textarea */}
+                      <div className="space-y-1">
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Key Achievements</label>
-                        {(exp.bullets || []).map((bullet, bi) => (
-                          <div key={bi} className="flex items-center gap-2">
-                            <span className="text-gray-400 text-xs">•</span>
-                            <input
-                              value={bullet}
-                              onChange={(e) => { const updated = [...resume.experience]; const bullets = [...(updated[i].bullets || [])]; bullets[bi] = e.target.value; updated[i] = { ...updated[i], bullets }; setResume(prev => ({ ...prev, experience: updated })); }}
-                              placeholder="Describe a key achievement..."
-                              className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            />
-                            <button onClick={() => { const updated = [...resume.experience]; updated[i] = { ...updated[i], bullets: updated[i].bullets.filter((_, idx) => idx !== bi) }; setResume(prev => ({ ...prev, experience: updated })); }} className="text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
-                          </div>
-                        ))}
-                        <button onClick={() => { const updated = [...resume.experience]; updated[i] = { ...updated[i], bullets: [...(updated[i].bullets || []), ''] }; setResume(prev => ({ ...prev, experience: updated })); }} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                          <Plus className="w-3 h-3" /> Add bullet point
-                        </button>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">One achievement per line. Each line becomes a bullet point.</p>
+                        <textarea
+                          value={(exp.bullets || []).join('\n')}
+                          onChange={(e) => {
+                            const updated = [...resume.experience];
+                            const bullets = e.target.value.split('\n');
+                            updated[i] = { ...updated[i], bullets };
+                            setResume(prev => ({ ...prev, experience: updated }));
+                          }}
+                          placeholder="Paste or type your achievements here — one per line&#10;e.g. Led a team of 10 engineers to deliver project 2 weeks early&#10;Reduced operational costs by 25% through process optimization"
+                          rows={5}
+                          className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-y"
+                        />
                       </div>
                     </div>
                   ))}

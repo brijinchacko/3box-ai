@@ -83,7 +83,7 @@ Return a valid JSON array with format:
         type: q.type || 'behavioral',
         difficulty: q.difficulty || 'medium',
         timeLimit: q.timeLimit || 120,
-        hints: q.hints || q.tips ? [q.tips] : ['Take a moment to structure your thoughts', 'Use specific examples'],
+        hints: (Array.isArray(q.hints) && q.hints.length > 0) ? q.hints : (q.tips ? [q.tips] : ['Take a moment to structure your thoughts', 'Use specific examples']),
         keyPoints: q.keyPoints || ['Clarity', 'Relevance', 'Depth'],
       }));
 

@@ -28,10 +28,12 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(await file.arrayBuffer());
 
       if (fileName.endsWith('.pdf')) {
-        // Dynamic import to avoid bundling issues
+        // pdf-parse v2 uses class-based API
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParse = require('pdf-parse');
-        const pdfData = await pdfParse(buffer);
+        const { PDFParse } = require('pdf-parse');
+        const parser = new PDFParse({ data: buffer, verbosity: 0 });
+        const pdfData = await parser.getText();
+        await parser.destroy();
         resumeText = pdfData.text;
       } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
         const mammoth = await import('mammoth');
