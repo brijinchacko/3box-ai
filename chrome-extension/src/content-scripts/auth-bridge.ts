@@ -13,7 +13,11 @@ function checkForToken(): void {
 
   // Send to background worker
   chrome.runtime.sendMessage({ type: 'SET_TOKEN', token }, (response) => {
-    if (response?.id) {
+    if (chrome.runtime.lastError) {
+      console.error('[3BOX Extension] Message failed:', chrome.runtime.lastError.message);
+      return;
+    }
+    if (response && !response.error) {
       console.log('[3BOX Extension] Successfully connected!');
       // Update the page to show success
       const statusEl = document.querySelector('[data-extension-status]');

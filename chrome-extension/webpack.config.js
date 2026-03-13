@@ -42,6 +42,7 @@ module.exports = {
         { from: 'icons', to: '../icons' },
         { from: 'src/popup/popup.html', to: '../popup/popup.html' },
         { from: 'src/popup/popup.css', to: '../popup/popup.css' },
+        { from: 'src/styles/content.css', to: 'content.css' },
       ],
     }),
     new MiniCssExtractPlugin({

@@ -21,9 +21,47 @@ function extractJobData(): DetectedJob | null {
   const url = window.location.href;
   if (!url.includes('/jobs/view/')) return null;
 
-  const title = document.querySelector('.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1.t-24')?.textContent?.trim() || '';
-  const company = document.querySelector('.job-details-jobs-unified-top-card__company-name a, .jobs-unified-top-card__company-name a, .jobs-unified-top-card__company-name')?.textContent?.trim() || '';
-  const location = document.querySelector('.job-details-jobs-unified-top-card__bullet, .jobs-unified-top-card__bullet')?.textContent?.trim() || '';
+  // Strategy 1: Extract from page title (format: "Job Title | Company | LinkedIn")
+  let title = '';
+  let company = '';
+  let location = '';
+
+  const pageTitle = document.title;
+  if (pageTitle && pageTitle.includes('|')) {
+    const parts = pageTitle.split('|').map((s) => s.trim());
+    if (parts.length >= 3) {
+      title = parts[0];
+      company = parts[1];
+    }
+  }
+
+  // Strategy 2: Find company from anchor linking to /company/
+  if (!company) {
+    const companyLink = document.querySelector('a[href*="/company/"]');
+    if (companyLink && companyLink.textContent?.trim()) {
+      company = companyLink.textContent.trim();
+    }
+  }
+
+  // Strategy 3: Old selectors as fallback
+  if (!title) {
+    title =
+      document.querySelector(
+        '.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1.t-24',
+      )?.textContent?.trim() || '';
+  }
+  if (!company) {
+    company =
+      document.querySelector(
+        '.job-details-jobs-unified-top-card__company-name a, .jobs-unified-top-card__company-name a',
+      )?.textContent?.trim() || '';
+  }
+
+  // Location: try old selectors, then fallback to text near company
+  location =
+    document.querySelector(
+      '.job-details-jobs-unified-top-card__bullet, .jobs-unified-top-card__bullet',
+    )?.textContent?.trim() || '';
 
   if (!title || !company) return null;
 
