@@ -20,7 +20,6 @@ import {
   XCircle,
   BarChart3,
   Wifi,
-  Lock,
   X,
   Radar,
   LayoutGrid,
@@ -28,8 +27,6 @@ import {
   History,
   Shield,
   AlertTriangle,
-  Target,
-  Hammer,
   ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -42,6 +39,7 @@ import AgentConfigPanel from '@/components/dashboard/AgentConfigPanel';
 import AgentLockedPage from '@/components/dashboard/AgentLockedPage';
 import AgentLoader from '@/components/brand/AgentLoader';
 import AgentAvatar from '@/components/brand/AgentAvatar';
+import SearchProfileWizard from '@/components/dashboard/jobs/SearchProfileWizard';
 import ScoutMissionModal, { type ScoutMissionResult } from '@/components/dashboard/ScoutMissionModal';
 import ScoutJobCard from '@/components/dashboard/ScoutJobCard';
 import ScoutJobGridCard from '@/components/dashboard/ScoutJobGridCard';
@@ -297,24 +295,6 @@ function JobDetailOverlay({
 
 // ── Autopilot Mode — Job Search with Saved Search Profiles ────────────────
 
-const JOB_BOARDS = [
-  { id: 'linkedin', label: 'LinkedIn', icon: '💼' },
-  { id: 'indeed', label: 'Indeed', icon: '🔍' },
-  { id: 'glassdoor', label: 'Glassdoor', icon: '🏢' },
-  { id: 'google', label: 'Google Jobs', icon: '🌐' },
-  { id: 'dice', label: 'Dice', icon: '🎲' },
-  { id: 'naukri', label: 'Naukri', icon: '📋' },
-];
-
-const EXPERIENCE_LEVELS = [
-  { value: '', label: 'Any Experience' },
-  { value: 'internship', label: 'Internship' },
-  { value: 'entry', label: 'Entry Level' },
-  { value: 'mid', label: 'Mid Level' },
-  { value: 'senior', label: 'Senior Level' },
-  { value: 'lead', label: 'Lead / Manager' },
-  { value: 'executive', label: 'Executive' },
-];
 
 interface SavedProfile {
   id: string;
@@ -328,181 +308,34 @@ interface SavedProfile {
   createdAt: string;
 }
 
-/* ── Email Connection Warning (shown when auto-apply is on but no email connected) ── */
-function EmailConnectionWarning() {
-  const [status, setStatus] = useState<'loading' | 'connected' | 'not-connected'>('loading');
-
-  useEffect(() => {
-    fetch('/api/auth/gmail/status')
-      .then(r => r.json())
-      .then(data => {
-        if (data.connected) {
-          setStatus('connected');
-        } else {
-          // Also check outlook
-          fetch('/api/auth/outlook/status')
-            .then(r => r.json())
-            .then(d => setStatus(d.connected ? 'connected' : 'not-connected'))
-            .catch(() => setStatus('not-connected'));
-        }
-      })
-      .catch(() => setStatus('not-connected'));
-  }, []);
-
-  if (status === 'loading' || status === 'connected') return null;
-
-  return (
-    <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-xs font-semibold text-orange-700 dark:text-orange-400 mb-1">
-            No personal email connected
-          </p>
-          <p className="text-xs text-orange-600 dark:text-orange-400/80">
-            Applications will be sent from <strong>hello@3box.ai</strong> (generic address).
-            Connect your own email in{' '}
-            <Link href="/dashboard/settings" className="underline font-medium hover:text-orange-800 dark:hover:text-orange-300">
-              Settings → Connected Email
-            </Link>{' '}
-            to apply from your personal address — employers are 3× more likely to respond.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function AutopilotJobSearch() {
-  // Search profile creation state
-  const [step, setStep] = useState(1);
-  const [jobTitles, setJobTitles] = useState<string[]>([]);
-  const [jobTitleInput, setJobTitleInput] = useState('');
-  const [location, setLocation] = useState('');
-  const [remoteOnly, setRemoteOnly] = useState(false);
-  const [experienceLevel, setExperienceLevel] = useState('');
-  const [selectedBoards, setSelectedBoards] = useState<string[]>(['linkedin', 'indeed', 'google']);
-  const [includeKeywords, setIncludeKeywords] = useState('');
-  const [excludeKeywords, setExcludeKeywords] = useState('');
-  const [excludeCompanies, setExcludeCompanies] = useState('');
-  const [matchTolerance, setMatchTolerance] = useState(70);
-  const [autoApply, setAutoApply] = useState(false);
-  const [autoSearch, setAutoSearch] = useState(true);
-
   // My Profiles state
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   // Search results state
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
   const [hasSearched, setHasSearched] = useState(false);
   const [activeTab, setActiveTab] = useState<'profiles' | 'search'>('profiles');
 
   // Fetch saved search profiles
-  useEffect(() => {
-    async function fetchProfiles() {
-      try {
-        const res = await fetch('/api/user/loops');
-        if (res.ok) {
-          const data = await res.json();
-          setProfiles(data.profiles || []);
-        }
-      } catch {} finally {
-        setLoadingProfiles(false);
-      }
-    }
-    fetchProfiles();
-  }, []);
-
-  const toggleBoard = (id: string) => {
-    setSelectedBoards(prev =>
-      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
-    );
-  };
-
-  // Combine jobTitles array into search query string
-  const jobTitle = jobTitles.join(', ');
-
-  const handleSearch = useCallback(async (e?: FormEvent) => {
-    e?.preventDefault();
-    if (jobTitles.length === 0) return;
-    setLoading(true);
-    setHasSearched(true);
-    setActiveTab('search');
+  const fetchProfiles = useCallback(async () => {
     try {
-      // Search each title separately and merge results for better coverage
-      const allJobs: Job[] = [];
-      const seenIds = new Set<string>();
-
-      for (const title of jobTitles) {
-        const params = new URLSearchParams({ q: title, page: String(page) });
-        if (location) params.set('location', location);
-        if (remoteOnly) params.set('remote', 'true');
-        if (experienceLevel) params.set('experience', experienceLevel);
-        if (includeKeywords) params.set('keywords', includeKeywords);
-        if (excludeKeywords) params.set('exclude', excludeKeywords);
-        if (selectedBoards.length > 0) params.set('sources', selectedBoards.join(','));
-        const res = await fetch(`/api/jobs/search?${params}`);
-        if (res.ok) {
-          const data: JobsResponse = await res.json();
-          for (const job of (data.jobs || [])) {
-            const key = `${job.company}::${job.title}`.toLowerCase();
-            if (!seenIds.has(key)) {
-              seenIds.add(key);
-              allJobs.push(job);
-            }
-          }
-        }
-      }
-
-      // Sort merged results by match score descending
-      allJobs.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
-      setJobs(allJobs);
-      setTotal(allJobs.length);
-    } catch {} finally {
-      setLoading(false);
-    }
-  }, [jobTitles, location, remoteOnly, experienceLevel, includeKeywords, excludeKeywords, selectedBoards, page]);
-
-  const handleSaveProfile = async () => {
-    if (jobTitles.length === 0) return;
-    setSaving(true);
-    try {
-      const res = await fetch('/api/user/loops', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: `${jobTitles.join(' / ')}${location ? ` in ${location}` : ''}`,
-          jobTitle: jobTitles.join(', '),
-          location,
-          remote: remoteOnly,
-          experienceLevel,
-          boards: selectedBoards,
-          includeKeywords,
-          excludeKeywords,
-          excludeCompanies,
-          matchTolerance,
-          autoApply,
-          autoSearch,
-        }),
-      });
+      const res = await fetch('/api/user/loops');
       if (res.ok) {
         const data = await res.json();
-        setProfiles(prev => [data.profile, ...prev]);
-        setShowCreateForm(false);
-        setStep(1);
-        setJobTitles([]); setJobTitleInput('');
-        setLocation('');
+        setProfiles(data.profiles || []);
       }
     } catch {} finally {
-      setSaving(false);
+      setLoadingProfiles(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
   const toggleProfileActive = async (profileId: string, active: boolean) => {
     try {
@@ -532,431 +365,28 @@ function AutopilotJobSearch() {
             Create search profiles to automatically find and apply to jobs.
           </p>
         </div>
-        {!showCreateForm && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Search className="w-4 h-4" />
-            New Search Profile
-          </button>
-        )}
+        <button
+          onClick={() => setShowWizard(true)}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+        >
+          <Search className="w-4 h-4" />
+          New Search Profile
+        </button>
       </div>
 
-      {/* Search Profile Creation Wizard */}
-      {showCreateForm && (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 mb-6 overflow-hidden">
-          {/* Steps indicator */}
-          <div className="border-b border-gray-100 dark:border-gray-800 px-6 py-4">
-            <div className="flex items-center gap-2">
-              {[1, 2, 3, 4].map(s => (
-                <div key={s} className="flex items-center gap-2">
-                  <button
-                    onClick={() => setStep(s)}
-                    className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
-                      step === s
-                        ? 'bg-blue-600 text-white'
-                        : step > s
-                          ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500',
-                    )}
-                  >
-                    {s}
-                  </button>
-                  <span className={cn(
-                    'text-sm font-medium hidden sm:inline',
-                    step === s ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500',
-                  )}>
-                    {s === 1 ? 'Job Details' : s === 2 ? 'Sources' : s === 3 ? 'Keywords' : 'Automation'}
-                  </span>
-                  {s < 4 && <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-6">
-            {/* Step 1: Job Details */}
-            {step === 1 && (
-              <div className="space-y-4 max-w-lg">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Job Titles <span className="text-red-500">*</span>
-                  </label>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-                    Add multiple titles to search across different roles. Press Enter or comma to add.
-                  </p>
-                  {/* Tags */}
-                  {jobTitles.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {jobTitles.map((t, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium"
-                        >
-                          {t}
-                          <button
-                            type="button"
-                            onClick={() => setJobTitles(jobTitles.filter((_, idx) => idx !== i))}
-                            className="ml-0.5 text-blue-400 hover:text-red-500 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {/* Input */}
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder={jobTitles.length === 0 ? 'e.g. PLC Engineer, Automation Engineer...' : 'Add another title...'}
-                      value={jobTitleInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        // Auto-add on comma
-                        if (val.endsWith(',')) {
-                          const title = val.slice(0, -1).trim();
-                          if (title && !jobTitles.includes(title)) {
-                            setJobTitles([...jobTitles, title]);
-                          }
-                          setJobTitleInput('');
-                        } else {
-                          setJobTitleInput(val);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const title = jobTitleInput.trim();
-                          if (title && !jobTitles.includes(title)) {
-                            setJobTitles([...jobTitles, title]);
-                          }
-                          setJobTitleInput('');
-                        }
-                        if (e.key === 'Backspace' && !jobTitleInput && jobTitles.length > 0) {
-                          setJobTitles(jobTitles.slice(0, -1));
-                        }
-                      }}
-                      className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Location
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="e.g. San Francisco, New York, London..."
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                    />
-                  </div>
-                </div>
-
-                <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={remoteOnly}
-                    onChange={(e) => setRemoteOnly(e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Remote Only</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Only show remote-friendly positions</p>
-                  </div>
-                </label>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Experience Level
-                  </label>
-                  <select
-                    value={experienceLevel}
-                    onChange={(e) => setExperienceLevel(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  >
-                    {EXPERIENCE_LEVELS.map(l => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Job Boards / Sources */}
-            {step === 2 && (
-              <div className="space-y-4 max-w-lg">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Job Boards
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Select which job boards to search. We&apos;ll aggregate results from all selected sources.
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {JOB_BOARDS.map(board => (
-                      <button
-                        key={board.id}
-                        onClick={() => toggleBoard(board.id)}
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors text-left',
-                          selectedBoards.includes(board.id)
-                            ? 'border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600',
-                        )}
-                      >
-                        <span className="text-base">{board.icon}</span>
-                        <span>{board.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Keywords */}
-            {step === 3 && (
-              <div className="space-y-4 max-w-lg">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Include Keywords
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                    Jobs must contain at least one of these keywords (comma-separated)
-                  </p>
-                  <input
-                    type="text"
-                    placeholder="e.g. React, TypeScript, Node.js..."
-                    value={includeKeywords}
-                    onChange={(e) => setIncludeKeywords(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Exclude Keywords
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                    Filter out jobs containing these keywords (comma-separated)
-                  </p>
-                  <input
-                    type="text"
-                    placeholder="e.g. Sales, Marketing, Unpaid..."
-                    value={excludeKeywords}
-                    onChange={(e) => setExcludeKeywords(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Exclude Companies
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                    Skip jobs from these companies (comma-separated)
-                  </p>
-                  <input
-                    type="text"
-                    placeholder="e.g. Acme Corp, Initech..."
-                    value={excludeCompanies}
-                    onChange={(e) => setExcludeCompanies(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Match Tolerance: <span className="text-blue-600 dark:text-blue-400">{matchTolerance}%</span>
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    Minimum match score to include a job. Lower values = more results.
-                  </p>
-                  <input
-                    type="range"
-                    min={30}
-                    max={100}
-                    step={5}
-                    value={matchTolerance}
-                    onChange={(e) => setMatchTolerance(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    <span>More results</span>
-                    <span>More precise</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Automation */}
-            {step === 4 && (
-              <div className="space-y-4 max-w-lg">
-                <label className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Auto-Search</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      Automatically run this search daily and notify you of new matches
-                    </p>
-                  </div>
-                  <div className="relative ml-4">
-                    <input
-                      type="checkbox"
-                      checked={autoSearch}
-                      onChange={(e) => setAutoSearch(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div
-                      onClick={() => setAutoSearch(!autoSearch)}
-                      className={cn(
-                        'w-10 h-5 rounded-full transition-colors cursor-pointer',
-                        autoSearch ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600',
-                      )}
-                    >
-                      <div className={cn(
-                        'w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-0.5',
-                        autoSearch ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-[2px]',
-                      )} />
-                    </div>
-                  </div>
-                </label>
-
-                <label className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Auto-Apply</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      Automatically apply to jobs with a match score above {matchTolerance}%
-                    </p>
-                  </div>
-                  <div className="relative ml-4">
-                    <input
-                      type="checkbox"
-                      checked={autoApply}
-                      onChange={(e) => setAutoApply(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div
-                      onClick={() => setAutoApply(!autoApply)}
-                      className={cn(
-                        'w-10 h-5 rounded-full transition-colors cursor-pointer',
-                        autoApply ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600',
-                      )}
-                    >
-                      <div className={cn(
-                        'w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-0.5',
-                        autoApply ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-[2px]',
-                      )} />
-                    </div>
-                  </div>
-                </label>
-
-                {autoApply && (
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
-                      <p className="text-xs text-amber-700 dark:text-amber-400">
-                        <strong>Note:</strong> Auto-apply uses your uploaded resume and generates a tailored cover letter for each application. Make sure your resume is up to date.
-                      </p>
-                    </div>
-
-                    {/* Email warning */}
-                    <EmailConnectionWarning />
-                  </div>
-                )}
-
-                {/* Summary */}
-                <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Profile Summary</h4>
-                  <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                    <p><span className="font-medium text-gray-900 dark:text-white">Titles:</span> {jobTitles.length > 0 ? jobTitles.join(', ') : '—'}</p>
-                    <p><span className="font-medium text-gray-900 dark:text-white">Location:</span> {location || 'Any'} {remoteOnly ? '(Remote)' : ''}</p>
-                    <p><span className="font-medium text-gray-900 dark:text-white">Experience:</span> {EXPERIENCE_LEVELS.find(l => l.value === experienceLevel)?.label || 'Any'}</p>
-                    <p><span className="font-medium text-gray-900 dark:text-white">Sources:</span> {selectedBoards.length ? selectedBoards.join(', ') : 'None'}</p>
-                    <p><span className="font-medium text-gray-900 dark:text-white">Match Tolerance:</span> {matchTolerance}%</p>
-                    <p><span className="font-medium text-gray-900 dark:text-white">Auto-Search:</span> {autoSearch ? 'On' : 'Off'}</p>
-                    <p><span className="font-medium text-gray-900 dark:text-white">Auto-Apply:</span> {autoApply ? 'On' : 'Off'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation buttons */}
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                {step > 1 && (
-                  <button
-                    onClick={() => setStep(s => s - 1)}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    Back
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setStep(1);
-                    // Reset all form fields so canceling doesn't leave stale data
-                    setJobTitles([]); setJobTitleInput('');
-                    setLocation('');
-                    setRemoteOnly(false);
-                    setExperienceLevel('');
-                    setSelectedBoards(['linkedin', 'indeed', 'google']);
-                    setIncludeKeywords('');
-                    setExcludeKeywords('');
-                    setExcludeCompanies('');
-                    setMatchTolerance(70);
-                    setAutoApply(false);
-                    setAutoSearch(true);
-                  }}
-                  className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                {step < 4 ? (
-                  <button
-                    onClick={() => setStep(s => s + 1)}
-                    disabled={step === 1 && jobTitles.length === 0}
-                    className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-                  >
-                    Next <ChevronRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => { setShowCreateForm(false); handleSearch(); }}
-                      disabled={jobTitles.length === 0 || loading}
-                      className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-1.5"
-                    >
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                      Search Now
-                    </button>
-                    <button
-                      onClick={handleSaveProfile}
-                      disabled={jobTitles.length === 0 || saving}
-                      className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-                    >
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className="w-4 h-4" />}
-                      Save Profile
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Search Profile Wizard Modal */}
+      {showWizard && (
+        <SearchProfileWizard
+          onClose={() => setShowWizard(false)}
+          onComplete={() => {
+            setShowWizard(false);
+            fetchProfiles();
+          }}
+        />
       )}
 
       {/* Tabs: My Profiles | Search Results */}
-      {!showCreateForm && (
+      {(
         <>
           <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-800">
             <button
@@ -1008,7 +438,7 @@ function AutopilotJobSearch() {
                     Create a search profile to automatically find and apply to jobs matching your criteria.
                   </p>
                   <button
-                    onClick={() => setShowCreateForm(true)}
+                    onClick={() => setShowWizard(true)}
                     className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
                   >
                     <Search className="w-4 h-4" />
@@ -1203,26 +633,6 @@ function AutopilotJobSearch() {
                     ))}
                   </div>
 
-                  {/* Pagination */}
-                  {total > 20 && (
-                    <div className="flex items-center justify-center gap-2 mt-6">
-                      <button
-                        onClick={() => { setPage(p => Math.max(1, p - 1)); handleSearch(); }}
-                        disabled={page <= 1}
-                        className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-50 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        Previous
-                      </button>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Page {page}</span>
-                      <button
-                        onClick={() => { setPage(p => p + 1); handleSearch(); }}
-                        disabled={page * 20 >= total}
-                        className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-50 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
                 </>
               )}
             </div>

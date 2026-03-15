@@ -16,9 +16,12 @@ import {
   Loader2,
   Globe,
   Shield,
+  ShieldCheck,
   Target,
   RefreshCw,
   Pencil,
+  Mail,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +37,15 @@ interface ResumeData {
   education?: Array<{ institution?: string; degree?: string }>;
   skills?: string[];
 }
+
+const JOB_BOARDS = [
+  { id: 'linkedin', label: 'LinkedIn', icon: '💼' },
+  { id: 'indeed', label: 'Indeed', icon: '🔍' },
+  { id: 'glassdoor', label: 'Glassdoor', icon: '🏢' },
+  { id: 'google', label: 'Google Jobs', icon: '🌐' },
+  { id: 'dice', label: 'Dice', icon: '🎲' },
+  { id: 'naukri', label: 'Naukri', icon: '📋' },
+];
 
 const EXPERIENCE_LEVELS = [
   { value: 'intern', label: 'Intern / Student' },
@@ -55,6 +67,12 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Step 0: Resume verification
+  const [resume, setResume] = useState<ResumeData | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(true);
+  const [resumeApproved, setResumeApproved] = useState(false);
+  const [resumeVerified, setResumeVerified] = useState(false);
+
   // Step 1: Job Search config
   const [jobTitle, setJobTitle] = useState('');
   const [location, setLocation] = useState('');
@@ -64,26 +82,59 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
   const [excludeKeywords, setExcludeKeywords] = useState('');
   const [excludeCompanies, setExcludeCompanies] = useState('');
   const [matchTolerance, setMatchTolerance] = useState(70);
+  const [selectedBoards, setSelectedBoards] = useState<string[]>(['linkedin', 'indeed']);
 
-  // Step 2: Resume verification
-  const [resume, setResume] = useState<ResumeData | null>(null);
-  const [resumeLoading, setResumeLoading] = useState(true);
-  const [resumeApproved, setResumeApproved] = useState(false);
-
-  // Step 3: Automation
+  // Step 2: Automation + Email
   const [autoSearch, setAutoSearch] = useState(true);
   const [autoApply, setAutoApply] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'loading' | 'connected' | 'not-connected'>('loading');
+  const [emailProvider, setEmailProvider] = useState<string | null>(null);
 
   // Load resume on mount
   useEffect(() => {
     fetch('/api/user/resume')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data?.resume) setResume(data.resume);
+        if (data?.resume) {
+          setResume(data.resume);
+          // Auto-approve if resume is already verified
+          if (data.isFinalized) {
+            setResumeApproved(true);
+            setResumeVerified(true);
+          }
+        }
         setResumeLoading(false);
       })
       .catch(() => setResumeLoading(false));
   }, []);
+
+  // Load email status on mount
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/auth/gmail/status').then(r => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
+      fetch('/api/auth/outlook/status').then(r => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
+      fetch('/api/user/smtp-config').then(r => r.ok ? r.json() : { configured: false }).catch(() => ({ configured: false })),
+    ]).then(([gmail, outlook, smtp]) => {
+      if (gmail.connected) {
+        setEmailStatus('connected');
+        setEmailProvider('Gmail');
+      } else if (outlook.connected) {
+        setEmailStatus('connected');
+        setEmailProvider('Outlook');
+      } else if (smtp.configured) {
+        setEmailStatus('connected');
+        setEmailProvider('SMTP');
+      } else {
+        setEmailStatus('not-connected');
+      }
+    });
+  }, []);
+
+  const toggleBoard = (id: string) => {
+    setSelectedBoards(prev =>
+      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
+    );
+  };
 
   const canProceedStep0 = resumeApproved;
   const canProceedStep1 = jobTitle.trim().length > 0;
@@ -115,6 +166,7 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
           excludeKeywords: excludeKeywords.trim() || undefined,
           excludeCompanies: excludeCompanies.trim() || undefined,
           matchTolerance,
+          boards: selectedBoards.length > 0 ? selectedBoards : undefined,
           autoSearch,
           autoApply,
         }),
@@ -201,6 +253,7 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <AnimatePresence mode="wait">
+            {/* ═══ STEP 0: PROFILE ═══ */}
             {step === 0 && (
               <motion.div
                 key="step-0"
@@ -236,6 +289,25 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                   </div>
                 ) : (
                   <>
+                    {/* Verified badge or warning */}
+                    {resumeVerified ? (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+                        <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Resume Verified — Ready for applications</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                        <span className="text-xs text-amber-700 dark:text-amber-400">
+                          Resume not verified yet. You can approve it below, or{' '}
+                          <a href="/dashboard/resume" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-amber-800 dark:hover:text-amber-300">
+                            verify it in the Resume Editor
+                          </a>{' '}
+                          for best results.
+                        </span>
+                      </div>
+                    )}
+
                     {/* Completeness indicator */}
                     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
                       <div className="flex items-center justify-between mb-2">
@@ -333,6 +405,8 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                       </button>
                       <a
                         href="/dashboard/resume"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
@@ -351,6 +425,7 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
               </motion.div>
             )}
 
+            {/* ═══ STEP 1: JOB HUNT ═══ */}
             {step === 1 && (
               <motion.div
                 key="step-1"
@@ -429,6 +504,32 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                   </select>
                 </div>
 
+                {/* Job Boards */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Job Boards</label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    Select which job boards to search. We&apos;ll aggregate results from all selected sources.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {JOB_BOARDS.map(board => (
+                      <button
+                        key={board.id}
+                        type="button"
+                        onClick={() => toggleBoard(board.id)}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors text-left',
+                          selectedBoards.includes(board.id)
+                            ? 'border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600',
+                        )}
+                      >
+                        <span className="text-base">{board.icon}</span>
+                        <span>{board.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Match Tolerance */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -491,6 +592,7 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
               </motion.div>
             )}
 
+            {/* ═══ STEP 2: AUTO-APPLY ═══ */}
             {step === 2 && (
               <motion.div
                 key="step-2"
@@ -513,8 +615,42 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                     {location && <p><span className="font-medium text-gray-800 dark:text-gray-200">Location:</span> {location}</p>}
                     {remote && <p><span className="font-medium text-gray-800 dark:text-gray-200">Remote:</span> Preferred</p>}
                     <p><span className="font-medium text-gray-800 dark:text-gray-200">Min match:</span> {matchTolerance}%</p>
+                    {selectedBoards.length > 0 && (
+                      <p><span className="font-medium text-gray-800 dark:text-gray-200">Sources:</span> {selectedBoards.map(b => JOB_BOARDS.find(jb => jb.id === b)?.label || b).join(', ')}</p>
+                    )}
                   </div>
                 </div>
+
+                {/* Email connection status */}
+                {emailStatus === 'connected' ? (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+                    <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                      Email connected ({emailProvider})
+                    </span>
+                  </div>
+                ) : emailStatus === 'not-connected' ? (
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          No personal email connected. Applications will be sent from{' '}
+                          <strong>hello@3box.ai</strong>.{' '}
+                          <a
+                            href="/dashboard/settings"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline font-medium hover:text-amber-800 dark:hover:text-amber-300"
+                          >
+                            Connect your email in Settings
+                          </a>{' '}
+                          for better response rates.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Auto-search toggle */}
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
@@ -573,6 +709,14 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                       <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-start gap-1.5">
                         <Shield className="w-3 h-3 mt-0.5 flex-shrink-0" />
                         Applications are sent with human-like timing (15-45s intervals, natural pauses) to avoid bot detection.
+                      </p>
+                    </div>
+                  )}
+                  {autoApply && !resumeVerified && (
+                    <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20">
+                      <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
+                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        Your resume isn&apos;t verified yet. Verify it in the Resume Editor for the best auto-apply results.
                       </p>
                     </div>
                   )}
