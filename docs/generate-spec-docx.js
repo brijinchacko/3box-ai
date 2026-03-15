@@ -1302,7 +1302,7 @@ const doc = new Document({
 });
 
 // ─── OUTPUT ─────────────────────────────────────────────────────────────────
-const outPath = "/Users/brijinchacko/Applications/NXTED/NXTED AI/docs/3BOX_AI_SPEC.docx";
+const outPath = "/Users/brijinchacko/Applications/3BOX/3BOX AI/docs/3BOX_AI_SPEC.docx";
 Packer.toBuffer(doc).then(buffer => {
   fs.writeFileSync(outPath, buffer);
   console.log("Created:", outPath);
