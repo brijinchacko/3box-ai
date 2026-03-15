@@ -197,7 +197,7 @@ function AutopilotResume() {
   const [uploadingResume, setUploadingResume] = useState(false);
 
   const [autoGenerating, setAutoGenerating] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<{ text: string; section: string }[]>([]);
 
   // ── Revert / AI enhance state ──
   const [preEnhanceSnapshot, setPreEnhanceSnapshot] = useState<typeof emptyResume | null>(null);
@@ -324,21 +324,21 @@ function AutopilotResume() {
 
   // Generate AI suggestions for what's missing or could be improved
   const generateAISuggestions = (resumeData: any) => {
-    const suggestions: string[] = [];
-    if (!resumeData.contact?.phone) suggestions.push('Add your phone number for recruiters to reach you');
-    if (!resumeData.contact?.linkedin) suggestions.push('Add your LinkedIn profile URL — recruiters check this first');
-    if (!resumeData.contact?.portfolio) suggestions.push('Create a portfolio to showcase your work (use the Portfolio tab)');
-    if (!resumeData.contact?.location) suggestions.push('Add your location — many jobs filter by location');
-    if (!resumeData.summary || resumeData.summary.length < 50) suggestions.push('Write a compelling 3-4 sentence professional summary');
-    if (!resumeData.experience || resumeData.experience.length === 0) suggestions.push('Add your work experience — even internships count');
+    const suggestions: { text: string; section: string }[] = [];
+    if (!resumeData.contact?.phone) suggestions.push({ text: 'Add your phone number for recruiters to reach you', section: 'contact' });
+    if (!resumeData.contact?.linkedin) suggestions.push({ text: 'Add your LinkedIn profile URL — recruiters check this first', section: 'contact' });
+    if (!resumeData.contact?.portfolio) suggestions.push({ text: 'Create a portfolio to showcase your work', section: 'contact' });
+    if (!resumeData.contact?.location) suggestions.push({ text: 'Add your location — many jobs filter by location', section: 'contact' });
+    if (!resumeData.summary || resumeData.summary.length < 50) suggestions.push({ text: 'Write a compelling 3-4 sentence professional summary', section: 'summary' });
+    if (!resumeData.experience || resumeData.experience.length === 0) suggestions.push({ text: 'Add your work experience — even internships count', section: 'experience' });
     if (resumeData.experience?.length > 0) {
       const hasWeakBullets = resumeData.experience.some((e: any) => !e.bullets || e.bullets.length < 3);
-      if (hasWeakBullets) suggestions.push('Add more bullet points with measurable achievements to your experience');
+      if (hasWeakBullets) suggestions.push({ text: 'Add more bullet points with measurable achievements', section: 'experience' });
     }
-    if (!resumeData.education || resumeData.education.length === 0) suggestions.push('Add your education details');
-    if (!resumeData.skills || resumeData.skills.length < 5) suggestions.push('Add at least 10-15 relevant skills for ATS optimization');
-    if (!resumeData.projects || resumeData.projects.length === 0) suggestions.push('Add 2-3 projects to showcase your technical abilities');
-    if (!resumeData.certifications || resumeData.certifications.length === 0) suggestions.push('Add relevant certifications to stand out');
+    if (!resumeData.education || resumeData.education.length === 0) suggestions.push({ text: 'Add your education details', section: 'education' });
+    if (!resumeData.skills || resumeData.skills.length < 5) suggestions.push({ text: 'Add at least 10-15 relevant skills for ATS optimization', section: 'skills' });
+    if (!resumeData.projects || resumeData.projects.length === 0) suggestions.push({ text: 'Add 2-3 projects to showcase your technical abilities', section: 'projects' });
+    if (!resumeData.certifications || resumeData.certifications.length === 0) suggestions.push({ text: 'Add relevant certifications to stand out', section: 'certifications' });
     setAiSuggestions(suggestions);
   };
 
@@ -370,6 +370,13 @@ function AutopilotResume() {
     }, 2000);
     return () => clearTimeout(timer);
   }, [resume, resumeLoaded, resumeId]);
+
+  // Re-evaluate AI suggestions whenever resume changes so resolved ones disappear
+  useEffect(() => {
+    if (resumeLoaded && resume.contact) {
+      generateAISuggestions(resume);
+    }
+  }, [resume, resumeLoaded]);
 
   // Auto-create portfolio from resume data
   const autoCreatePortfolio = async () => {
@@ -1022,8 +1029,8 @@ function AutopilotResume() {
 
       {/* Template selector moved inside Editor & Preview tabs */}
 
-      {/* AI Suggestions Banner */}
-      {aiSuggestions.length > 0 && (
+      {/* AI Suggestions Banner — hidden when verified */}
+      {!isVerified && aiSuggestions.length > 0 && (
         <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -1036,9 +1043,16 @@ function AutopilotResume() {
           </div>
           <div className="flex flex-wrap gap-2">
             {aiSuggestions.slice(0, 4).map((s, i) => (
-              <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="w-3 h-3 shrink-0" />{s}
-              </span>
+              <button
+                key={i}
+                onClick={() => {
+                  setActiveTab('editor');
+                  setActiveSection(s.section);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/20 transition-colors cursor-pointer"
+              >
+                <AlertTriangle className="w-3 h-3 shrink-0" />{s.text}
+              </button>
             ))}
             {aiSuggestions.length > 4 && (
               <Link
