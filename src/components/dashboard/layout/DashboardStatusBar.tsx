@@ -45,6 +45,7 @@ interface PipelineStatus {
   totalApplied: number;
   totalFound: number;
   hasResume: boolean;
+  resumeVerified: boolean;
   hasTargetRole: boolean;
   autoSearchOn: boolean;
   dailyLimitReached: boolean;
@@ -186,6 +187,12 @@ function SetupWarnings({
       text: 'Upload your resume to enable auto-apply',
       action: { label: 'Upload', href: '/dashboard/resume' },
     });
+  } else if (!status.resumeVerified) {
+    warnings.push({
+      icon: <FileText className="w-3.5 h-3.5 text-amber-500" />,
+      text: 'Verify your resume before auto-apply can start',
+      action: { label: 'Verify', href: '/dashboard/resume' },
+    });
   }
 
   if (!status.hasTargetRole) {
@@ -291,6 +298,7 @@ export default function DashboardStatusBar() {
     totalApplied: 0,
     totalFound: 0,
     hasResume: false,
+    resumeVerified: false,
     hasTargetRole: false,
     autoSearchOn: false,
     dailyLimitReached: false,
@@ -300,13 +308,14 @@ export default function DashboardStatusBar() {
   // Fetch pipeline status + notifications
   const fetchStatus = useCallback(async () => {
     try {
-      const [loopsRes, gmailRes, outlookRes, configRes, notifRes, profileRes] = await Promise.all([
+      const [loopsRes, gmailRes, outlookRes, configRes, notifRes, profileRes, resumeRes] = await Promise.all([
         fetch('/api/user/loops').then(r => r.ok ? r.json() : { profiles: [] }).catch(() => ({ profiles: [] })),
         fetch('/api/auth/gmail/status').then(r => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
         fetch('/api/auth/outlook/status').then(r => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
         fetch('/api/agents/config').then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/api/notifications').then(r => r.ok ? r.json() : { notifications: [], unreadCount: 0 }).catch(() => ({ notifications: [], unreadCount: 0 })),
         fetch('/api/user/profile').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/user/resume').then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
 
       const profiles = loopsRes.profiles || [];
@@ -350,7 +359,8 @@ export default function DashboardStatusBar() {
         nextRunIn,
         totalApplied,
         totalFound,
-        hasResume: !!profileRes?.resumeData || !!profileRes?.resumeUrl,
+        hasResume: !!resumeRes?.resumeId || !!resumeRes?.resume?.contact?.name,
+        resumeVerified: !!resumeRes?.isFinalized,
         hasTargetRole: !!profileRes?.targetRole,
         autoSearchOn: !!configRes?.scoutAutoMode,
         dailyLimitReached: configRes?.scoutDailyCount >= configRes?.scoutDailyCap && activeProfiles.length > 0,
@@ -377,6 +387,7 @@ export default function DashboardStatusBar() {
   // Count setup issues
   const setupIssues = [
     !status.hasResume,
+    status.hasResume && !status.resumeVerified,
     !status.hasTargetRole,
     !status.hasConnectedEmail,
     status.profileCount === 0,
