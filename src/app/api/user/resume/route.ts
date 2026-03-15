@@ -137,8 +137,18 @@ export async function PUT(req: Request) {
 
   const resolvedTemplate = template || resume.template || 'modern';
 
-  // Determine finalization status based on verify flag
+  // Only update finalization fields when verify flag is explicitly passed
+  const hasVerifyFlag = typeof verify === 'boolean';
   const isVerifying = verify === true;
+
+  // Build finalization fields only when verify is explicitly set
+  const finalizationData = hasVerifyFlag
+    ? {
+        isFinalized: isVerifying,
+        approvalStatus: isVerifying ? 'approved' : 'draft',
+        ...(isVerifying ? { approvedAt: new Date() } : {}),
+      }
+    : {};
 
   try {
     let saved;
@@ -152,9 +162,7 @@ export async function PUT(req: Request) {
           template: resolvedTemplate,
           title: resume.title || 'My Resume',
           targetJob: resume.targetJob || null,
-          isFinalized: isVerifying,
-          approvalStatus: isVerifying ? 'approved' : 'draft',
-          ...(isVerifying ? { approvedAt: new Date() } : {}),
+          ...finalizationData,
         },
       });
     } else {
@@ -171,9 +179,7 @@ export async function PUT(req: Request) {
             content: resume,
             template: resolvedTemplate,
             title: resume.title || 'My Resume',
-            isFinalized: isVerifying,
-            approvalStatus: isVerifying ? 'approved' : 'draft',
-            ...(isVerifying ? { approvedAt: new Date() } : {}),
+            ...finalizationData,
           },
         });
       } else {
@@ -208,7 +214,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({
       resumeId: saved.id,
       success: true,
-      isFinalized: isVerifying,
+      isFinalized: saved.isFinalized,
     });
   } catch (err) {
     console.error('[user/resume/PUT]', err);

@@ -206,6 +206,7 @@ function AutopilotResume() {
 
   // ── Auto portfolio creation guard ──
   const portfolioAutoCreated = useRef(false);
+  const userHasEdited = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -345,6 +346,11 @@ function AutopilotResume() {
   // Auto-save to DB with debounce
   useEffect(() => {
     if (!resumeLoaded || !resume.contact.name) return;
+    // Skip the first auto-save triggered by initial data load
+    if (!userHasEdited.current) {
+      userHasEdited.current = true;
+      return;
+    }
     const timer = setTimeout(() => {
       setSaving(true);
       fetch('/api/user/resume', {
@@ -356,7 +362,7 @@ function AutopilotResume() {
         .then(data => {
           if (data?.resumeId && !resumeId) setResumeId(data.resumeId);
           setLastSaved(new Date().toLocaleTimeString());
-          // Any edit un-verifies the resume (user must re-verify)
+          // Any real edit un-verifies the resume (user must re-verify)
           setIsVerified(false);
 
           // Auto-create portfolio after first save (if none exists)
