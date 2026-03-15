@@ -254,13 +254,14 @@ export default function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(true); // Start solid to prevent layout flash
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!isHomePage) { setScrolled(true); return; }
     const onScroll = () => setScrolled(window.scrollY > 80);
+    // Run immediately — if user is at top of homepage, go transparent after mount
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -314,22 +315,13 @@ export default function Navbar() {
           {/* Logo */}
           <Link
             href="/"
-            className={`flex items-center gap-2 group transition-all duration-500 ease-out ${
-              !scrolled && isHomePage
-                ? 'absolute left-1/2 -translate-x-1/2 scale-125'
-                : ''
-            }`}
+            className="flex items-center gap-2 group"
           >
             <Logo size="md" />
           </Link>
 
-          {/* Invisible spacer when logo is centered */}
-          {!scrolled && isHomePage && <div className="w-[120px]" />}
-
           {/* ── Desktop Nav ── */}
-          <div className={`hidden md:flex items-center gap-1 transition-all duration-300 ${
-            scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-          }`}>
+          <div className="hidden md:flex items-center gap-1">
             {/* AI Agents — mega-menu trigger */}
             <div
               onMouseEnter={() => handleMenuEnter('agents')}
@@ -386,9 +378,7 @@ export default function Navbar() {
           </div>
 
           {/* ── CTA ── */}
-          <div className={`hidden md:flex items-center gap-3 transition-all duration-300 ${
-            scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-          }`}>
+          <div className="hidden md:flex items-center gap-3">
             {session ? (
               <Link href="/dashboard" className="btn-primary text-sm flex items-center gap-1">
                 Dashboard <ChevronRight className="w-4 h-4" />
@@ -406,9 +396,7 @@ export default function Navbar() {
           {/* ── Mobile Toggle ── */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className={`md:hidden p-2 rounded-lg hover:bg-white/5 transition-all duration-300 ${
-              scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
+            className="md:hidden p-2 rounded-lg hover:bg-white/5"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>

@@ -24,13 +24,6 @@ export default function LoginPageClient() {
   const router = useRouter();
   const { status } = useSession();
 
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.replace('/dashboard');
-    }
-  }, [status, router]);
-
   const [mode, setMode] = useState<AuthMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +38,13 @@ export default function LoginPageClient() {
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [otpTimer, setOtpTimer] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [status, router]);
 
   // Handle URL error params from NextAuth redirects
   useEffect(() => {
@@ -258,9 +258,16 @@ export default function LoginPageClient() {
     signIn('linkedin', { callbackUrl: '/dashboard' });
   };
 
-  // Show blank screen while checking auth or redirecting (prevents flash)
+  // Show loading spinner while checking session — prevents login form flash for logged-in users
   if (status === 'loading' || status === 'authenticated') {
-    return <div className="min-h-screen bg-surface" />;
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Logo size="md" />
+          <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+        </div>
+      </div>
+    );
   }
 
   return (

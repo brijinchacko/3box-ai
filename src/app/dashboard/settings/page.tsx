@@ -65,6 +65,183 @@ function getInitials(name: string): string {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
+/* ── SMTP Config Section for non-Google/Outlook users ── */
+function SmtpConfigSection() {
+  const [showSmtp, setShowSmtp] = useState(false);
+  const [smtp, setSmtp] = useState({ host: '', port: '587', email: '', password: '', fromName: '' });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [smtpConnected, setSmtpConnected] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/user/smtp-config')
+      .then(r => r.json())
+      .then(data => {
+        if (data.configured) {
+          setSmtpConnected(true);
+          setSmtp({
+            host: data.host || '',
+            port: data.port || '587',
+            email: data.email || '',
+            password: '', // Don't expose
+            fromName: data.fromName || '',
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveSmtp = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/user/smtp-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smtp),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSaved(true);
+        setSmtpConnected(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch {}
+    setSaving(false);
+  };
+
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    try {
+      const res = await fetch('/api/user/smtp-config/test', { method: 'POST' });
+      const data = await res.json();
+      alert(data.success ? 'Test email sent successfully! Check your inbox.' : `Failed: ${data.error}`);
+    } catch {
+      alert('Test failed. Please check your settings.');
+    }
+    setTestingSmtp(false);
+  };
+
+  const handleDisconnectSmtp = async () => {
+    const res = await fetch('/api/user/smtp-config', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      setSmtpConnected(false);
+      setSmtp({ host: '', port: '587', email: '', password: '', fromName: '' });
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl border border-white/10 bg-white/[.02]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gray-500/10 flex items-center justify-center">
+            <Mail className="w-5 h-5 text-gray-400" />
+          </div>
+          <div>
+            <div className="font-medium text-sm">Custom Email (SMTP)</div>
+            <div className="text-xs text-white/30">
+              {smtpConnected ? (
+                <span className="text-green-400">{smtp.email || 'Configured'}</span>
+              ) : (
+                'For Yahoo, iCloud, company email, etc.'
+              )}
+            </div>
+          </div>
+        </div>
+        {smtpConnected ? (
+          <div className="flex gap-2">
+            <button
+              onClick={handleTestSmtp}
+              disabled={testingSmtp}
+              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs hover:bg-white/10 transition-colors"
+            >
+              {testingSmtp ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Test'}
+            </button>
+            <button
+              onClick={handleDisconnectSmtp}
+              className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10 transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowSmtp(!showSmtp)}
+            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs hover:bg-white/10 transition-colors"
+          >
+            {showSmtp ? 'Close' : 'Configure'}
+          </button>
+        )}
+      </div>
+
+      {(showSmtp || smtpConnected) && (
+        <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-white/40 mb-1">SMTP Host</label>
+              <input
+                value={smtp.host}
+                onChange={e => setSmtp({ ...smtp, host: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+                placeholder="smtp.mail.yahoo.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Port</label>
+              <input
+                value={smtp.port}
+                onChange={e => setSmtp({ ...smtp, port: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+                placeholder="587"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-white/40 mb-1">Email Address</label>
+            <input
+              value={smtp.email}
+              onChange={e => setSmtp({ ...smtp, email: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+              placeholder="you@yahoo.com"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-white/40 mb-1">App Password</label>
+            <input
+              type="password"
+              value={smtp.password}
+              onChange={e => setSmtp({ ...smtp, password: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+              placeholder={smtpConnected ? '••••••••' : 'App-specific password'}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-white/40 mb-1">Display Name (optional)</label>
+            <input
+              value={smtp.fromName}
+              onChange={e => setSmtp({ ...smtp, fromName: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+              placeholder="John Doe"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-white/20">Use an app-specific password, not your main password. Your credentials are encrypted.</p>
+            <button
+              onClick={handleSaveSmtp}
+              disabled={saving || !smtp.host || !smtp.email || (!smtpConnected && !smtp.password)}
+              className="px-4 py-2 rounded-lg bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs font-medium hover:bg-neon-blue/20 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : saved ? <Check className="w-3 h-3" /> : <Save className="w-3 h-3" />}
+              {saved ? 'Saved!' : 'Save SMTP'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -738,6 +915,11 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+
+                {/* SMTP Config for non-Google/Outlook users */}
+                <div className="mt-6">
+                  <SmtpConfigSection />
+                </div>
 
                 {/* Info box */}
                 <div className="mt-6 p-4 rounded-xl bg-neon-blue/5 border border-neon-blue/10">

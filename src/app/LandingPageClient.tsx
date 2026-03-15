@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Upload, Search, Sparkles, Rocket, ChevronDown, ChevronUp, Chrome, Mail, Globe, Zap, Shield } from 'lucide-react';
+import { ArrowRight, Upload, Search, Sparkles, Rocket, ChevronDown, ChevronUp, Chrome, Mail, Globe, Zap, Shield, LayoutDashboard } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AgentAvatar from '@/components/brand/AgentAvatar';
@@ -26,6 +27,7 @@ const faqItems = [
 
 export default function LandingPageClient() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { data: session } = useSession();
 
   return (
     <div className="min-h-screen">
@@ -63,13 +65,24 @@ export default function LandingPageClient() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Link
-              href="/get-started"
-              className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
-            >
-              Get Started <ArrowRight className="w-5 h-5" />
-            </Link>
-            <p className="text-xs text-white/30">7-day money-back guarantee &middot; Cancel anytime</p>
+            {session ? (
+              <Link
+                href="/dashboard"
+                className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+              >
+                Go to Dashboard <LayoutDashboard className="w-5 h-5" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/get-started"
+                  className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+                >
+                  Get Started <ArrowRight className="w-5 h-5" />
+                </Link>
+                <p className="text-xs text-white/30">7-day money-back guarantee &middot; Cancel anytime</p>
+              </>
+            )}
           </motion.div>
         </div>
       </section>
@@ -319,15 +332,30 @@ export default function LandingPageClient() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Ready to hire your <span className="gradient-text">AI team</span>?
+              {session ? (
+                <>Welcome back to your <span className="gradient-text">AI team</span></>
+              ) : (
+                <>Ready to hire your <span className="gradient-text">AI team</span>?</>
+              )}
             </h2>
-            <p className="text-white/40 mb-8">7-day money-back guarantee. No risk.</p>
-            <Link
-              href="/get-started"
-              className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20"
-            >
-              Get Started <ArrowRight className="w-5 h-5" />
-            </Link>
+            <p className="text-white/40 mb-8">
+              {session ? 'Your agents are ready and waiting.' : '7-day money-back guarantee. No risk.'}
+            </p>
+            {session ? (
+              <Link
+                href="/dashboard"
+                className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+              >
+                Go to Dashboard <LayoutDashboard className="w-5 h-5" />
+              </Link>
+            ) : (
+              <Link
+                href="/get-started"
+                className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+              >
+                Get Started <ArrowRight className="w-5 h-5" />
+              </Link>
+            )}
 
             {/* Mini agent row */}
             <div className="flex items-center justify-center gap-2 mt-10">

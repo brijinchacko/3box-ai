@@ -9,6 +9,7 @@ import MobileNav from '@/components/dashboard/layout/MobileNav';
 import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import FeatureLockedOverlay from '@/components/dashboard/shared/FeatureLockedOverlay';
+import DashboardStatusBar from '@/components/dashboard/layout/DashboardStatusBar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -106,6 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       <MobileNav onOpen={() => setMobileOpen(true)} />
       <main className={`flex-1 overflow-auto pt-14 lg:pt-0 ${isAgentic ? 'text-white' : ''}`}>
+        <DashboardStatusBar />
         {children}
       </main>
 

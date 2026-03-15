@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
-import { Plus, Search, MapPin, Pause, Play, Trash2, Loader2, FileEdit, Mic, Target, CheckCircle2, Sparkles, ArrowRight, Clock, Chrome, X } from 'lucide-react';
+import { Plus, Search, MapPin, Pause, Play, Trash2, Loader2, FileEdit, Mic, Target, CheckCircle2, Sparkles, ArrowRight, Chrome, X } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,6 @@ import QuickActions from '@/components/dashboard/overview/QuickActions';
 import RecentActivity from '@/components/dashboard/overview/RecentActivity';
 import ApplicationLimitBar from '@/components/dashboard/shared/ApplicationLimitBar';
 import SearchProfileWizard from '@/components/dashboard/jobs/SearchProfileWizard';
-import { useFeatureGate } from '@/hooks/useFeatureGate';
 
 interface SearchProfile {
   id: string;
@@ -42,7 +41,7 @@ export default function DashboardOverviewPage() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   USAGE BANNER — Compact inline quota strip
+   CHROME EXTENSION BANNER
    ═══════════════════════════════════════════════════════ */
 function ExtensionBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -80,52 +79,6 @@ function ExtensionBanner() {
           <X className="w-4 h-4" />
         </button>
       </div>
-    </div>
-  );
-}
-
-function UsageBanner() {
-  const { isLocked, loading, plan, used, limit, remaining, limitType } = useFeatureGate();
-
-  if (loading) return null;
-
-  const percent = limit > 0 ? Math.round((used / limit) * 100) : 0;
-  const barColor = isLocked ? 'bg-red-500' : percent >= 90 ? 'bg-red-500' : percent >= 60 ? 'bg-amber-500' : 'bg-blue-500';
-  const periodLabel = limitType === 'lifetime' ? 'total' : 'today';
-
-  if (isLocked) {
-    return (
-      <div className="mb-4 flex items-center gap-3 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
-        <span className="text-xs font-semibold text-red-600 dark:text-red-400">Quota exhausted</span>
-        <div className="flex-1 bg-red-200 dark:bg-red-500/20 rounded-full h-1.5">
-          <div className="h-1.5 rounded-full bg-red-500 w-full" />
-        </div>
-        <Link href="/pricing" className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline whitespace-nowrap flex items-center gap-1">
-          Upgrade <ArrowRight className="w-3 h-3" />
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-4 flex items-center gap-3 px-3 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-      <span className={cn(
-        'text-[10px] font-bold px-1.5 py-0.5 rounded',
-        plan === 'FREE' ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-          : plan === 'PRO' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-            : 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400',
-      )}>
-        {plan}
-      </span>
-      <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{used}/{limit} {periodLabel}</span>
-      <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
-        <div className={cn('h-1.5 rounded-full transition-all duration-500', barColor)} style={{ width: `${Math.min(100, percent)}%` }} />
-      </div>
-      {plan === 'FREE' && (
-        <Link href="/pricing" className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap flex items-center gap-1">
-          Upgrade <ArrowRight className="w-3 h-3" />
-        </Link>
-      )}
     </div>
   );
 }
@@ -173,7 +126,6 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <UsageBanner />
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -183,13 +135,15 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
             Here&apos;s what your 3BOX is doing for you.
           </p>
         </div>
-        <button
-          onClick={() => setShowWizard(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Create Your 3BOX
-        </button>
+        {profiles.length > 0 && (
+          <button
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            New Pipeline
+          </button>
+        )}
       </div>
 
       <StatsCards />

@@ -55,10 +55,18 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [
     // Only include Google provider when credentials are configured
+    // Request gmail.send scope so we can send job application emails from user's own address
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [GoogleProvider({
           clientId: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          authorization: {
+            params: {
+              scope: 'openid email profile https://www.googleapis.com/auth/gmail.send',
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+          },
         })]
       : []),
     // Only include LinkedIn provider when credentials are configured
@@ -168,13 +176,64 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ user, account }) {
+      const prisma = getPrisma();
+
       if (user.email && isOforoDomain(user.email)) {
-        const prisma = getPrisma();
         await prisma.user.update({
           where: { email: user.email },
           data: { isOforoInternal: true, plan: 'MAX' },
         }).catch(() => {}); // user might not exist yet
       }
+
+      // Auto-connect Gmail when signing in with Google (if we got tokens with gmail.send scope)
+      if (
+        account?.provider === 'google' &&
+        account.access_token &&
+        account.refresh_token &&
+        user.id &&
+        user.email
+      ) {
+        try {
+          const { encrypt } = require('@/lib/email/oauth/encryption');
+          const encryptedAccess = encrypt(account.access_token);
+          const encryptedRefresh = encrypt(account.refresh_token);
+          const tokenExpiry = account.expires_at
+            ? new Date(account.expires_at * 1000)
+            : new Date(Date.now() + 3600 * 1000);
+
+          await prisma.userEmailConnection.upsert({
+            where: {
+              userId_provider_email: {
+                userId: user.id,
+                provider: 'gmail',
+                email: user.email,
+              },
+            },
+            create: {
+              userId: user.id,
+              provider: 'gmail',
+              email: user.email,
+              accessToken: encryptedAccess,
+              refreshToken: encryptedRefresh,
+              tokenExpiry,
+              scopes: 'https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email',
+              isActive: true,
+              isPrimary: true,
+            },
+            update: {
+              accessToken: encryptedAccess,
+              refreshToken: encryptedRefresh,
+              tokenExpiry,
+              isActive: true,
+            },
+          });
+          console.log(`[NextAuth] Auto-connected Gmail for ${user.email}`);
+        } catch (err) {
+          console.error('[NextAuth] Auto-connect Gmail error:', err);
+          // Non-fatal — sign-in still succeeds
+        }
+      }
+
       return true;
     },
   },

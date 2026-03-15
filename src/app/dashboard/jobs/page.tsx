@@ -328,10 +328,56 @@ interface SavedProfile {
   createdAt: string;
 }
 
+/* ── Email Connection Warning (shown when auto-apply is on but no email connected) ── */
+function EmailConnectionWarning() {
+  const [status, setStatus] = useState<'loading' | 'connected' | 'not-connected'>('loading');
+
+  useEffect(() => {
+    fetch('/api/auth/gmail/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.connected) {
+          setStatus('connected');
+        } else {
+          // Also check outlook
+          fetch('/api/auth/outlook/status')
+            .then(r => r.json())
+            .then(d => setStatus(d.connected ? 'connected' : 'not-connected'))
+            .catch(() => setStatus('not-connected'));
+        }
+      })
+      .catch(() => setStatus('not-connected'));
+  }, []);
+
+  if (status === 'loading' || status === 'connected') return null;
+
+  return (
+    <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-xs font-semibold text-orange-700 dark:text-orange-400 mb-1">
+            No personal email connected
+          </p>
+          <p className="text-xs text-orange-600 dark:text-orange-400/80">
+            Applications will be sent from <strong>hello@3box.ai</strong> (generic address).
+            Connect your own email in{' '}
+            <Link href="/dashboard/settings" className="underline font-medium hover:text-orange-800 dark:hover:text-orange-300">
+              Settings → Connected Email
+            </Link>{' '}
+            to apply from your personal address — employers are 3× more likely to respond.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AutopilotJobSearch() {
   // Search profile creation state
   const [step, setStep] = useState(1);
-  const [jobTitle, setJobTitle] = useState('');
+  const [jobTitles, setJobTitles] = useState<string[]>([]);
+  const [jobTitleInput, setJobTitleInput] = useState('');
   const [location, setLocation] = useState('');
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [experienceLevel, setExperienceLevel] = useState('');
@@ -379,41 +425,60 @@ function AutopilotJobSearch() {
     );
   };
 
+  // Combine jobTitles array into search query string
+  const jobTitle = jobTitles.join(', ');
+
   const handleSearch = useCallback(async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!jobTitle.trim()) return;
+    if (jobTitles.length === 0) return;
     setLoading(true);
     setHasSearched(true);
     setActiveTab('search');
     try {
-      const params = new URLSearchParams({ q: jobTitle, page: String(page) });
-      if (location) params.set('location', location);
-      if (remoteOnly) params.set('remote', 'true');
-      if (experienceLevel) params.set('experience', experienceLevel);
-      if (includeKeywords) params.set('keywords', includeKeywords);
-      if (excludeKeywords) params.set('exclude', excludeKeywords);
-      if (selectedBoards.length > 0) params.set('sources', selectedBoards.join(','));
-      const res = await fetch(`/api/jobs/search?${params}`);
-      if (res.ok) {
-        const data: JobsResponse = await res.json();
-        setJobs(data.jobs || []);
-        setTotal(data.total || 0);
+      // Search each title separately and merge results for better coverage
+      const allJobs: Job[] = [];
+      const seenIds = new Set<string>();
+
+      for (const title of jobTitles) {
+        const params = new URLSearchParams({ q: title, page: String(page) });
+        if (location) params.set('location', location);
+        if (remoteOnly) params.set('remote', 'true');
+        if (experienceLevel) params.set('experience', experienceLevel);
+        if (includeKeywords) params.set('keywords', includeKeywords);
+        if (excludeKeywords) params.set('exclude', excludeKeywords);
+        if (selectedBoards.length > 0) params.set('sources', selectedBoards.join(','));
+        const res = await fetch(`/api/jobs/search?${params}`);
+        if (res.ok) {
+          const data: JobsResponse = await res.json();
+          for (const job of (data.jobs || [])) {
+            const key = `${job.company}::${job.title}`.toLowerCase();
+            if (!seenIds.has(key)) {
+              seenIds.add(key);
+              allJobs.push(job);
+            }
+          }
+        }
       }
+
+      // Sort merged results by match score descending
+      allJobs.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+      setJobs(allJobs);
+      setTotal(allJobs.length);
     } catch {} finally {
       setLoading(false);
     }
-  }, [jobTitle, location, remoteOnly, experienceLevel, includeKeywords, excludeKeywords, selectedBoards, page]);
+  }, [jobTitles, location, remoteOnly, experienceLevel, includeKeywords, excludeKeywords, selectedBoards, page]);
 
   const handleSaveProfile = async () => {
-    if (!jobTitle.trim()) return;
+    if (jobTitles.length === 0) return;
     setSaving(true);
     try {
       const res = await fetch('/api/user/loops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `${jobTitle}${location ? ` in ${location}` : ''}`,
-          jobTitle,
+          name: `${jobTitles.join(' / ')}${location ? ` in ${location}` : ''}`,
+          jobTitle: jobTitles.join(', '),
           location,
           remote: remoteOnly,
           experienceLevel,
@@ -431,7 +496,7 @@ function AutopilotJobSearch() {
         setProfiles(prev => [data.profile, ...prev]);
         setShowCreateForm(false);
         setStep(1);
-        setJobTitle('');
+        setJobTitles([]); setJobTitleInput('');
         setLocation('');
       }
     } catch {} finally {
@@ -517,15 +582,64 @@ function AutopilotJobSearch() {
               <div className="space-y-4 max-w-lg">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Job Title <span className="text-red-500">*</span>
+                    Job Titles <span className="text-red-500">*</span>
                   </label>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                    Add multiple titles to search across different roles. Press Enter or comma to add.
+                  </p>
+                  {/* Tags */}
+                  {jobTitles.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {jobTitles.map((t, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                        >
+                          {t}
+                          <button
+                            type="button"
+                            onClick={() => setJobTitles(jobTitles.filter((_, idx) => idx !== i))}
+                            className="ml-0.5 text-blue-400 hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Input */}
                   <div className="relative">
                     <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="e.g. Software Engineer, Product Manager..."
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
+                      placeholder={jobTitles.length === 0 ? 'e.g. PLC Engineer, Automation Engineer...' : 'Add another title...'}
+                      value={jobTitleInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Auto-add on comma
+                        if (val.endsWith(',')) {
+                          const title = val.slice(0, -1).trim();
+                          if (title && !jobTitles.includes(title)) {
+                            setJobTitles([...jobTitles, title]);
+                          }
+                          setJobTitleInput('');
+                        } else {
+                          setJobTitleInput(val);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const title = jobTitleInput.trim();
+                          if (title && !jobTitles.includes(title)) {
+                            setJobTitles([...jobTitles, title]);
+                          }
+                          setJobTitleInput('');
+                        }
+                        if (e.key === 'Backspace' && !jobTitleInput && jobTitles.length > 0) {
+                          setJobTitles(jobTitles.slice(0, -1));
+                        }
+                      }}
                       className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                     />
                   </div>
@@ -745,10 +859,15 @@ function AutopilotJobSearch() {
                 </label>
 
                 {autoApply && (
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      <strong>Note:</strong> Auto-apply uses your uploaded resume and generates a tailored cover letter for each application. Make sure your resume is up to date.
-                    </p>
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        <strong>Note:</strong> Auto-apply uses your uploaded resume and generates a tailored cover letter for each application. Make sure your resume is up to date.
+                      </p>
+                    </div>
+
+                    {/* Email warning */}
+                    <EmailConnectionWarning />
                   </div>
                 )}
 
@@ -756,7 +875,7 @@ function AutopilotJobSearch() {
                 <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                   <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Profile Summary</h4>
                   <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                    <p><span className="font-medium text-gray-900 dark:text-white">Title:</span> {jobTitle || '—'}</p>
+                    <p><span className="font-medium text-gray-900 dark:text-white">Titles:</span> {jobTitles.length > 0 ? jobTitles.join(', ') : '—'}</p>
                     <p><span className="font-medium text-gray-900 dark:text-white">Location:</span> {location || 'Any'} {remoteOnly ? '(Remote)' : ''}</p>
                     <p><span className="font-medium text-gray-900 dark:text-white">Experience:</span> {EXPERIENCE_LEVELS.find(l => l.value === experienceLevel)?.label || 'Any'}</p>
                     <p><span className="font-medium text-gray-900 dark:text-white">Sources:</span> {selectedBoards.length ? selectedBoards.join(', ') : 'None'}</p>
@@ -784,7 +903,7 @@ function AutopilotJobSearch() {
                     setShowCreateForm(false);
                     setStep(1);
                     // Reset all form fields so canceling doesn't leave stale data
-                    setJobTitle('');
+                    setJobTitles([]); setJobTitleInput('');
                     setLocation('');
                     setRemoteOnly(false);
                     setExperienceLevel('');
@@ -805,7 +924,7 @@ function AutopilotJobSearch() {
                 {step < 4 ? (
                   <button
                     onClick={() => setStep(s => s + 1)}
-                    disabled={step === 1 && !jobTitle.trim()}
+                    disabled={step === 1 && jobTitles.length === 0}
                     className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
                   >
                     Next <ChevronRight className="w-4 h-4" />
@@ -814,7 +933,7 @@ function AutopilotJobSearch() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => { setShowCreateForm(false); handleSearch(); }}
-                      disabled={!jobTitle.trim() || loading}
+                      disabled={jobTitles.length === 0 || loading}
                       className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-1.5"
                     >
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -822,7 +941,7 @@ function AutopilotJobSearch() {
                     </button>
                     <button
                       onClick={handleSaveProfile}
-                      disabled={!jobTitle.trim() || saving}
+                      disabled={jobTitles.length === 0 || saving}
                       className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className="w-4 h-4" />}

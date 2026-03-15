@@ -129,7 +129,7 @@ export async function PUT(req: Request) {
 
   const userId = session.user.id;
   const body = await req.json();
-  const { resumeId, resume, template } = body;
+  const { resumeId, resume, template, verify } = body;
 
   if (!resume?.contact?.name) {
     return NextResponse.json({ error: 'Resume must have at least a name' }, { status: 400 });
@@ -137,17 +137,8 @@ export async function PUT(req: Request) {
 
   const resolvedTemplate = template || resume.template || 'modern';
 
-  // Also build the Archer-compatible content shape
-  const archerContent = {
-    contact: resume.contact,
-    summary: resume.summary || '',
-    experience: (resume.experience || []).map((exp: any) => ({
-      title: exp.role || '',
-      company: exp.company || '',
-      bullets: exp.bullets || [],
-    })),
-    skills: resume.skills || [],
-  };
+  // Determine finalization status based on verify flag
+  const isVerifying = verify === true;
 
   try {
     let saved;
@@ -161,9 +152,9 @@ export async function PUT(req: Request) {
           template: resolvedTemplate,
           title: resume.title || 'My Resume',
           targetJob: resume.targetJob || null,
-          isFinalized: true,
-          approvalStatus: 'approved',
-          approvedAt: new Date(),
+          isFinalized: isVerifying,
+          approvalStatus: isVerifying ? 'approved' : 'draft',
+          ...(isVerifying ? { approvedAt: new Date() } : {}),
         },
       });
     } else {
@@ -180,9 +171,9 @@ export async function PUT(req: Request) {
             content: resume,
             template: resolvedTemplate,
             title: resume.title || 'My Resume',
-            isFinalized: true,
-            approvalStatus: 'approved',
-            approvedAt: new Date(),
+            isFinalized: isVerifying,
+            approvalStatus: isVerifying ? 'approved' : 'draft',
+            ...(isVerifying ? { approvedAt: new Date() } : {}),
           },
         });
       } else {
@@ -193,28 +184,31 @@ export async function PUT(req: Request) {
             template: resolvedTemplate,
             title: resume.title || 'My Resume',
             sourceType: 'manual',
-            isFinalized: true,
-            approvalStatus: 'approved',
-            approvedAt: new Date(),
+            isFinalized: isVerifying,
+            approvalStatus: isVerifying ? 'approved' : 'draft',
+            ...(isVerifying ? { approvedAt: new Date() } : {}),
           },
         });
       }
     }
 
-    // Sync resumeId to AutoApplyConfig so Archer knows which resume to use
-    await prisma.autoApplyConfig.upsert({
-      where: { userId },
-      update: { resumeId: saved.id },
-      create: {
-        userId,
-        resumeId: saved.id,
-        automationMode: 'autopilot',
-      },
-    });
+    // Only sync resumeId to AutoApplyConfig when user explicitly verifies
+    if (isVerifying) {
+      await prisma.autoApplyConfig.upsert({
+        where: { userId },
+        update: { resumeId: saved.id },
+        create: {
+          userId,
+          resumeId: saved.id,
+          automationMode: 'autopilot',
+        },
+      });
+    }
 
     return NextResponse.json({
       resumeId: saved.id,
       success: true,
+      isFinalized: isVerifying,
     });
   } catch (err) {
     console.error('[user/resume/PUT]', err);

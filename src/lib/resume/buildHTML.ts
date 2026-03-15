@@ -266,6 +266,7 @@ export function esc(str: string): string {
 function printBar(accent: string): string {
   return `<div class="no-print" style="background:#f3f4f6;text-align:center;padding:12px;font-size:14px;color:#374151;">
     Press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) to save as PDF &nbsp;|&nbsp;
+    Set Margins to <strong>None</strong> &amp; check <strong>Background graphics</strong> for best results &nbsp;|&nbsp;
     <button onclick="window.print()" style="background:${accent};color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Print / Save PDF</button>
   </div>`;
 }
@@ -286,21 +287,44 @@ function docHead(title: string, css: string): string {
     /* ── Reset ──────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Page sizing ───────────────────────── */
-    @page { size: letter; margin: 0; }
+    /* ── Page sizing — A4 ──────────────────── */
+    @page { size: A4; margin: 0; }
 
     ${css}
 
     /* ── Print ──────────────────────────────── */
     @media print {
-      html, body { width: 816px; }
-      body { background: #fff !important; margin: 0; padding: 0; }
+      html, body { margin: 0; padding: 0; }
+      body { background: #fff !important; }
       .no-print { display: none !important; }
-      .page { box-shadow: none !important; margin: 0 !important; page-break-after: always; }
+      .page {
+        box-shadow: none !important; margin: 0 !important;
+        page-break-after: always; page-break-inside: avoid;
+        overflow: hidden;
+      }
       .page:last-child { page-break-after: auto; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style>
+  <script>
+    /* Auto-fit: widen layout + zoom so content fits exactly one A4 page at 794px */
+    window.addEventListener('load', function() {
+      var pages = document.querySelectorAll('.page');
+      pages.forEach(function(page) {
+        var pageHeight = 1123;
+        var contentHeight = page.scrollHeight;
+        if (contentHeight > pageHeight) {
+          var scale = pageHeight / contentHeight;
+          scale = Math.max(scale, 0.55);
+          /* Widen the page so content reflows shorter, then zoom brings width back to 794px */
+          page.style.width = Math.ceil(794 / scale) + 'px';
+          page.style.minHeight = pageHeight + 'px';
+          page.style.zoom = String(scale);
+          page.style.overflow = 'hidden';
+        }
+      });
+    });
+  </script>
 </head>`;
 }
 
@@ -375,8 +399,10 @@ function buildModern(p: BuildHTMLParams): string {
   if (contact.linkedin) contactLines.push(`<div class="sidebar-item"><span class="sidebar-icon">in</span> <a href="https://${esc(contact.linkedin)}">${esc(contact.linkedin)}</a></div>`);
   if (contact.portfolio) contactLines.push(`<div class="sidebar-item"><span class="sidebar-icon">&#9901;</span> <a href="https://${esc(contact.portfolio)}">${esc(contact.portfolio)}</a></div>`);
 
-  /* ── Skills list with descriptions ──────── */
-  const skillsHTML = buildSkillsSection(skills, skillDescriptions, 'skill-row');
+  /* ── Skills as tags for sidebar ──────────── */
+  const skillTagsHTML = skills
+    .map((s) => `<span class="skill-tag">${esc(s)}</span>`)
+    .join('');
 
   /* ── Experience HTML ────────────────────── */
   const expHTML = experience
@@ -421,61 +447,69 @@ function buildModern(p: BuildHTMLParams): string {
       color: #1f2937; background: #e5e7eb; line-height: 1.55;
     }
     .page {
-      width: 816px; min-height: 1056px; margin: 20px auto;
+      width: 794px; min-height: 1123px; margin: 20px auto;
       display: flex; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
       position: relative;
     }
 
     /* ── Sidebar ────────────────────────────── */
     .sidebar {
-      width: 30%; background: #f0f4f8; padding: 32px 18px 24px; flex-shrink: 0;
+      width: 30%; background: #f0f4f8; padding: 24px 16px 18px 22px; flex-shrink: 0;
       display: flex; flex-direction: column;
     }
-    .sidebar h1 { font-size: 20px; font-weight: 700; color: ${accent}; margin-bottom: 14px; line-height: 1.25; }
+    .sidebar h1 { font-size: 18px; font-weight: 700; color: ${accent}; margin-bottom: 10px; line-height: 1.2; }
     .sidebar-section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #d0d8e4;
+      font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: ${accent}; margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid #d0d8e4;
     }
-    .sidebar-item { font-size: 11.5px; color: #374151; margin-bottom: 5px; word-break: break-word; }
+    .sidebar-item { font-size: 10px; color: #374151; margin-bottom: 3px; word-break: break-word; line-height: 1.35; }
     .sidebar-item a { color: ${accent}; text-decoration: none; }
-    .sidebar-icon { display: inline-block; width: 16px; color: ${accent}; font-style: normal; text-align: center; margin-right: 4px; }
+    .sidebar-icon { display: inline-block; width: 14px; color: ${accent}; font-style: normal; text-align: center; margin-right: 3px; }
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+    .skill-tag {
+      font-size: 8.5px; padding: 2px 6px; border-radius: 3px;
+      background: ${accent}15; border: 1px solid ${accent}30; color: ${accent};
+      white-space: nowrap;
+    }
+    .sidebar-edu { font-size: 10px; margin-bottom: 5px; }
+    .sidebar-edu-degree { font-weight: 600; color: #374151; }
+    .sidebar-edu-school { color: #6b7280; }
+    .sidebar-edu-date { font-size: 9px; color: #9ca3af; }
+    .sidebar-cert { font-size: 10px; margin-bottom: 4px; }
+    .sidebar-cert-name { font-weight: 600; color: #374151; }
+    .sidebar-cert-issuer { color: #6b7280; }
     .sidebar-spacer { flex: 1; }
 
     /* ── Main content ───────────────────────── */
     .main {
-      width: 70%; padding: 32px 28px 24px;
+      width: 70%; padding: 24px 22px 18px;
       display: flex; flex-direction: column;
     }
     .section-title {
-      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid ${accent};
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: ${accent}; margin: 12px 0 5px; padding-bottom: 3px; border-bottom: 2px solid ${accent};
     }
     .section-title:first-child { margin-top: 0; }
-    .summary { font-size: 12.5px; color: #4b5563; line-height: 1.6; }
-
-    /* ── Skills with descriptions ────────────── */
-    .skill-row { font-size: 11.5px; color: #374151; margin-bottom: 3px; line-height: 1.45; }
-    .skill-name { font-weight: 600; color: #111827; }
-    .skill-desc { color: #6b7280; }
+    .summary { font-size: 11px; color: #4b5563; line-height: 1.45; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 8px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 12.5px; color: #6b7280; }
-    .entry-date { font-size: 11.5px; color: #9ca3af; white-space: nowrap; }
-    .entry-location { font-size: 11.5px; color: #9ca3af; margin-bottom: 3px; }
-    .edu-detail { font-size: 12.5px; color: #4b5563; margin-top: 2px; }
-    ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
-    li { font-size: 12.5px; color: #374151; margin-bottom: 2px; line-height: 1.5; }
+    .entry-role { font-weight: 600; font-size: 11.5px; color: #111827; }
+    .entry-company { font-size: 11px; color: #6b7280; }
+    .entry-date { font-size: 10px; color: #9ca3af; white-space: nowrap; }
+    .entry-location { font-size: 10px; color: #9ca3af; margin-bottom: 2px; }
+    .edu-detail { font-size: 11px; color: #4b5563; margin-top: 1px; }
+    ul { list-style: disc; padding-left: 14px; margin-top: 2px; }
+    li { font-size: 11px; color: #374151; margin-bottom: 1px; line-height: 1.4; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
-    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .project-link { font-size: 10px; color: ${accent}; text-decoration: none; }
+    .project-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.4; }
+    .project-tech { font-size: 10px; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12.5px; color: #374151; margin-bottom: 4px; }
+    .cert { font-size: 11px; color: #374151; margin-bottom: 3px; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
     .verified { color: #16a34a; margin-right: 4px; }
@@ -484,7 +518,7 @@ function buildModern(p: BuildHTMLParams): string {
     .fill-space { flex: 1; }
     .watermark {
       text-align: center; font-size: 10px; color: #9ca3af;
-      margin-top: auto; padding-top: 10px; border-top: 1px solid #e5e7eb;
+      margin-top: auto; padding-top: 8px; border-top: 1px solid #e5e7eb;
     }
   `;
 
@@ -499,6 +533,27 @@ function buildModern(p: BuildHTMLParams): string {
       <div class="sidebar-section-title">Contact</div>
       ${contactLines.join('\n      ')}
 
+      ${skills.length ? `
+      <div class="sidebar-section-title">Skills</div>
+      <div class="skill-tags">${skillTagsHTML}</div>` : ''}
+
+      ${education.length ? `
+      <div class="sidebar-section-title">Education</div>
+      ${education.map((edu) => `
+        <div class="sidebar-edu">
+          <div class="sidebar-edu-degree">${esc(edu.degree)}${edu.field ? ` in ${esc(edu.field)}` : ''}</div>
+          <div class="sidebar-edu-school">${esc(edu.institution)}</div>
+          ${edu.endDate ? `<div class="sidebar-edu-date">${esc(edu.startDate)} &ndash; ${esc(edu.endDate)}</div>` : ''}
+        </div>`).join('')}` : ''}
+
+      ${certifications.length ? `
+      <div class="sidebar-section-title">Certifications</div>
+      ${certifications.map((c) => `
+        <div class="sidebar-cert">
+          <div class="sidebar-cert-name">${c.verified ? '<span class="verified">&#10003;</span>' : ''}${esc(c.name)}</div>
+          ${c.issuer ? `<div class="sidebar-cert-issuer">${esc(c.issuer)}</div>` : ''}
+        </div>`).join('')}` : ''}
+
       <div class="sidebar-spacer"></div>
     </div>
 
@@ -506,15 +561,9 @@ function buildModern(p: BuildHTMLParams): string {
     <div class="main">
       ${summary ? `<div class="section-title">Professional Summary</div><div class="summary">${esc(summary)}</div>` : ''}
 
-      ${skills.length ? `<div class="section-title">Technical Skills</div><div class="skills-list">${skillsHTML}</div>` : ''}
-
       ${experience.length ? `<div class="section-title">Work Experience</div>${expHTML}` : ''}
 
-      ${education.length ? `<div class="section-title">Education</div>${eduHTML}` : ''}
-
       ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
-
-      ${certifications.length ? `<div class="section-title">Certifications</div>${certsHTML}` : ''}
 
       <div class="fill-space"></div>
       ${watermark(showWatermark)}
@@ -531,19 +580,21 @@ function buildModern(p: BuildHTMLParams): string {
 
 function buildClassic(p: BuildHTMLParams): string {
   const accent = '#1e293b';
-  const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects, showWatermark } = p;
+  const { contact, summary, experience, education, skills, certifications, projects, showWatermark } = p;
 
-  /* ── Contact row (pipe-separated) ──────── */
+  /* ── Contact row (bullet-separated) ──────── */
   const contactParts: string[] = [];
   if (contact.email) contactParts.push(esc(contact.email));
   if (contact.phone) contactParts.push(esc(contact.phone));
   if (contact.location) contactParts.push(esc(contact.location));
   if (contact.linkedin) contactParts.push(`<a href="https://${esc(contact.linkedin)}">${esc(contact.linkedin)}</a>`);
   if (contact.portfolio) contactParts.push(`<a href="https://${esc(contact.portfolio)}">${esc(contact.portfolio)}</a>`);
-  const contactRow = contactParts.join(' <span class="pipe">|</span> ');
+  const contactRow = contactParts.join(' <span class="bullet">&bull;</span> ');
 
-  /* ── Skills with descriptions ────────────── */
-  const skillsHTML = buildSkillsSection(skills, skillDescriptions, 'skill-row');
+  /* ── Skill pills ────────────────────────── */
+  const skillPillsHTML = skills
+    .map((s) => `<span class="skill-pill">${esc(s)}</span>`)
+    .join('');
 
   /* ── Experience ─────────────────────────── */
   const expHTML = experience
@@ -551,7 +602,7 @@ function buildClassic(p: BuildHTMLParams): string {
       (exp) => `
       <div class="entry">
         <div class="entry-header">
-          <div><span class="entry-role">${esc(exp.role)}</span>, <span class="entry-company">${esc(exp.company)}</span><span class="entry-loc"> &mdash; ${esc(exp.location)}</span></div>
+          <div><span class="entry-role">${esc(exp.role)}</span> <span class="entry-company">&mdash; ${esc(exp.company)}${exp.location ? `, ${esc(exp.location)}` : ''}</span></div>
           <span class="entry-date">${esc(exp.startDate)} &ndash; ${exp.current ? 'Present' : esc(exp.endDate)}</span>
         </div>
         <ul>${exp.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
@@ -565,12 +616,10 @@ function buildClassic(p: BuildHTMLParams): string {
       (edu) => `
       <div class="entry">
         <div class="entry-header">
-          <div>
-            <span class="entry-role">${esc(edu.institution)}</span>
-            <span class="entry-loc"> &mdash; ${esc(edu.degree)} in ${esc(edu.field)}${edu.gpa ? `, GPA: ${esc(edu.gpa)}` : ''}</span>
-          </div>
-          <span class="entry-date">${esc(edu.startDate)} &ndash; ${esc(edu.endDate)}</span>
+          <span class="entry-role">${esc(edu.degree)}${edu.field ? ` in ${esc(edu.field)}` : ''}</span>
+          ${edu.endDate ? `<span class="entry-date">${esc(edu.endDate)}</span>` : ''}
         </div>
+        <div class="entry-sub">${esc(edu.institution)}${edu.gpa ? ` &middot; GPA: ${esc(edu.gpa)}` : ''}</div>
       </div>`,
     )
     .join('');
@@ -579,7 +628,11 @@ function buildClassic(p: BuildHTMLParams): string {
   const projHTML = buildProjectsHTML(projects, 'entry');
 
   /* ── Certifications ─────────────────────── */
-  const certsHTML = buildCertsHTML(certifications);
+  const certsHTML = certifications
+    .map(
+      (c) => `<div class="cert"><span class="cert-name">${esc(c.name)}</span>${c.issuer ? `<span class="cert-issuer"> &mdash; ${esc(c.issuer)}</span>` : ''}</div>`,
+    )
+    .join('');
 
   const css = `
     body {
@@ -587,55 +640,54 @@ function buildClassic(p: BuildHTMLParams): string {
       color: #1f2937; background: #e5e7eb; line-height: 1.5;
     }
     .page {
-      width: 816px; min-height: 1056px; margin: 20px auto;
-      padding: 40px 48px 32px; background: #fff;
+      width: 794px; min-height: 1123px; margin: 20px auto;
+      padding: 28px 36px 24px; background: #fff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.12);
       display: flex; flex-direction: column;
     }
 
     /* ── Header ─────────────────────────────── */
-    .header { text-align: center; margin-bottom: 16px; }
-    .header h1 { font-size: 26px; font-weight: 700; color: ${accent}; margin-bottom: 6px; letter-spacing: 0.5px; }
-    .contact-row { font-size: 11.5px; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .header { text-align: center; margin-bottom: 10px; }
+    .header h1 { font-size: 22px; font-weight: 700; color: ${accent}; margin-bottom: 4px; letter-spacing: 0.5px; }
+    .contact-row { font-size: 10px; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif; }
     .contact-row a { color: ${accent}; text-decoration: none; }
-    .pipe { color: #d1d5db; margin: 0 4px; }
-    .header hr { border: none; border-top: 1.5px solid ${accent}; margin-top: 14px; }
+    .bullet { color: #d1d5db; margin: 0 3px; }
+    .header hr { border: none; border-top: 2px solid ${accent}; margin-top: 10px; }
 
     /* ── Section titles ─────────────────────── */
     .section-title {
-      font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
-      color: ${accent}; margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+      color: ${accent}; margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1;
     }
 
-    /* ── Skills with descriptions ────────────── */
-    .skills-list { columns: 2; column-gap: 24px; }
-    .skill-row {
-      font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.4;
-      break-inside: avoid; font-family: 'Segoe UI', system-ui, sans-serif;
+    /* ── Skill pills ─────────────────────────── */
+    .skill-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+    .skill-pill {
+      font-size: 10px; padding: 2px 8px; border-radius: 12px;
+      border: 1px solid ${accent}40; background: ${accent}08; color: #374151;
+      white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif;
     }
-    .skill-name { font-weight: 600; color: ${accent}; }
-    .skill-desc { color: #6b7280; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 8px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 700; font-size: 13px; color: ${accent}; }
-    .entry-company { font-size: 13px; color: #374151; }
-    .entry-loc { font-size: 12px; color: #6b7280; }
-    .entry-date { font-size: 11.5px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
-    ul { list-style: disc; padding-left: 18px; margin-top: 4px; }
-    li { font-size: 12.5px; color: #374151; margin-bottom: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .entry-role { font-weight: 700; font-size: 11.5px; color: #111827; }
+    .entry-company { font-size: 11px; color: #6b7280; }
+    .entry-sub { font-size: 11px; color: #6b7280; margin-top: 1px; }
+    .entry-date { font-size: 10px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
+    ul { list-style: disc; padding-left: 14px; margin-top: 2px; }
+    li { font-size: 11px; color: #374151; margin-bottom: 1px; line-height: 1.4; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Summary ─────────────────────────────── */
-    .summary { font-size: 12.5px; color: #4b5563; line-height: 1.6; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .summary { font-size: 11px; color: #4b5563; line-height: 1.45; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-link { font-size: 10px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.4; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-tech { font-size: 10px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12.5px; color: #374151; margin-bottom: 4px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .cert { font-size: 11px; color: #374151; margin-bottom: 3px; font-family: 'Segoe UI', system-ui, sans-serif; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
     .verified { color: #16a34a; margin-right: 4px; }
@@ -644,7 +696,7 @@ function buildClassic(p: BuildHTMLParams): string {
     .fill-space { flex: 1; }
     .watermark {
       text-align: center; font-size: 10px; color: #9ca3af;
-      margin-top: auto; padding-top: 10px; border-top: 1px solid #e5e7eb;
+      margin-top: auto; padding-top: 8px; border-top: 1px solid #e5e7eb;
       font-family: 'Segoe UI', system-ui, sans-serif;
     }
   `;
@@ -662,15 +714,15 @@ function buildClassic(p: BuildHTMLParams): string {
 
     ${summary ? `<div class="section-title">Professional Summary</div><div class="summary">${esc(summary)}</div>` : ''}
 
-    ${skills.length ? `<div class="section-title">Technical Skills</div><div class="skills-list">${skillsHTML}</div>` : ''}
-
-    ${experience.length ? `<div class="section-title">Experience</div>${expHTML}` : ''}
+    ${experience.length ? `<div class="section-title">Work Experience</div>${expHTML}` : ''}
 
     ${education.length ? `<div class="section-title">Education</div>${eduHTML}` : ''}
 
-    ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
+    ${skills.length ? `<div class="section-title">Skills</div><div class="skill-pills">${skillPillsHTML}</div>` : ''}
 
     ${certifications.length ? `<div class="section-title">Certifications</div>${certsHTML}` : ''}
+
+    ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
 
     <div class="fill-space"></div>
     ${watermark(showWatermark)}
@@ -686,19 +738,19 @@ function buildClassic(p: BuildHTMLParams): string {
 
 function buildMinimal(p: BuildHTMLParams): string {
   const accent = '#374151';
-  const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects, showWatermark } = p;
+  const { contact, summary, experience, education, skills, certifications, projects, showWatermark } = p;
 
-  /* ── Contact inline ─────────────────────── */
+  /* ── Contact pipe-separated ─────────────── */
   const contactParts: string[] = [];
   if (contact.email) contactParts.push(esc(contact.email));
   if (contact.phone) contactParts.push(esc(contact.phone));
   if (contact.location) contactParts.push(esc(contact.location));
   if (contact.linkedin) contactParts.push(`<a href="https://${esc(contact.linkedin)}">${esc(contact.linkedin)}</a>`);
   if (contact.portfolio) contactParts.push(`<a href="https://${esc(contact.portfolio)}">${esc(contact.portfolio)}</a>`);
-  const contactLine = contactParts.join(' <span class="dot">&middot;</span> ');
+  const contactLine = contactParts.join(' <span class="pipe">|</span> ');
 
-  /* ── Skills with descriptions ────────────── */
-  const skillsHTML = buildSkillsSection(skills, skillDescriptions, 'skill-row');
+  /* ── Skills — dot-joined string ─────────── */
+  const skillsHTML = skills.map((s) => esc(s)).join(' &nbsp;&middot;&nbsp; ');
 
   /* ── Experience ─────────────────────────── */
   const expHTML = experience
@@ -706,10 +758,9 @@ function buildMinimal(p: BuildHTMLParams): string {
       (exp) => `
       <div class="entry">
         <div class="entry-header">
-          <span class="entry-role">${esc(exp.role)}</span>
+          <span><span class="entry-role">${esc(exp.role)}</span> <span class="entry-company">&mdash; ${esc(exp.company)}</span></span>
           <span class="entry-date">${esc(exp.startDate)} &ndash; ${exp.current ? 'Present' : esc(exp.endDate)}</span>
         </div>
-        <div class="entry-company">${esc(exp.company)} &middot; ${esc(exp.location)}</div>
         <ul>${exp.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
       </div>`,
     )
@@ -721,10 +772,10 @@ function buildMinimal(p: BuildHTMLParams): string {
       (edu) => `
       <div class="entry">
         <div class="entry-header">
-          <span class="entry-role">${esc(edu.institution)}</span>
-          <span class="entry-date">${esc(edu.startDate)} &ndash; ${esc(edu.endDate)}</span>
+          <span class="entry-degree">${esc(edu.degree)} in ${esc(edu.field)}</span>
+          <span class="entry-date">${esc(edu.endDate)}</span>
         </div>
-        <div class="entry-company">${esc(edu.degree)} in ${esc(edu.field)}${edu.gpa ? ` &middot; GPA: ${esc(edu.gpa)}` : ''}</div>
+        <div class="entry-institution">${esc(edu.institution)}${edu.gpa ? ` &middot; GPA: ${esc(edu.gpa)}` : ''}</div>
       </div>`,
     )
     .join('');
@@ -733,7 +784,12 @@ function buildMinimal(p: BuildHTMLParams): string {
   const projHTML = buildProjectsHTML(projects, 'entry');
 
   /* ── Certifications ─────────────────────── */
-  const certsHTML = buildCertsHTML(certifications);
+  const certsHTML = certifications
+    .map(
+      (c) =>
+        `<div class="cert"><span class="cert-name">${esc(c.name)}</span><span class="cert-issuer"> &mdash; ${esc(c.issuer)}</span></div>`,
+    )
+    .join('');
 
   const css = `
     body {
@@ -741,61 +797,59 @@ function buildMinimal(p: BuildHTMLParams): string {
       color: #374151; background: #e5e7eb; line-height: 1.6;
     }
     .page {
-      width: 816px; min-height: 1056px; margin: 20px auto;
-      padding: 44px 52px 32px; background: #fff;
+      width: 794px; min-height: 1123px; margin: 20px auto;
+      padding: 36px 44px 24px; background: #fff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.12);
       display: flex; flex-direction: column;
     }
 
     /* ── Header ─────────────────────────────── */
-    .header { margin-bottom: 24px; }
-    .header h1 { font-size: 30px; font-weight: 300; color: #111827; margin-bottom: 2px; letter-spacing: -0.5px; }
-    .header .subtitle { font-size: 13px; color: #9ca3af; margin-bottom: 10px; }
-    .contact-line { font-size: 11.5px; color: #9ca3af; }
+    .header { margin-bottom: 18px; }
+    .header h1 { font-size: 26px; font-weight: 300; color: #111827; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .contact-line { font-size: 10.5px; color: #9ca3af; }
     .contact-line a { color: #6b7280; text-decoration: none; }
-    .dot { margin: 0 6px; color: #d1d5db; }
+    .pipe { margin: 0 6px; color: #d1d5db; }
 
     /* ── Section titles ─────────────────────── */
     .section-title {
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px;
-      color: #9ca3af; margin: 22px 0 10px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 2.5px;
+      color: #9ca3af; margin: 16px 0 6px; padding-bottom: 6px;
+      border-bottom: 1px solid #e5e7eb;
     }
 
-    /* ── Skills with descriptions ────────────── */
-    .skills-list { columns: 2; column-gap: 24px; }
-    .skill-row { font-size: 12px; color: #6b7280; margin-bottom: 3px; line-height: 1.4; break-inside: avoid; }
-    .skill-name { font-weight: 500; color: #111827; }
-    .skill-desc { color: #9ca3af; }
+    /* ── Skills (dot-joined string) ──────────── */
+    .skills-text { font-size: 11px; color: #4b5563; line-height: 1.55; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 14px; }
+    .entry { margin-bottom: 10px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 500; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 12.5px; color: #9ca3af; margin-top: 1px; }
-    .entry-date { font-size: 11.5px; color: #d1d5db; white-space: nowrap; }
-    ul { list-style: none; padding-left: 0; margin-top: 4px; }
-    li { font-size: 12.5px; color: #4b5563; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
-    li::before { content: '\\2013'; position: absolute; left: 0; color: #d1d5db; }
+    .entry-role { font-weight: 600; font-size: 11.5px; color: #111827; }
+    .entry-company { font-size: 11.5px; color: #6b7280; }
+    .entry-degree { font-weight: 500; font-size: 11.5px; color: #111827; }
+    .entry-institution { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .entry-date { font-size: 10.5px; color: #d1d5db; white-space: nowrap; }
+    ul { list-style: none; padding-left: 0; margin-top: 3px; }
+    li { font-size: 11px; color: #4b5563; margin-bottom: 2px; line-height: 1.45; padding-left: 12px; position: relative; }
+    li::before { content: '\\2022'; position: absolute; left: 0; color: #d1d5db; font-size: 8px; top: 2px; }
 
     /* ── Summary ─────────────────────────────── */
-    .summary { font-size: 12.5px; color: #6b7280; line-height: 1.65; }
+    .summary { font-size: 11px; color: #6b7280; line-height: 1.55; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: #6b7280; text-decoration: none; }
-    .project-desc { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.5; }
-    .project-tech { font-size: 11px; color: #d1d5db; margin-top: 2px; }
+    .project-link { font-size: 10px; color: #6b7280; text-decoration: none; }
+    .project-desc { font-size: 11px; color: #6b7280; margin-top: 2px; line-height: 1.45; }
+    .project-tech { font-size: 10px; color: #d1d5db; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12.5px; color: #6b7280; margin-bottom: 4px; }
+    .cert { font-size: 11px; color: #6b7280; margin-bottom: 3px; }
     .cert-name { font-weight: 500; color: #374151; }
     .cert-issuer { color: #9ca3af; }
-    .verified { color: #16a34a; margin-right: 4px; }
 
     /* ── Fill + Watermark ───────────────────── */
     .fill-space { flex: 1; }
     .watermark {
       text-align: center; font-size: 10px; color: #d1d5db;
-      margin-top: auto; padding-top: 12px;
+      margin-top: auto; padding-top: 10px;
     }
   `;
 
@@ -806,21 +860,20 @@ function buildMinimal(p: BuildHTMLParams): string {
     <!-- Header -->
     <div class="header">
       <h1>${esc(contact.name)}</h1>
-      ${experience.length ? `<div class="subtitle">${esc(experience[0].role)}</div>` : ''}
       <div class="contact-line">${contactLine}</div>
     </div>
 
-    ${summary ? `<div class="section-title">About</div><div class="summary">${esc(summary)}</div>` : ''}
-
-    ${skills.length ? `<div class="section-title">Technical Skills</div><div class="skills-list">${skillsHTML}</div>` : ''}
+    ${summary ? `<div class="section-title">Summary</div><div class="summary">${esc(summary)}</div>` : ''}
 
     ${experience.length ? `<div class="section-title">Experience</div>${expHTML}` : ''}
 
     ${education.length ? `<div class="section-title">Education</div>${eduHTML}` : ''}
 
-    ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
+    ${skills.length ? `<div class="section-title">Skills</div><div class="skills-text">${skillsHTML}</div>` : ''}
 
     ${certifications.length ? `<div class="section-title">Certifications</div>${certsHTML}` : ''}
+
+    ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
 
     <div class="fill-space"></div>
     ${watermark(showWatermark)}
@@ -836,36 +889,23 @@ function buildMinimal(p: BuildHTMLParams): string {
 
 function buildCreative(p: BuildHTMLParams): string {
   const accent = '#7c3aed';
-  const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects, showWatermark } = p;
+  const { contact, summary, experience, education, skills, certifications, projects, showWatermark } = p;
 
-  /* ── Contact pills ──────────────────────── */
-  const pillColors = ['#a855f7', '#00d4ff', '#00ff88', '#a855f7', '#00d4ff'];
-  const contactParts: { label: string; value: string; href?: string }[] = [];
-  if (contact.email) contactParts.push({ label: contact.email, value: contact.email });
-  if (contact.phone) contactParts.push({ label: contact.phone, value: contact.phone });
-  if (contact.location) contactParts.push({ label: contact.location, value: contact.location });
-  if (contact.linkedin) contactParts.push({ label: contact.linkedin, value: contact.linkedin, href: `https://${contact.linkedin}` });
-  if (contact.portfolio) contactParts.push({ label: contact.portfolio, value: contact.portfolio, href: `https://${contact.portfolio}` });
+  /* ── Contact info (white text in header) ─── */
+  const contactParts: string[] = [];
+  if (contact.email) contactParts.push(esc(contact.email));
+  if (contact.phone) contactParts.push(esc(contact.phone));
+  if (contact.location) contactParts.push(esc(contact.location));
+  if (contact.linkedin) contactParts.push(`<a href="https://${esc(contact.linkedin)}" style="color:#fff;text-decoration:none;">${esc(contact.linkedin)}</a>`);
+  if (contact.portfolio) contactParts.push(`<a href="https://${esc(contact.portfolio)}" style="color:#fff;text-decoration:none;">${esc(contact.portfolio)}</a>`);
+  const contactLine = contactParts.join(' <span style="margin:0 6px;opacity:0.6;">|</span> ');
 
-  const pillsHTML = contactParts
-    .map((cp, i) => {
-      const color = pillColors[i % pillColors.length];
-      const inner = cp.href
-        ? `<a href="${esc(cp.href)}" style="color:${color};text-decoration:none;">${esc(cp.label)}</a>`
-        : esc(cp.label);
-      return `<span class="pill" style="border-color:${color}30;background:${color}0a;color:${color};">${inner}</span>`;
-    })
-    .join('');
-
-  /* ── Skills with descriptions (colored) ─── */
-  const tagColors = ['#a855f7', '#00d4ff', '#00ff88'];
-  const skillsHTML = skills
+  /* ── Skill pills (first 10, rotating colors) */
+  const pillColors = ['#a855f7', '#00d4ff', '#00ff88', '#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4'];
+  const skillPills = skills.slice(0, 10)
     .map((s, i) => {
-      const c = tagColors[i % tagColors.length];
-      const desc = getSkillDescription(s, skillDescriptions);
-      return desc
-        ? `<div class="skill-row"><span class="skill-name" style="color:${c};">${esc(s)}</span><span class="skill-desc"> &mdash; ${esc(desc)}</span></div>`
-        : `<div class="skill-row"><span class="skill-name" style="color:${c};">${esc(s)}</span></div>`;
+      const c = pillColors[i % pillColors.length];
+      return `<span class="skill-pill" style="background:${c}15;color:${c};border:1px solid ${c}30;">${esc(s)}</span>`;
     })
     .join('');
 
@@ -890,10 +930,10 @@ function buildCreative(p: BuildHTMLParams): string {
       (edu) => `
       <div class="entry">
         <div class="entry-header">
-          <span class="entry-role">${esc(edu.institution)}</span>
-          <span class="entry-date">${esc(edu.startDate)} &ndash; ${esc(edu.endDate)}</span>
+          <span class="entry-degree">${esc(edu.degree)} in ${esc(edu.field)}</span>
+          <span class="entry-date">${esc(edu.endDate)}</span>
         </div>
-        <div class="entry-company">${esc(edu.degree)} in ${esc(edu.field)}${edu.gpa ? ` &middot; GPA: ${esc(edu.gpa)}` : ''}</div>
+        <div class="entry-institution">${esc(edu.institution)}${edu.gpa ? ` &middot; GPA: ${esc(edu.gpa)}` : ''}</div>
       </div>`,
     )
     .join('');
@@ -902,7 +942,12 @@ function buildCreative(p: BuildHTMLParams): string {
   const projHTML = buildProjectsHTML(projects, 'entry');
 
   /* ── Certifications ─────────────────────── */
-  const certsHTML = buildCertsHTML(certifications);
+  const certsHTML = certifications
+    .map(
+      (c) =>
+        `<div class="cert"><span class="cert-name">${esc(c.name)}</span><span class="cert-issuer"> &mdash; ${esc(c.issuer)}</span></div>`,
+    )
+    .join('');
 
   const css = `
     body {
@@ -910,77 +955,77 @@ function buildCreative(p: BuildHTMLParams): string {
       color: #1f2937; background: #e5e7eb; line-height: 1.55;
     }
     .page {
-      width: 816px; min-height: 1056px; margin: 20px auto;
+      width: 794px; min-height: 1123px; margin: 20px auto;
       overflow: hidden; background: #fff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.12);
       display: flex; flex-direction: column;
     }
 
-    /* ── Gradient header ────────────────────── */
+    /* ── Gradient header banner ──────────────── */
     .creative-header {
       background: linear-gradient(135deg, #a855f7, #00d4ff, #00ff88);
-      padding: 28px 36px 24px; color: #fff; flex-shrink: 0;
+      padding: 24px 32px 20px; color: #fff; flex-shrink: 0;
     }
-    .creative-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-    .creative-header .role { font-size: 13px; color: rgba(255,255,255,0.8); }
+    .creative-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .creative-header .contact-row { font-size: 10.5px; color: rgba(255,255,255,0.85); }
 
-    /* ── Contact pills ──────────────────────── */
-    .pills { padding: 12px 36px; display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
-    .pill {
-      display: inline-block; font-size: 11px; padding: 3px 12px;
-      border-radius: 20px; border: 1px solid; white-space: nowrap;
+    /* ── Skill pills below header ────────────── */
+    .skill-pills { padding: 10px 32px; display: flex; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }
+    .skill-pill {
+      display: inline-block; font-size: 10px; padding: 2px 10px;
+      border-radius: 20px; white-space: nowrap; font-weight: 500;
     }
-    .pill a { text-decoration: none; }
 
     /* ── Content area ───────────────────────── */
     .content-area {
-      flex: 1; padding: 0 36px 28px; display: flex; flex-direction: column;
+      flex: 1; padding: 0 32px 20px; display: flex; flex-direction: column;
     }
 
-    /* ── Summary with accent bar ────────────── */
-    .summary-wrap { display: flex; gap: 12px; margin: 8px 0 16px; }
+    /* ── Section titles with gradient underline ─ */
+    .section-title {
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: ${accent}; margin: 14px 0 6px; padding-bottom: 3px;
+      border-bottom: 2px solid transparent;
+      border-image: linear-gradient(90deg, #a855f7, #00d4ff, #00ff88) 1;
+    }
+
+    /* ── About section with accent bar ────────── */
+    .about-wrap { display: flex; gap: 10px; margin: 6px 0 12px; }
     .accent-bar {
       width: 3px; flex-shrink: 0; border-radius: 2px;
       background: linear-gradient(to bottom, #a855f7, #00d4ff);
     }
-    .summary { font-size: 12.5px; color: #4b5563; line-height: 1.65; }
-
-    /* ── Section titles ─────────────────────── */
-    .section-title {
-      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 16px 0 8px; padding-bottom: 4px;
-      border-bottom: 2px solid ${accent}30;
-    }
-
-    /* ── Skills with descriptions ────────────── */
-    .skills-list { columns: 2; column-gap: 20px; }
-    .skill-row { font-size: 11.5px; color: #374151; margin-bottom: 3px; line-height: 1.4; break-inside: avoid; }
-    .skill-name { font-weight: 600; }
-    .skill-desc { color: #6b7280; }
+    .summary { font-size: 11px; color: #4b5563; line-height: 1.55; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 10px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 12.5px; color: #9ca3af; margin-top: 1px; }
-    .entry-date { font-size: 11.5px; color: #9ca3af; white-space: nowrap; }
-    ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
-    li { font-size: 12.5px; color: #374151; margin-bottom: 2px; line-height: 1.5; }
+    .entry-role { font-weight: 600; font-size: 11.5px; color: #111827; }
+    .entry-company { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .entry-degree { font-weight: 500; font-size: 11.5px; color: #111827; }
+    .entry-institution { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .entry-date { font-size: 10.5px; color: #9ca3af; white-space: nowrap; }
+    ul { list-style: none; padding-left: 0; margin-top: 3px; }
+    li { font-size: 11px; color: #374151; margin-bottom: 2px; line-height: 1.45; padding-left: 14px; position: relative; }
+    li::before {
+      content: ''; position: absolute; left: 0; top: 5px;
+      width: 3px; height: 10px; border-radius: 2px;
+      background: linear-gradient(to bottom, #a855f7, #00d4ff);
+    }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
-    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .project-link { font-size: 10px; color: ${accent}; text-decoration: none; }
+    .project-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.45; }
+    .project-tech { font-size: 10px; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12.5px; color: #374151; margin-bottom: 4px; }
+    .cert { font-size: 11px; color: #374151; margin-bottom: 3px; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
-    .verified { color: #16a34a; margin-right: 4px; }
 
     /* ── Bottom gradient bar ─────────────────── */
     .bottom-bar {
-      height: 4px; margin: 0 36px;
+      height: 3px; margin: 0 32px;
       background: linear-gradient(90deg, #a855f7, #00d4ff, #00ff88); border-radius: 2px;
       flex-shrink: 0;
     }
@@ -989,7 +1034,7 @@ function buildCreative(p: BuildHTMLParams): string {
     .fill-space { flex: 1; }
     .watermark {
       text-align: center; font-size: 10px; color: #9ca3af;
-      margin-top: auto; padding: 10px 36px 20px;
+      margin-top: auto; padding: 8px 32px 16px;
     }
   `;
 
@@ -997,29 +1042,27 @@ function buildCreative(p: BuildHTMLParams): string {
 <body>
   ${printBar(accent)}
   <div class="page">
-    <!-- Gradient header -->
+    <!-- Gradient header banner -->
     <div class="creative-header">
       <h1>${esc(contact.name)}</h1>
-      ${experience.length ? `<div class="role">${esc(experience[0].role)}</div>` : ''}
+      <div class="contact-row">${contactLine}</div>
     </div>
 
-    <!-- Contact pills -->
-    <div class="pills">${pillsHTML}</div>
+    <!-- Colorful skill pills -->
+    ${skills.length ? `<div class="skill-pills">${skillPills}</div>` : ''}
 
     <!-- Content area -->
     <div class="content-area">
-      <!-- Summary with accent bar -->
-      ${summary ? `<div class="summary-wrap"><div class="accent-bar"></div><div class="summary">${esc(summary)}</div></div>` : ''}
-
-      ${skills.length ? `<div class="section-title">Technical Skills</div><div class="skills-list">${skillsHTML}</div>` : ''}
+      <!-- About section with accent bar -->
+      ${summary ? `<div class="section-title">About</div><div class="about-wrap"><div class="accent-bar"></div><div class="summary">${esc(summary)}</div></div>` : ''}
 
       ${experience.length ? `<div class="section-title">Experience</div>${expHTML}` : ''}
 
       ${education.length ? `<div class="section-title">Education</div>${eduHTML}` : ''}
 
-      ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
-
       ${certifications.length ? `<div class="section-title">Certifications</div>${certsHTML}` : ''}
+
+      ${projects && projects.length ? `<div class="section-title">Projects</div>${projHTML}` : ''}
 
       <div class="fill-space"></div>
     </div>

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "3BOX AI — Auto Apply",
   "version": "1.0.0",
-  "description": "Automatically apply to jobs on LinkedIn, Indeed, Naukri, Glassdoor, Workday, and iCIMS with your 3BOX AI profile.",
+  "description": "Auto-fill and submit job applications across popular job boards using your 3BOX AI profile and resume.",
   "permissions": [
     "storage",
     "tabs",
@@ -20,8 +20,7 @@
     "https://glassdoor.com/*",
     "https://*.myworkdayjobs.com/*",
     "https://*.icims.com/*",
-    "https://3box.ai/*",
-    "https://localhost:3002/*"
+    "https://3box.ai/*"
   ],
   "background": {
     "service_worker": "dist/background.js"

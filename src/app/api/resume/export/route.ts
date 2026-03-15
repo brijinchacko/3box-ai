@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { contact, summary, experience, education, skills, certifications } =
+    const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects } =
       resumeData;
 
     // ── 5. Determine watermark ───────────────────
@@ -86,7 +86,9 @@ export async function POST(req: Request) {
       experience,
       education,
       skills,
+      skillDescriptions,
       certifications,
+      projects,
       template: template ?? 'modern',
       showWatermark,
     });
