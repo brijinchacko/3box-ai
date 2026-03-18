@@ -636,7 +636,7 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
                       <div>
                         <p className="text-xs text-amber-700 dark:text-amber-400">
                           No personal email connected. Applications will be sent from{' '}
-                          <strong>hello@3box.ai</strong>.{' '}
+                          <strong>nishinth.m@wartens.com</strong>.{' '}
                           <a
                             href="/dashboard/settings"
                             target="_blank"

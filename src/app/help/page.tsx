@@ -56,7 +56,7 @@ const faqs: Record<string, { q: string; a: string }[]> = {
   'technical': [
     { q: 'What AI models power 3BOX AI?', a: 'We use a multi-model architecture: GPT-4o for career coaching and resume generation, Claude for nuanced skill assessment, and custom fine-tuned models for job matching and salary prediction. Our model router automatically selects the best model for each task.' },
     { q: 'What is the tech stack?', a: '3BOX AI is built with Next.js 14 (App Router), TypeScript, Tailwind CSS, and Framer Motion on the frontend. Backend uses Next.js API routes, Prisma ORM with PostgreSQL, NextAuth.js for authentication, and Stripe for payments. AI integration via OpenRouter API.' },
-    { q: 'Is there an API available?', a: 'We are planning a public API for enterprise integrations. If you are interested in API access for your organization (career services, universities, HR platforms), please contact us at api@3box.ai.' },
+    { q: 'Is there an API available?', a: 'We are planning a public API for enterprise integrations. If you are interested in API access for your organization (career services, universities, HR platforms), please contact us at nishinth.m@wartens.com.' },
     { q: 'How does data privacy work technically?', a: 'All user data is encrypted with AES-256 at rest. API calls use TLS 1.3. We implement row-level security in PostgreSQL. AI prompts are anonymized before processing. We do not use your data to train AI models. Full GDPR compliance with data export and deletion capabilities.' },
     { q: 'Browser and device support?', a: '3BOX AI works on all modern browsers (Chrome, Firefox, Safari, Edge) and is fully responsive for mobile, tablet, and desktop. We recommend the latest browser version for the best experience.' },
   ],

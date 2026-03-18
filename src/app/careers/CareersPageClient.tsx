@@ -151,10 +151,10 @@ export default function CareersPageClient() {
             </p>
             <p className="text-white/40 mb-6">
               Send your resume to{' '}
-              <span className="text-white font-semibold">careers@oforo.ai</span>
+              <span className="text-white font-semibold">nishinth.m@wartens.com</span>
             </p>
             <a
-              href="mailto:careers@oforo.ai"
+              href="mailto:nishinth.m@wartens.com"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-medium hover:opacity-90 transition-opacity"
             >
               <Mail className="w-4 h-4" />

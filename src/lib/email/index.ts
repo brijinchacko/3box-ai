@@ -12,7 +12,7 @@ function getResend() {
   return _resend;
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM || '3BOX AI <hello@3box.ai>';
+const FROM_EMAIL = process.env.EMAIL_FROM || '3BOX AI <nishinth.m@wartens.com>';
 // Use NEXTAUTH_URL (runtime) — NEXT_PUBLIC_APP_URL is inlined at build time by Next.js
 const APP_URL = process.env.NEXTAUTH_URL || 'https://3box.ai';
 

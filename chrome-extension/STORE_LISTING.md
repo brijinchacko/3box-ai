@@ -36,7 +36,7 @@ REQUIREMENTS:
 • A 3BOX AI account (sign up free at https://3box.ai)
 • An uploaded resume on your 3BOX profile
 
-Need help? Visit https://3box.ai or contact support@3box.ai.
+Need help? Visit https://3box.ai or contact nishinth.m@wartens.com.
 
 ## Category
 Productivity

@@ -68,7 +68,7 @@ export default function SecurityPageClient() {
               <p>Your data is processed by AI models (via OpenRouter) to power your agent team. PII is redacted from AI interaction logs. You can opt out of AI features at any time.</p>
 
               <h3 className="text-white font-semibold">Data Retention</h3>
-              <p>Your data is retained as long as your account is active. You can request data deletion at any time through Settings or by contacting privacy@oforo.ai.</p>
+              <p>Your data is retained as long as your account is active. You can request data deletion at any time through Settings or by contacting nishinth.m@wartens.com.</p>
 
               <h3 className="text-white font-semibold">Third-Party Services</h3>
               <p>We use Stripe for payments, Google for OAuth, and cloud providers for hosting. Each is bound by data processing agreements.</p>
@@ -108,7 +108,7 @@ export default function SecurityPageClient() {
                 'Right to erasure: Delete your account and all associated data',
                 'Right to data portability: Download data in standard formats',
                 'Right to object: Opt out of AI processing at any time',
-                'Data Protection Officer: dpo@oforo.ai',
+                'Data Protection Officer: nishinth.m@wartens.com',
               ].map((item) => (
                 <div key={item} className="flex items-start gap-2 text-sm text-white/50">
                   <CheckCircle2 className="w-4 h-4 text-neon-green flex-shrink-0 mt-0.5" />

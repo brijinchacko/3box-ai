@@ -163,7 +163,7 @@ export default function GDPRPageClient() {
             <div className="space-y-3">
               {[
                 'Our Data Protection Officer oversees GDPR compliance',
-                'Contact: dpo@oforo.ai',
+                'Contact: nishinth.m@wartens.com',
                 'Response time: Within 30 days for formal requests',
                 'You may also lodge a complaint with your local supervisory authority if you believe your rights have been violated',
               ].map((item) => (

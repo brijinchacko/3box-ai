@@ -117,7 +117,7 @@ const sections = [
       { text: 'These terms are governed by the laws of the United States.' },
       { text: 'Disputes shall be resolved through binding arbitration.' },
       { text: 'You agree to resolve disputes individually, not as part of a class action.' },
-      { text: 'Contact: legal@oforo.ai for legal inquiries.' },
+      { text: 'Contact: nishinth.m@wartens.com for legal inquiries.' },
     ],
   },
   {

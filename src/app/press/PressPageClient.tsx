@@ -380,11 +380,11 @@ export default function PressPageClient() {
               For press inquiries, interviews, or media resources:
             </p>
             <a
-              href="mailto:press@oforo.ai"
+              href="mailto:nishinth.m@wartens.com"
               className="inline-flex items-center gap-2 text-xl font-semibold text-neon-blue hover:underline mb-6"
             >
               <Mail className="w-5 h-5" />
-              press@oforo.ai
+              nishinth.m@wartens.com
             </a>
             <div className="flex items-center justify-center gap-3">
               {socialLinks.map((s) => (

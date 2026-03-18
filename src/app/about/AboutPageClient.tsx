@@ -90,8 +90,8 @@ export default function AboutPageClient() {
             <h2 className="text-2xl font-bold mb-4">Get in Touch</h2>
             <p className="text-white/40 mb-6">We&apos;d love to hear from you — whether you&apos;re a user, partner, or investor.</p>
             <div className="flex items-center justify-center gap-4">
-              <a href="mailto:hello@oforo.ai" className="btn-secondary text-sm flex items-center gap-2">
-                <Mail className="w-4 h-4" /> hello@oforo.ai
+              <a href="mailto:nishinth.m@wartens.com" className="btn-secondary text-sm flex items-center gap-2">
+                <Mail className="w-4 h-4" /> nishinth.m@wartens.com
               </a>
               <a href="https://www.linkedin.com/company/3box-ai/" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Linkedin className="w-4 h-4" /></a>
               <a href="https://youtube.com/channel/UCt1LnfzqtMRcfSPwAV3J1ZQ/" target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm"><Youtube className="w-4 h-4" /></a>

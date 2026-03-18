@@ -68,7 +68,7 @@ const sections = [
       { text: 'Deleted accounts: Data permanently removed within 30 days.' },
       { text: 'AI interaction logs: Auto-purged after 90 days.' },
       { text: 'Payment records: Retained as required by law (typically 7 years).' },
-      { text: 'Request data deletion anytime: Settings page or email privacy@oforo.ai.' },
+      { text: 'Request data deletion anytime: Settings page or email nishinth.m@wartens.com.' },
     ],
   },
   {
@@ -99,7 +99,7 @@ const sections = [
       { text: 'We may update this policy periodically to reflect platform changes.' },
       { text: 'Significant changes will be communicated via email and in-app notification.' },
       { text: 'Continued use of the platform after changes constitutes acceptance.' },
-      { text: 'Contact: privacy@oforo.ai for questions about this policy.' },
+      { text: 'Contact: nishinth.m@wartens.com for questions about this policy.' },
     ],
   },
 ];

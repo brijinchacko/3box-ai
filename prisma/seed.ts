@@ -24,11 +24,11 @@ async function main() {
 
   // Create OFORO internal user
   const oforoUser = await prisma.user.upsert({
-    where: { email: 'admin@oforo.ai' },
+    where: { email: 'nishinth.m@wartens.com' },
     update: {},
     create: {
       name: 'OFORO Admin',
-      email: 'admin@oforo.ai',
+      email: 'nishinth.m@wartens.com',
       hashedPassword,
       plan: 'ULTRA',
       isOforoInternal: true,
@@ -141,7 +141,7 @@ async function main() {
 
   console.log('✅ Seed data created successfully');
   console.log(`   Demo user: demo@3box.ai / demo123456`);
-  console.log(`   OFORO admin: admin@oforo.ai / demo123456`);
+  console.log(`   OFORO admin: nishinth.m@wartens.com / demo123456`);
 }
 
 main()

@@ -16,7 +16,7 @@ const contactMethods = [
     color: 'text-neon-blue',
     title: 'General Inquiries',
     description: 'For questions about 3BOX AI, our mission, or anything else.',
-    action: { type: 'email' as const, value: 'hello@oforo.ai' },
+    action: { type: 'email' as const, value: 'nishinth.m@wartens.com' },
   },
   {
     icon: MessageSquare,
@@ -31,7 +31,7 @@ const contactMethods = [
     title: 'Partnerships',
     description:
       'Interested in partnering with us? We\'re open to collaborations with educational institutions, employers, and career services.',
-    action: { type: 'email' as const, value: 'partnerships@oforo.ai' },
+    action: { type: 'email' as const, value: 'nishinth.m@wartens.com' },
   },
 ];
 

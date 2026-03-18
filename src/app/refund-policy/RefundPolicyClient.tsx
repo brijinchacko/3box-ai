@@ -59,7 +59,7 @@ const sections = [
     title: 'How to Request a Refund',
     color: 'text-neon-blue',
     content: [
-      'To request a refund, send an email to refund@oforo.ai with the following information:',
+      'To request a refund, send an email to nishinth.m@wartens.com with the following information:',
     ],
     steps: [
       'Your registered account email address.',
@@ -95,7 +95,7 @@ const sections = [
     content: [
       'All approved refunds are returned to the original payment method used during purchase.',
       'Depending on your bank or payment provider, it may take an additional 5-10 business days for the refund to appear in your account after processing.',
-      'If your original payment method is no longer available, contact refund@oforo.ai for alternative arrangements.',
+      'If your original payment method is no longer available, contact nishinth.m@wartens.com for alternative arrangements.',
     ],
   },
 ];
@@ -156,7 +156,7 @@ export default function RefundPolicyClient() {
                   </li>
                   <li className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-neon-blue flex-shrink-0" />
-                    Email refund@oforo.ai to request a refund
+                    Email nishinth.m@wartens.com to request a refund
                   </li>
                 </ul>
               </div>
