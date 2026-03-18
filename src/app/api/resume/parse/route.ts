@@ -1,5 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { aiChat, AI_MODELS, extractJSON } from '@/lib/ai/openrouter';
+import { execFile } from 'child_process';
+import path from 'path';
 
 /**
  * POST /api/resume/parse
@@ -29,14 +31,23 @@ export async function POST(request: NextRequest) {
 
       if (fileName.endsWith('.pdf')) {
         try {
-          // pdf-parse is externalized via serverExternalPackages in next.config.js
-          // so Node.js loads it directly (bypassing webpack bundling issues with canvas)
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { PDFParse } = require('pdf-parse');
-          const parser = new PDFParse({ data: buffer, verbosity: 0 });
-          const pdfData = await parser.getText();
-          await parser.destroy();
-          resumeText = pdfData.text;
+          // Run PDF extraction in a child process to completely avoid
+          // Next.js webpack bundling issues with pdf-parse/canvas
+          const scriptPath = path.join(process.cwd(), 'scripts', 'extract-pdf-text.cjs');
+          const base64 = buffer.toString('base64');
+          const output = await new Promise<string>((resolve, reject) => {
+            execFile('node', [scriptPath, base64], { maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
+              if (err) {
+                console.error('[Resume Parse] Child process error:', stderr || err.message);
+                reject(new Error(stderr || err.message));
+              } else {
+                resolve(stdout);
+              }
+            });
+          });
+          const parsed = JSON.parse(output);
+          if (parsed.error) throw new Error(parsed.error);
+          resumeText = parsed.text;
         } catch (pdfError) {
           console.error('[Resume Parse] PDF extraction failed:', pdfError);
           return NextResponse.json(

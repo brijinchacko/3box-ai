@@ -3,15 +3,6 @@ const nextConfig = {
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },
-  serverExternalPackages: ['pdf-parse'],
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Prevent webpack from bundling native canvas module (used optionally by pdfjs-dist)
-      config.externals = config.externals || [];
-      config.externals.push({ canvas: 'commonjs canvas' });
-    }
-    return config;
-  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
