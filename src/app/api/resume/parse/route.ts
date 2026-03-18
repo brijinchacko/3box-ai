@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { aiChat, AI_MODELS, extractJSON } from '@/lib/ai/openrouter';
-import { execFile } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 
 /**
@@ -36,14 +36,25 @@ export async function POST(request: NextRequest) {
           const scriptPath = path.join(process.cwd(), 'scripts', 'extract-pdf-text.cjs');
           const base64 = buffer.toString('base64');
           const output = await new Promise<string>((resolve, reject) => {
-            execFile('node', [scriptPath, base64], { maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
-              if (err) {
-                console.error('[Resume Parse] Child process error:', stderr || err.message);
-                reject(new Error(stderr || err.message));
+            const child = spawn('node', [scriptPath], { stdio: ['pipe', 'pipe', 'pipe'] });
+            const chunks: Buffer[] = [];
+            const errChunks: Buffer[] = [];
+            child.stdout.on('data', (d: Buffer) => chunks.push(d));
+            child.stderr.on('data', (d: Buffer) => errChunks.push(d));
+            child.on('close', (code) => {
+              const stdout = Buffer.concat(chunks).toString('utf-8');
+              if (code !== 0) {
+                const stderr = Buffer.concat(errChunks).toString('utf-8');
+                console.error('[Resume Parse] Child process error:', stderr);
+                reject(new Error(stderr || `Process exited with code ${code}`));
               } else {
                 resolve(stdout);
               }
             });
+            child.on('error', reject);
+            // Send PDF data via stdin to avoid command-line length limits
+            child.stdin.write(base64);
+            child.stdin.end();
           });
           const parsed = JSON.parse(output);
           if (parsed.error) throw new Error(parsed.error);

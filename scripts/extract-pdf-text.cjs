@@ -3,21 +3,30 @@
  * Standalone PDF text extraction script.
  * Runs outside Next.js webpack — uses pdf-parse v2 directly via Node.js.
  *
- * Usage: node scripts/extract-pdf-text.cjs <base64-encoded-pdf>
+ * Usage: echo <base64-pdf> | node scripts/extract-pdf-text.cjs
  * Output: JSON { "text": "..." } on stdout
  */
 
 const { PDFParse } = require('pdf-parse');
 
-async function main() {
-  const base64 = process.argv[2];
-  if (!base64) {
-    process.stdout.write(JSON.stringify({ error: 'No input provided' }));
-    process.exit(1);
-  }
+function readStdin() {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    process.stdin.on('data', (chunk) => chunks.push(chunk));
+    process.stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+    process.stdin.on('error', reject);
+  });
+}
 
+async function main() {
   try {
-    const buffer = Buffer.from(base64, 'base64');
+    const base64 = await readStdin();
+    if (!base64 || !base64.trim()) {
+      process.stdout.write(JSON.stringify({ error: 'No input provided' }));
+      process.exit(1);
+    }
+
+    const buffer = Buffer.from(base64.trim(), 'base64');
     const parser = new PDFParse({ data: buffer, verbosity: 0 });
     const pdfData = await parser.getText();
     await parser.destroy();
