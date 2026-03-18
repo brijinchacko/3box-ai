@@ -28,13 +28,21 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(await file.arrayBuffer());
 
       if (fileName.endsWith('.pdf')) {
-        // pdf-parse v2 uses class-based API
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { PDFParse } = require('pdf-parse');
-        const parser = new PDFParse({ data: buffer, verbosity: 0 });
-        const pdfData = await parser.getText();
-        await parser.destroy();
-        resumeText = pdfData.text;
+        try {
+          // pdf-parse v2 uses class-based API
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { PDFParse } = require('pdf-parse');
+          const parser = new PDFParse({ data: buffer, verbosity: 0 });
+          const pdfData = await parser.getText();
+          await parser.destroy();
+          resumeText = pdfData.text;
+        } catch (pdfError) {
+          console.error('[Resume Parse] PDF extraction failed:', pdfError);
+          return NextResponse.json(
+            { error: 'Failed to extract text from PDF. The file may be image-based or corrupted. Please try a DOCX or TXT file, or paste your resume text.' },
+            { status: 400 }
+          );
+        }
       } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
         const mammoth = await import('mammoth');
         const result = await mammoth.extractRawText({ buffer });
