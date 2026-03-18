@@ -2,12 +2,11 @@
 const nextConfig = {
   experimental: {
     missingSuspenseWithCSRBailout: false,
-    serverComponentsExternalPackages: ['pdf-parse'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // pdf-parse v2 optionally requires canvas (native C++ module).
-      // Mark it as external so webpack doesn't try to bundle it.
+      // pdfjs-dist optionally requires canvas (native C++ module) for rendering.
+      // We only use it for text extraction, so mark canvas as external.
       config.externals = config.externals || [];
       config.externals.push({ canvas: 'commonjs canvas' });
     }

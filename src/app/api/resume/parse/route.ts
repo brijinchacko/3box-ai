@@ -29,13 +29,21 @@ export async function POST(request: NextRequest) {
 
       if (fileName.endsWith('.pdf')) {
         try {
-          // pdf-parse v2 uses class-based API
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { PDFParse } = require('pdf-parse');
-          const parser = new PDFParse({ data: buffer, verbosity: 0 });
-          const pdfData = await parser.getText();
-          await parser.destroy();
-          resumeText = pdfData.text;
+          // Use pdfjs-dist directly (webpack-friendly, no native canvas dependency)
+          const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+          const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+          const pdfDoc = await loadingTask.promise;
+          const textParts: string[] = [];
+          for (let i = 1; i <= pdfDoc.numPages; i++) {
+            const page = await pdfDoc.getPage(i);
+            const content = await page.getTextContent();
+            const pageText = content.items
+              .filter((item: Record<string, unknown>) => 'str' in item)
+              .map((item: Record<string, unknown>) => item.str as string)
+              .join(' ');
+            textParts.push(pageText);
+          }
+          resumeText = textParts.join('\n');
         } catch (pdfError) {
           console.error('[Resume Parse] PDF extraction failed:', pdfError);
           return NextResponse.json(
