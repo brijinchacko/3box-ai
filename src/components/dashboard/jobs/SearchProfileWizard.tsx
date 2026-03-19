@@ -156,7 +156,34 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
     );
   };
 
-  const canProceedStep0 = resumeApproved;
+  const [verifyingResume, setVerifyingResume] = useState(false);
+
+  const handleApproveResume = async () => {
+    if (resumeVerified) {
+      setResumeApproved(true);
+      return;
+    }
+    setVerifyingResume(true);
+    try {
+      const res = await fetch('/api/user/resume', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume, verify: true }),
+      });
+      if (res.ok) {
+        setResumeApproved(true);
+        setResumeVerified(true);
+      } else {
+        setError('Failed to verify resume. Please ensure your resume has a name and content.');
+      }
+    } catch {
+      setError('Failed to verify resume.');
+    } finally {
+      setVerifyingResume(false);
+    }
+  };
+
+  const canProceedStep0 = resumeApproved && resumeVerified;
   const canProceedStep1 = jobTitle.trim().length > 0;
   const canSubmit = canProceedStep0 && canProceedStep1;
 
@@ -417,16 +444,22 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
                     {/* Approve / Edit actions */}
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => setResumeApproved(true)}
+                        onClick={handleApproveResume}
+                        disabled={verifyingResume || (resumeApproved && resumeVerified)}
                         className={cn(
                           'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-                          resumeApproved
+                          resumeApproved && resumeVerified
                             ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30'
                             : 'bg-emerald-600 text-white hover:bg-emerald-700',
                         )}
                       >
-                        {resumeApproved ? <Check className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                        {resumeApproved ? 'Resume Approved' : 'Approve Resume'}
+                        {verifyingResume ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</>
+                        ) : resumeApproved && resumeVerified ? (
+                          <><ShieldCheck className="w-4 h-4" /> Resume Verified</>
+                        ) : (
+                          <><Shield className="w-4 h-4" /> Verify &amp; Approve Resume</>
+                        )}
                       </button>
                       <a
                         href="/dashboard/resume"
