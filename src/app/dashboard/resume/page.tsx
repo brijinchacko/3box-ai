@@ -232,16 +232,9 @@ function AutopilotResume() {
           }));
           if (data.resumeId) setResumeId(data.resumeId);
           setIsVerified(!!data.isFinalized);
-          // Check if resume has real content (summary OR experience OR 3+ skills)
-          const hasContent = data.resume.summary || (data.resume.experience?.length > 0) || (data.resume.skills?.length >= 3);
-          if (hasContent) {
-            setIsFirstTime(false);
-            // Generate AI suggestions for what to improve
-            generateAISuggestions(data.resume);
-          } else {
-            // Auto-generate resume using profile data — never show empty
-            autoGenerateResume(data.resume?.contact?.name || session?.user?.name || '');
-          }
+          setIsFirstTime(false);
+          // Only generate AI suggestions — never auto-generate over an existing DB resume
+          generateAISuggestions(data.resume);
         } else {
           // No resume at all — auto-generate
           autoGenerateResume(session?.user?.name || '');
