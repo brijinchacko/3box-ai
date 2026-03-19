@@ -213,12 +213,19 @@ function AutopilotResume() {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
-  // Sanitize bullet text: remove markdown bold, leading bullet chars
-  const sanitizeBullet = (b: string) => b
-    .replace(/\*\*/g, '')           // Remove **bold**
-    .replace(/^[•·\-*]\s*/g, '')    // Remove leading bullet markers
-    .replace(/^#{1,3}\s*/, '')      // Remove markdown headings
-    .trim();
+  // Sanitize bullet text: remove markdown bold, leading bullet chars, etc.
+  const sanitizeBullet = (b: string) => {
+    let clean = b
+      .replace(/^\*\*.*?\*\*\s*/, '')  // Remove **bold prefix** like **Spearheaded**
+      .replace(/\*\*/g, '')             // Remove remaining ** markers
+      .replace(/^#{1,3}\s*/, '')        // Remove markdown headings
+      .trim();
+    // Remove leading bullet markers (may appear multiple times: "• · Spearheaded")
+    while (/^[•·●\-*]\s*/.test(clean)) {
+      clean = clean.replace(/^[•·●\-*]\s*/, '').trim();
+    }
+    return clean;
+  };
 
   // Clean experience bullets from DB or AI
   const cleanExperience = (exps: any[]) => (exps || []).map((exp: any) => {
@@ -599,12 +606,7 @@ function AutopilotResume() {
             experience: prev.experience.map((exp, i) => {
               const enhanced = parsed.experience[i];
               if (!enhanced) return exp;
-              const cleanBullet = (b: string) => b
-                .replace(/^\*\*.*?\*\*\s*/, '')  // Remove **bold prefix**
-                .replace(/\*\*/g, '')              // Remove remaining ** markers
-                .replace(/^[•\-*]\s*/, '')         // Remove bullet markers
-                .replace(/^#{1,3}\s*/, '')          // Remove markdown headings
-                .trim();
+              const cleanBullet = (b: string) => sanitizeBullet(b);
               const cleanedBullets = (enhanced.bullets || [])
                 .map((b: string) => cleanBullet(b))
                 .filter((b: string) => {
