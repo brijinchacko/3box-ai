@@ -25,9 +25,25 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface EditProfileData {
+  id: string;
+  jobTitle: string;
+  location?: string;
+  remote?: boolean;
+  experienceLevel?: string;
+  boards?: string;
+  includeKeywords?: string;
+  excludeKeywords?: string;
+  excludeCompanies?: string;
+  matchTolerance?: number;
+  autoSearch?: boolean;
+  autoApply?: boolean;
+}
+
 interface SearchProfileWizardProps {
   onClose: () => void;
   onComplete: () => void;
+  editProfile?: EditProfileData;
 }
 
 interface ResumeData {
@@ -62,31 +78,35 @@ const STEPS = [
   { id: 'apply', label: 'Box 3: Auto-Apply', icon: Zap },
 ];
 
-export default function SearchProfileWizard({ onClose, onComplete }: SearchProfileWizardProps) {
-  const [step, setStep] = useState(0);
+export default function SearchProfileWizard({ onClose, onComplete, editProfile }: SearchProfileWizardProps) {
+  const isEditing = !!editProfile;
+  // In edit mode, skip resume step (step 0) and go straight to job config
+  const [step, setStep] = useState(isEditing ? 1 : 0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Step 0: Resume verification
   const [resume, setResume] = useState<ResumeData | null>(null);
   const [resumeLoading, setResumeLoading] = useState(true);
-  const [resumeApproved, setResumeApproved] = useState(false);
-  const [resumeVerified, setResumeVerified] = useState(false);
+  const [resumeApproved, setResumeApproved] = useState(isEditing);
+  const [resumeVerified, setResumeVerified] = useState(isEditing);
 
-  // Step 1: Job Search config
-  const [jobTitle, setJobTitle] = useState('');
-  const [location, setLocation] = useState('');
-  const [remote, setRemote] = useState(false);
-  const [experienceLevel, setExperienceLevel] = useState('');
-  const [includeKeywords, setIncludeKeywords] = useState('');
-  const [excludeKeywords, setExcludeKeywords] = useState('');
-  const [excludeCompanies, setExcludeCompanies] = useState('');
-  const [matchTolerance, setMatchTolerance] = useState(70);
-  const [selectedBoards, setSelectedBoards] = useState<string[]>(['linkedin', 'indeed']);
+  // Step 1: Job Search config — pre-fill from editProfile if editing
+  const [jobTitle, setJobTitle] = useState(editProfile?.jobTitle || '');
+  const [location, setLocation] = useState(editProfile?.location || '');
+  const [remote, setRemote] = useState(editProfile?.remote || false);
+  const [experienceLevel, setExperienceLevel] = useState(editProfile?.experienceLevel || '');
+  const [includeKeywords, setIncludeKeywords] = useState(editProfile?.includeKeywords || '');
+  const [excludeKeywords, setExcludeKeywords] = useState(editProfile?.excludeKeywords || '');
+  const [excludeCompanies, setExcludeCompanies] = useState(editProfile?.excludeCompanies || '');
+  const [matchTolerance, setMatchTolerance] = useState(editProfile?.matchTolerance || 70);
+  const [selectedBoards, setSelectedBoards] = useState<string[]>(
+    editProfile?.boards ? editProfile.boards.split(',').filter(Boolean) : ['linkedin', 'indeed'],
+  );
 
   // Step 2: Automation + Email
-  const [autoSearch, setAutoSearch] = useState(true);
-  const [autoApply, setAutoApply] = useState(false);
+  const [autoSearch, setAutoSearch] = useState(editProfile?.autoSearch ?? true);
+  const [autoApply, setAutoApply] = useState(editProfile?.autoApply ?? false);
   const [emailStatus, setEmailStatus] = useState<'loading' | 'connected' | 'not-connected'>('loading');
   const [emailProvider, setEmailProvider] = useState<string | null>(null);
 
@@ -153,28 +173,33 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
     setSubmitting(true);
     setError(null);
 
+    const payload = {
+      jobTitle: jobTitle.trim(),
+      location: location.trim() || undefined,
+      remote,
+      experienceLevel: experienceLevel || undefined,
+      includeKeywords: includeKeywords.trim() || undefined,
+      excludeKeywords: excludeKeywords.trim() || undefined,
+      excludeCompanies: excludeCompanies.trim() || undefined,
+      matchTolerance,
+      boards: selectedBoards.length > 0 ? selectedBoards : undefined,
+      autoSearch,
+      autoApply,
+    };
+
     try {
-      const res = await fetch('/api/user/loops', {
-        method: 'POST',
+      const url = isEditing ? `/api/user/loops/${editProfile!.id}` : '/api/user/loops';
+      const method = isEditing ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobTitle: jobTitle.trim(),
-          location: location.trim() || undefined,
-          remote,
-          experienceLevel: experienceLevel || undefined,
-          includeKeywords: includeKeywords.trim() || undefined,
-          excludeKeywords: excludeKeywords.trim() || undefined,
-          excludeCompanies: excludeCompanies.trim() || undefined,
-          matchTolerance,
-          boards: selectedBoards.length > 0 ? selectedBoards : undefined,
-          autoSearch,
-          autoApply,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to create search profile');
+        throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'create'} search profile`);
       }
 
       onComplete();
@@ -777,12 +802,12 @@ export default function SearchProfileWizard({ onClose, onComplete }: SearchProfi
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Activating...
+                  {isEditing ? 'Saving...' : 'Activating...'}
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  Activate Your 3BOX
+                  {isEditing ? 'Save Changes' : 'Activate Your 3BOX'}
                 </>
               )}
             </button>

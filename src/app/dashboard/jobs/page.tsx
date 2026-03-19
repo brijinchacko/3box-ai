@@ -306,6 +306,14 @@ interface SavedProfile {
   jobsFound: number;
   appliedCount: number;
   createdAt: string;
+  experienceLevel?: string;
+  boards?: string;
+  includeKeywords?: string;
+  excludeKeywords?: string;
+  excludeCompanies?: string;
+  matchTolerance?: number;
+  autoApply?: boolean;
+  autoSearch?: boolean;
 }
 
 
@@ -314,6 +322,8 @@ function AutopilotJobSearch() {
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<SavedProfile | null>(null);
+  const [stoppedProfiles, setStoppedProfiles] = useState<SavedProfile[]>([]);
 
   // Search results state
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -348,11 +358,19 @@ function AutopilotJobSearch() {
     } catch {}
   };
 
-  const deleteProfile = async (profileId: string) => {
+  const stopProfile = async (profileId: string) => {
+    const profile = profiles.find(p => p.id === profileId);
     try {
       await fetch(`/api/user/loops/${profileId}`, { method: 'DELETE' });
       setProfiles(prev => prev.filter(l => l.id !== profileId));
+      // Move to history
+      if (profile) setStoppedProfiles(prev => [{ ...profile, active: false }, ...prev]);
     } catch {}
+  };
+
+  const openEditWizard = (profile: SavedProfile) => {
+    setEditingProfile(profile);
+    setShowWizard(true);
   };
 
   return (
@@ -377,11 +395,26 @@ function AutopilotJobSearch() {
       {/* Search Profile Wizard Modal */}
       {showWizard && (
         <SearchProfileWizard
-          onClose={() => setShowWizard(false)}
+          onClose={() => { setShowWizard(false); setEditingProfile(null); }}
           onComplete={() => {
             setShowWizard(false);
+            setEditingProfile(null);
             fetchProfiles();
           }}
+          editProfile={editingProfile ? {
+            id: editingProfile.id,
+            jobTitle: editingProfile.jobTitle,
+            location: editingProfile.location,
+            remote: editingProfile.remote,
+            experienceLevel: editingProfile.experienceLevel,
+            boards: editingProfile.boards,
+            includeKeywords: editingProfile.includeKeywords,
+            excludeKeywords: editingProfile.excludeKeywords,
+            excludeCompanies: editingProfile.excludeCompanies,
+            matchTolerance: editingProfile.matchTolerance,
+            autoSearch: editingProfile.autoSearch,
+            autoApply: editingProfile.autoApply,
+          } : undefined}
         />
       )}
 
@@ -450,17 +483,22 @@ function AutopilotJobSearch() {
                   {profiles.map(profile => (
                     <div
                       key={profile.id}
-                      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
+                      className={cn(
+                        'bg-white dark:bg-gray-900 border rounded-xl p-4 transition-colors',
+                        profile.active
+                          ? 'border-green-200 dark:border-green-500/20 hover:border-green-300 dark:hover:border-green-500/30'
+                          : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 opacity-70',
+                      )}
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{profile.name}</h3>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{profile.jobTitle}</h3>
                             <span className={cn(
                               'text-xs px-2 py-0.5 rounded-full font-medium',
                               profile.active
                                 ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
+                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400',
                             )}>
                               {profile.active ? 'Active' : 'Paused'}
                             </span>
@@ -477,6 +515,12 @@ function AutopilotJobSearch() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
+                            onClick={() => openEditWizard(profile)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
                             onClick={() => toggleProfileActive(profile.id, !profile.active)}
                             className={cn(
                               'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
@@ -488,17 +532,47 @@ function AutopilotJobSearch() {
                             {profile.active ? 'Pause' : 'Resume'}
                           </button>
                           <button
-                            onClick={() => deleteProfile(profile.id)}
-                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                            title="Delete profile"
+                            onClick={() => stopProfile(profile.id)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            title="Stop and move to history"
                           >
-                            <X className="w-4 h-4" />
+                            Stop
                           </button>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Stopped / History */}
+                {stoppedProfiles.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <History className="w-3.5 h-3.5" />
+                      History
+                    </h4>
+                    <div className="space-y-2">
+                      {stoppedProfiles.map(profile => (
+                        <div
+                          key={profile.id}
+                          className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-lg p-3 opacity-60"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{profile.jobTitle}</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                                {profile.location || 'Any location'} — {profile.jobsFound} found, {profile.appliedCount} applied
+                              </span>
+                            </div>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                              Stopped
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               )}
             </div>
           )}

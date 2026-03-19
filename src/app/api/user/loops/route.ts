@@ -23,6 +23,14 @@ export async function GET() {
       jobsFound: true,
       appliedCount: true,
       createdAt: true,
+      experienceLevel: true,
+      boards: true,
+      includeKeywords: true,
+      excludeKeywords: true,
+      excludeCompanies: true,
+      matchTolerance: true,
+      autoApply: true,
+      autoSearch: true,
     },
   });
 
