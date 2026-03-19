@@ -479,6 +479,7 @@ function AutopilotJobSearch() {
                   </button>
                 </div>
               ) : (
+                <>
                 <div className="space-y-3">
                   {profiles.map(profile => (
                     <div
@@ -573,6 +574,7 @@ function AutopilotJobSearch() {
                     </div>
                   </div>
                 )}
+                </>
               )}
             </div>
           )}
