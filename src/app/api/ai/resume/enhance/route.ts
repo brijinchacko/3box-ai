@@ -15,7 +15,23 @@ const SECTION_PROMPTS: Record<string, (targetJob?: string) => string> = {
   skills: (targetJob) =>
     `You are an ATS optimization specialist. Optimize the following skills list for maximum ATS compatibility.${targetJob ? ` Target role: ${targetJob}. Prioritize skills that match this role and add commonly expected skills that are missing.` : ''} Group skills by category and prioritize the most relevant ones. Return JSON: { "enhanced": "<optimized skills section>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
   full: (targetJob) =>
-    `You are a professional resume writer and ATS optimization expert. Rewrite the entire resume content to be professional, ATS-friendly, and compelling.${targetJob ? ` Tailor specifically for the target role: ${targetJob}.` : ''} Improve formatting, add metrics where possible, use strong action verbs, and optimize keywords. Return JSON: { "enhanced": "<full rewritten resume content>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
+    `You are a professional resume writer and ATS optimization expert. Enhance the resume to be professional, ATS-friendly, and compelling.${targetJob ? ` Tailor specifically for the target role: ${targetJob}.` : ''} Improve wording, add metrics where possible, use strong action verbs, and optimize keywords.
+
+Return a JSON object with this EXACT structure:
+{
+  "summary": "enhanced professional summary text",
+  "experience": [
+    {
+      "role": "job title",
+      "company": "company name",
+      "bullets": ["enhanced bullet 1", "enhanced bullet 2", "enhanced bullet 3"]
+    }
+  ],
+  "skills": ["skill1", "skill2"],
+  "suggestions": ["improvement suggestion 1", "improvement suggestion 2"]
+}
+
+IMPORTANT: Return ONLY valid JSON. The experience array must match the same jobs in the same order as the input. Each bullet should start with a strong action verb and include metrics where possible.`,
 };
 
 export async function POST(req: Request) {

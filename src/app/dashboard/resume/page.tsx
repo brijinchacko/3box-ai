@@ -545,20 +545,59 @@ function AutopilotResume() {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.enhanced) {
-          // Try to parse as JSON structure, or use as full text
+        // The API now returns structured data for 'full' enhancement
+        // data.enhanced can be: { summary, experience, skills } or a string
+        let parsed: any = null;
+        try {
+          parsed = typeof data.enhanced === 'string' ? JSON.parse(data.enhanced) : data.enhanced;
+        } catch {
+          // Not JSON — try extracting JSON from the string
           try {
-            const parsed = typeof data.enhanced === 'string' ? JSON.parse(data.enhanced) : data.enhanced;
-            if (parsed.summary) setResume(prev => ({ ...prev, summary: parsed.summary }));
-            if (parsed.experience) setResume(prev => ({ ...prev, experience: parsed.experience }));
-            if (parsed.skills) setResume(prev => ({ ...prev, skills: parsed.skills }));
-          } catch {
-            // If not JSON, enhance the summary at minimum
-            setResume(prev => ({ ...prev, summary: data.enhanced }));
+            const jsonMatch = (data.enhanced || '').match(/\{[\s\S]*\}/);
+            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+          } catch { /* ignore */ }
+        }
+
+        if (parsed?.summary) {
+          // Clean any leftover JSON/markdown artifacts from summary
+          const cleanSummary = parsed.summary.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+          setResume(prev => ({ ...prev, summary: cleanSummary }));
+        }
+
+        if (parsed?.experience && Array.isArray(parsed.experience)) {
+          setResume(prev => ({
+            ...prev,
+            experience: prev.experience.map((exp, i) => {
+              const enhanced = parsed.experience[i];
+              if (!enhanced) return exp;
+              return {
+                ...exp,
+                role: enhanced.role || exp.role,
+                company: enhanced.company || exp.company,
+                bullets: enhanced.bullets?.length > 0
+                  ? enhanced.bullets.map((b: string) => b.replace(/^[•\-*]\s*/, '').trim())
+                  : exp.bullets,
+              };
+            }),
+          }));
+        }
+
+        if (parsed?.skills && Array.isArray(parsed.skills)) {
+          setResume(prev => ({ ...prev, skills: parsed.skills }));
+        }
+
+        if (!parsed) {
+          // Fallback: enhance summary only, but clean any JSON artifacts
+          const clean = (data.enhanced || '').replace(/```json[\s\S]*```/g, '').replace(/\{[\s\S]*\}/g, '').trim();
+          if (clean.length > 20) {
+            setResume(prev => ({ ...prev, summary: clean }));
           }
         }
 
-        // Also enhance each experience individually if we have them
+        // Skip individual experience enhancement since 'full' already covers it
+        const _skipIndividualEnhance = true;
+        if (!_skipIndividualEnhance)
+        // Legacy: enhance each experience individually if 'full' didn't return structured data
         for (let i = 0; i < resume.experience.length; i++) {
           const exp = resume.experience[i];
           const bullets = (exp.bullets || []).filter(Boolean);
