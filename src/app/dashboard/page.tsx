@@ -92,13 +92,16 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [bulkToggling, setBulkToggling] = useState(false);
+  const [resumeVerified, setResumeVerified] = useState(false);
 
   const activeCount = profiles.filter(p => p.active).length;
   const totalFound = profiles.reduce((sum, p) => sum + p.jobsFound, 0);
   const totalApplied = profiles.reduce((sum, p) => sum + p.appliedCount, 0);
   const hasProfiles = profiles.length > 0;
   const allPaused = hasProfiles && activeCount === 0;
-  const isActive = activeCount > 0;
+  // Auto-apply is truly active only when resume is verified AND pipelines are running
+  const isActive = activeCount > 0 && resumeVerified;
+  const needsSetup = activeCount > 0 && !resumeVerified;
 
   const fetchProfiles = useCallback(() => {
     fetch('/api/user/loops')
@@ -111,6 +114,14 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
   }, []);
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
+
+  // Check resume verification status
+  useEffect(() => {
+    fetch('/api/user/resume')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.isFinalized) setResumeVerified(true); })
+      .catch(() => {});
+  }, []);
 
   const toggleProfile = async (id: string, active: boolean) => {
     setTogglingId(id);
@@ -201,6 +212,30 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
                   {bulkToggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
                   Pause All
                 </button>
+              </div>
+            </div>
+          )}
+
+          {needsSetup && (
+            <div className="mb-6 p-4 rounded-xl border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-300">Auto-Apply Needs Setup</p>
+                    <p className="text-xs text-red-600 dark:text-red-400/70 mt-0.5">
+                      Verify your resume before auto-apply can start sending applications.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard/resume"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-300 dark:border-red-500/30 bg-white dark:bg-red-500/10 text-red-700 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors"
+                >
+                  Verify Resume
+                </Link>
               </div>
             </div>
           )}

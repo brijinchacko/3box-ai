@@ -432,9 +432,13 @@ export default function DashboardStatusBar() {
   // Critical issues = things that actually prevent auto-apply from working
   const criticalIssues = [
     !status.hasResume,
+    status.hasResume && !status.resumeVerified,
     status.profileCount === 0,
     status.dailyLimitReached,
   ].filter(Boolean).length;
+
+  // Auto-apply can only be truly active if resume is verified
+  const isReady = status.resumeVerified && status.activeCount > 0;
 
   // Warnings = nice-to-have improvements (don't block status from showing "Active")
   const setupIssues = [
@@ -453,23 +457,25 @@ export default function DashboardStatusBar() {
   const barColor = isLocked ? 'bg-red-500' : percent >= 90 ? 'bg-red-500' : percent >= 60 ? 'bg-amber-500' : 'bg-blue-500';
   const periodLabel = limitType === 'lifetime' ? 'total' : 'today';
 
-  // Auto-apply status — show Active when pipelines are running, even with non-critical warnings
+  // Auto-apply status — only Active when resume verified + pipelines running
   const statusDot = status.dailyLimitReached
     ? 'bg-red-500'
-    : status.activeCount > 0
+    : isReady
       ? 'bg-green-500 animate-pulse'
-      : setupIssues > 0
+      : criticalIssues > 0
         ? 'bg-amber-500'
-        : 'bg-gray-400';
+        : status.activeCount > 0
+          ? 'bg-amber-500'
+          : 'bg-gray-400';
 
   const statusLabel = status.dailyLimitReached
     ? 'Limit Reached'
-    : status.activeCount > 0
+    : isReady
       ? 'Active'
-      : status.profileCount > 0
-        ? 'Paused'
-        : criticalIssues > 0
-          ? 'Needs Setup'
+      : criticalIssues > 0
+        ? 'Needs Setup'
+        : status.profileCount > 0
+          ? 'Paused'
           : 'Not Set Up';
 
   // Format lastRunAt
