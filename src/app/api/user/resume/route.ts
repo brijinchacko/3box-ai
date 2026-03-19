@@ -54,58 +54,28 @@ export async function GET() {
     });
   }
 
-  // No resume at all — try to populate from CareerTwin profile
-  const [user, twin] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
-    prisma.careerTwin.findUnique({ where: { userId }, select: { skillSnapshot: true, interests: true, targetRoles: true } }),
-  ]);
-
-  const snapshot = twin?.skillSnapshot as any;
-  const profile = snapshot?._profile || {};
-  const interests = (twin?.interests as string[]) || [];
-  const targetRoles = twin?.targetRoles as any;
-  const targetRole = Array.isArray(targetRoles) && targetRoles.length > 0
-    ? (typeof targetRoles[0] === 'string' ? targetRoles[0] : targetRoles[0]?.title || '')
-    : '';
-
-  // Build skills from snapshot (exclude _profile key)
-  const skills = snapshot
-    ? Object.keys(snapshot).filter(k => k !== '_profile')
-    : interests;
+  // No resume record — return a blank resume with only name/email
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
 
   const freshResume = {
     id: '1',
-    title: targetRole ? `${targetRole} Resume` : 'My Resume',
+    title: 'My Resume',
     template: 'modern',
     contact: {
       name: user?.name || '',
       email: user?.email || '',
-      phone: profile.phone || '',
-      location: profile.location || '',
-      linkedin: profile.linkedin || '',
+      phone: '',
+      location: '',
+      linkedin: '',
       portfolio: '',
     },
-    summary: profile.bio || '',
-    experience: (profile.experiences || []).map((exp: any, i: number) => ({
-      id: String(i + 1),
-      company: exp.company || '',
-      role: exp.title || '',
-      location: '',
-      startDate: exp.duration?.split('-')[0]?.trim() || '',
-      endDate: exp.duration?.split('-')[1]?.trim() || '',
-      current: false,
-      bullets: exp.description ? [exp.description] : [],
-    })),
-    education: profile.educationLevel ? [{
-      id: '1',
-      institution: profile.institution || '',
-      degree: profile.educationLevel || '',
-      field: profile.fieldOfStudy || '',
-      startDate: '',
-      endDate: profile.graduationYear || '',
-      gpa: '',
-    }] : [],
-    skills,
+    summary: '',
+    experience: [],
+    education: [],
+    skills: [],
     certifications: [],
     projects: [],
   };
