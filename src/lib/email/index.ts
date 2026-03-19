@@ -18,14 +18,21 @@ const APP_URL = process.env.NEXTAUTH_URL || 'https://3box.ai';
 
 // ─── Core send function ──────────────────────────
 
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<{ id?: string; error?: string }> {
+export async function sendEmail({ to, subject, html, text, attachments }: SendEmailParams): Promise<{ id?: string; error?: string }> {
   if (!process.env.RESEND_API_KEY) {
     console.log(`[Email] Would send to ${to}: ${subject}`);
     return { id: 'demo-mode' };
@@ -40,6 +47,13 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
       subject,
       html,
       text,
+      ...(attachments?.length ? {
+        attachments: attachments.map(a => ({
+          filename: a.filename,
+          content: a.content,
+          content_type: a.contentType,
+        })),
+      } : {}),
     });
 
     if (error) {
@@ -500,6 +514,7 @@ export async function sendJobApplicationEmail({
   company,
   coverLetter,
   resumeUrl,
+  resumePdf,
 }: {
   to: string;
   candidateName: string;
@@ -508,6 +523,7 @@ export async function sendJobApplicationEmail({
   company: string;
   coverLetter: string;
   resumeUrl?: string;
+  resumePdf?: Buffer;
 }): Promise<{ id?: string; error?: string }> {
   const subject = `Application for ${jobTitle} — ${candidateName}`;
 
@@ -543,7 +559,13 @@ export async function sendJobApplicationEmail({
 
   const text = `Dear Hiring Manager,\n\n${coverLetter}\n\n${resumeUrl ? `Resume: ${resumeUrl}\n\n` : ''}Best regards,\n${candidateName}\n${candidateEmail}`;
 
-  return sendEmail({ to, subject, html, text });
+  const attachments: EmailAttachment[] = [];
+  if (resumePdf) {
+    const safeName = candidateName.replace(/[^a-zA-Z0-9_\- ]/g, '').replace(/\s+/g, '_');
+    attachments.push({ filename: `${safeName}_Resume.pdf`, content: resumePdf, contentType: 'application/pdf' });
+  }
+
+  return sendEmail({ to, subject, html, text, attachments: attachments.length ? attachments : undefined });
 }
 
 // ─── Agent Run Summary Email ────────────────────

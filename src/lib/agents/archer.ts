@@ -21,6 +21,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback } from '@/lib/ai/openrouter';
 import { sendEmail } from '@/lib/email';
+import { generateResumePdf } from '@/lib/resume/generatePdf';
 import { findCompanyEmail as findVerifiedEmail, type EmailFinderResult } from '@/lib/email/emailFinder';
 import { routeApplication, detectATSType, type RouteDecision, type ApplicationChannel } from '@/lib/ats/router';
 import { smartRouteApplication } from '@/lib/ats/smartRouter';
@@ -358,11 +359,22 @@ async function executeColdEmailApplication(
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
 
   try {
+    // Generate PDF resume to attach
+    let attachments: { filename: string; content: Buffer; contentType: string }[] = [];
+    try {
+      const pdfBuffer = await generateResumePdf(resume as any);
+      const safeName = resume.contact.name.replace(/[^a-zA-Z0-9_\- ]/g, '').replace(/\s+/g, '_');
+      attachments = [{ filename: `${safeName}_Resume.pdf`, content: pdfBuffer, contentType: 'application/pdf' }];
+    } catch (pdfErr) {
+      console.warn('[Archer] PDF generation failed, sending without attachment:', pdfErr);
+    }
+
     const emailResult = await sendEmail({
       to: emailInfo.email,
       subject: emailSubject,
       html: emailBody,
       text: `${coverLetter}\n\nBest regards,\n${resume.contact.name}\n${resume.contact.email}\n${resume.contact.phone}`,
+      attachments,
     });
 
     const applicationId = await recordApplication(
