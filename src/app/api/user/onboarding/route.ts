@@ -118,6 +118,12 @@ export async function POST(request: NextRequest) {
     // so the dashboard resume builder can load and edit it immediately.
     if (profile) {
       try {
+        // Split duration on both hyphen and em-dash
+        const splitDuration = (d: string) => {
+          const sep = d.includes('–') ? '–' : d.includes('—') ? '—' : '-';
+          return d.split(sep).map((s: string) => s.trim());
+        };
+
         const editorResume = {
           id: '1',
           title: `${targetRole} Resume`,
@@ -131,16 +137,24 @@ export async function POST(request: NextRequest) {
             portfolio: '',
           },
           summary: profile.bio || '',
-          experience: (profile.experiences || []).map((e: any, i: number) => ({
-            id: String(i + 1),
-            company: e.company || '',
-            role: e.title || '',
-            location: '',
-            startDate: e.duration?.split('-')[0]?.trim() || '',
-            endDate: e.duration?.split('-')[1]?.trim() || '',
-            current: false,
-            bullets: e.description ? [e.description] : [],
-          })),
+          experience: (profile.experiences || []).map((e: any, i: number) => {
+            const [start, end] = e.duration ? splitDuration(e.duration) : ['', ''];
+            // Split description into bullet points on sentence boundaries
+            const desc = e.description || '';
+            const bullets = desc.includes('. ')
+              ? desc.split(/\.\s+/).filter((s: string) => s.trim()).map((s: string) => s.trim().replace(/\.?$/, '.'))
+              : desc ? [desc] : [];
+            return {
+              id: String(i + 1),
+              company: e.company || '',
+              role: e.title || '',
+              location: '',
+              startDate: start || '',
+              endDate: end || '',
+              current: (end || '').toLowerCase().includes('present'),
+              bullets,
+            };
+          }),
           education: profile.educationLevel ? [{
             id: '1',
             institution: profile.institution || '',
@@ -153,6 +167,8 @@ export async function POST(request: NextRequest) {
           skills: profile.skills || [],
           certifications: [],
           projects: [],
+          // Store raw resume text so the resume builder can re-parse if needed
+          ...(resumeText ? { rawResumeText: resumeText } : {}),
         };
 
         await prisma.resume.create({
@@ -163,9 +179,8 @@ export async function POST(request: NextRequest) {
             template: 'modern',
             targetJob: targetRole,
             sourceType: 'onboarding',
-            isFinalized: true,
-            approvalStatus: 'approved',
-            approvedAt: new Date(),
+            isFinalized: false,
+            approvalStatus: 'draft',
           },
         });
       } catch (resumeErr) {
