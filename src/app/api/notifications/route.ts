@@ -139,7 +139,7 @@ export async function GET() {
     }
 
     // 4. Search pipeline status
-    const loops = await prisma.searchLoop.findMany({
+    const loops = await prisma.searchProfile.findMany({
       where: { userId },
       select: { active: true },
     });

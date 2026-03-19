@@ -106,6 +106,50 @@ export async function POST(req: Request) {
   }
 }
 
+/* PATCH /api/user/loops — Bulk pause/resume all profiles */
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
+  try {
+    const { action } = await req.json();
+
+    if (action === 'pause_all') {
+      await prisma.searchProfile.updateMany({
+        where: { userId, active: true },
+        data: { active: false },
+      });
+    } else if (action === 'resume_all') {
+      await prisma.searchProfile.updateMany({
+        where: { userId, active: false },
+        data: { active: true },
+      });
+    } else {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    await syncAutoApplyConfig(userId);
+
+    const profiles = await prisma.searchProfile.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, name: true, jobTitle: true, location: true,
+        remote: true, active: true, jobsFound: true, appliedCount: true, createdAt: true,
+      },
+    });
+
+    return NextResponse.json({ profiles, action });
+  } catch (err) {
+    console.error('[loops/PATCH]', err);
+    return NextResponse.json({ error: 'Failed to update profiles' }, { status: 500 });
+  }
+}
+
 /* ─── Helpers ──────────────────────────────────────────── */
 
 /**

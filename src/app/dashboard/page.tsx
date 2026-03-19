@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
-import { Plus, Search, MapPin, Pause, Play, Trash2, Loader2, FileEdit, Mic, Target, CheckCircle2, Sparkles, ArrowRight, Chrome, X } from 'lucide-react';
+import { Plus, Search, MapPin, Pause, Play, Trash2, Loader2, FileEdit, Mic, Target, CheckCircle2, Sparkles, ArrowRight, Chrome, X, Zap, Power } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -91,6 +91,14 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [bulkToggling, setBulkToggling] = useState(false);
+
+  const activeCount = profiles.filter(p => p.active).length;
+  const totalFound = profiles.reduce((sum, p) => sum + p.jobsFound, 0);
+  const totalApplied = profiles.reduce((sum, p) => sum + p.appliedCount, 0);
+  const hasProfiles = profiles.length > 0;
+  const allPaused = hasProfiles && activeCount === 0;
+  const isActive = activeCount > 0;
 
   const fetchProfiles = useCallback(() => {
     fetch('/api/user/loops')
@@ -117,6 +125,22 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
     setTogglingId(null);
   };
 
+  const bulkToggle = async (action: 'pause_all' | 'resume_all') => {
+    setBulkToggling(true);
+    try {
+      const res = await fetch('/api/user/loops', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.profiles) setProfiles(data.profiles);
+      }
+    } catch {}
+    setBulkToggling(false);
+  };
+
   const deleteProfile = async (id: string) => {
     try {
       await fetch(`/api/user/loops/${id}`, { method: 'DELETE' });
@@ -135,7 +159,7 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
             Here&apos;s what your 3BOX is doing for you.
           </p>
         </div>
-        {profiles.length > 0 && (
+        {hasProfiles && (
           <button
             onClick={() => setShowWizard(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
@@ -145,6 +169,88 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
           </button>
         )}
       </div>
+
+      {/* ═══ AUTO-APPLY STATUS BANNER ═══ */}
+      {!loadingProfiles && (
+        <>
+          {isActive && (
+            <div className="mb-6 p-4 rounded-xl border border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-green-800 dark:text-green-300">Auto-Apply is Active</p>
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-600 dark:text-green-400/70 mt-0.5">
+                      {activeCount} pipeline{activeCount !== 1 ? 's' : ''} running — {totalFound} jobs found, {totalApplied} applied
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => bulkToggle('pause_all')}
+                  disabled={bulkToggling}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm font-medium hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
+                >
+                  {bulkToggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
+                  Pause All
+                </button>
+              </div>
+            </div>
+          )}
+
+          {allPaused && (
+            <div className="mb-6 p-4 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+                    <Pause className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Auto-Apply is Paused</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400/70 mt-0.5">
+                      {profiles.length} pipeline{profiles.length !== 1 ? 's' : ''} paused — resume to continue searching & applying
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => bulkToggle('resume_all')}
+                  disabled={bulkToggling}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
+                >
+                  {bulkToggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  Resume All
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!hasProfiles && (
+            <div className="mb-6 p-6 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Start Auto-Applying to Jobs</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
+                Set up your pipeline in 3 simple steps: verify your resume, choose your target role, and let AI agents search & apply automatically.
+              </p>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Power className="w-4 h-4" />
+                Set Up Auto-Apply
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       <StatsCards />
 
@@ -193,16 +299,27 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
       {/* Chrome Extension CTA */}
       <ExtensionBanner />
 
-      {/* Search Profiles section */}
-      {(profiles.length > 0 || loadingProfiles) && (
+      {/* Search Profiles / Pipelines section */}
+      {(hasProfiles || loadingProfiles) && (
         <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
               Your 3BOX Pipelines
             </h3>
-            <span className="text-xs text-gray-400">
-              {profiles.filter(p => p.active).length} active
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400">
+                {activeCount} active of {profiles.length}
+              </span>
+              {profiles.length > 1 && (
+                <button
+                  onClick={() => bulkToggle(isActive ? 'pause_all' : 'resume_all')}
+                  disabled={bulkToggling}
+                  className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  {bulkToggling ? '...' : isActive ? 'Pause all' : 'Resume all'}
+                </button>
+              )}
+            </div>
           </div>
 
           {loadingProfiles ? (
@@ -251,8 +368,13 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
                     <button
                       onClick={() => toggleProfile(profile.id, profile.active)}
                       disabled={togglingId === profile.id}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                      title={profile.active ? 'Pause' : 'Resume'}
+                      className={cn(
+                        'p-1.5 rounded-lg transition-colors',
+                        profile.active
+                          ? 'hover:bg-amber-50 dark:hover:bg-amber-500/10 text-amber-500 hover:text-amber-600'
+                          : 'hover:bg-green-50 dark:hover:bg-green-500/10 text-green-500 hover:text-green-600',
+                      )}
+                      title={profile.active ? 'Pause pipeline' : 'Resume pipeline'}
                     >
                       {togglingId === profile.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -265,7 +387,7 @@ function AutopilotDashboard({ firstName }: { firstName: string }) {
                     <button
                       onClick={() => deleteProfile(profile.id)}
                       className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Delete"
+                      title="Delete pipeline"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
