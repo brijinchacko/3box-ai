@@ -7,8 +7,7 @@
  */
 import { google } from 'googleapis';
 import { encrypt, decrypt } from './encryption';
-
-const { prisma } = require('@/lib/db/prisma');
+import { prisma } from '@/lib/db/prisma';
 
 // Use separate OAuth credentials for Gmail (different scopes than NextAuth Google login)
 const GMAIL_CLIENT_ID = process.env.GOOGLE_GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
@@ -48,11 +47,11 @@ export async function handleGmailCallback(
       return { success: false, error: 'No tokens received. Try disconnecting and reconnecting.' };
     }
 
-    // Get user's Gmail address
+    // Get user's Gmail address via userinfo (covered by userinfo.email scope)
     oauth2Client.setCredentials(tokens);
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-    const profile = await gmail.users.getProfile({ userId: 'me' });
-    const email = profile.data.emailAddress;
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const userInfo = await oauth2.userinfo.get();
+    const email = userInfo.data.email;
 
     if (!email) {
       return { success: false, error: 'Could not retrieve email address' };

@@ -280,6 +280,27 @@ export default function SettingsPage() {
   }>({});
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailDisconnecting, setEmailDisconnecting] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+
+  // Handle email connection callback params from URL
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const connected = searchParams.get('email_connected');
+    const email = searchParams.get('email');
+    if (error) {
+      setEmailError(decodeURIComponent(error));
+      setActiveTab('email');
+      // Clean URL
+      window.history.replaceState({}, '', '/dashboard/settings?tab=email');
+    }
+    if (connected) {
+      setEmailSuccess(`${email || 'Email'} connected successfully!`);
+      setActiveTab('email');
+      fetchEmailConnections();
+      window.history.replaceState({}, '', '/dashboard/settings?tab=email');
+    }
+  }, [searchParams]);
 
   // ----- Coach state -----
   const [coachPersonality, setCoachPersonality] = useState('friendly');
@@ -841,6 +862,21 @@ export default function SettingsPage() {
                 <p className="text-sm text-white/40 mb-6">
                   Connect your Gmail or Outlook so job applications are sent from your personal email — boosting response rates.
                 </p>
+
+                {emailError && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5">⚠</span>
+                    <span>{emailError}</span>
+                    <button onClick={() => setEmailError(null)} className="ml-auto shrink-0 text-red-400/60 hover:text-red-400">✕</button>
+                  </div>
+                )}
+                {emailSuccess && (
+                  <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5">✓</span>
+                    <span>{emailSuccess}</span>
+                    <button onClick={() => setEmailSuccess(null)} className="ml-auto shrink-0 text-green-400/60 hover:text-green-400">✕</button>
+                  </div>
+                )}
 
                 {emailLoading ? (
                   <div className="flex items-center justify-center py-12">
