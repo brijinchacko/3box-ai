@@ -213,6 +213,35 @@ function AutopilotResume() {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  // Sanitize bullet text: remove markdown bold, leading bullet chars
+  const sanitizeBullet = (b: string) => b
+    .replace(/\*\*/g, '')           // Remove **bold**
+    .replace(/^[•·\-*]\s*/g, '')    // Remove leading bullet markers
+    .replace(/^#{1,3}\s*/, '')      // Remove markdown headings
+    .trim();
+
+  // Clean experience bullets from DB or AI
+  const cleanExperience = (exps: any[]) => (exps || []).map((exp: any) => {
+    // Fix duplicate endDate like "Dec 2021 – Dec 2021" or "Present – Present"
+    let endDate = exp.endDate || '';
+    const endParts = endDate.split(/\s*[–-]\s*/);
+    if (endParts.length > 1) endDate = endParts[endParts.length - 1].trim();
+    return {
+      ...exp,
+      endDate,
+      bullets: (exp.bullets || [])
+        .map((b: string) => sanitizeBullet(b))
+        .filter((b: string) => {
+          if (b.length < 10) return false;
+          // Filter out role-title-only bullets
+          const lower = b.toLowerCase();
+          const role = (exp.role || '').toLowerCase();
+          if (role && lower.includes(role) && lower.includes(exp.company?.toLowerCase() || '___') && b.length < 80) return false;
+          return true;
+        }),
+    };
+  });
+
   // Load resume from DB, then auto-generate if empty
   useEffect(() => {
     fetch('/api/user/resume')
@@ -223,7 +252,7 @@ function AutopilotResume() {
             ...prev,
             ...data.resume,
             contact: { ...prev.contact, ...(data.resume.contact || {}), email: data.resume.contact?.email || session?.user?.email || '' },
-            experience: data.resume.experience || [],
+            experience: cleanExperience(data.resume.experience || []),
             education: data.resume.education || [],
             skills: data.resume.skills || [],
             certifications: data.resume.certifications || [],
@@ -570,13 +599,29 @@ function AutopilotResume() {
             experience: prev.experience.map((exp, i) => {
               const enhanced = parsed.experience[i];
               if (!enhanced) return exp;
+              const cleanBullet = (b: string) => b
+                .replace(/^\*\*.*?\*\*\s*/, '')  // Remove **bold prefix**
+                .replace(/\*\*/g, '')              // Remove remaining ** markers
+                .replace(/^[•\-*]\s*/, '')         // Remove bullet markers
+                .replace(/^#{1,3}\s*/, '')          // Remove markdown headings
+                .trim();
+              const cleanedBullets = (enhanced.bullets || [])
+                .map((b: string) => cleanBullet(b))
+                .filter((b: string) => {
+                  if (!b || b.length < 10) return false;
+                  // Filter out bullets that are just role titles or company names
+                  const lower = b.toLowerCase();
+                  const role = (enhanced.role || exp.role || '').toLowerCase();
+                  const company = (enhanced.company || exp.company || '').toLowerCase();
+                  if (role && lower.startsWith(role)) return false;
+                  if (company && lower.includes(company) && b.length < 80 && !lower.includes('led') && !lower.includes('managed') && !lower.includes('developed')) return false;
+                  return true;
+                });
               return {
                 ...exp,
                 role: enhanced.role || exp.role,
                 company: enhanced.company || exp.company,
-                bullets: enhanced.bullets?.length > 0
-                  ? enhanced.bullets.map((b: string) => b.replace(/^[•\-*]\s*/, '').trim())
-                  : exp.bullets,
+                bullets: cleanedBullets.length > 0 ? cleanedBullets : exp.bullets,
               };
             }),
           }));

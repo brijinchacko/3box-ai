@@ -31,7 +31,14 @@ Return a JSON object with this EXACT structure:
   "suggestions": ["improvement suggestion 1", "improvement suggestion 2"]
 }
 
-IMPORTANT: Return ONLY valid JSON. The experience array must match the same jobs in the same order as the input. Each bullet should start with a strong action verb and include metrics where possible.`,
+IMPORTANT RULES:
+- Return ONLY valid JSON, no markdown code fences.
+- The experience array must match the same jobs in the same order as the input.
+- Each bullet should start with a strong action verb and include metrics where possible.
+- Do NOT include **bold** markdown in bullets. Use plain text only.
+- Do NOT include the job title or company name as a bullet point.
+- Do NOT repeat dates in the bullets.
+- Bullets should be achievement-oriented impact statements only.`,
 };
 
 export async function POST(req: Request) {
