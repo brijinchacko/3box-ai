@@ -14,7 +14,7 @@ type OtpStep = 'email' | 'code';
 const ERROR_MESSAGES: Record<string, string> = {
   OAuthCallback: 'Google sign-in failed. Please try again or use email login.',
   OAuthSignin: 'Could not start Google sign-in. Please try email login instead.',
-  OAuthAccountNotLinked: 'This email is already registered. Please sign in with your password or OTP.',
+  OAuthAccountNotLinked: 'Sign-in failed. Please try again or use a different method.',
   CredentialsSignin: 'Invalid email or password.',
   default: 'Something went wrong. Please try again.',
 };
