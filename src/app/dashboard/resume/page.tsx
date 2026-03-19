@@ -2134,10 +2134,15 @@ function AutopilotResume() {
               <button
                 onClick={() => {
                   if (confirm('This will clear all resume data and start fresh. Are you sure?')) {
+                    // Delete from DB first, then reset local state
+                    fetch('/api/user/resume', { method: 'DELETE' }).catch(() => {});
                     setResume({ ...emptyResume });
+                    setResumeId(null as any);
+                    setIsVerified(false);
                     localStorage.removeItem(RESUME_STORAGE_KEY);
                     setUploadedFileName(null);
                     setIsFirstTime(true);
+                    userHasEdited.current = false; // Reset so next load doesn't auto-save
                     showToast('Resume data cleared.', 'success');
                   }
                 }}
