@@ -473,21 +473,44 @@ function AutopilotResume() {
         body: formData,
       });
       if (!res.ok) {
-        showToast('Resume upload coming soon! Use AI Generate instead.', 'error');
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Failed to parse resume. Please try again.', 'error');
         return;
       }
       const data = await res.json();
-      if (data.resume) {
+      const p = data.data; // API returns { success, data: { fullName, experiences, ... } }
+      if (p) {
+        // Convert onboarding-format parsed data to editor-format resume
         setResume(prev => ({
           ...prev,
-          ...data.resume,
-          contact: { ...prev.contact, ...(data.resume.contact || {}) },
-          experience: data.resume.experience || [],
-          education: data.resume.education || [],
-          skills: data.resume.skills || [],
-          skillDescriptions: data.resume.skillDescriptions || {},
-          certifications: data.resume.certifications || [],
-          projects: data.resume.projects || [],
+          contact: {
+            ...prev.contact,
+            name: p.fullName || prev.contact.name,
+            phone: p.phone || prev.contact.phone,
+            location: p.location || prev.contact.location,
+            linkedin: p.linkedin || prev.contact.linkedin,
+          },
+          summary: p.bio || prev.summary,
+          experience: (p.experiences || []).map((exp: any, i: number) => ({
+            id: String(i + 1),
+            company: exp.company || '',
+            role: exp.title || '',
+            location: '',
+            startDate: exp.duration?.split('-')[0]?.trim() || exp.duration?.split('–')[0]?.trim() || '',
+            endDate: exp.duration?.split('-')[1]?.trim() || exp.duration?.split('–')[1]?.trim() || '',
+            current: false,
+            bullets: exp.description ? [exp.description] : [],
+          })),
+          education: p.educationLevel ? [{
+            id: '1',
+            institution: p.institution || '',
+            degree: p.educationLevel || '',
+            field: p.fieldOfStudy || '',
+            startDate: '',
+            endDate: p.graduationYear || '',
+            gpa: '',
+          }] : prev.education,
+          skills: p.skills || prev.skills,
         }));
         setIsFirstTime(false);
         showToast('Resume parsed successfully!', 'success');
