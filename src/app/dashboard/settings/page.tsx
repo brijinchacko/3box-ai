@@ -858,23 +858,30 @@ export default function SettingsPage() {
           {activeTab === 'email' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="card">
-                <h3 className="font-semibold mb-2">Connected Email Accounts</h3>
-                <p className="text-sm text-white/40 mb-6">
-                  Connect your Gmail or Outlook so job applications are sent from your personal email — boosting response rates.
+                <h3 className="font-semibold mb-2 text-left">Connected Email Accounts</h3>
+                <p className="text-sm text-white/40 mb-6 text-left">
+                  Connect your Gmail so job applications are sent from your personal email — boosting response rates.
                 </p>
 
+                {/* Warning: applications go from our email if not connected */}
+                {!emailConnections.gmail && (
+                  <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-left">
+                    If you don&apos;t connect your Gmail, job applications will be sent from our system email address. For better response rates from employers, we strongly recommend connecting your personal Gmail.
+                  </div>
+                )}
+
                 {emailError && (
-                  <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-2">
-                    <span className="shrink-0 mt-0.5">⚠</span>
+                  <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-2 text-left">
+                    <span className="shrink-0 mt-0.5">!</span>
                     <span>{emailError}</span>
-                    <button onClick={() => setEmailError(null)} className="ml-auto shrink-0 text-red-400/60 hover:text-red-400">✕</button>
+                    <button onClick={() => setEmailError(null)} className="ml-auto shrink-0 text-red-400/60 hover:text-red-400">x</button>
                   </div>
                 )}
                 {emailSuccess && (
-                  <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-start gap-2">
-                    <span className="shrink-0 mt-0.5">✓</span>
+                  <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-start gap-2 text-left">
+                    <span className="shrink-0 mt-0.5">OK</span>
                     <span>{emailSuccess}</span>
-                    <button onClick={() => setEmailSuccess(null)} className="ml-auto shrink-0 text-green-400/60 hover:text-green-400">✕</button>
+                    <button onClick={() => setEmailSuccess(null)} className="ml-auto shrink-0 text-green-400/60 hover:text-green-400">x</button>
                   </div>
                 )}
 
@@ -887,10 +894,10 @@ export default function SettingsPage() {
                     {/* Gmail */}
                     <div className="p-4 rounded-xl border border-white/10 bg-white/[.02] flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
                           <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z" fill="#EA4335"/></svg>
                         </div>
-                        <div>
+                        <div className="text-left">
                           <div className="font-medium text-sm">Gmail</div>
                           {emailConnections.gmail ? (
                             <div className="text-xs text-green-400">{emailConnections.gmail.email}</div>
@@ -903,68 +910,46 @@ export default function SettingsPage() {
                         <button
                           onClick={() => disconnectEmail('gmail')}
                           disabled={emailDisconnecting === 'gmail'}
-                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10 transition-colors disabled:opacity-50 shrink-0"
                         >
                           {emailDisconnecting === 'gmail' ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Disconnect'}
                         </button>
                       ) : (
                         <a
                           href="/api/auth/gmail/connect"
-                          className="px-3 py-1.5 rounded-lg bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs hover:bg-neon-blue/20 transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs hover:bg-neon-blue/20 transition-colors shrink-0"
                         >
                           Connect Gmail
                         </a>
                       )}
                     </div>
 
-                    {/* Outlook */}
-                    <div className="p-4 rounded-xl border border-white/10 bg-white/[.02] flex items-center justify-between">
+                    {/* Outlook — Coming Soon */}
+                    <div className="p-4 rounded-xl border border-white/10 bg-white/[.02] flex items-center justify-between opacity-50">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                           <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.3L19.4 7.5 12 11.7 4.6 7.5 12 4.3zM4 9l7.5 4v7.5L4 16.5V9zm9.5 11.5V13L21 9v7.5l-7.5 4z" fill="#0078D4"/></svg>
                         </div>
-                        <div>
+                        <div className="text-left">
                           <div className="font-medium text-sm">Outlook / Microsoft</div>
-                          {emailConnections.outlook ? (
-                            <div className="text-xs text-green-400">{emailConnections.outlook.email}</div>
-                          ) : (
-                            <div className="text-xs text-white/30">Not connected</div>
-                          )}
+                          <div className="text-xs text-white/30">Coming soon</div>
                         </div>
                       </div>
-                      {emailConnections.outlook ? (
-                        <button
-                          onClick={() => disconnectEmail('outlook')}
-                          disabled={emailDisconnecting === 'outlook'}
-                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                        >
-                          {emailDisconnecting === 'outlook' ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Disconnect'}
-                        </button>
-                      ) : (
-                        <a
-                          href="/api/auth/outlook/connect"
-                          className="px-3 py-1.5 rounded-lg bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs hover:bg-neon-blue/20 transition-colors"
-                        >
-                          Connect Outlook
-                        </a>
-                      )}
+                      <span className="px-3 py-1.5 rounded-lg border border-white/10 text-white/30 text-xs shrink-0">
+                        Coming Soon
+                      </span>
                     </div>
                   </div>
                 )}
 
-                {/* SMTP Config for non-Google/Outlook users */}
-                <div className="mt-6">
-                  <SmtpConfigSection />
-                </div>
-
                 {/* Info box */}
-                <div className="mt-6 p-4 rounded-xl bg-neon-blue/5 border border-neon-blue/10">
+                <div className="mt-6 p-4 rounded-xl bg-neon-blue/5 border border-neon-blue/10 text-left">
                   <h4 className="text-xs font-semibold text-neon-blue mb-2">Why Connect Your Email?</h4>
                   <ul className="text-xs text-white/40 space-y-1">
-                    <li>• Applications sent from your personal email have 3× higher response rates</li>
-                    <li>• Employers see your name, not a generic company address</li>
-                    <li>• We only use the &quot;send email&quot; permission — we never read your inbox</li>
-                    <li>• You can disconnect at any time</li>
+                    <li>Applications sent from your personal email have 3x higher response rates</li>
+                    <li>Employers see your name, not a generic company address</li>
+                    <li>We only use the &quot;send email&quot; permission — we never read your inbox</li>
+                    <li>You can disconnect at any time</li>
                   </ul>
                 </div>
               </div>

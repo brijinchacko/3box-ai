@@ -106,12 +106,12 @@ export async function GET() {
     }
 
     // 3. Check user profile completeness
-    const userProfile = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { resumeData: true, targetRole: true },
+    const userResume = await prisma.resume.findFirst({
+      where: { userId },
+      select: { id: true },
     });
 
-    if (!userProfile?.resumeData) {
+    if (!userResume) {
       notifications.push({
         id: 'no-resume',
         type: 'warning',
@@ -122,12 +122,17 @@ export async function GET() {
       });
     }
 
-    if (!userProfile?.targetRole) {
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { onboardingDone: true },
+    });
+
+    if (!userProfile?.onboardingDone) {
       notifications.push({
-        id: 'no-target-role',
+        id: 'onboarding-incomplete',
         type: 'warning',
-        title: 'No Target Role Set',
-        message: 'Set your target role in Settings so agents know what jobs to find.',
+        title: 'Complete Your Setup',
+        message: 'Complete onboarding so AI agents know what jobs to find for you.',
         time: new Date().toISOString(),
         read: false,
       });
