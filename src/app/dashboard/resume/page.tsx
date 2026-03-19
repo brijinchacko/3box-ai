@@ -339,10 +339,10 @@ function AutopilotResume() {
   // Auto-save to DB with debounce
   useEffect(() => {
     if (!resumeLoaded || !resume.contact.name) return;
-    // Skip the first auto-save triggered by initial data load
+    // Skip the first auto-save triggered by initial data load (only when a resume was loaded from DB)
     if (!userHasEdited.current) {
       userHasEdited.current = true;
-      return;
+      if (resumeId) return; // Only skip if we loaded an existing resume — otherwise this IS a real edit
     }
     const timer = setTimeout(() => {
       setSaving(true);
