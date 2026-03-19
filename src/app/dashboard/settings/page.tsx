@@ -857,7 +857,7 @@ export default function SettingsPage() {
           {/* =============== CONNECTED EMAIL TAB =============== */}
           {activeTab === 'email' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div className="card">
+              <div className="card text-left">
                 <h3 className="font-semibold mb-2 text-left">Connected Email Accounts</h3>
                 <p className="text-sm text-white/40 mb-6 text-left">
                   Connect your Gmail so job applications are sent from your personal email — boosting response rates.
@@ -945,7 +945,7 @@ export default function SettingsPage() {
                 {/* Info box */}
                 <div className="mt-6 p-4 rounded-xl bg-neon-blue/5 border border-neon-blue/10 text-left">
                   <h4 className="text-xs font-semibold text-neon-blue mb-2">Why Connect Your Email?</h4>
-                  <ul className="text-xs text-white/40 space-y-1">
+                  <ul className="text-xs text-white/40 space-y-1.5 list-disc pl-4">
                     <li>Applications sent from your personal email have 3x higher response rates</li>
                     <li>Employers see your name, not a generic company address</li>
                     <li>We only use the &quot;send email&quot; permission — we never read your inbox</li>
