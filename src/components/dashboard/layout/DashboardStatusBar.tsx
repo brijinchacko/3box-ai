@@ -59,10 +59,14 @@ function NotificationDropdown({
   notifications,
   onClose,
   isAgentic,
+  onClearAll,
+  onDismiss,
 }: {
   notifications: Notification[];
   onClose: () => void;
   isAgentic: boolean;
+  onClearAll: () => void;
+  onDismiss: (id: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -110,9 +114,19 @@ function NotificationDropdown({
         <span className={cn('text-sm font-semibold', isAgentic ? 'text-white' : 'text-gray-900 dark:text-white')}>
           Notifications
         </span>
-        <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-          <X className="w-3.5 h-3.5 text-gray-400" />
-        </button>
+        <div className="flex items-center gap-2">
+          {notifications.length > 0 && (
+            <button
+              onClick={onClearAll}
+              className={cn('text-[10px] font-medium px-2 py-0.5 rounded', isAgentic ? 'text-white/40 hover:text-white/60 hover:bg-white/5' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800')}
+            >
+              Clear all
+            </button>
+          )}
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+            <X className="w-3.5 h-3.5 text-gray-400" />
+          </button>
+        </div>
       </div>
 
       {/* List */}
@@ -127,7 +141,7 @@ function NotificationDropdown({
             <div
               key={n.id}
               className={cn(
-                'flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors',
+                'group flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors',
                 isAgentic
                   ? 'border-white/[0.04] hover:bg-white/[0.03]'
                   : 'border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50',
@@ -145,6 +159,13 @@ function NotificationDropdown({
                   {relativeTime(n.time)}
                 </p>
               </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDismiss(n.id); }}
+                className="flex-shrink-0 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Dismiss"
+              >
+                <X className="w-3 h-3 text-gray-400" />
+              </button>
             </div>
           ))
         )}
@@ -287,6 +308,28 @@ export default function DashboardStatusBar() {
   const [showWarnings, setShowWarnings] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('3box_dismissed_notifs');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const dismissNotification = (id: string) => {
+    const updated = new Set(dismissedIds);
+    updated.add(id);
+    setDismissedIds(updated);
+    try { localStorage.setItem('3box_dismissed_notifs', JSON.stringify([...updated])); } catch {}
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    const allIds = new Set([...dismissedIds, ...notifications.map(n => n.id)]);
+    setDismissedIds(allIds);
+    try { localStorage.setItem('3box_dismissed_notifs', JSON.stringify([...allIds])); } catch {}
+    setNotifications([]);
+    setUnreadCount(0);
+  };
   const [status, setStatus] = useState<PipelineStatus>({
     loaded: false,
     profileCount: 0,
@@ -367,8 +410,9 @@ export default function DashboardStatusBar() {
         warnings: [],
       });
 
-      setNotifications(notifRes.notifications || []);
-      setUnreadCount(notifRes.unreadCount || 0);
+      const filteredNotifs = (notifRes.notifications || []).filter((n: Notification) => !dismissedIds.has(n.id));
+      setNotifications(filteredNotifs);
+      setUnreadCount(filteredNotifs.length);
     } catch (err) {
       console.error('[StatusBar] Fetch error:', err);
       setStatus(prev => ({ ...prev, loaded: true }));
@@ -385,6 +429,14 @@ export default function DashboardStatusBar() {
   if (!status.loaded) return null;
 
   // Count setup issues
+  // Critical issues = things that actually prevent auto-apply from working
+  const criticalIssues = [
+    !status.hasResume,
+    status.profileCount === 0,
+    status.dailyLimitReached,
+  ].filter(Boolean).length;
+
+  // Warnings = nice-to-have improvements (don't block status from showing "Active")
   const setupIssues = [
     !status.hasResume,
     status.hasResume && !status.resumeVerified,
@@ -401,23 +453,23 @@ export default function DashboardStatusBar() {
   const barColor = isLocked ? 'bg-red-500' : percent >= 90 ? 'bg-red-500' : percent >= 60 ? 'bg-amber-500' : 'bg-blue-500';
   const periodLabel = limitType === 'lifetime' ? 'total' : 'today';
 
-  // Auto-apply status
+  // Auto-apply status — show Active when pipelines are running, even with non-critical warnings
   const statusDot = status.dailyLimitReached
     ? 'bg-red-500'
-    : setupIssues > 0
-      ? 'bg-amber-500'
-      : status.activeCount > 0
-        ? 'bg-green-500 animate-pulse'
+    : status.activeCount > 0
+      ? 'bg-green-500 animate-pulse'
+      : setupIssues > 0
+        ? 'bg-amber-500'
         : 'bg-gray-400';
 
   const statusLabel = status.dailyLimitReached
     ? 'Limit Reached'
-    : status.activeCount > 0 && setupIssues === 0
+    : status.activeCount > 0
       ? 'Active'
-      : status.activeCount > 0
-        ? 'Needs Setup'
-        : status.profileCount > 0
-          ? 'Paused'
+      : status.profileCount > 0
+        ? 'Paused'
+        : criticalIssues > 0
+          ? 'Needs Setup'
           : 'Not Set Up';
 
   // Format lastRunAt
@@ -558,6 +610,8 @@ export default function DashboardStatusBar() {
                   notifications={notifications}
                   onClose={() => setShowNotifications(false)}
                   isAgentic={isAgentic}
+                  onClearAll={clearAllNotifications}
+                  onDismiss={dismissNotification}
                 />
               )}
             </div>
