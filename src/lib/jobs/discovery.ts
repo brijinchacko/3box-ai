@@ -1,9 +1,23 @@
 /**
- * Multi-source Job Discovery Engine
- * Aggregates jobs from JSearch, Adzuna, SerpAPI (Naukri, LinkedIn, Indeed, Google Jobs)
+ * Multi-source Job Discovery Engine v2
+ *
+ * Sources (priority order):
+ * 1. Serper.dev — Google Jobs (structured), LinkedIn, Naukri, Indeed (2,500 free/mo)
+ * 2. Jooble — Free aggregator covering 69 countries incl. India
+ * 3. Adzuna — Free, good salary data, India support
+ * 4. JSearch (RapidAPI) — Fallback only (quota limited)
+ *
+ * Smart search: limits API calls based on available sources, deduplicates
+ * aggressively, and filters for quality before returning results.
  */
 import { searchAdzuna } from './adzuna';
-import { searchNaukri, searchLinkedInJobs, searchIndeedIndia, searchGoogleJobs } from './serpapi';
+import { searchJooble } from './jooble';
+import {
+  searchGoogleJobs as searchSerperGoogleJobs,
+  searchLinkedInJobs as searchSerperLinkedIn,
+  searchNaukriJobs as searchSerperNaukri,
+  searchIndeedJobs as searchSerperIndeed,
+} from './serper';
 import { calculateMatchScore } from './matcher';
 
 export interface DiscoveredJob {
@@ -28,7 +42,7 @@ export interface DiscoveryParams {
   limit: number;
   excludeCompanies?: string[];
   excludeKeywords?: string[];
-  /** Optional list of platforms to search. When omitted, all platforms are used. */
+  /** Optional list of platforms to search. When omitted, all available platforms are used. */
   platforms?: string[];
   userProfile: {
     targetRole: string;
@@ -37,107 +51,56 @@ export interface DiscoveryParams {
   };
 }
 
-const PLATFORM_SEARCH_MAP: Record<string, (role: string, location: string) => Promise<DiscoveredJob[]>> = {
-  jsearch: searchJSearch,
+// ── Platform Registry ──
+
+type SearchFn = (role: string, location: string) => Promise<DiscoveredJob[]>;
+
+const PLATFORM_SEARCH_MAP: Record<string, SearchFn> = {
+  // Serper.dev (Google) — highest quality, structured data
+  google_jobs: searchSerperGoogleJobs,
+  linkedin: searchSerperLinkedIn,
+  naukri: searchSerperNaukri,
+  indeed: searchSerperIndeed,
+  // Jooble — free aggregator
+  jooble: searchJoobleWrapper,
+  // Adzuna — free, good salary data
   adzuna: searchAdzunaIndia,
-  naukri: searchNaukri,
-  linkedin: searchLinkedInJobs,
-  indeed: searchIndeedIndia,
-  google_jobs: searchGoogleJobs,
+  // JSearch — fallback (often rate-limited)
+  jsearch: searchJSearch,
 };
 
 export const ALL_PLATFORMS = Object.keys(PLATFORM_SEARCH_MAP);
 
-/**
- * Deduplicate jobs by comparing company + title (fuzzy)
- */
-function deduplicateJobs(jobs: DiscoveredJob[]): DiscoveredJob[] {
-  const seen = new Map<string, DiscoveredJob>();
-  
-  for (const job of jobs) {
-    const key = `${job.company.toLowerCase().replace(/\s+/g, '')}-${job.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
-    if (!seen.has(key)) {
-      seen.set(key, job);
-    }
-  }
-  
-  return Array.from(seen.values());
+// ── Source Wrappers ──
+
+async function searchJoobleWrapper(role: string, location: string): Promise<DiscoveredJob[]> {
+  const result = await searchJooble(role, location);
+  return result.jobs.map((j) => ({
+    id: j.id,
+    title: j.title,
+    company: j.company,
+    location: j.location,
+    description: j.description,
+    salary: j.salary,
+    url: j.url,
+    source: j.source,
+    postedAt: j.postedAt,
+    remote: j.remote,
+  }));
 }
 
-/**
- * Filter out excluded companies and keywords
- */
-function applyExclusions(jobs: DiscoveredJob[], excludeCompanies: string[], excludeKeywords: string[]): DiscoveredJob[] {
-  const lowerCompanies = excludeCompanies.map(c => c.toLowerCase());
-  const lowerKeywords = excludeKeywords.map(k => k.toLowerCase());
-  
-  return jobs.filter(job => {
-    const jobCompanyLower = job.company.toLowerCase();
-    if (lowerCompanies.some(c => jobCompanyLower.includes(c))) return false;
-    
-    const jobText = `${job.title} ${job.description}`.toLowerCase();
-    if (lowerKeywords.some(k => jobText.includes(k))) return false;
-    
-    return true;
-  });
-}
-
-/**
- * Search JSearch API (existing integration)
- */
-async function searchJSearch(role: string, location: string): Promise<DiscoveredJob[]> {
-  const rapidApiKey = process.env.RAPIDAPI_KEY;
-  if (!rapidApiKey) return [];
-  
-  try {
-    const searchQuery = `${role}${location ? ` in ${location}` : ' in India'}`;
-    const apiUrl = new URL('https://jsearch.p.rapidapi.com/search');
-    apiUrl.searchParams.set('query', searchQuery);
-    apiUrl.searchParams.set('page', '1');
-    apiUrl.searchParams.set('num_pages', '1');
-    apiUrl.searchParams.set('date_posted', 'week');
-    
-    const response = await fetch(apiUrl.toString(), {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': rapidApiKey,
-        'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
-      },
-      next: { revalidate: 300 },
-    });
-    
-    if (!response.ok) return [];
-    const data = await response.json();
-    
-    return (data.data || []).map((job: any) => ({
-      id: job.job_id || `jsearch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      title: job.job_title || '',
-      company: job.employer_name || 'Unknown',
-      location: job.job_is_remote ? 'Remote' : [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ') || 'Not specified',
-      description: (job.job_description || '').slice(0, 500),
-      salary: job.job_min_salary && job.job_max_salary ? `${job.job_min_salary} - ${job.job_max_salary}` : null,
-      url: job.job_apply_link || '',
-      source: 'JSearch',
-      postedAt: job.job_posted_at_datetime_utc || new Date().toISOString(),
-      remote: job.job_is_remote || false,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Search Adzuna with India support
- */
 async function searchAdzunaIndia(role: string, location: string): Promise<DiscoveredJob[]> {
   if (!process.env.ADZUNA_APP_ID || !process.env.ADZUNA_APP_KEY) return [];
-  
+
   try {
-    const isIndianLocation = /india|bangalore|mumbai|delhi|hyderabad|chennai|pune|kolkata|bengaluru|noida|gurgaon|gurugram/i.test(location);
+    const isIndianLocation =
+      /india|bangalore|mumbai|delhi|hyderabad|chennai|pune|kolkata|bengaluru|noida|gurgaon|gurugram/i.test(
+        location,
+      );
     const country = isIndianLocation || !location ? 'in' : 'us';
-    
+
     const result = await searchAdzuna(role, location, 1, country);
-    return result.jobs.map(j => ({
+    return result.jobs.map((j) => ({
       id: j.id,
       title: j.title,
       company: j.company,
@@ -154,96 +117,285 @@ async function searchAdzunaIndia(role: string, location: string): Promise<Discov
   }
 }
 
+async function searchJSearch(role: string, location: string): Promise<DiscoveredJob[]> {
+  const rapidApiKey = process.env.RAPIDAPI_KEY;
+  if (!rapidApiKey) return [];
+
+  try {
+    const searchQuery = `${role}${location ? ` in ${location}` : ' in India'}`;
+    const apiUrl = new URL('https://jsearch.p.rapidapi.com/search');
+    apiUrl.searchParams.set('query', searchQuery);
+    apiUrl.searchParams.set('page', '1');
+    apiUrl.searchParams.set('num_pages', '1');
+    apiUrl.searchParams.set('date_posted', 'week');
+
+    const response = await fetch(apiUrl.toString(), {
+      method: 'GET',
+      headers: {
+        'X-RapidAPI-Key': rapidApiKey,
+        'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn('[JSearch] Rate limited (429) — quota exhausted');
+      }
+      return [];
+    }
+    const data = await response.json();
+
+    return (data.data || []).map((job: any) => ({
+      id: job.job_id || `jsearch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: job.job_title || '',
+      company: job.employer_name || 'Unknown',
+      location: job.job_is_remote
+        ? 'Remote'
+        : [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ') ||
+          'Not specified',
+      description: (job.job_description || '').slice(0, 500),
+      salary:
+        job.job_min_salary && job.job_max_salary
+          ? `${job.job_min_salary} - ${job.job_max_salary}`
+          : null,
+      url: job.job_apply_link || '',
+      source: 'JSearch',
+      postedAt: job.job_posted_at_datetime_utc || new Date().toISOString(),
+      remote: job.job_is_remote || false,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Utility Functions ──
+
 /**
- * Clean location string for API search queries.
- * Strips postcodes, zip codes, extra punctuation that confuse job search APIs.
+ * Clean location string — strips postcodes, zip codes, PIN codes
  */
 function cleanLocationForSearch(location: string): string {
   if (!location) return '';
-  let clean = location
-    // Remove UK postcodes (e.g., "BD7 2AA", "SW1A 1AA")
-    .replace(/,?\s*[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi, '')
-    // Remove US zip codes (e.g., "90210", "90210-1234")
-    .replace(/,?\s*\d{5}(-\d{4})?\b/g, '')
-    // Remove Indian PIN codes (e.g., "560001")
-    .replace(/,?\s*\d{6}\b/g, '')
-    // Clean up trailing/leading commas and whitespace
+  const clean = location
+    .replace(/,?\s*[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi, '') // UK postcodes
+    .replace(/,?\s*\d{5}(-\d{4})?\b/g, '') // US zip codes
+    .replace(/,?\s*\d{6}\b/g, '') // Indian PIN codes
     .replace(/^[\s,]+|[\s,]+$/g, '')
     .replace(/,\s*,/g, ',')
     .trim();
-  return clean || location; // Fall back to original if cleaning removed everything
+  return clean || location;
 }
 
 /**
- * Main discovery function — aggregates from all sources
+ * Aggressive deduplication — same company + similar title = duplicate
+ */
+function deduplicateJobs(jobs: DiscoveredJob[]): DiscoveredJob[] {
+  const seen = new Map<string, DiscoveredJob>();
+
+  for (const job of jobs) {
+    // Normalize: strip spaces, lowercase, first 30 chars of title
+    const companyKey = job.company
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 20);
+    const titleKey = job.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 30);
+    const key = `${companyKey}-${titleKey}`;
+
+    if (!seen.has(key)) {
+      seen.set(key, job);
+    } else {
+      // Keep the one with more data (longer description, has salary, etc.)
+      const existing = seen.get(key)!;
+      const existingScore =
+        (existing.description?.length || 0) + (existing.salary ? 50 : 0) + (existing.url ? 20 : 0);
+      const newScore =
+        (job.description?.length || 0) + (job.salary ? 50 : 0) + (job.url ? 20 : 0);
+      if (newScore > existingScore) {
+        seen.set(key, job);
+      }
+    }
+  }
+
+  return Array.from(seen.values());
+}
+
+/**
+ * Filter out excluded companies and keywords
+ */
+function applyExclusions(
+  jobs: DiscoveredJob[],
+  excludeCompanies: string[],
+  excludeKeywords: string[],
+): DiscoveredJob[] {
+  const lowerCompanies = excludeCompanies.map((c) => c.toLowerCase());
+  const lowerKeywords = excludeKeywords.map((k) => k.toLowerCase());
+
+  return jobs.filter((job) => {
+    const jobCompanyLower = job.company.toLowerCase();
+    if (lowerCompanies.some((c) => jobCompanyLower.includes(c))) return false;
+
+    const jobText = `${job.title} ${job.description}`.toLowerCase();
+    if (lowerKeywords.some((k) => jobText.includes(k))) return false;
+
+    // Filter out jobs with no apply URL
+    if (!job.url || job.url.length < 10) return false;
+
+    // Filter out obviously bad titles
+    const badTitles = ['not found', 'error', 'page not found', 'access denied'];
+    if (badTitles.some((t) => job.title.toLowerCase().includes(t))) return false;
+
+    return true;
+  });
+}
+
+/**
+ * Filter low-quality jobs that waste application slots
+ */
+function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
+  return jobs.filter((job) => {
+    // Must have a real title (not just "Job" or single word)
+    if (!job.title || job.title.trim().split(/\s+/).length < 2) return false;
+
+    // Must have a real company name
+    if (!job.company || job.company === 'Unknown' || job.company === 'Unknown Company') {
+      // Allow if it has a good URL and description
+      if (!job.description || job.description.length < 50) return false;
+    }
+
+    // Must have some description
+    if (!job.description || job.description.length < 20) return false;
+
+    return true;
+  });
+}
+
+// ── Main Discovery Function ──
+
+/**
+ * Discover jobs from all available sources
+ *
+ * Searches up to 3 roles across all enabled platforms in parallel,
+ * deduplicates, filters for quality, scores against user profile,
+ * and returns the top matches.
  */
 export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJob[]> {
-  const { roles, locations, preferRemote, limit, excludeCompanies = [], excludeKeywords = [], platforms, userProfile } = params;
+  const {
+    roles,
+    locations,
+    preferRemote,
+    limit,
+    excludeCompanies = [],
+    excludeKeywords = [],
+    platforms,
+    userProfile,
+  } = params;
 
   const allJobs: DiscoveredJob[] = [];
-
-  // Search selected (or all) sources in parallel for each role
   const searchPromises: Promise<DiscoveredJob[]>[] = [];
+  const platformNames: string[] = [];
+
+  // Determine which platforms to use
   const activePlatforms = platforms && platforms.length > 0 ? platforms : ALL_PLATFORMS;
 
-  for (const role of roles.slice(0, 3)) { // Max 3 roles to avoid rate limits
+  // Log available API keys
+  const hasSerper = !!process.env.SERPER_API_KEY;
+  const hasJooble = !!process.env.JOOBLE_API_KEY;
+  const hasAdzuna = !!process.env.ADZUNA_APP_ID && !!process.env.ADZUNA_APP_KEY;
+  const hasJSearch = !!process.env.RAPIDAPI_KEY;
+  console.log(
+    `[Discovery] Sources: Serper=${hasSerper}, Jooble=${hasJooble}, Adzuna=${hasAdzuna}, JSearch=${hasJSearch}`,
+  );
+
+  if (!hasSerper && !hasJooble && !hasAdzuna && !hasJSearch) {
+    console.error('[Discovery] No job search API keys configured! Cannot discover jobs.');
+    return [];
+  }
+
+  // Search each role (max 3 to avoid burning API quota)
+  for (const role of roles.slice(0, 3)) {
     const loc = cleanLocationForSearch(locations[0] || '');
 
     for (const platform of activePlatforms) {
       const searchFn = PLATFORM_SEARCH_MAP[platform];
-      if (searchFn) searchPromises.push(searchFn(role, loc));
-    }
-  }
-  
-  // Track which platforms we're actually searching
-  const platformNames: string[] = [];
-  for (const role of roles.slice(0, 3)) {
-    for (const platform of activePlatforms) {
-      platformNames.push(platform);
+      if (searchFn) {
+        searchPromises.push(searchFn(role, loc));
+        platformNames.push(`${platform}:${role}`);
+      }
     }
   }
 
+  // Execute all searches in parallel
   const results = await Promise.allSettled(searchPromises);
 
-  let platformIdx = 0;
-  for (const result of results) {
-    const platform = platformNames[platformIdx] || 'unknown';
+  let totalFromSource: Record<string, number> = {};
+  for (let i = 0; i < results.length; i++) {
+    const label = platformNames[i] || 'unknown';
+    const platform = label.split(':')[0];
+    const result = results[i];
+
     if (result.status === 'fulfilled') {
-      if (result.value.length > 0) {
-        console.log(`[Discovery] ${platform}: found ${result.value.length} jobs`);
-      } else {
-        console.log(`[Discovery] ${platform}: returned 0 jobs (API key missing or no results)`);
+      const count = result.value.length;
+      totalFromSource[platform] = (totalFromSource[platform] || 0) + count;
+      if (count > 0) {
+        allJobs.push(...result.value);
       }
-      allJobs.push(...result.value);
     } else {
-      console.error(`[Discovery] ${platform}: failed —`, result.reason?.message || result.reason);
+      console.error(`[Discovery] ${label}: failed —`, result.reason?.message || result.reason);
     }
-    platformIdx++;
   }
-  
-  // Deduplicate
-  let uniqueJobs = deduplicateJobs(allJobs);
-  
-  // Apply exclusions
-  uniqueJobs = applyExclusions(uniqueJobs, excludeCompanies, excludeKeywords);
-  
-  // Filter remote if preferred
+
+  // Log summary per source
+  for (const [source, count] of Object.entries(totalFromSource)) {
+    console.log(`[Discovery] ${source}: ${count} jobs`);
+  }
+  if (Object.values(totalFromSource).every((c) => c === 0)) {
+    console.warn('[Discovery] All sources returned 0 jobs — check API keys and search criteria');
+  }
+
+  console.log(`[Discovery] Total raw: ${allJobs.length} jobs`);
+
+  // ── Post-processing pipeline ──
+
+  // 1. Deduplicate
+  let processed = deduplicateJobs(allJobs);
+  console.log(`[Discovery] After dedup: ${processed.length}`);
+
+  // 2. Apply exclusions
+  processed = applyExclusions(processed, excludeCompanies, excludeKeywords);
+
+  // 3. Filter low quality
+  processed = filterLowQuality(processed);
+  console.log(`[Discovery] After quality filter: ${processed.length}`);
+
+  // 4. Filter remote if preferred
   if (preferRemote) {
-    const remoteJobs = uniqueJobs.filter(j => j.remote);
-    if (remoteJobs.length >= 5) uniqueJobs = remoteJobs; // Only filter if enough remote jobs
+    const remoteJobs = processed.filter((j) => j.remote);
+    if (remoteJobs.length >= 5) processed = remoteJobs;
   }
-  
-  // Score and rank
-  const scoredJobs = uniqueJobs.map(job => ({
+
+  // 5. Score and rank against user profile
+  const scoredJobs = processed.map((job) => ({
     ...job,
     matchScore: calculateMatchScore(
-      { title: job.title, description: job.description, location: job.location, salary: job.salary, remote: job.remote },
-      userProfile
+      {
+        title: job.title,
+        description: job.description,
+        location: job.location,
+        salary: job.salary,
+        remote: job.remote,
+      },
+      userProfile,
     ),
   }));
-  
-  // Sort by score descending
+
+  // Sort by match score descending
   scoredJobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
-  
+
+  console.log(
+    `[Discovery] Returning top ${Math.min(limit, scoredJobs.length)} of ${scoredJobs.length} scored jobs`,
+  );
+
   return scoredJobs.slice(0, limit);
 }
