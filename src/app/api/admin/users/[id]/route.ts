@@ -98,7 +98,6 @@ export async function GET(
             agentActivities: true,
             auditLogs: true,
             searchProfiles: true,
-            chatMessages: true,
           },
         },
       },

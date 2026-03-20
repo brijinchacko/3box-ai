@@ -259,7 +259,6 @@ export default function AdminUsersPage() {
       `Jobs Applied: ${u._count.jobApplications}`,
       `Search Profiles: ${u._count.searchProfiles}`,
       `Agent Activities: ${u._count.agentActivities}`,
-      `Chat Messages: ${u._count.chatMessages}`,
       '',
       '=== BILLING ===',
       `Total Revenue: $${u.totalRevenue.toFixed(2)}`,
@@ -641,10 +640,6 @@ export default function AdminUsersPage() {
                         <div className="text-center p-2 rounded-lg bg-white/[0.03]">
                           <p className="text-base font-bold">{selectedUser._count.searchProfiles}</p>
                           <p className="text-white/30">Search Profiles</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-white/[0.03]">
-                          <p className="text-base font-bold">{selectedUser._count.chatMessages}</p>
-                          <p className="text-white/30">Chat Messages</p>
                         </div>
                         <div className="text-center p-2 rounded-lg bg-white/[0.03]">
                           <p className="text-base font-bold">{selectedUser._count.agentActivities}</p>
