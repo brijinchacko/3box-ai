@@ -18,6 +18,13 @@ import {
   searchNaukriJobs as searchSerperNaukri,
   searchIndeedJobs as searchSerperIndeed,
 } from './serper';
+import {
+  searchGoogleJobsFree,
+  searchLinkedInFree,
+  searchNaukriFree,
+  searchIndeedFree,
+  type ScrapedJob,
+} from './google-scraper';
 import { calculateMatchScore } from './matcher';
 
 export interface DiscoveredJob {
@@ -55,8 +62,34 @@ export interface DiscoveryParams {
 
 type SearchFn = (role: string, location: string) => Promise<DiscoveredJob[]>;
 
+// Wrappers to convert ScrapedJob → DiscoveredJob
+function wrapFreeScraperFn(
+  fn: (role: string, location: string) => Promise<ScrapedJob[]>,
+): SearchFn {
+  return async (role: string, location: string): Promise<DiscoveredJob[]> => {
+    const results = await fn(role, location);
+    return results.map((j) => ({
+      id: j.id,
+      title: j.title,
+      company: j.company,
+      location: j.location,
+      description: j.description,
+      salary: j.salary,
+      url: j.url,
+      source: j.source,
+      postedAt: j.postedAt,
+      remote: j.remote,
+    }));
+  };
+}
+
 const PLATFORM_SEARCH_MAP: Record<string, SearchFn> = {
-  // Serper.dev (Google) — highest quality, structured data
+  // Free Google scraping — no API key needed (rate-limited, cached)
+  google_free: wrapFreeScraperFn(searchGoogleJobsFree),
+  linkedin_free: wrapFreeScraperFn(searchLinkedInFree),
+  naukri_free: wrapFreeScraperFn(searchNaukriFree),
+  indeed_free: wrapFreeScraperFn(searchIndeedFree),
+  // Serper.dev (Google) — paid, structured data (2,500 free/mo)
   google_jobs: searchSerperGoogleJobs,
   linkedin: searchSerperLinkedIn,
   naukri: searchSerperNaukri,
@@ -299,19 +332,14 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
   // Determine which platforms to use
   const activePlatforms = platforms && platforms.length > 0 ? platforms : ALL_PLATFORMS;
 
-  // Log available API keys
+  // Log available sources
   const hasSerper = !!process.env.SERPER_API_KEY;
   const hasJooble = !!process.env.JOOBLE_API_KEY;
   const hasAdzuna = !!process.env.ADZUNA_APP_ID && !!process.env.ADZUNA_APP_KEY;
   const hasJSearch = !!process.env.RAPIDAPI_KEY;
   console.log(
-    `[Discovery] Sources: Serper=${hasSerper}, Jooble=${hasJooble}, Adzuna=${hasAdzuna}, JSearch=${hasJSearch}`,
+    `[Discovery] Sources: GoogleFree=yes, Serper=${hasSerper}, Jooble=${hasJooble}, Adzuna=${hasAdzuna}, JSearch=${hasJSearch}`,
   );
-
-  if (!hasSerper && !hasJooble && !hasAdzuna && !hasJSearch) {
-    console.error('[Discovery] No job search API keys configured! Cannot discover jobs.');
-    return [];
-  }
 
   // Search each role (max 3 to avoid burning API quota)
   for (const role of roles.slice(0, 3)) {
