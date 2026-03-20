@@ -2,6 +2,9 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
+import { runIndependentScout } from '@/lib/agents/scout';
+import { runIndependentArcher } from '@/lib/agents/archer';
+import { normalizePlan } from '@/lib/tokens/pricing';
 
 export async function GET() {
   try {
@@ -115,11 +118,56 @@ export async function PUT(request: NextRequest) {
     if (typeof archerInterval === 'number' && VALID_INTERVALS.includes(archerInterval)) data.archerInterval = archerInterval;
     if (typeof archerMaxPerRun === 'number') data.archerMaxPerRun = Math.min(100, Math.max(1, archerMaxPerRun));
 
+    // Fetch previous config to detect newly enabled agents
+    const prevConfig = await prisma.autoApplyConfig.findUnique({ where: { userId: session.user.id } });
+
     const config = await prisma.autoApplyConfig.upsert({
       where: { userId: session.user.id },
       update: data,
       create: { userId: session.user.id, ...data },
     });
+
+    // ── Trigger immediate first run when agents are newly enabled ──
+    const scoutJustEnabled = scoutEnabled === true && (!prevConfig || !prevConfig.scoutEnabled);
+    const archerJustEnabled = archerEnabled === true && (!prevConfig || !prevConfig.archerEnabled);
+
+    if (scoutJustEnabled || archerJustEnabled) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { plan: true },
+      });
+      const plan = normalizePlan(user?.plan || 'FREE');
+
+      if (plan !== 'FREE') {
+        // Fire and forget — don't block the config save response
+        (async () => {
+          try {
+            if (scoutJustEnabled) {
+              console.log(`[Config] Triggering immediate Scout run for ${session.user.id}`);
+              await runIndependentScout(session.user.id, {
+                targetRoles: (config.targetRoles as string[]) || [],
+                targetLocations: (config.targetLocations as string[]) || [],
+                preferRemote: config.preferRemote,
+                minMatchScore: config.minMatchScore,
+                excludeCompanies: (config.excludeCompanies as string[]) || [],
+                excludeKeywords: (config.excludeKeywords as string[]) || [],
+              });
+            }
+            if (archerJustEnabled) {
+              console.log(`[Config] Triggering immediate Archer run for ${session.user.id}`);
+              await runIndependentArcher(session.user.id, {
+                maxPerRun: config.archerMaxPerRun,
+                resumeId: config.resumeId || undefined,
+                forgeEnabled: config.forgeEnabled,
+                forgeMode: config.forgeMode,
+              });
+            }
+          } catch (err) {
+            console.error('[Config] Immediate agent run failed:', err);
+          }
+        })();
+      }
+    }
 
     return NextResponse.json(config);
   } catch (err) {

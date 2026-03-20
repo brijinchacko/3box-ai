@@ -195,12 +195,30 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
     }
   }
   
-  const results = await Promise.allSettled(searchPromises);
-  
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      allJobs.push(...result.value);
+  // Track which platforms we're actually searching
+  const platformNames: string[] = [];
+  for (const role of roles.slice(0, 3)) {
+    for (const platform of activePlatforms) {
+      platformNames.push(platform);
     }
+  }
+
+  const results = await Promise.allSettled(searchPromises);
+
+  let platformIdx = 0;
+  for (const result of results) {
+    const platform = platformNames[platformIdx] || 'unknown';
+    if (result.status === 'fulfilled') {
+      if (result.value.length > 0) {
+        console.log(`[Discovery] ${platform}: found ${result.value.length} jobs`);
+      } else {
+        console.log(`[Discovery] ${platform}: returned 0 jobs (API key missing or no results)`);
+      }
+      allJobs.push(...result.value);
+    } else {
+      console.error(`[Discovery] ${platform}: failed —`, result.reason?.message || result.reason);
+    }
+    platformIdx++;
   }
   
   // Deduplicate

@@ -185,13 +185,19 @@ export async function GET(request: NextRequest) {
       }
 
       // ── Send Email Notification ──
-      // Only send if at least one agent actually ran for this user in this cycle
+      // Only send if agents ran AND actually found/applied something useful
       const userResults = results.filter(r => r.userId === config.userId && r.status === 'completed');
       if (userResults.length > 0 && config.user.email) {
         try {
           const jobsFound = userResults.reduce((sum, r) => sum + (r.jobsNew || 0), 0);
           const jobsApplied = userResults.reduce((sum, r) => sum + (r.jobsApplied || 0), 0);
           const agentsUsed = userResults.map(r => r.agent.charAt(0).toUpperCase() + r.agent.slice(1));
+
+          // Skip sending email if nothing meaningful happened (0 jobs, 0 applications)
+          if (jobsFound === 0 && jobsApplied === 0) {
+            console.log(`[Cron] Skipping email for ${config.user.email} — no jobs found or applied`);
+            continue;
+          }
 
           // Fetch top recent matches for the email
           const topMatches = await prisma.scoutJob.findMany({
