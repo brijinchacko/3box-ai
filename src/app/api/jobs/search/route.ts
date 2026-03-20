@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
             : [];
         userProfile = { targetRole: targetRole || query, skills: skillList, location };
       }
-    } catch {}
+    } catch (_e) { /* ignore */ }
 
     // Parse platforms filter
     const platforms = sourcesParam
@@ -77,15 +77,55 @@ export async function GET(request: NextRequest) {
           .filter(Boolean)
       : [];
 
-    // Run discovery engine with all sources
+    // Track daily search count per user for source quality tiering
+    let dailySearchCount = 0;
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dailySearchCount = await prisma.agentActivity.count({
+        where: {
+          userId: session.user.id,
+          agent: 'live_search',
+          createdAt: { gte: today },
+        },
+      });
+    } catch (_e) { /* ignore — default to 0 */ }
+
+    // Log this search as an activity
+    try {
+      await prisma.agentActivity.create({
+        data: {
+          userId: session.user.id,
+          agent: 'live_search',
+          action: 'search',
+          summary: `Searched for "${query}"${location ? ` in ${location}` : ''}`,
+          details: { query, location, searchNumber: dailySearchCount + 1 },
+        },
+      });
+    } catch (_e) { /* ignore */ }
+
+    // First 5 searches use premium sources only; after that include lower-quality sources
+    const isPremiumSearch = dailySearchCount < 5;
+    let effectivePlatforms = platforms;
+    if (!effectivePlatforms && isPremiumSearch) {
+      // Premium: exclude adzuna and jsearch for better quality results
+      effectivePlatforms = [
+        'google_free', 'linkedin_free', 'naukri_free', 'indeed_free',
+        'google_jobs', 'linkedin', 'naukri', 'indeed',
+        'jooble',
+      ];
+    }
+    // After 5th search: all platforms including adzuna & jsearch (effectivePlatforms stays undefined = all)
+
+    // Run discovery engine with all sources — max 20 results per search
     const jobs = await discoverJobs({
       roles: [query],
       locations: location ? [location] : [],
       preferRemote: remoteOnly,
-      limit: 50,
+      limit: 20,
       excludeCompanies: [],
       excludeKeywords: excludes,
-      platforms,
+      platforms: effectivePlatforms,
       userProfile,
     });
 
@@ -119,6 +159,9 @@ export async function GET(request: NextRequest) {
       page,
       isDemo: false,
       sources: sourceBreakdown,
+      searchTier: isPremiumSearch ? 'premium' : 'standard',
+      searchesUsed: dailySearchCount + 1,
+      premiumSearchesLeft: Math.max(0, 5 - (dailySearchCount + 1)),
     });
   } catch (error) {
     console.error('[Jobs Search API] Error:', error);

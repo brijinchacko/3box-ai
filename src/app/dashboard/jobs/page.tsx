@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase,
@@ -143,9 +143,22 @@ function JobDetailOverlay({
   onSave: () => void;
   onClose: () => void;
 }) {
+  const overlayRouter = useRouter();
   const [scamCheck, setScamCheck] = useState<ScamSignals | null>(null);
   const sentinelAvailable = isAgentAvailable('sentinel', userPlan);
   const forgeAvailable = isAgentAvailable('forge', userPlan);
+
+  const goToImproveScore = () => {
+    const params = new URLSearchParams();
+    params.set('title', job.title);
+    if (job.company) params.set('company', job.company);
+    if (job.description) params.set('description', job.description.slice(0, 500));
+    if (job.location) params.set('location', job.location);
+    if (job.matchScore) params.set('score', String(Math.round(job.matchScore)));
+    if (job.salary) params.set('salary', job.salary);
+    if (job.remote) params.set('remote', 'true');
+    overlayRouter.push(`/dashboard/resume/improve?${params}`);
+  };
 
   const handleVerify = () => {
     const result = detectScamSignals({
@@ -179,13 +192,15 @@ function JobDetailOverlay({
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-bold text-white">{job.title}</h3>
               {typeof job.matchScore === 'number' && (
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
+                <button
+                  onClick={(e) => { e.stopPropagation(); goToImproveScore(); }}
+                  className={`text-xs font-bold px-2 py-0.5 rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${
                   job.matchScore >= 70 ? 'bg-blue-400/10 text-blue-400 border-blue-400/20' :
                   job.matchScore >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                   'bg-white/5 text-white/40 border-white/10'
                 }`}>
                   {job.matchScore}%
-                </span>
+                </button>
               )}
             </div>
             <p className="text-xs text-white/50 mt-0.5">{job.company}</p>
@@ -318,6 +333,7 @@ interface SavedProfile {
 
 
 function AutopilotJobSearch() {
+  const autopilotRouter = useRouter();
   // My Profiles state
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -616,9 +632,23 @@ function AutopilotJobSearch() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{job.title}</h3>
                               {typeof job.matchScore === 'number' && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const params = new URLSearchParams();
+                                    params.set('title', job.title);
+                                    if (job.company) params.set('company', job.company);
+                                    if (job.description) params.set('description', job.description.slice(0, 500));
+                                    if (job.location) params.set('location', job.location);
+                                    if (job.matchScore) params.set('score', String(Math.round(job.matchScore)));
+                                    if (job.salary) params.set('salary', job.salary);
+                                    if (job.remote) params.set('remote', 'true');
+                                    autopilotRouter.push(`/dashboard/resume/improve?${params}`);
+                                  }}
+                                  className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 cursor-pointer hover:opacity-80 transition-opacity"
+                                >
                                   {job.matchScore}% match
-                                </span>
+                                </button>
                               )}
                               {job.remote && (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400">
@@ -724,6 +754,7 @@ export default function JobsPage() {
   const { isAutopilot, isAgentic } = useDashboardMode();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const mainRouter = useRouter();
   const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase() as PlanTier;
   const agentLocked = !isAgentAvailable('scout', userPlan);
 
@@ -906,9 +937,29 @@ export default function JobsPage() {
         setError(data.error);
       }
 
-      setJobs(data.jobs || []);
+      const foundJobs = data.jobs || [];
+      setJobs(foundJobs);
       setTotal(data.total || 0);
       setIsDemo(data.isDemo || false);
+
+      // Auto-save search results to board in background
+      if (foundJobs.length > 0) {
+        fetch('/api/user/board-jobs', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobs: foundJobs.map((j: Job) => ({
+              title: j.title,
+              company: j.company,
+              url: j.url,
+              location: j.location,
+              source: j.source || 'Live Search',
+              matchScore: j.matchScore,
+              description: j.description,
+            })),
+          }),
+        }).catch(() => {}); // Silent — don't block search UX
+      }
     } catch {
       setError('Network error. Please check your connection and try again.');
     } finally {
@@ -1386,13 +1437,26 @@ export default function JobsPage() {
                       <div className="flex items-center gap-3 mb-1.5 flex-wrap">
                         <h3 className="font-semibold text-white truncate">{job.title}</h3>
                         {typeof job.matchScore === 'number' && (
-                          <span className={`badge text-xs flex-shrink-0 ${
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const params = new URLSearchParams();
+                              params.set('title', job.title);
+                              if (job.company) params.set('company', job.company);
+                              if (job.description) params.set('description', job.description.slice(0, 500));
+                              if (job.location) params.set('location', job.location);
+                              if (job.matchScore) params.set('score', String(Math.round(job.matchScore)));
+                              if (job.salary) params.set('salary', job.salary);
+                              if (job.remote) params.set('remote', 'true');
+                              mainRouter.push(`/dashboard/resume/improve?${params}`);
+                            }}
+                            className={`badge text-xs flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity ${
                             job.matchScore >= 70 ? 'bg-blue-400/10 text-blue-400' :
                             job.matchScore >= 40 ? 'bg-amber-500/10 text-amber-400' :
                             'bg-white/5 text-white/40'
                           }`}>
                             <BarChart3 className="w-3 h-3 mr-0.5" /> {job.matchScore}% match
-                          </span>
+                          </button>
                         )}
                         {job.remote && (
                           <span className="badge text-xs bg-cyan-400/10 text-cyan-400 flex-shrink-0">

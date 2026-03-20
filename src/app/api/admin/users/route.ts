@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (plan && ['BASIC', 'STARTER', 'PRO', 'ULTRA'].includes(plan)) {
+    if (plan && ['FREE', 'BASIC', 'STARTER', 'PRO', 'ULTRA', 'MAX'].includes(plan)) {
       where.plan = plan;
     }
 
@@ -37,16 +37,23 @@ export async function GET(req: Request) {
           id: true,
           name: true,
           email: true,
+          image: true,
           plan: true,
           createdAt: true,
           updatedAt: true,
           onboardingDone: true,
           aiCreditsUsed: true,
           aiCreditsLimit: true,
+          totalAppsUsed: true,
+          dailyAppsUsed: true,
           isOforoInternal: true,
+          isStudent: true,
           stripeCustomerId: true,
           referralCode: true,
           referredBy: true,
+          accounts: {
+            select: { provider: true },
+          },
           _count: {
             select: {
               assessments: true,
@@ -54,7 +61,13 @@ export async function GET(req: Request) {
               careerPlans: true,
               learningPaths: true,
               jobApplications: true,
+              scoutJobs: true,
+              agentActivities: true,
               auditLogs: true,
+              searchProfiles: true,
+              subscriptions: true,
+              creditPurchases: true,
+              emailConnections: true,
             },
           },
         },
@@ -62,8 +75,49 @@ export async function GET(req: Request) {
       prisma.user.count({ where }),
     ]);
 
+    // Enrich users with signup source and revenue data
+    const userIds = users.map((u: any) => u.id);
+
+    // Batch fetch revenue data (subscriptions + credit purchases)
+    const [subscriptions, creditPurchases] = await Promise.all([
+      prisma.subscription.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, plan: true, status: true, interval: true },
+      }),
+      prisma.creditPurchase.aggregate({
+        where: { userId: { in: userIds } },
+        _sum: { amountPaid: true },
+        _count: true,
+      }),
+    ]);
+
+    // Per-user revenue via credit purchases
+    const perUserRevenue = await prisma.creditPurchase.groupBy({
+      by: ['userId'],
+      where: { userId: { in: userIds } },
+      _sum: { amountPaid: true },
+      _count: true,
+    });
+    const revenueMap = new Map(
+      perUserRevenue.map((r: any) => [r.userId, { total: (r._sum.amountPaid || 0) / 100, count: r._count }])
+    );
+
+    // Subscription map
+    const subMap = new Map<string, any[]>();
+    for (const sub of subscriptions) {
+      if (!subMap.has(sub.userId)) subMap.set(sub.userId, []);
+      subMap.get(sub.userId)!.push(sub);
+    }
+
+    const enrichedUsers = users.map((u: any) => ({
+      ...u,
+      signupSource: u.accounts.length > 0 ? u.accounts.map((a: any) => a.provider).join(', ') : 'credentials',
+      revenue: revenueMap.get(u.id) || { total: 0, count: 0 },
+      subscriptions: subMap.get(u.id) || [],
+    }));
+
     return NextResponse.json({
-      users,
+      users: enrichedUsers,
       pagination: {
         page,
         limit,

@@ -64,6 +64,67 @@ function generateId(prefix: string): string {
 }
 
 /**
+ * Detect Naukri search/listing pages vs actual job postings.
+ * Listing pages have URLs like /plc-engineer-jobs-in-bangalore and titles like
+ * "1622 Plc Automation Engineer Job Vacancies In Bangalore".
+ * Actual job pages have URLs like /job-listing/maintenance-engineer-delhivery-...
+ */
+function isNaukriListingPage(url: string, title: string): boolean {
+  const urlLower = url.toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  // URL patterns that indicate listing/search pages (not individual jobs)
+  const listingUrlPatterns = [
+    /-jobs-in-/,           // naukri.com/plc-engineer-jobs-in-bangalore
+    /-jobs$/,              // naukri.com/plc-engineer-jobs
+    /\/jobs-in-/,          // naukri.com/jobs-in-bangalore
+    /naukri\.com\/\w+-jobs\?/,  // naukri.com/data-engineer-jobs?...
+  ];
+  if (listingUrlPatterns.some((p) => p.test(urlLower))) return true;
+
+  // Title patterns that indicate search result pages
+  const listingTitlePatterns = [
+    /^\d+\s+.*job\s*(vacancies|openings|listings)/i,  // "1622 Plc Automation Engineer Job Vacancies"
+    /job\s*vacancies\s*in/i,                           // "Job Vacancies In Bangalore"
+    /jobs\s*in\s+[a-z]/i,                              // "Jobs In Bangalore"
+    /^\d+\+?\s+.*jobs?\s/i,                            // "500+ PLC Jobs ..."
+  ];
+  if (listingTitlePatterns.some((p) => p.test(titleLower))) return true;
+
+  return false;
+}
+
+/**
+ * Detect listing/search pages for LinkedIn and Indeed too
+ */
+function isSearchResultPage(url: string, title: string): boolean {
+  const titleLower = title.toLowerCase();
+  const urlLower = url.toLowerCase();
+
+  // Generic patterns for any source
+  const badTitlePatterns = [
+    /^\d+\s+.*job\s*(vacancies|openings|listings|results)/i,
+    /^\d+\+?\s+.*jobs?\s+(in|near|for)/i,
+    /job\s*vacancies\s*in/i,
+  ];
+  if (badTitlePatterns.some((p) => p.test(titleLower))) return true;
+
+  // LinkedIn search pages
+  if (urlLower.includes('linkedin.com') && /\/jobs\/search\?|\/jobs\/view\/\d+$/.test(urlLower) === false) {
+    // LinkedIn job URLs should contain /jobs/view/ for individual jobs
+    if (!urlLower.includes('/jobs/view/') && !urlLower.includes('/jobs/') === false) {
+      // Allow /jobs/ with specific IDs but block /jobs/search
+      if (urlLower.includes('/jobs/search')) return true;
+    }
+  }
+
+  // Indeed search pages
+  if (urlLower.includes('indeed.com') && urlLower.includes('/jobs?')) return true;
+
+  return false;
+}
+
+/**
  * Rate-limited fetch from Google with rotating UA
  */
 async function fetchGoogle(url: string): Promise<string | null> {
@@ -187,6 +248,13 @@ function parseOrganicResults(html: string, source: string): ScrapedJob[] {
       /₹[\d,.]+ ?(?:- ?₹[\d,.]+)?(?:\s*(?:LPA|PA|per annum|per month|lakh|lakhs))?/i,
     );
     if (salaryMatch) salary = salaryMatch[0];
+
+    // Skip search/listing pages (not individual job postings)
+    if (isSearchResultPage(url, title)) return;
+    if (url.includes('naukri.com') && isNaukriListingPage(url, title)) return;
+
+    // Skip if company is "Unknown" AND title looks like a listing page
+    if (company === 'Unknown Company' && /\d+.*jobs?|vacancies|openings/i.test(title)) return;
 
     jobs.push({
       id: generateId('gscrape'),
@@ -374,7 +442,12 @@ export async function searchNaukriFree(
   if (!html) return [];
 
   const jobs = parseOrganicResults(html, 'Naukri');
-  const naukriJobs = jobs.filter((j) => j.url.includes('naukri.com'));
+  const naukriJobs = jobs.filter((j) => {
+    if (!j.url.includes('naukri.com')) return false;
+    // Filter out Naukri search/listing pages (not individual job postings)
+    if (isNaukriListingPage(j.url, j.title)) return false;
+    return true;
+  });
   console.log(`[GoogleScraper] Naukri: ${naukriJobs.length} jobs for "${role}"`);
   setCache(cacheKey, naukriJobs);
   return naukriJobs;

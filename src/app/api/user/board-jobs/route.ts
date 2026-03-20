@@ -109,3 +109,70 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to save job' }, { status: 500 });
   }
 }
+
+/* PUT /api/user/board-jobs — Bulk save jobs from live search results */
+export async function PUT(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { jobs } = body as { jobs: Array<{ title: string; company: string; url: string; location?: string; source?: string; matchScore?: number; description?: string }> };
+
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      return NextResponse.json({ error: 'jobs array is required' }, { status: 400 });
+    }
+
+    let saved = 0;
+    // Process in parallel batches of 5 to avoid overwhelming the DB
+    for (let i = 0; i < jobs.length; i += 5) {
+      const batch = jobs.slice(i, i + 5);
+      const results = await Promise.allSettled(
+        batch.map(async (job) => {
+          if (!job.title || !job.company || !job.url) return null;
+
+          const normalizedCompany = job.company.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+          const normalizedTitle = job.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+          let urlDomain = '';
+          try {
+            urlDomain = new URL(job.url).hostname.replace('www.', '');
+          } catch (_e) {
+            urlDomain = 'unknown';
+          }
+          const dedupeKey = `${normalizedCompany}::${normalizedTitle}::${urlDomain}`;
+
+          return prisma.scoutJob.upsert({
+            where: {
+              userId_dedupeKey: {
+                userId: session.user.id,
+                dedupeKey,
+              },
+            },
+            create: {
+              userId: session.user.id,
+              title: job.title,
+              company: job.company,
+              jobUrl: job.url,
+              dedupeKey,
+              location: job.location || '',
+              description: job.description || '',
+              source: job.source || 'Live Search',
+              matchScore: job.matchScore || null,
+              status: 'NEW',
+            },
+            // Don't overwrite status if job already exists (user may have changed it)
+            update: {},
+          });
+        }),
+      );
+      saved += results.filter((r) => r.status === 'fulfilled' && r.value).length;
+    }
+
+    return NextResponse.json({ saved, total: jobs.length });
+  } catch (err) {
+    console.error('[board-jobs/PUT bulk]', err);
+    return NextResponse.json({ error: 'Failed to bulk save' }, { status: 500 });
+  }
+}

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight, Clock, X, Zap, AlertTriangle, CheckCircle2, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import KanbanBoard from '@/components/dashboard/board/KanbanBoard';
 
@@ -30,6 +31,108 @@ interface LiveSearchJob {
   source: string;
   matchScore: number;
   remote: boolean;
+}
+
+interface SearchHistoryItem {
+  query: string;
+  location: string;
+  resultCount: number;
+  timestamp: number;
+}
+
+interface SearchHistoryWithResults {
+  query: string;
+  location: string;
+  jobs: LiveSearchJob[];
+  sources: Record<string, number>;
+  timestamp: number;
+}
+
+interface ImproveScoreJob {
+  title: string;
+  company: string;
+  location?: string;
+  description?: string;
+  matchScore?: number | null;
+  salary?: string | null;
+  remote?: boolean;
+}
+
+const SEARCH_HISTORY_KEY = '3box-search-history';
+const SEARCH_RESULTS_KEY = '3box-search-results';
+const MAX_HISTORY = 10;
+const MAX_STORED_SEARCHES = 5; // Store results for last 5 searches
+
+function getSearchHistory(): SearchHistoryItem[] {
+  try {
+    const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_e) {
+    return [];
+  }
+}
+
+function saveSearchHistory(item: SearchHistoryItem) {
+  try {
+    let history = getSearchHistory();
+    // Remove duplicate (same query + location)
+    history = history.filter(
+      (h) => !(h.query.toLowerCase() === item.query.toLowerCase() && h.location.toLowerCase() === item.location.toLowerCase()),
+    );
+    history.unshift(item);
+    if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+  } catch (_e) { /* ignore */ }
+}
+
+function getStoredSearchResults(): SearchHistoryWithResults[] {
+  try {
+    const raw = localStorage.getItem(SEARCH_RESULTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_e) {
+    return [];
+  }
+}
+
+function saveSearchResults(entry: SearchHistoryWithResults) {
+  try {
+    let stored = getStoredSearchResults();
+    // Remove duplicate
+    stored = stored.filter(
+      (s) => !(s.query.toLowerCase() === entry.query.toLowerCase() && s.location.toLowerCase() === entry.location.toLowerCase()),
+    );
+    stored.unshift(entry);
+    if (stored.length > MAX_STORED_SEARCHES) stored = stored.slice(0, MAX_STORED_SEARCHES);
+    localStorage.setItem(SEARCH_RESULTS_KEY, JSON.stringify(stored));
+  } catch (_e) { /* ignore — localStorage may be full */ }
+}
+
+function getLastSearchResults(): SearchHistoryWithResults | null {
+  const stored = getStoredSearchResults();
+  return stored.length > 0 ? stored[0] : null;
+}
+
+function getSearchResultsFor(query: string, location: string): SearchHistoryWithResults | null {
+  const stored = getStoredSearchResults();
+  return stored.find(
+    (s) => s.query.toLowerCase() === query.toLowerCase() && s.location.toLowerCase() === location.toLowerCase(),
+  ) || null;
+}
+
+function removeSearchHistoryItem(query: string, location: string) {
+  try {
+    let history = getSearchHistory();
+    history = history.filter(
+      (h) => !(h.query.toLowerCase() === query.toLowerCase() && h.location.toLowerCase() === location.toLowerCase()),
+    );
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+    // Also remove stored results
+    let stored = getStoredSearchResults();
+    stored = stored.filter(
+      (s) => !(s.query.toLowerCase() === query.toLowerCase() && s.location.toLowerCase() === location.toLowerCase()),
+    );
+    localStorage.setItem(SEARCH_RESULTS_KEY, JSON.stringify(stored));
+  } catch (_e) { /* ignore */ }
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -66,6 +169,7 @@ const GRAPH_GROUPS = [
 ];
 
 export default function BoardPage() {
+  const router = useRouter();
   const [jobs, setJobs] = useState<BoardJob[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -83,6 +187,18 @@ export default function BoardPage() {
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveSources, setLiveSources] = useState<Record<string, number>>({});
   const [savingJobId, setSavingJobId] = useState<string | null>(null);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [searchTier, setSearchTier] = useState<{ tier: string; used: number; premiumLeft: number } | null>(null);
+
+  // Auto Apply state
+  const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+  const [autoApplyStatus, setAutoApplyStatus] = useState<{
+    resumeReady: boolean;
+    resumeStatus: string;
+    cap: { allowed: boolean; used: number; limit: number; remaining: number; limitType: string };
+  } | null>(null);
+  const [autoApplyError, setAutoApplyError] = useState<string | null>(null);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -93,30 +209,99 @@ export default function BoardPage() {
         setJobs(data.jobs || []);
         setStatusCounts(data.statusCounts || {});
       }
-    } catch {} finally {
+    } catch (_e) { /* ignore */ } finally {
       setLoading(false);
     }
   }, [period]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  useEffect(() => {
+    setSearchHistory(getSearchHistory());
+    // Restore last search results so they're visible immediately
+    const lastSearch = getLastSearchResults();
+    if (lastSearch && lastSearch.jobs.length > 0) {
+      setLiveJobs(lastSearch.jobs);
+      setLiveSources(lastSearch.sources || {});
+      setLiveQuery(lastSearch.query);
+      setLiveLocation(lastSearch.location || '');
+    }
+  }, []);
+
+  // Fetch auto-apply eligibility when switching to search tab
+  useEffect(() => {
+    if (activeTab === 'search' && !autoApplyStatus) {
+      fetch('/api/jobs/quick-apply')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setAutoApplyStatus(data); })
+        .catch(() => {});
+    }
+  }, [activeTab, autoApplyStatus]);
+
+  // Shared search execution
+  const executeSearch = async (query: string, location: string) => {
+    setLiveLoading(true);
+    setLiveJobs([]);
+    try {
+      const params = new URLSearchParams({ q: query });
+      if (location) params.set('location', location);
+      const res = await fetch(`/api/jobs/search?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        const foundJobs = data.jobs || [];
+        setLiveJobs(foundJobs);
+        setLiveSources(data.sources || {});
+        if (data.searchTier) {
+          setSearchTier({ tier: data.searchTier, used: data.searchesUsed, premiumLeft: data.premiumSearchesLeft });
+        }
+        const count = foundJobs.length;
+        saveSearchHistory({ query: query.trim(), location: location.trim(), resultCount: count, timestamp: Date.now() });
+        saveSearchResults({ query: query.trim(), location: location.trim(), jobs: foundJobs, sources: data.sources || {}, timestamp: Date.now() });
+        setSearchHistory(getSearchHistory());
+
+        // Auto-save all search results to the board in background
+        if (foundJobs.length > 0) {
+          fetch('/api/user/board-jobs', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobs: foundJobs.map((j: LiveSearchJob) => ({
+                title: j.title,
+                company: j.company,
+                url: j.url,
+                location: j.location,
+                source: j.source,
+                matchScore: j.matchScore,
+                description: j.description,
+              })),
+            }),
+          })
+            .then(() => fetchJobs()) // Refresh board after saving
+            .catch(() => {}); // Silent — don't block search UX
+        }
+      }
+    } catch (_e) { /* ignore */ } finally {
+      setLiveLoading(false);
+    }
+  };
+
+  // Run search with specific query/location (used by history clicks)
+  const runSearchWith = async (query: string, location: string) => {
+    setLiveQuery(query);
+    setLiveLocation(location);
+    // Check for cached results first (instant load)
+    const cached = getSearchResultsFor(query, location);
+    if (cached && cached.jobs.length > 0) {
+      setLiveJobs(cached.jobs);
+      setLiveSources(cached.sources || {});
+    }
+    // Always re-fetch for fresh results (will update UI when done)
+    await executeSearch(query, location);
+  };
 
   // Live Search function
   const runLiveSearch = async () => {
     if (!liveQuery.trim()) return;
-    setLiveLoading(true);
-    setLiveJobs([]);
-    try {
-      const params = new URLSearchParams({ q: liveQuery });
-      if (liveLocation) params.set('location', liveLocation);
-      const res = await fetch(`/api/jobs/search?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLiveJobs(data.jobs || []);
-        setLiveSources(data.sources || {});
-      }
-    } catch {} finally {
-      setLiveLoading(false);
-    }
+    await executeSearch(liveQuery, liveLocation);
   };
 
   // Save a live search job to the board
@@ -139,8 +324,76 @@ export default function BoardPage() {
       });
       // Refresh board jobs
       fetchJobs();
-    } catch {} finally {
+    } catch (_e) { /* ignore */ } finally {
       setSavingJobId(null);
+    }
+  };
+
+  // Auto Apply a live search job
+  const autoApply = async (job: LiveSearchJob) => {
+    setAutoApplyError(null);
+
+    // Check resume first
+    if (autoApplyStatus && !autoApplyStatus.resumeReady) {
+      setAutoApplyError('resume');
+      return;
+    }
+
+    // Check cap
+    if (autoApplyStatus && !autoApplyStatus.cap.allowed) {
+      setAutoApplyError('limit');
+      return;
+    }
+
+    setApplyingJobId(job.id);
+    try {
+      const res = await fetch('/api/jobs/quick-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          description: job.description,
+          url: job.url,
+          source: job.source,
+          matchScore: job.matchScore,
+          salary: job.salary,
+          remote: job.remote,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error === 'resume_not_ready') {
+          setAutoApplyError('resume');
+        } else if (data.error === 'limit_reached') {
+          setAutoApplyError('limit');
+          if (autoApplyStatus) {
+            setAutoApplyStatus({ ...autoApplyStatus, cap: { ...autoApplyStatus.cap, allowed: false, remaining: 0 } });
+          }
+        } else {
+          setAutoApplyError(data.message || 'Failed to apply');
+        }
+        return;
+      }
+
+      // Mark as applied
+      setAppliedJobIds(prev => new Set([...prev, job.id]));
+      // Update cap remaining
+      if (autoApplyStatus && data.cap) {
+        setAutoApplyStatus({
+          ...autoApplyStatus,
+          cap: { ...autoApplyStatus.cap, remaining: data.cap.remaining, used: autoApplyStatus.cap.used + 1 },
+        });
+      }
+      // Refresh board
+      fetchJobs();
+    } catch (_e) {
+      setAutoApplyError('Network error. Please try again.');
+    } finally {
+      setApplyingJobId(null);
     }
   };
 
@@ -176,6 +429,19 @@ export default function BoardPage() {
     if (mins < 60) return `${mins}m ago`;
     if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
     return `${Math.floor(mins / 1440)}d ago`;
+  };
+
+  // Navigate to score improvement page
+  const goToImproveScore = (job: ImproveScoreJob) => {
+    const params = new URLSearchParams();
+    params.set('title', job.title);
+    if (job.company) params.set('company', job.company);
+    if (job.description) params.set('description', job.description.slice(0, 500));
+    if (job.location) params.set('location', job.location);
+    if (job.matchScore) params.set('score', String(Math.round(job.matchScore)));
+    if (job.salary) params.set('salary', job.salary);
+    if (job.remote) params.set('remote', 'true');
+    router.push(`/dashboard/resume/improve?${params}`);
   };
 
   return (
@@ -271,6 +537,103 @@ export default function BoardPage() {
             </button>
           </div>
 
+          {/* Search History — always visible when there's history */}
+          {searchHistory.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Recent Searches</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchHistory.map((item, i) => (
+                  <button
+                    key={`${item.query}-${item.location}-${i}`}
+                    onClick={() => runSearchWith(item.query, item.location)}
+                    className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300 dark:hover:border-blue-500/40 hover:bg-blue-50 dark:hover:bg-blue-500/5 transition-colors"
+                  >
+                    <Search className="w-3 h-3 text-gray-400 group-hover:text-blue-500" />
+                    <span className="font-medium">{item.query}</span>
+                    {item.location && <span className="text-gray-400">in {item.location}</span>}
+                    <span className="text-gray-400 dark:text-gray-500">({item.resultCount})</span>
+                    <span
+                      role="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeSearchHistoryItem(item.query, item.location);
+                        setSearchHistory(getSearchHistory());
+                      }}
+                      className="ml-0.5 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3 text-gray-400" />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Auto Apply Status Bar */}
+          {autoApplyStatus && (
+            <div className={cn(
+              'mb-4 p-3 rounded-xl border flex items-center justify-between text-sm',
+              autoApplyStatus.resumeReady && autoApplyStatus.cap.allowed
+                ? 'bg-green-50 dark:bg-green-500/5 border-green-200 dark:border-green-500/20'
+                : 'bg-amber-50 dark:bg-amber-500/5 border-amber-200 dark:border-amber-500/20',
+            )}>
+              <div className="flex items-center gap-2">
+                {autoApplyStatus.resumeReady && autoApplyStatus.cap.allowed ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <span className="text-green-700 dark:text-green-400 font-medium">Auto Apply Ready</span>
+                    <span className="text-green-600 dark:text-green-500 text-xs">
+                      {autoApplyStatus.cap.remaining} of {autoApplyStatus.cap.limit} applications remaining {autoApplyStatus.cap.limitType === 'daily' ? 'today' : ''}
+                    </span>
+                  </>
+                ) : !autoApplyStatus.resumeReady ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">Resume Required</span>
+                    <Link href="/dashboard/resume" className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-1">
+                      Create & verify your resume
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">Application Limit Reached</span>
+                    <span className="text-amber-600 dark:text-amber-500 text-xs">
+                      {autoApplyStatus.cap.used}/{autoApplyStatus.cap.limit} {autoApplyStatus.cap.limitType === 'daily' ? 'today' : 'total'}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {autoApplyError && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                {autoApplyError === 'resume' ? (
+                  <span className="text-red-700 dark:text-red-400">
+                    You need a verified resume to auto-apply.{' '}
+                    <Link href="/dashboard/resume" className="font-medium underline">Create Resume</Link>
+                  </span>
+                ) : autoApplyError === 'limit' ? (
+                  <span className="text-red-700 dark:text-red-400">
+                    Application limit reached. Upgrade your plan for more applications.
+                  </span>
+                ) : (
+                  <span className="text-red-700 dark:text-red-400">{autoApplyError}</span>
+                )}
+              </div>
+              <button onClick={() => setAutoApplyError(null)} className="p-1 hover:bg-red-100 dark:hover:bg-red-500/10 rounded">
+                <X className="w-3.5 h-3.5 text-red-400" />
+              </button>
+            </div>
+          )}
+
           {/* Source breakdown chips */}
           {Object.keys(liveSources).length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
@@ -282,6 +645,19 @@ export default function BoardPage() {
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 Total: {liveJobs.length}
               </span>
+              {searchTier && (
+                <span className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium',
+                  searchTier.tier === 'premium'
+                    ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
+                )}>
+                  <Sparkles className="w-3 h-3" />
+                  {searchTier.tier === 'premium'
+                    ? `Premium sources (${searchTier.premiumLeft} left today)`
+                    : 'All sources'}
+                </span>
+              )}
             </div>
           )}
 
@@ -303,14 +679,22 @@ export default function BoardPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{job.title}</h3>
                         {job.matchScore >= 70 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 font-medium flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); goToImproveScore(job); }}
+                            className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 font-medium flex-shrink-0 hover:bg-green-200 dark:hover:bg-green-500/20 transition-colors cursor-pointer"
+                            title="Click to see how to improve your score"
+                          >
                             {Math.round(job.matchScore)}% match
-                          </span>
+                          </button>
                         )}
                         {job.matchScore > 0 && job.matchScore < 70 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); goToImproveScore(job); }}
+                            className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium flex-shrink-0 hover:bg-amber-200 dark:hover:bg-amber-500/20 transition-colors cursor-pointer"
+                            title="Click to see how to improve your score"
+                          >
                             {Math.round(job.matchScore)}% match
-                          </span>
+                          </button>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -325,13 +709,27 @@ export default function BoardPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">
+                      {appliedJobIds.has(job.id) ? (
+                        <span className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Applied
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => autoApply(job)}
+                          disabled={applyingJobId === job.id}
+                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-medium hover:from-blue-700 hover:to-purple-700 transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                          {applyingJobId === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                          Auto Apply
+                        </button>
+                      )}
                       <a
                         href={job.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1"
                       >
-                        Apply <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-3 h-3" /> Manual
                       </a>
                       <button
                         onClick={() => saveToBoard(job)}
@@ -356,8 +754,8 @@ export default function BoardPage() {
             </div>
           )}
 
-          {/* Initial state */}
-          {!liveLoading && liveJobs.length === 0 && !liveQuery && (
+          {/* Initial state — show when no query typed and no results */}
+          {!liveLoading && liveJobs.length === 0 && !liveQuery && searchHistory.length === 0 && (
             <div className="text-center py-16">
               <Radar className="w-12 h-12 text-blue-300 dark:text-blue-600 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Search jobs across the web</h3>
@@ -529,12 +927,16 @@ export default function BoardPage() {
                   </div>
                   <div className="col-span-1 hidden sm:block">
                     {job.matchScore ? (
-                      <span className={cn(
-                        'text-xs font-semibold',
-                        job.matchScore >= 80 ? 'text-green-600' : job.matchScore >= 60 ? 'text-amber-600' : 'text-gray-500',
-                      )}>
+                      <button
+                        onClick={() => goToImproveScore({ title: job.title, company: job.company, location: job.location, matchScore: job.matchScore })}
+                        className={cn(
+                          'text-xs font-semibold hover:underline cursor-pointer',
+                          job.matchScore >= 80 ? 'text-green-600' : job.matchScore >= 60 ? 'text-amber-600' : 'text-gray-500',
+                        )}
+                        title="Click to see how to improve your score"
+                      >
                         {Math.round(job.matchScore)}%
-                      </span>
+                      </button>
                     ) : (
                       <span className="text-xs text-gray-400">-</span>
                     )}

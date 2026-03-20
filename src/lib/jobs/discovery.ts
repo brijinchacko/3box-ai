@@ -300,6 +300,16 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     // Must have some description
     if (!job.description || job.description.length < 20) return false;
 
+    // Filter out search/listing pages that slipped through (not actual job postings)
+    const titleLower = job.title.toLowerCase();
+    if (/^\d+\s+.*job\s*(vacancies|openings|listings|results)/i.test(titleLower)) return false;
+    if (/^\d+\+?\s+.*jobs?\s+(in|near|for)/i.test(titleLower)) return false;
+    if (/job\s*vacancies\s*in\s/i.test(titleLower)) return false;
+
+    // Filter Naukri listing page URLs
+    const urlLower = (job.url || '').toLowerCase();
+    if (urlLower.includes('naukri.com') && /-jobs-in-|-jobs$/.test(urlLower)) return false;
+
     return true;
   });
 }
