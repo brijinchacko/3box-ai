@@ -28,7 +28,7 @@ npm run dev
 
 **Demo credentials:**
 - User: `demo@3box.ai` / `demo123456`
-- OFORO Admin: `nishinth.m@wartens.com` / `demo123456` (auto-ULTRA access)
+- OFORO Admin: `nishinth.m@wartens.com` / `demo123456` (auto-MAX access)
 
 ## Architecture
 

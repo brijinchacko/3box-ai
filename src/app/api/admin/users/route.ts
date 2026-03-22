@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (plan && ['FREE', 'BASIC', 'STARTER', 'PRO', 'ULTRA', 'MAX'].includes(plan)) {
+    if (plan && ['FREE', 'PRO', 'MAX'].includes(plan)) {
       where.plan = plan;
     }
 

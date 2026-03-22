@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     where,
     include: { phase: { select: { id: true, name: true } } },
     orderBy: { createdAt: 'asc' },
+    take: 100,
   });
 
   return NextResponse.json({ tasks });

@@ -70,8 +70,8 @@ export async function handleToolRequest(
             where: { id: session.user.id },
             select: { plan: true },
           });
-          const plan = (user?.plan ?? 'BASIC').toUpperCase();
-          if (plan !== 'BASIC') {
+          const plan = (user?.plan ?? 'FREE').toUpperCase();
+          if (plan !== 'FREE') {
             isPaidUser = true;
           }
         }

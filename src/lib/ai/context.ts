@@ -148,13 +148,13 @@ export async function buildUserContext(userId: string): Promise<UserContextDocum
     prisma.resume.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
-      take: 3,
-      select: { content: true, targetJob: true, atsScore: true },
+      take: 1,
+      select: { targetJob: true, atsScore: true },
     }),
     prisma.jobApplication.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 5,
       select: { jobTitle: true, company: true, status: true },
     }),
     prisma.portfolio.findFirst({
@@ -272,19 +272,16 @@ export async function buildUserContext(userId: string): Promise<UserContextDocum
     };
   }
 
-  // ─── Parse Resumes ────────────
+  // ─── Parse Resumes (lightweight — no full content fetched) ────────────
   const latestResume = resumes[0] || null;
-  const resumeContent = latestResume?.content as any;
 
   const resumeDoc: UserContextDocument['resume'] = {
     hasResume: resumes.length > 0,
     count: resumes.length,
     latestAtsScore: latestResume?.atsScore || null,
     latestTargetJob: latestResume?.targetJob || null,
-    latestSummary: resumeContent?.summary || resumeContent?.personalInfo?.summary || null,
-    latestSkills: Array.isArray(resumeContent?.skills)
-      ? resumeContent.skills.map((s: any) => (typeof s === 'string' ? s : s.name || s.skill || '')).filter(Boolean).slice(0, 15)
-      : [],
+    latestSummary: null,
+    latestSkills: [],
   };
 
   // ─── Parse Job Applications ────────────
@@ -325,7 +322,7 @@ export async function buildUserContext(userId: string): Promise<UserContextDocum
   const doc: UserContextDocument = {
     user: {
       name: user.name || 'User',
-      plan: user.plan || 'BASIC',
+      plan: user.plan || 'FREE',
       memberSince: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '',
       onboardingDone: user.onboardingDone || false,
     },
@@ -364,7 +361,7 @@ export function serializeUserContext(ctx: UserContextDocument): string {
   // Identity
   lines.push(`Name: ${ctx.user.name} | Plan: ${ctx.user.plan} | Member since: ${ctx.user.memberSince}`);
 
-  // Career profile
+  // Career profile (trimmed to essentials)
   if (ctx.careerProfile) {
     const p = ctx.careerProfile;
     if (p.targetRoles.length > 0) {
@@ -379,34 +376,31 @@ export function serializeUserContext(ctx: UserContextDocument): string {
       lines.push(`Current Status: ${p.targetRoles[0].currentStatus}`);
     }
     if (p.location) lines.push(`Location: ${p.location}`);
+    if (p.bio) lines.push(`Bio: ${p.bio.slice(0, 120)}`);
     if (p.educationLevel || p.institution) {
       const edu = [p.educationLevel, p.fieldOfStudy, p.institution, p.graduationYear].filter(Boolean).join(', ');
       lines.push(`Education: ${edu}`);
     }
-    if (p.bio) lines.push(`Bio: ${p.bio}`);
     if (p.experiences.length > 0) {
-      lines.push(`Work Experience: ${p.experiences.length} position(s)`);
-      p.experiences.slice(0, 3).forEach(e => {
-        lines.push(`  - ${e.title}${e.company ? ` at ${e.company}` : ''}${e.duration ? ` (${e.duration})` : ''}`);
-      });
+      lines.push(`Experience: ${p.experiences.slice(0, 2).map(e => `${e.title}${e.company ? ` at ${e.company}` : ''}`).join('; ')}`);
     }
     if (p.interests.length > 0) {
-      lines.push(`Interests: ${p.interests.join(', ')}`);
+      lines.push(`Interests: ${p.interests.slice(0, 5).join(', ')}`);
     }
     lines.push(`Market Readiness: ${Math.round(p.marketReadiness)}% | Hire Probability: ${Math.round(p.hireProbability)}%`);
   }
 
-  // Skills
+  // Skills (capped to reduce token count)
   const skillKeys = Object.keys(ctx.skills.snapshot);
   if (skillKeys.length > 0) {
-    const skillStr = skillKeys.slice(0, 12).map(k => `${k} (${ctx.skills.snapshot[k]})`).join(', ');
+    const skillStr = skillKeys.slice(0, 8).map(k => `${k} (${ctx.skills.snapshot[k]})`).join(', ');
     lines.push(`Skills: ${skillStr}`);
   }
   if (ctx.skills.overallScore !== null) {
     lines.push(`Assessment Score: ${ctx.skills.overallScore}/100`);
   }
   if (ctx.skills.gaps.length > 0) {
-    const gapStr = ctx.skills.gaps.slice(0, 5).map(g => `${g.skill} (${g.current}/${g.required}, ${g.priority})`).join(', ');
+    const gapStr = ctx.skills.gaps.slice(0, 3).map(g => `${g.skill} (${g.current}/${g.required}, ${g.priority})`).join(', ');
     lines.push(`Skill Gaps: ${gapStr}`);
   }
 
@@ -422,19 +416,13 @@ export function serializeUserContext(ctx: UserContextDocument): string {
     lines.push(`Learning: ${lp.completedModules}/${lp.totalModules} modules (${lp.progressPercentage}%) for ${lp.targetRole}`);
   }
 
-  // Resume
+  // Resume (summary only — no full content)
   if (ctx.resume.hasResume) {
     const r = ctx.resume;
     let resumeLine = `Resume: ${r.count} saved`;
     if (r.latestAtsScore) resumeLine += ` | ATS Score: ${r.latestAtsScore}`;
     if (r.latestTargetJob) resumeLine += ` | Targeting: ${r.latestTargetJob}`;
     lines.push(resumeLine);
-    if (r.latestSkills.length > 0) {
-      lines.push(`Resume Skills: ${r.latestSkills.join(', ')}`);
-    }
-    if (r.latestSummary) {
-      lines.push(`Resume Summary: ${r.latestSummary.slice(0, 200)}`);
-    }
   }
 
   // Job Search

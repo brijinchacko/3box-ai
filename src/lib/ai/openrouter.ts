@@ -8,7 +8,7 @@ const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
 // ─── Model Configuration ──────────────────────
 
 export type ModelTier = 'free' | 'standard' | 'reasoning' | 'premium';
-export type PlanTier = 'BASIC' | 'STARTER' | 'PRO' | 'ULTRA';
+export type PlanTier = 'FREE' | 'PRO' | 'MAX';
 export type AIFeature =
   | 'assessment'
   | 'career-plan'
@@ -94,13 +94,12 @@ const ALL_PREMIUM: Record<AIFeature, ModelTier> = {
 };
 
 const MODEL_ROUTING: Record<PlanTier, Record<AIFeature, ModelTier>> = {
-  BASIC: ALL_PREMIUM,
-  STARTER: ALL_PREMIUM,
+  FREE: ALL_PREMIUM,
   PRO: ALL_PREMIUM,
-  ULTRA: ALL_PREMIUM,
+  MAX: ALL_PREMIUM,
 };
 
-export function getModelForFeature(feature: AIFeature, userPlan: PlanTier = 'BASIC'): AIModelConfig {
+export function getModelForFeature(feature: AIFeature, userPlan: PlanTier = 'FREE'): AIModelConfig {
   const tier = MODEL_ROUTING[userPlan]?.[feature] || 'free';
   return AI_MODELS[tier];
 }
@@ -304,9 +303,9 @@ export async function aiChatStream(
     body: JSON.stringify(body),
     signal: abortCtrl.signal,
   });
-  clearTimeout(streamTimeout);
 
   if (!response.ok || !response.body) {
+    clearTimeout(streamTimeout);
     // Fallback to non-streaming
     console.warn(`[AI] Streaming failed for ${startTier}, falling back to non-streaming`);
     const text = await aiChatWithFallback(request, startTier);
@@ -320,6 +319,8 @@ export async function aiChatStream(
     });
   }
 
+  // Clear timeout once streaming body starts flowing — the stream itself will end naturally
+  clearTimeout(streamTimeout);
   return response.body;
 }
 
@@ -336,7 +337,7 @@ function injectContext(basePrompt: string, userContext?: string): string {
 export async function generateAssessmentQuestions(
   targetRole: string,
   existingSkills?: string[],
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('assessment', userPlan);
@@ -380,7 +381,7 @@ Return ONLY a valid JSON array. No markdown, no explanation.`, userContext),
 export async function analyzeAssessment(
   targetRole: string,
   answers: Record<string, any>,
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('assessment', userPlan);
@@ -406,7 +407,7 @@ export async function analyzeAssessment(
 export async function generateCareerPlan(
   targetRole: string,
   skillScores: Record<string, number>,
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('career-plan', userPlan);
@@ -432,7 +433,7 @@ export async function generateCareerPlan(
 export async function generateLearningPath(
   targetRole: string,
   gaps: any[],
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('learning-path', userPlan);
@@ -457,7 +458,7 @@ export async function generateLearningPath(
 export async function generateResume(
   profile: any,
   targetJob?: string,
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('resume', userPlan);
@@ -483,7 +484,7 @@ export async function generateResume(
 export async function generateCoverLetter(
   resume: any,
   jobDescription: string,
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('cover-letter', userPlan);
@@ -517,7 +518,7 @@ export async function generateCoverLetter(
 export async function matchJobs(
   profile: any,
   preferences: any,
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string
 ): Promise<string> {
   const model = getModelForFeature('job-matching', userPlan);
@@ -542,7 +543,7 @@ export async function matchJobs(
 export async function coachChat(
   userMessage: string,
   context: any,
-  userPlan: PlanTier = 'BASIC',
+  userPlan: PlanTier = 'FREE',
   userContext?: string,
   agentKnowledge?: string | null
 ): Promise<string> {

@@ -41,11 +41,11 @@ export async function POST(req: Request) {
     const plan = (user.plan ?? 'FREE').toUpperCase();
 
     // ── 3. Plan gate ─────────────────────────────
-    if (plan === 'FREE' || plan === 'BASIC') {
+    if (plan === 'FREE') {
       return NextResponse.json(
         {
           error: 'upgrade_required',
-          message: 'Upgrade to Starter or above to export PDF',
+          message: 'Upgrade to Pro or above to export PDF',
         },
         { status: 403 },
       );
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       resumeData;
 
     // ── 5. Determine watermark ───────────────────
-    const showWatermark = plan === 'STARTER';
+    const showWatermark = plan === 'PRO';
 
     // ── 6. Track export (increment aiCreditsUsed) ─
     try {

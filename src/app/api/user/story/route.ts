@@ -57,7 +57,7 @@ async function generateStory(userId: string): Promise<string | null> {
       profile.bio ? `Bio: ${profile.bio}` : null,
     ].filter(Boolean).join('\n');
 
-    const model = getModelForFeature('coach', 'BASIC' as PlanTier);
+    const model = getModelForFeature('coach', 'FREE' as PlanTier);
 
     const result = await aiChatWithFallback(
       {

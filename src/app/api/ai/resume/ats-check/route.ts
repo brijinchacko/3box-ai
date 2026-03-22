@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       select: { plan: true },
     });
 
-    const userPlan = (user?.plan as any) || 'BASIC';
+    const userPlan = (user?.plan as any) || 'FREE';
 
     // ── 4. Parse body ────────────────────────────
     const body = await req.json();

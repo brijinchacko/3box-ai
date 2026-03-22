@@ -9,7 +9,7 @@ const { prisma } = require('@/lib/db/prisma');
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    let userPlan: PlanTier = 'BASIC';
+    let userPlan: PlanTier = 'FREE';
     if (session?.user?.id) {
       const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { plan: true } });
       if (user) userPlan = user.plan;

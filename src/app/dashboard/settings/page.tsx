@@ -611,7 +611,7 @@ export default function SettingsPage() {
   /*  Derived values                                                   */
   /* ---------------------------------------------------------------- */
 
-  const userPlan = profile?.plan || (session?.user as any)?.plan || 'BASIC';
+  const userPlan = profile?.plan || (session?.user as any)?.plan || 'FREE';
   const userName = profile?.name || session?.user?.name || 'User';
   const userEmail = profile?.email || session?.user?.email || '';
   const creditsUsed = profile?.aiCreditsUsed ?? (session?.user as any)?.aiCreditsUsed ?? 0;
@@ -619,27 +619,18 @@ export default function SettingsPage() {
   const creditPercent = creditsLimit > 0 ? Math.min(Math.round((creditsUsed / creditsLimit) * 100), 100) : 0;
 
   const planLabel: Record<string, string> = {
-    BASIC: 'Basic (Free)',
-    STARTER: 'Starter',
+    FREE: 'Free',
     PRO: 'Pro',
-    ULTRA: 'Ultra',
+    MAX: 'Max',
   };
 
   const planFeatures: Record<string, string[]> = {
-    BASIC: [
+    FREE: [
       '10 AI credits / month',
       '1 skill assessment / month',
       '1 resume (watermarked)',
       'Basic career plan',
       'AI coach (limited)',
-    ],
-    STARTER: [
-      '100 AI credits / month',
-      '5 skill assessments / month',
-      '3 resume templates',
-      '5 PDF exports / month',
-      'AI coach (full access)',
-      'Scout & Forge agents',
     ],
     PRO: [
       '500 AI credits / month',
@@ -650,7 +641,7 @@ export default function SettingsPage() {
       'Interview prep + mock interviews',
       'Scout, Forge, Archer & Atlas agents',
     ],
-    ULTRA: [
+    MAX: [
       'Unlimited AI credits',
       'All 6 agents (full autopilot)',
       'Priority AI processing',
@@ -967,19 +958,17 @@ export default function SettingsPage() {
                     <div>
                       <div className="font-semibold">{planLabel[userPlan] || userPlan} Plan</div>
                       <div className="text-sm text-white/40">
-                        {userPlan === 'BASIC'
+                        {userPlan === 'FREE'
                           ? 'Free forever'
-                          : userPlan === 'STARTER'
-                            ? '$12/month'
-                            : userPlan === 'PRO'
-                              ? '$29/month'
-                              : '$59/month'}
+                          : userPlan === 'PRO'
+                            ? '$29/month'
+                            : '$59/month'}
                       </div>
                     </div>
                   </div>
-                  {userPlan !== 'ULTRA' && (
+                  {userPlan !== 'MAX' && (
                     <a href="/pricing" className="btn-secondary text-sm">
-                      {userPlan === 'BASIC' ? 'Upgrade' : 'Upgrade to Ultra'}
+                      {userPlan === 'FREE' ? 'Upgrade' : 'Upgrade to Max'}
                     </a>
                   )}
                 </div>
@@ -1006,7 +995,7 @@ export default function SettingsPage() {
                 <div className="mb-6">
                   <h4 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Plan Includes</h4>
                   <div className="grid sm:grid-cols-2 gap-2">
-                    {(planFeatures[userPlan] || planFeatures.BASIC).map((feat) => (
+                    {(planFeatures[userPlan] || planFeatures.FREE).map((feat) => (
                       <div key={feat} className="flex items-center gap-2 text-xs text-white/50">
                         <div className="w-1 h-1 rounded-full bg-neon-green flex-shrink-0" />
                         {feat}
@@ -1015,7 +1004,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {userPlan !== 'BASIC' && (
+                {userPlan !== 'FREE' && (
                   <button
                     onClick={openBillingPortal}
                     disabled={portalLoading}

@@ -203,7 +203,7 @@ function StatCardSkeleton() {
 export default function QualityReviewPage() {
   const { data: session } = useSession();
   const { isAgentic } = useDashboardMode();
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase() as PlanTier;
   const agentLocked = !isAgentAvailable('sentinel', userPlan);
 
   // In Agentic mode, render Cortex-style agent workspace for Sentinel

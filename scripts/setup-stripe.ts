@@ -43,26 +43,19 @@ interface PlanConfig {
 }
 
 const PLANS: Record<string, PlanConfig> = {
-  STARTER: {
-    name: '3BOX AI Starter',
-    description: 'Perfect for getting started with AI-powered career tools',
-    monthlyPrice: 1200, // $12
-    yearlyPrice: 9600,  // $96/yr ($8/mo)
-    features: ['5 assessments/mo', '100 AI credits/mo', '3 resume templates', 'Full career plan', 'AI coach access'],
-  },
   PRO: {
     name: '3BOX AI Pro',
-    description: 'Advanced career tools with human expert support',
+    description: 'Advanced career tools with full AI access',
     monthlyPrice: 2900, // $29
-    yearlyPrice: 23200, // $232/yr (~$19.33/mo)
-    features: ['Unlimited assessments', '500 AI credits/mo', 'All templates', 'Job matching', 'Human mock interviews', 'Human resume review'],
+    yearlyPrice: 29000, // $290/yr
+    features: ['All 6 AI agents', '20 applications/day', 'All resume templates', 'Job matching', 'AI coach access'],
   },
-  ULTRA: {
-    name: '3BOX AI Ultra',
+  MAX: {
+    name: '3BOX AI Max',
     description: 'The complete career acceleration package',
     monthlyPrice: 5900, // $59
-    yearlyPrice: 47200, // $472/yr (~$39.33/mo)
-    features: ['Everything in Pro', 'Unlimited AI credits', 'Auto-apply', 'Dedicated career mentor', '1-on-1 expert coaching', 'LinkedIn optimizer'],
+    yearlyPrice: 59000, // $590/yr
+    features: ['Everything in Pro', '50 applications/day', 'Auto-apply', 'Priority support'],
   },
 };
 

@@ -7,6 +7,7 @@ export async function GET() {
   const entries = await prisma.changelog.findMany({
     where: { isPublic: true },
     orderBy: { createdAt: 'desc' },
+    take: 50,
     select: {
       id: true,
       title: true,

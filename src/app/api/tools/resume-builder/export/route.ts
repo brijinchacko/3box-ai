@@ -45,8 +45,8 @@ export async function POST(req: Request) {
           where: { id: session.user.id },
           select: { plan: true },
         });
-        const plan = (user?.plan ?? 'BASIC').toUpperCase();
-        if (plan === 'PRO' || plan === 'ULTRA') {
+        const plan = (user?.plan ?? 'FREE').toUpperCase();
+        if (plan === 'PRO' || plan === 'MAX') {
           isPaidUser = true;
         }
       }

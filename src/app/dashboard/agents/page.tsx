@@ -221,7 +221,7 @@ export default function AgentDashboardPage() {
   }, []);
 
   function buildAgentList(plan: string): AgentDef[] {
-    const PLAN_LEVELS: Record<string, number> = { BASIC: 0, FREE: 0, STARTER: 1, PRO: 2, ULTRA: 3, MAX: 3 };
+    const PLAN_LEVELS: Record<string, number> = { FREE: 0, PRO: 2, MAX: 3 };
     const userLevel = PLAN_LEVELS[plan] || 0;
 
     return AGENT_LIST.map(a => ({
@@ -814,7 +814,7 @@ export default function AgentDashboardPage() {
       </div>
 
       {/* ── Schedule CTA ── */}
-      {effectivePlan !== 'BASIC' && !config.scheduleTime && !config.scoutEnabled && !config.archerEnabled && (
+      {effectivePlan !== 'FREE' && !config.scheduleTime && !config.scoutEnabled && !config.archerEnabled && (
         <motion.div custom={10} variants={fadeUp} initial="hidden" animate="visible">
           <div className="card border border-neon-purple/20 bg-gradient-to-r from-neon-purple/5 to-neon-blue/5">
             <div className="flex items-center gap-4">

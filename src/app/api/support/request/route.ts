@@ -20,9 +20,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Only PRO and ULTRA users can request human support
-    if (user.plan !== 'PRO' && user.plan !== 'ULTRA') {
-      return NextResponse.json({ error: 'Upgrade to Pro or Ultra for human expert access' }, { status: 403 });
+    // Only PRO and MAX users can request human support
+    if (user.plan !== 'PRO' && user.plan !== 'MAX') {
+      return NextResponse.json({ error: 'Upgrade to Pro or Max for human expert access' }, { status: 403 });
     }
 
     const body = await request.json();

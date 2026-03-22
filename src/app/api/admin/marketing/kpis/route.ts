@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const kpis = await prisma.marketingKPI.findMany({
     where: { month, year },
     orderBy: { name: 'asc' },
+    take: 50,
   });
 
   return NextResponse.json({ kpis, month, year });

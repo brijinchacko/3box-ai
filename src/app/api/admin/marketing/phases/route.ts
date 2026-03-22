@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const phases = await prisma.marketingPhase.findMany({
     include: { tasks: { orderBy: { createdAt: 'asc' } } },
     orderBy: { createdAt: 'asc' },
+    take: 50,
   });
 
   return NextResponse.json({ phases });

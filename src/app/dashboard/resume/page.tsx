@@ -274,7 +274,7 @@ function AutopilotResume() {
       })
       .catch(() => {})
       .finally(() => setResumeLoaded(true));
-  }, [session?.user?.email]);
+  }, [session?.user?.email, session?.user?.name]);
 
   // Auto-generate a full resume from onboarding/profile data
   const autoGenerateResume = async (userName: string) => {
@@ -388,7 +388,7 @@ function AutopilotResume() {
           if (data?.resumeId && !resumeId) setResumeId(data.resumeId);
           setLastSaved(new Date().toLocaleTimeString());
           // Any real edit un-verifies the resume (user must re-verify)
-          setIsVerified(false);
+          if (isVerified) setIsVerified(false);
 
           // Auto-create portfolio after first save (if none exists)
           if (!portfolioAutoCreated.current && resume.contact.name && resume.summary) {
@@ -528,8 +528,8 @@ function AutopilotResume() {
             company: exp.company || '',
             role: exp.title || '',
             location: '',
-            startDate: exp.duration?.split('-')[0]?.trim() || exp.duration?.split('–')[0]?.trim() || '',
-            endDate: exp.duration?.split('-')[1]?.trim() || exp.duration?.split('–')[1]?.trim() || '',
+            startDate: exp.duration?.split(/[-–]/)[0]?.trim() || '',
+            endDate: exp.duration?.split(/[-–]/)[1]?.trim() || '',
             current: false,
             bullets: exp.description ? [exp.description] : [],
           })),
@@ -766,6 +766,7 @@ function AutopilotResume() {
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         if (err?.error === 'upgrade_required') {
+          setExporting(false);
           window.location.href = '/pricing';
           return;
         }
@@ -923,9 +924,11 @@ function AutopilotResume() {
 
   // Auto-generate generic cover letter when tab is opened
   useEffect(() => {
+    let cancelled = false;
     if (activeTab === 'cover-letter' && !genericCoverLetter && !genericCLLoading && resume.contact.name && !isFirstTime) {
       handleGenericCoverLetter();
     }
+    return () => { cancelled = true; };
   }, [activeTab, resume.contact.name, isFirstTime]);
 
   const sections = [

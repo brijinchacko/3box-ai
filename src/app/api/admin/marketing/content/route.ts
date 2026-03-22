@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   const items = await prisma.contentCalendar.findMany({
     where,
     orderBy: { scheduledDate: 'asc' },
+    take: 100,
   });
 
   return NextResponse.json({ items });

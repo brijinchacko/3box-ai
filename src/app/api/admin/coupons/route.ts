@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { code, plan, maxUses, durationDays, expiresAt } = body;
 
-    const validPlans = ['BASIC', 'STARTER', 'PRO', 'ULTRA'];
+    const validPlans = ['FREE', 'PRO', 'MAX'];
     if (!plan || !validPlans.includes(plan)) {
       return NextResponse.json({ error: 'Invalid plan tier' }, { status: 400 });
     }

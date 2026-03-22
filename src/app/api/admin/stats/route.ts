@@ -69,7 +69,7 @@ export async function GET() {
     ]);
 
     // Plan distribution
-    const plans: Record<string, number> = { BASIC: 0, STARTER: 0, PRO: 0, ULTRA: 0 };
+    const plans: Record<string, number> = { FREE: 0, PRO: 0, MAX: 0 };
     planCounts.forEach((p: any) => { plans[p.plan] = p._count; });
 
     // Daily signups for chart (last 30 days)

@@ -313,11 +313,8 @@ export default function AdminUsersPage() {
 
   const planColors: Record<string, string> = {
     FREE: 'text-white/40 bg-white/5',
-    BASIC: 'text-white/40 bg-white/5',
-    STARTER: 'text-neon-green bg-neon-green/10',
     PRO: 'text-neon-blue bg-neon-blue/10',
-    MAX: 'text-neon-blue bg-neon-blue/10',
-    ULTRA: 'text-neon-purple bg-neon-purple/10',
+    MAX: 'text-neon-purple bg-neon-purple/10',
   };
 
   const statusColors: Record<string, string> = {
@@ -380,11 +377,8 @@ export default function AdminUsersPage() {
         >
           <option value="">All Plans</option>
           <option value="FREE">Free</option>
-          <option value="BASIC">Basic</option>
-          <option value="STARTER">Starter</option>
           <option value="PRO">Pro</option>
           <option value="MAX">Max</option>
-          <option value="ULTRA">Ultra</option>
         </select>
       </div>
 
@@ -854,7 +848,7 @@ export default function AdminUsersPage() {
             <h2 className="text-lg font-bold mb-1">Change User Plan</h2>
             <p className="text-sm text-white/50 mb-4">{upgradeModal.name || upgradeModal.email} — currently {upgradeModal.plan}</p>
             <div className="grid grid-cols-3 gap-2 mb-4">
-              {['FREE', 'PRO', 'MAX', 'ULTRA'].map(p => (
+              {['FREE', 'PRO', 'MAX'].map(p => (
                 <button
                   key={p}
                   onClick={() => setSelectedPlan(p)}

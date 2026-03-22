@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       select: { plan: true },
     });
 
-    const planOrder = ['BASIC', 'STARTER', 'PRO', 'ULTRA'];
-    const currentPlanIndex = planOrder.indexOf(user?.plan || 'BASIC');
+    const planOrder = ['FREE', 'PRO', 'MAX'];
+    const currentPlanIndex = planOrder.indexOf(user?.plan || 'FREE');
     const couponPlanIndex = planOrder.indexOf(coupon.plan);
 
     if (currentPlanIndex >= couponPlanIndex) {
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     // Apply upgrade in a transaction
-    const creditLimits: Record<string, number> = { BASIC: 10, STARTER: 100, PRO: 500, ULTRA: -1 };
+    const creditLimits: Record<string, number> = { FREE: 10, PRO: 500, MAX: -1 };
 
     await prisma.$transaction([
       prisma.user.update({

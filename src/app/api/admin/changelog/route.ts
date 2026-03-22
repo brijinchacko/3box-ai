@@ -10,6 +10,7 @@ export async function GET() {
   const prisma = getPrisma();
   const entries = await prisma.changelog.findMany({
     orderBy: { createdAt: 'desc' },
+    take: 100,
   });
 
   return NextResponse.json({ entries });

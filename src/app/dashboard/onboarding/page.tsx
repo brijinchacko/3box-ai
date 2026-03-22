@@ -223,7 +223,7 @@ export default function OnboardingPage() {
     archerEnabled: false,
     preset: 'balanced' as SchedulePreset,
   });
-  const [userPlan, setUserPlan] = useState<string>('STARTER');
+  const [userPlan, setUserPlan] = useState<string>('FREE');
 
   // Resume upload state
   const [resumeMode, setResumeMode] = useState<'upload' | 'paste' | null>(null);

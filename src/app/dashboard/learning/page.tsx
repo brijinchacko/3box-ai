@@ -348,7 +348,7 @@ function EmptyState({
 export default function LearningPathPage() {
   const { data: session } = useSession();
   const { isAgentic } = useDashboardMode();
-  const userPlan = ((session?.user as any)?.plan ?? 'BASIC').toUpperCase() as PlanTier;
+  const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase() as PlanTier;
   const sageLocked = !isAgentAvailable('sage', userPlan);
 
   // In Agentic mode, render Cortex-style agent workspace for Sage

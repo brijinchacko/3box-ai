@@ -4,12 +4,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Delete existing test coupon if present
-  await prisma.coupon.deleteMany({ where: { code: 'TEST-ULTRA' } });
+  await prisma.coupon.deleteMany({ where: { code: 'TEST-MAX' } });
 
   const coupon = await prisma.coupon.create({
     data: {
-      code: 'TEST-ULTRA',
-      plan: 'ULTRA',
+      code: 'TEST-MAX',
+      plan: 'MAX',
       maxUses: 100,
       durationDays: 30,
       createdBy: 'system',

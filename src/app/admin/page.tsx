@@ -107,10 +107,9 @@ export default function AdminDashboard() {
               const total = Object.values(plans).reduce((a, b) => a + b, 0);
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               const colors: Record<string, string> = {
-                BASIC: 'bg-white/20',
-                STARTER: 'bg-neon-green',
+                FREE: 'bg-white/20',
                 PRO: 'bg-neon-blue',
-                ULTRA: 'bg-neon-purple',
+                MAX: 'bg-neon-purple',
               };
               return (
                 <div key={plan}>
@@ -204,10 +203,9 @@ export default function AdminDashboard() {
             <tbody>
               {recentUsers.map((u) => {
                 const planColors: Record<string, string> = {
-                  BASIC: 'text-white/40 bg-white/5',
-                  STARTER: 'text-neon-green bg-neon-green/10',
+                  FREE: 'text-white/40 bg-white/5',
                   PRO: 'text-neon-blue bg-neon-blue/10',
-                  ULTRA: 'text-neon-purple bg-neon-purple/10',
+                  MAX: 'text-neon-purple bg-neon-purple/10',
                 };
                 return (
                   <tr key={u.id} className="border-b border-white/5 hover:bg-white/[0.02]">

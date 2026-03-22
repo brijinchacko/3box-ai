@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const userContext = await getUserContextString(session.user.id);
 
     // jobDescription is now optional — when missing, a generic cover letter is generated
-    const coverLetter = await generateCoverLetter(resume, jobDescription || '', user?.plan || 'BASIC', userContext);
+    const coverLetter = await generateCoverLetter(resume, jobDescription || '', user?.plan || 'FREE', userContext);
 
     return NextResponse.json({ coverLetter });
   } catch (error) {

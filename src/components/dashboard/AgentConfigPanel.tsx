@@ -69,7 +69,7 @@ export default function AgentConfigPanel({
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(variant === 'inline');
   const [loaded, setLoaded] = useState(false);
-  const [plan, setPlan] = useState<string>('STARTER');
+  const [plan, setPlan] = useState<string>('FREE');
 
   const tokens = useTokens(60000); // poll every 60s
 
@@ -99,7 +99,7 @@ export default function AgentConfigPanel({
       }
       if (profileRes.ok) {
         const p = await profileRes.json();
-        setPlan(p.plan || 'STARTER');
+        setPlan(p.plan || 'FREE');
       }
       setLoaded(true);
     } catch {

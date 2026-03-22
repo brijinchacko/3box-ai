@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     let learningPathData;
     try {
-      const aiResponse = await generateLearningPath(targetRole, gaps, user?.plan || 'BASIC', userContext);
+      const aiResponse = await generateLearningPath(targetRole, gaps, user?.plan || 'FREE', userContext);
       learningPathData = JSON.parse(extractJSON(aiResponse));
     } catch (aiError) {
       console.warn('[Learning Path] AI generation failed, using demo data:', aiError);

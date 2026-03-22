@@ -132,11 +132,11 @@ export async function POST(req: Request) {
 
     // ── Streaming path ──────────────────────────
     if (useStream) {
-      return handleStreamingChat(session.user.id, message, chatContext, user?.plan || 'BASIC', userContext, agentKnowledge);
+      return handleStreamingChat(session.user.id, message, chatContext, user?.plan || 'FREE', userContext, agentKnowledge);
     }
 
     // ── Non-streaming path (existing) ───────────
-    const reply = await coachChat(message, chatContext, user?.plan || 'BASIC', userContext, agentKnowledge);
+    const reply = await coachChat(message, chatContext, user?.plan || 'FREE', userContext, agentKnowledge);
 
     // Parse actions from AI reply
     const { cleanReply, actions } = parseActions(reply);
@@ -232,59 +232,100 @@ ${userContextBlock}
       model.tier
     );
 
-    // Create a TransformStream that buffers the full response for action parsing
+    // Accumulate full text in background for action parsing at end
     let fullText = '';
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
+    // Buffer for partial SSE lines split across TCP chunks
+    let lineBuf = '';
 
     const transformStream = new TransformStream({
-      async transform(chunk, controller) {
+      transform(chunk, controller) {
         const text = decoder.decode(chunk, { stream: true });
-        // Parse SSE lines from OpenRouter
-        const lines = text.split('\n');
+        // Prepend any leftover partial line from the previous chunk
+        lineBuf += text;
+        const lines = lineBuf.split('\n');
+        // Keep the last element — it may be an incomplete line
+        lineBuf = lines.pop() || '';
+
         for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try {
-              const json = JSON.parse(line.slice(6));
-              const content = json.choices?.[0]?.delta?.content || '';
-              if (content) {
-                fullText += content;
-                // Forward the chunk as an SSE event
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-              }
-            } catch {
-              // Skip malformed JSON chunks
-            }
-          } else if (line === 'data: [DONE]') {
-            // Stream is done — parse actions from buffered text
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          if (trimmed === 'data: [DONE]') {
+            // Stream complete — parse actions from accumulated text
             const { cleanReply, actions } = parseActions(fullText);
 
-            // If the clean reply is different (action block was removed), send a correction
+            // If action block was stripped, send a replace event so client shows clean text
             if (cleanReply !== fullText && cleanReply.length < fullText.length) {
-              // Send a replace event with the clean text
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ replace: cleanReply })}\n\n`));
             }
 
-            // Execute profile update actions server-side
-            for (const action of actions) {
-              if (action.type === 'update_profile') {
-                try {
-                  await executeProfileUpdate(userId, { [action.field]: action.value });
-                  action.success = true;
-                } catch {
-                  action.success = false;
-                }
-              }
-            }
-
-            // Send actions as a final event
+            // Execute profile updates server-side (fire-and-forget, don't block stream close)
             if (actions.length > 0) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ actions })}\n\n`));
-            }
+              const execPromises = actions
+                .filter((a) => a.type === 'update_profile')
+                .map(async (action) => {
+                  try {
+                    await executeProfileUpdate(userId, { [action.field]: action.value });
+                    action.success = true;
+                  } catch {
+                    action.success = false;
+                  }
+                });
 
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              // Wait for profile updates, then send actions event
+              Promise.all(execPromises)
+                .then(() => {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ actions })}\n\n`));
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                })
+                .catch(() => {
+                  // Still send DONE even if updates fail
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                });
+            } else {
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            }
+            return;
+          }
+
+          if (trimmed.startsWith('data: ')) {
+            const payload = trimmed.slice(6);
+            try {
+              const json = JSON.parse(payload);
+              const content = json.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullText += content;
+                // Immediately forward each delta to the client
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+              }
+            } catch {
+              // Malformed JSON chunk — skip without crashing
+            }
           }
         }
+      },
+
+      flush(controller) {
+        // Process any remaining data left in the line buffer
+        if (lineBuf.trim()) {
+          const trimmed = lineBuf.trim();
+          if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const content = json.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullText += content;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+              }
+            } catch {
+              // Skip malformed final chunk
+            }
+          }
+        }
+        // Ensure DONE is always sent if the upstream ended without one
+        // (TransformStream guarantees flush runs after all transform calls)
       },
     });
 
@@ -295,6 +336,7 @@ ${userContextBlock}
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
       },
     });
   } catch (error) {

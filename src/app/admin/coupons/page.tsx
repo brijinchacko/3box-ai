@@ -98,10 +98,9 @@ export default function AdminCouponsPage() {
   };
 
   const planColors: Record<string, string> = {
-    BASIC: 'text-white/40 bg-white/5',
-    STARTER: 'text-neon-green bg-neon-green/10',
+    FREE: 'text-white/40 bg-white/5',
     PRO: 'text-neon-blue bg-neon-blue/10',
-    ULTRA: 'text-neon-purple bg-neon-purple/10',
+    MAX: 'text-neon-purple bg-neon-purple/10',
   };
 
   return (
@@ -243,7 +242,7 @@ export default function AdminCouponsPage() {
               <div>
                 <label className="block text-sm text-white/60 mb-1.5">Target Plan</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {['BASIC', 'STARTER', 'PRO', 'ULTRA'].map((p) => (
+                  {['FREE', 'PRO', 'MAX'].map((p) => (
                     <button
                       key={p}
                       onClick={() => setForm({ ...form, plan: p })}

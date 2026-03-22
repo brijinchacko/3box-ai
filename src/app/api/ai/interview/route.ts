@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       where: { id: session.user.id },
       select: { plan: true },
     });
-    const userPlan = user?.plan || 'BASIC';
+    const userPlan = user?.plan || 'FREE';
     const model = getModelForFeature('interview', userPlan);
 
     const body = await req.json();

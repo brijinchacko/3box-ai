@@ -173,7 +173,7 @@ const statusColors: Record<string, { color: string; bg: string }> = {
 };
 
 const planColors: Record<string, string> = {
-  BASIC: 'text-white/40', STARTER: 'text-neon-green', PRO: 'text-neon-blue', ULTRA: 'text-neon-purple',
+  FREE: 'text-white/40', PRO: 'text-neon-blue', MAX: 'text-neon-purple',
 };
 
 // ─── Main Component ────────────────────────────
@@ -522,7 +522,7 @@ export default function MonitoringDashboard() {
                       </div>
                       <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${
-                          plan === 'ULTRA' ? 'bg-neon-purple' : plan === 'PRO' ? 'bg-neon-blue' : plan === 'STARTER' ? 'bg-neon-green' : 'bg-white/20'
+                          plan === 'MAX' ? 'bg-neon-purple' : plan === 'PRO' ? 'bg-neon-blue' : plan === 'FREE' ? 'bg-neon-green' : 'bg-white/20'
                         }`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>

@@ -179,7 +179,7 @@ export async function PATCH(
     const body = await request.json();
     const { plan } = body;
 
-    const validPlans = ['FREE', 'BASIC', 'STARTER', 'PRO', 'ULTRA', 'MAX'];
+    const validPlans = ['FREE', 'PRO', 'MAX'];
     if (!plan || !validPlans.includes(plan)) {
       return NextResponse.json({ error: 'Invalid plan tier' }, { status: 400 });
     }
@@ -190,7 +190,7 @@ export async function PATCH(
     });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const creditLimits: Record<string, number> = { FREE: 10, BASIC: 10, STARTER: 100, PRO: 500, MAX: 500, ULTRA: -1 };
+    const creditLimits: Record<string, number> = { FREE: 10, PRO: 500, MAX: -1 };
 
     const updated = await prisma.user.update({
       where: { id },

@@ -123,7 +123,7 @@ export async function POST(req: Request) {
           emailVerified: new Date(),
           isOforoInternal: isOforo,
           isStudent,
-          plan: isOforo ? 'ULTRA' : 'BASIC',
+          plan: isOforo ? 'MAX' : 'FREE',
           aiCreditsLimit: isOforo ? -1 : 10,
           referralCode,
         },
