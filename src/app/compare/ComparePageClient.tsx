@@ -186,11 +186,15 @@ export default function ComparePageClient({ data }: { data: ComparisonData }) {
                   <tr>
                     <td className="px-6 py-4 text-sm font-medium">User Rating</td>
                     <td className="px-6 py-4 text-center border-x border-neon-blue/20 bg-neon-blue/[0.03]">
-                      <div className="flex items-center justify-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span className="font-semibold">{data.boxAiRating}</span>
-                        <span className="text-white/30 text-xs">({data.boxAiReviewCount})</span>
-                      </div>
+                      {data.boxAiRating ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                          <span className="font-semibold">{data.boxAiRating}</span>
+                          {data.boxAiReviewCount && <span className="text-white/30 text-xs">({data.boxAiReviewCount})</span>}
+                        </div>
+                      ) : (
+                        <span className="text-white/30 text-xs">New platform</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">

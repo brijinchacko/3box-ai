@@ -61,9 +61,9 @@ const data: ComparisonData = {
   competitorPrice: '$29/mo (Pro+)',
   boxAiEntryPlan: 'Pro at $29/mo with all 6 AI agents and unlimited operations',
   competitorEntryPlan: 'Yes, limited resume builder, job tracker',
-  boxAiRating: '4.8',
+  boxAiRating: '',
   competitorRating: '4.5',
-  boxAiReviewCount: '2,847',
+  boxAiReviewCount: '',
   competitorReviewCount: '900+',
   advantages: [
     {

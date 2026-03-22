@@ -61,9 +61,9 @@ const data: ComparisonData = {
   competitorPrice: '$49.95/mo',
   boxAiEntryPlan: 'Pro at $29/mo with all 6 AI agents and unlimited operations',
   competitorEntryPlan: 'Limited, 5 scans/mo',
-  boxAiRating: '4.8',
+  boxAiRating: '',
   competitorRating: '4.4',
-  boxAiReviewCount: '2,847',
+  boxAiReviewCount: '',
   competitorReviewCount: '1,200+',
   advantages: [
     {
