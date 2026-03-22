@@ -161,42 +161,49 @@ export async function persistScoutJobs(
   jobs: DiscoveredJob[],
   scoutRunId?: string,
 ): Promise<{ newCount: number; dupCount: number }> {
-  let newCount = 0;
-  let dupCount = 0;
+  if (!jobs.length) return { newCount: 0, dupCount: 0 };
 
-  for (const job of jobs) {
-    const dedupeKey = computeDedupeKey(job.company, job.title, job.url);
-    try {
-      await prisma.scoutJob.create({
-        data: {
-          userId,
-          title: job.title,
-          company: job.company,
-          jobUrl: job.url,
-          dedupeKey,
-          location: job.location || null,
-          description: job.description || '',
-          salary: job.salary || null,
-          source: job.source,
-          remote: job.remote || false,
-          postedAt: job.postedAt || null,
-          matchScore: job.matchScore || null,
-          status: 'NEW',
-          scoutRunId: scoutRunId || null,
-        },
-      });
-      newCount++;
-    } catch (err: any) {
-      // Unique constraint violation (P2002) = duplicate, silently skip
-      if (err.code === 'P2002') {
-        dupCount++;
-      } else {
-        console.error('[Scout] Failed to persist job:', job.title, err.message);
+  const data = jobs.map((job) => ({
+    userId,
+    title: job.title,
+    company: job.company,
+    jobUrl: job.url,
+    dedupeKey: computeDedupeKey(job.company, job.title, job.url),
+    location: job.location || null,
+    description: job.description || '',
+    salary: job.salary || null,
+    source: job.source,
+    remote: job.remote || false,
+    postedAt: job.postedAt || null,
+    matchScore: job.matchScore || null,
+    status: 'NEW' as const,
+    scoutRunId: scoutRunId || null,
+  }));
+
+  try {
+    const result = await prisma.scoutJob.createMany({
+      data,
+      skipDuplicates: true, // Skip on unique constraint (userId + dedupeKey)
+    });
+    const newCount = result.count;
+    const dupCount = jobs.length - newCount;
+    return { newCount, dupCount };
+  } catch (err: any) {
+    console.error('[Scout] Batch persist failed, falling back to individual inserts:', err.message);
+    // Fallback: individual inserts for better error isolation
+    let newCount = 0;
+    let dupCount = 0;
+    for (const item of data) {
+      try {
+        await prisma.scoutJob.create({ data: item });
+        newCount++;
+      } catch (e: any) {
+        if (e.code === 'P2002') dupCount++;
+        else console.error('[Scout] Failed to persist job:', item.title, e.message);
       }
     }
+    return { newCount, dupCount };
   }
-
-  return { newCount, dupCount };
 }
 
 // ── Independent Scout (runs on its own schedule) ──

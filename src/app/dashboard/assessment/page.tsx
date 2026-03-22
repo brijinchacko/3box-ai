@@ -136,6 +136,8 @@ export default function AssessmentPage() {
     }, 500);
 
     try {
+      const abortCtrl = new AbortController();
+      const timeout = setTimeout(() => abortCtrl.abort(), 30000);
       const res = await fetch('/api/ai/assessment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,7 +146,9 @@ export default function AssessmentPage() {
           targetRole,
           existingSkills: existingSkills ? existingSkills.split(',').map(s => s.trim()) : [],
         }),
+        signal: abortCtrl.signal,
       });
+      clearTimeout(timeout);
 
       clearInterval(progressInterval);
 

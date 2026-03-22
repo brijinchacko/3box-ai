@@ -40,12 +40,12 @@ export async function GET() {
           // Exclude sensitive fields: hashedPassword, stripeCustomerId, etc.
         },
       }),
-      prisma.assessment.findMany({ where: { userId } }),
-      prisma.careerPlan.findMany({ where: { userId } }),
-      prisma.learningPath.findMany({ where: { userId } }),
-      prisma.resume.findMany({ where: { userId } }),
-      prisma.portfolio.findMany({ where: { userId } }),
-      prisma.jobApplication.findMany({ where: { userId } }),
+      prisma.assessment.findMany({ where: { userId }, take: 100 }),
+      prisma.careerPlan.findMany({ where: { userId }, take: 50 }),
+      prisma.learningPath.findMany({ where: { userId }, take: 50 }),
+      prisma.resume.findMany({ where: { userId }, take: 50 }),
+      prisma.portfolio.findMany({ where: { userId }, take: 50 }),
+      prisma.jobApplication.findMany({ where: { userId }, take: 500, orderBy: { createdAt: 'desc' } }),
       prisma.careerTwin.findUnique({ where: { userId } }),
       prisma.auditLog.findMany({
         where: { userId },

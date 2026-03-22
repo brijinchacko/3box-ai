@@ -149,6 +149,7 @@ export async function PUT(req: Request) {
             content: resume,
             template: resolvedTemplate,
             title: resume.title || 'My Resume',
+            targetJob: resume.targetJob || existing.targetJob || null,
             ...finalizationData,
           },
         });

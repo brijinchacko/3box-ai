@@ -18,12 +18,14 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const applications = await prisma.jobApplication.findMany({
       where: { autoApplyRunId: run.id },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
 
     // Get agent activities for this run
     const activities = await prisma.agentActivity.findMany({
       where: { runId: run.id },
       orderBy: { createdAt: 'asc' },
+      take: 200,
     });
 
     return NextResponse.json({ run, applications, activities });

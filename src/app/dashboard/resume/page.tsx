@@ -221,7 +221,7 @@ function AutopilotResume() {
       .replace(/^#{1,3}\s*/, '')        // Remove markdown headings
       .trim();
     // Remove leading bullet markers (may appear multiple times: "• · Spearheaded")
-    while (/^[•·●\-*]\s*/.test(clean)) {
+    while (/^[•·●\-*]\s*/.test(clean) && clean.length > 0) {
       clean = clean.replace(/^[•·●\-*]\s*/, '').trim();
     }
     return clean;
@@ -239,11 +239,7 @@ function AutopilotResume() {
       bullets: (exp.bullets || [])
         .map((b: string) => sanitizeBullet(b))
         .filter((b: string) => {
-          if (b.length < 10) return false;
-          // Filter out role-title-only bullets
-          const lower = b.toLowerCase();
-          const role = (exp.role || '').toLowerCase();
-          if (role && lower.includes(role) && lower.includes(exp.company?.toLowerCase() || '___') && b.length < 80) return false;
+          if (b.length < 3) return false; // Only filter truly empty bullets
           return true;
         }),
     };
@@ -406,11 +402,11 @@ function AutopilotResume() {
     return () => clearTimeout(timer);
   }, [resume, resumeLoaded, resumeId]);
 
-  // Re-evaluate AI suggestions whenever resume changes so resolved ones disappear
+  // Re-evaluate AI suggestions with 1s debounce to avoid firing on every keystroke
   useEffect(() => {
-    if (resumeLoaded && resume.contact) {
-      generateAISuggestions(resume);
-    }
+    if (!resumeLoaded || !resume.contact) return;
+    const timer = setTimeout(() => generateAISuggestions(resume), 1000);
+    return () => clearTimeout(timer);
   }, [resume, resumeLoaded]);
 
   // Auto-create portfolio from resume data
@@ -3499,6 +3495,7 @@ function AgenticResumePage() {
       experience: Array.isArray(wizardResult.experience) ? wizardResult.experience : prev.experience,
       education: Array.isArray(wizardResult.education) ? wizardResult.education : prev.education,
       skills: Array.isArray(wizardResult.skills) ? wizardResult.skills : prev.skills,
+      skillDescriptions: wizardResult.skillDescriptions || prev.skillDescriptions,
       certifications: Array.isArray(wizardResult.certifications) ? wizardResult.certifications : prev.certifications,
       projects: Array.isArray(wizardResult.projects) ? wizardResult.projects : prev.projects,
     }));

@@ -126,6 +126,7 @@ model User {
 
   @@index([email])
   @@index([referralCode])
+  @@index([plan, createdAt])
 }
 
 // ─── User Email Connections (OAuth Gmail/Outlook) ──
@@ -555,7 +556,10 @@ model JobApplication {
   followUps         FollowUp[]
 
   @@index([userId])
+  @@index([userId, status])
+  @@index([userId, updatedAt])
   @@index([applicationMethod])
+  @@index([userId, applicationMethod])
 }
 
 // ─── AI Coach Settings ─────────────────────────

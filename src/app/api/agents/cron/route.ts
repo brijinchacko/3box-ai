@@ -81,7 +81,14 @@ export async function GET(request: NextRequest) {
 
     const results: DispatchResult[] = [];
 
-    for (const config of configs) {
+    // Limit configs to prevent cron from running too long
+    const maxConfigs = 50;
+    const limitedConfigs = configs.slice(0, maxConfigs);
+    if (configs.length > maxConfigs) {
+      console.warn(`[Cron] Processing ${maxConfigs} of ${configs.length} configs to prevent timeout`);
+    }
+
+    for (const config of limitedConfigs) {
       // Skip FREE plan users from cron automation
       if (normalizePlan(config.user.plan) === 'FREE') continue;
 

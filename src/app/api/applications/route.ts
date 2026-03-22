@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       where.status = statusFilter;
     }
 
-    // Fetch applications + stats in parallel
-    const [applications, total, stats] = await Promise.all([
+    // Fetch applications + stats in parallel using groupBy instead of 10 separate counts
+    const [applications, total, statusGroups, methodGroups] = await Promise.all([
       prisma.jobApplication.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -60,22 +60,26 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.jobApplication.count({ where }),
-      // Aggregate stats
-      Promise.all([
-        prisma.jobApplication.count({ where: { userId } }),
-        prisma.jobApplication.count({ where: { userId, status: 'QUEUED' } }),
-        prisma.jobApplication.count({ where: { userId, status: 'EMAILED' } }),
-        prisma.jobApplication.count({ where: { userId, status: 'APPLIED' } }),
-        prisma.jobApplication.count({ where: { userId, status: 'INTERVIEW' } }),
-        prisma.jobApplication.count({ where: { userId, status: 'OFFER' } }),
-        prisma.jobApplication.count({ where: { userId, status: 'REJECTED' } }),
-        prisma.jobApplication.count({ where: { userId, applicationMethod: 'ats_api' } }),
-        prisma.jobApplication.count({ where: { userId, applicationMethod: 'cold_email' } }),
-        prisma.jobApplication.count({ where: { userId, applicationMethod: 'portal' } }),
-      ]),
+      // Single groupBy for all status counts (replaces 7 separate COUNT queries)
+      prisma.jobApplication.groupBy({
+        by: ['status'],
+        where: { userId },
+        _count: true,
+      }),
+      // Single groupBy for method counts (replaces 3 separate COUNT queries)
+      prisma.jobApplication.groupBy({
+        by: ['applicationMethod'],
+        where: { userId },
+        _count: true,
+      }),
     ]);
 
-    const [totalAll, queued, emailed, applied, interview, offer, rejected, byAtsApi, byColdEmail, byPortal] = stats;
+    // Build stats from groupBy results
+    const statusMap: Record<string, number> = {};
+    for (const g of statusGroups) statusMap[g.status] = g._count;
+    const methodMap: Record<string, number> = {};
+    for (const g of methodGroups) methodMap[g.applicationMethod || 'unknown'] = g._count;
+    const totalAll = Object.values(statusMap).reduce((a, b) => a + b, 0);
 
     return NextResponse.json({
       applications,
@@ -85,16 +89,16 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil(total / limit),
       stats: {
         total: totalAll,
-        queued,
-        emailed,
-        applied,
-        interview,
-        offer,
-        rejected,
+        queued: statusMap['QUEUED'] || 0,
+        emailed: statusMap['EMAILED'] || 0,
+        applied: statusMap['APPLIED'] || 0,
+        interview: statusMap['INTERVIEW'] || 0,
+        offer: statusMap['OFFER'] || 0,
+        rejected: statusMap['REJECTED'] || 0,
         byMethod: {
-          ats_api: byAtsApi,
-          cold_email: byColdEmail,
-          portal: byPortal,
+          ats_api: methodMap['ats_api'] || 0,
+          cold_email: methodMap['cold_email'] || 0,
+          portal: methodMap['portal'] || 0,
         },
       },
     });

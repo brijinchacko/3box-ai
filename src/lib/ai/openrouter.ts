@@ -189,25 +189,39 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
     body.response_format = { type: 'json_object' };
   }
 
-  const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://3box.ai',
-      'X-Title': '3BOX AI',
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error(`[AI] OpenRouter error (${modelId}):`, redactPII(error));
-    throw new Error('AI service temporarily unavailable');
+  try {
+    const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://3box.ai',
+        'X-Title': '3BOX AI',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.text().catch(() => 'Unknown error');
+      console.error(`[AI] OpenRouter error (${modelId}):`, redactPII(error));
+      throw new Error('AI service temporarily unavailable');
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.error(`[AI] OpenRouter timeout after 30s (${modelId})`);
+      throw new Error('AI request timed out. Please try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 /**
@@ -276,6 +290,9 @@ export async function aiChatStream(
     stream: true,
   };
 
+  const abortCtrl = new AbortController();
+  const streamTimeout = setTimeout(() => abortCtrl.abort(), 60000); // 60s for streaming
+
   const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -285,7 +302,9 @@ export async function aiChatStream(
       'X-Title': '3BOX AI',
     },
     body: JSON.stringify(body),
+    signal: abortCtrl.signal,
   });
+  clearTimeout(streamTimeout);
 
   if (!response.ok || !response.body) {
     // Fallback to non-streaming
