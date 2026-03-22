@@ -51,9 +51,9 @@ function resolveStep(state: PipelineState): StepInfo {
 
   if (!state.resumeFinalized) {
     return {
-      text: 'Finalize your resume to start applying',
+      text: 'Review your resume before applying',
       href: '/dashboard/resume',
-      cta: 'Finalize Resume',
+      cta: 'Review Resume',
       icon: <FileCheck className="w-4 h-4" />,
     };
   }
@@ -143,7 +143,7 @@ export default function NextStepBanner() {
       ]);
 
       const hasResume = !!(resumeRes?.resumeId || resumeRes?.resume?.contact?.name);
-      const resumeFinalized = !!resumeRes?.isFinalized;
+      const resumeFinalized = !!resumeRes?.isFinalized || resumeRes?.approvalStatus === 'ready' || resumeRes?.approvalStatus === 'approved';
 
       // Scout has run if any loop profile has found jobs
       const profiles = loopsRes?.profiles || [];

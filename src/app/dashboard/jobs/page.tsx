@@ -710,13 +710,16 @@ function AutopilotJobSearch() {
             Create search profiles to automatically find and apply to jobs.
           </p>
         </div>
-        <button
-          onClick={() => setShowWizard(true)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <Search className="w-4 h-4" />
-          New Search Profile
-        </button>
+        {/* Only show "New Search Profile" button when user already has profiles */}
+        {profiles.length > 0 && (
+          <button
+            onClick={() => setShowWizard(true)}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <Search className="w-4 h-4" />
+            New Search Profile
+          </button>
+        )}
       </div>
 
       {/* Review Queue — jobs below auto-apply threshold */}

@@ -198,9 +198,103 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ══════════════════════════════════════════════════════
+    // POST-ONBOARDING AUTO-CREATION HOOK
+    // Everything the user provided during onboarding must be
+    // IMMEDIATELY used — no empty dashboard after completing setup.
+    // ══════════════════════════════════════════════════════
+
+    const userId = session.user.id;
+    const location = profile?.location || '';
+
+    // 1. If user uploaded a resume, mark it as READY (not draft)
+    //    They already uploaded it — no need for a "finalize" step
+    if (resumeText || (profile?.experiences && profile.experiences.length > 0)) {
+      try {
+        await prisma.resume.updateMany({
+          where: { userId, sourceType: 'onboarding' },
+          data: { approvalStatus: 'ready', isFinalized: true },
+        });
+      } catch (e) {
+        console.warn('[Onboarding] Resume approval update failed:', e);
+      }
+    }
+
+    // 2. AUTO-CREATE SearchProfile from onboarding data
+    //    This is what /dashboard/jobs shows — the user should NEVER see
+    //    "No search profiles yet" after completing onboarding
+    try {
+      const existingProfile = await prisma.searchProfile.findFirst({
+        where: { userId, jobTitle: targetRole },
+      });
+
+      if (!existingProfile) {
+        await prisma.searchProfile.create({
+          data: {
+            userId,
+            name: `${targetRole}${location ? ` in ${location}` : ''}`,
+            jobTitle: targetRole,
+            location: location || '',
+            remote: false,
+            active: true,
+            autoSearch: true,
+            autoApply: false,
+            matchTolerance: 70,
+            experienceLevel: profile?.experienceLevel || '',
+          },
+        });
+        console.log(`[Onboarding] Auto-created search profile: "${targetRole}" for user ${userId}`);
+      }
+    } catch (e) {
+      console.warn('[Onboarding] Search profile auto-creation failed:', e);
+    }
+
+    // 3. AUTO-ENABLE Scout in AutoApplyConfig
+    try {
+      await prisma.autoApplyConfig.upsert({
+        where: { userId },
+        create: {
+          userId,
+          enabled: true,
+          scoutEnabled: true,
+          scoutAutoMode: true,
+          scoutInterval: 12,
+          targetRoles: [targetRole],
+          targetLocations: location ? [location] : [],
+        },
+        update: {
+          scoutEnabled: true,
+          scoutAutoMode: true,
+          targetRoles: [targetRole],
+          targetLocations: location ? [location] : [],
+        },
+      });
+    } catch (e) {
+      console.warn('[Onboarding] AutoApplyConfig setup failed:', e);
+    }
+
+    // 4. TRIGGER first Scout run in background (fire-and-forget)
+    //    This runs async — don't block the response
+    try {
+      const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
+      fetch(`${appUrl}/api/agents/run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || '',
+        },
+        body: JSON.stringify({ agentType: 'scout' }),
+      }).catch(err => {
+        console.warn('[Onboarding] Background Scout trigger failed:', err?.message);
+      });
+      console.log(`[Onboarding] Triggered first Scout run for user ${userId}`);
+    } catch (e) {
+      console.warn('[Onboarding] Scout trigger failed:', e);
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Onboarding completed successfully',
+      message: 'Onboarding completed — search profile created and Scout searching',
     });
   } catch (error) {
     console.error('Error completing onboarding:', error);

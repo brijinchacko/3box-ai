@@ -131,7 +131,7 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
 
         setPipeline({
           profileDone: !!(profile?.name && profile?.email && profile?.targetRole),
-          resumeDone: !!(resume?.isFinalized || resume?.hasResume || resume?.resumeId || resume?.resume?.contact?.name),
+          resumeDone: !!(resume?.isFinalized || resume?.approvalStatus === 'ready' || resume?.approvalStatus === 'approved' || resume?.hasResume || resume?.resumeId || resume?.resume?.contact?.name),
           jobsFound: jobsCount > 0,
           hasApplications: appsCount > 0,
           jobsCount,
@@ -223,6 +223,40 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
 
       {/* ═══ SECTION 2: Action Card ═══ */}
       <ActionCard pipeline={pipeline} currentStepIndex={currentStepIndex} />
+
+      {/* ═══ SECTION 2.5: How do you want to apply? (Plain English mode selector) ═══ */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">How do you want to apply?</h3>
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5 cursor-pointer">
+            <input type="radio" name="applyMode" defaultChecked className="mt-1 accent-blue-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">I&apos;ll review and apply myself</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Scout finds jobs, you decide which to apply to</p>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
+            <input type="radio" name="applyMode" className="mt-1 accent-blue-600" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Apply automatically to great matches</p>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">PRO</span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">AI applies to 80%+ match jobs. You review the rest.</p>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
+            <input type="radio" name="applyMode" className="mt-1 accent-blue-600" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Full autopilot — apply to everything</p>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">MAX</span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">AI handles the entire process end-to-end</p>
+            </div>
+          </label>
+        </div>
+      </div>
 
       {/* ═══ SECTION 3: Quick Stats (only if 1+ applications) ═══ */}
       {pipeline?.hasApplications && stats && (

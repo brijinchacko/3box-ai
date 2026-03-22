@@ -468,15 +468,20 @@ export default function DashboardStatusBar() {
           ? 'bg-amber-500'
           : 'bg-gray-400';
 
+  // Plain language status — show SPECIFIC next action, not cryptic count
   const statusLabel = status.dailyLimitReached
     ? 'Limit Reached'
     : isReady
       ? 'Ready'
-      : criticalIssues > 0
-        ? 'Needs Setup'
-        : status.profileCount > 0
-          ? 'Paused'
-          : 'Not Set Up';
+      : !status.hasResume
+        ? 'Upload resume'
+        : !status.resumeVerified
+          ? 'Resume needs review'
+          : status.profileCount === 0
+            ? 'Set up job search'
+            : status.activeCount === 0
+              ? 'Paused'
+              : 'Ready';
 
   // Format lastRunAt
   let lastRunText = '';
@@ -512,9 +517,8 @@ export default function DashboardStatusBar() {
               )}
             >
               <div className={cn('w-2 h-2 rounded-full flex-shrink-0', statusDot)} />
-              <span className="hidden sm:inline">Pipeline:</span>
               <span>{statusLabel}</span>
-              {setupIssues > 0 && (
+              {false && setupIssues > 0 && (
                 <span className={cn(
                   'px-1.5 py-0.5 rounded-full text-[10px] font-bold',
                   isAgentic ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
