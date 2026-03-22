@@ -6,7 +6,7 @@ interface ApplicationCapData {
   used: number;
   limit: number;
   remaining: number;
-  limitType: 'lifetime' | 'daily';
+  limitType: 'weekly' | 'daily';
   allowed: boolean;
   resetsAt: string | null;
 }
@@ -26,7 +26,7 @@ const DEFAULT_CAP: ApplicationCapData = {
   used: 0,
   limit: 10,
   remaining: 10,
-  limitType: 'lifetime',
+  limitType: 'weekly',
   allowed: true,
   resetsAt: null,
 };
@@ -56,7 +56,7 @@ export function useTokens(pollInterval = 30000) {
         used: cap.used ?? 0,
         limit: cap.limit ?? 10,
         remaining: cap.remaining ?? 0,
-        limitType: cap.limitType ?? 'lifetime',
+        limitType: cap.limitType ?? 'weekly',
         allowed: cap.allowed ?? true,
         resetsAt: cap.resetsAt ?? null,
       };

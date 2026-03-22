@@ -11,7 +11,7 @@ interface FeatureLockedOverlayProps {
 
 /**
  * Full-screen overlay shown when a FREE-plan user has exhausted all
- * their lifetime applications. Blocks all dashboard features with
+ * their weekly applications. Blocks all dashboard features with
  * a clear upgrade CTA.
  */
 export default function FeatureLockedOverlay({ used, limit }: FeatureLockedOverlayProps) {

@@ -16,15 +16,15 @@ interface FeatureGateState {
   limit: number;
   /** Remaining applications */
   remaining: number;
-  /** 'lifetime' for FREE, 'daily' for PRO/MAX */
-  limitType: 'lifetime' | 'daily';
+  /** 'weekly' for FREE, 'daily' for PRO/MAX */
+  limitType: 'weekly' | 'daily';
   /** Refresh the gate status */
   refresh: () => Promise<void>;
 }
 
 /**
  * Hook that determines whether a FREE-plan user has exhausted their
- * lifetime application limit and should be locked out of all features.
+ * weekly application limit and should be locked out of all features.
  *
  * PRO/MAX users are never locked (daily resets handle their limits).
  * FREE users are locked when totalAppsUsed >= 10.
@@ -39,7 +39,7 @@ export function useFeatureGate(): FeatureGateState {
     used: 0,
     limit: 10,
     remaining: 10,
-    limitType: 'lifetime',
+    limitType: 'weekly',
   });
 
   const fetchCap = useCallback(async () => {
@@ -51,7 +51,7 @@ export function useFeatureGate(): FeatureGateState {
       const used = cap.used ?? 0;
       const limit = cap.limit ?? 10;
       const remaining = cap.remaining ?? 0;
-      const limitType = cap.limitType ?? 'lifetime';
+      const limitType = cap.limitType ?? 'weekly';
       const allowed = cap.allowed ?? true;
 
       // Only FREE-plan users get fully locked when exhausted.

@@ -8,7 +8,7 @@ interface ApplicationLimitData {
   used: number;
   limit: number;
   remaining: number;
-  limitType: 'lifetime' | 'daily';
+  limitType: 'weekly' | 'daily';
   allowed: boolean;
   resetsAt: string | null;
 }
@@ -42,8 +42,8 @@ export default function ApplicationLimitBar({ className, compact = false }: Appl
 
   const resetLabel = data.limitType === 'daily' && data.resetsAt
     ? `Resets ${formatResetTime(data.resetsAt)}`
-    : data.limitType === 'lifetime'
-    ? 'Lifetime limit'
+    : data.limitType === 'weekly'
+    ? 'Resets every Monday'
     : '';
 
   if (compact) {
@@ -98,8 +98,8 @@ export default function ApplicationLimitBar({ className, compact = false }: Appl
       {isAtLimit && (
         <div className="mt-3 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20">
           <p className="text-xs text-red-700 dark:text-red-400 font-medium">
-            {data.limitType === 'lifetime'
-              ? 'You\'ve used all your free applications. Upgrade to Pro for 20/day.'
+            {data.limitType === 'weekly'
+              ? 'You\'ve used all your free applications this week. Upgrade to Pro for 20/day.'
               : 'Daily limit reached. Resets at midnight UTC.'}
           </p>
         </div>

@@ -4,19 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, Briefcase, GraduationCap, Sparkles, ArrowRight, ArrowLeft,
-  Check, MapPin, Phone, Linkedin, Plus, X, Loader2, Rocket,
+  User, Briefcase, Sparkles, ArrowRight, ArrowLeft,
+  Check, MapPin, Plus, X, Loader2, Rocket,
   DollarSign, FileText, Upload, ClipboardPaste, Zap, CheckCircle2,
-  ToggleLeft, ToggleRight, AlertTriangle, Clock, Target,
 } from 'lucide-react';
 import ResumeInsightsPanel, { type ResumeInsightsData } from '@/components/onboarding/ResumeInsightsPanel';
-import {
-  SCHEDULE_PRESETS, type SchedulePreset,
-} from '@/lib/agents/configUtils';
-// Token system removed — AI operations are unlimited
-const estimateTotalMonthlyTokens = (..._args: any[]) => 0;
-const getTokenWarningLevel = (..._args: any[]): { level: 'none' | 'warning' | 'error'; message: string } => ({ level: 'none', message: '' });
-const PLAN_TOKEN_LIMITS: Record<string, number> = { FREE: 999, PRO: 999, MAX: 999 };
 
 // ─── Types ──────────────────────────────────────
 interface ExperienceEntry {
@@ -53,17 +45,6 @@ const experienceLevels = [
   { value: '10+', label: '10+ Years', desc: 'Veteran' },
 ];
 
-const currentStatuses = [
-  { value: 'student', label: 'Student' },
-  { value: 'employed', label: 'Currently Employed' },
-  { value: 'job-searching', label: 'Looking for a Job' },
-  { value: 'career-change', label: 'Changing Careers' },
-  { value: 'freelancer', label: 'Freelancer' },
-];
-
-const educationLevels = [
-  'High School', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Self-Taught', 'Bootcamp',
-];
 
 const suggestedRoles = [
   'Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
@@ -199,11 +180,8 @@ function generateStaticInsights(parsed: OnboardingData): ResumeInsightsData {
 
 const STEPS = [
   { icon: FileText, label: 'Resume' },
-  { icon: User, label: 'About You' },
-  { icon: Briefcase, label: 'Career' },
-  { icon: GraduationCap, label: 'Background' },
-  { icon: Sparkles, label: 'Skills' },
-  { icon: Sparkles, label: 'Agents' },
+  { icon: Briefcase, label: 'Your Profile' },
+  { icon: Sparkles, label: 'All Set' },
 ];
 
 // ─── Component ──────────────────────────────────
@@ -215,15 +193,6 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [customSkill, setCustomSkill] = useState('');
   const [userEmail, setUserEmail] = useState('');
-
-  // Agent scheduling state (Step 5)
-  const [agentConfig, setAgentConfig] = useState({
-    scoutEnabled: true,
-    forgeEnabled: false,
-    archerEnabled: false,
-    preset: 'balanced' as SchedulePreset,
-  });
-  const [userPlan, setUserPlan] = useState<string>('FREE');
 
   // Resume upload state
   const [resumeMode, setResumeMode] = useState<'upload' | 'paste' | null>(null);
@@ -260,7 +229,6 @@ export default function OnboardingPage() {
       .then((profile) => {
         if (profile.name) setData((prev) => ({ ...prev, fullName: profile.name }));
         if (profile.email) setUserEmail(profile.email);
-        if (profile.plan) setUserPlan(profile.plan);
       })
       .catch(() => {});
   }, []);
@@ -285,21 +253,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const addExperience = () => {
-    setData((prev) => ({ ...prev, experiences: [...prev.experiences, { title: '', company: '', duration: '', description: '' }] }));
-  };
-
-  const updateExperience = (index: number, field: keyof ExperienceEntry, value: string) => {
-    setData((prev) => {
-      const updated = [...prev.experiences];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, experiences: updated };
-    });
-  };
-
-  const removeExperience = (index: number) => {
-    setData((prev) => ({ ...prev, experiences: prev.experiences.filter((_, i) => i !== index) }));
-  };
 
   const suggestedSkills = roleSkillMap[data.targetRole] || genericSkills;
   const salaryInfo = roleSalaryMap[data.targetRole];
@@ -446,11 +399,8 @@ export default function OnboardingPage() {
   const canProceed = (s: number): boolean => {
     switch (s) {
       case 0: return true; // Resume step is always skippable
-      case 1: return !!data.fullName.trim() && !!data.location.trim();
-      case 2: return !!data.targetRole.trim() && !!data.experienceLevel && !!data.currentStatus;
-      case 3: return !!data.educationLevel;
-      case 4: return data.skills.length >= 2;
-      case 5: return true;
+      case 1: return !!data.targetRole.trim() && !!data.location.trim() && !!data.experienceLevel;
+      case 2: return true; // Confirmation step
       default: return true;
     }
   };
@@ -511,23 +461,6 @@ export default function OnboardingPage() {
         targetRole: data.targetRole,
       };
       localStorage.setItem('3box_resume_draft', JSON.stringify(resumeData));
-
-      // Save agent configuration from onboarding
-      const selectedPreset = SCHEDULE_PRESETS[agentConfig.preset];
-      await fetch('/api/agents/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scoutEnabled: agentConfig.scoutEnabled,
-          scoutInterval: selectedPreset.scoutInterval,
-          forgeEnabled: agentConfig.forgeEnabled,
-          forgeInterval: selectedPreset.forgeInterval,
-          forgeMode: 'on_demand',
-          archerEnabled: agentConfig.archerEnabled,
-          archerInterval: selectedPreset.archerInterval,
-          archerMaxPerRun: 10,
-        }),
-      }).catch(() => {}); // Non-blocking — don't fail onboarding if config save fails
 
       router.push('/dashboard');
     } catch {
@@ -777,34 +710,28 @@ export default function OnboardingPage() {
               </motion.div>
             )}
 
-            {/* ─── Step 1: About You ────────── */}
+            {/* ─── Step 1: Your Profile (Target Role + Location + Experience) ────────── */}
             {step === 1 && (
               <motion.div key="step-1" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-cyan-400 flex items-center justify-center"><User className="w-5 h-5 text-white" /></div>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-purple to-pink-400 flex items-center justify-center"><Briefcase className="w-5 h-5 text-white" /></div>
                   <div>
-                    <h2 className="text-lg font-bold">About You</h2>
+                    <h2 className="text-lg font-bold">Your Profile</h2>
                     <p className="text-xs text-white/40">
-                      {resumeParsed ? 'Review the auto-filled details below' : 'Basic information for your profile'}
+                      {resumeParsed ? 'Review the auto-filled details below' : 'Tell us about yourself and your career goals'}
                     </p>
                   </div>
-                  {resumeParsed && <span className="ml-auto px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-medium">Auto-filled</span>}
+                  {resumeParsed && data.targetRole && <span className="ml-auto px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-medium">Auto-filled</span>}
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-white/50 mb-1 block">Full Name *</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                      <input value={data.fullName} onChange={(e) => update({ fullName: e.target.value })} className="input-field pl-10" placeholder="John Doe" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+                  {/* Name & Location */}
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-white/50 mb-1 block">Phone</label>
+                      <label className="text-xs text-white/50 mb-1 block">Full Name</label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                        <input value={data.phone} onChange={(e) => update({ phone: e.target.value })} className="input-field pl-10" placeholder="+1 (555) 000-0000" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                        <input value={data.fullName} onChange={(e) => update({ fullName: e.target.value })} className="input-field pl-10" placeholder="John Doe" />
                       </div>
                     </div>
                     <div>
@@ -815,40 +742,10 @@ export default function OnboardingPage() {
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-white/50 mb-1 block">LinkedIn URL</label>
-                    <div className="relative">
-                      <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                      <input value={data.linkedin} onChange={(e) => update({ linkedin: e.target.value })} className="input-field pl-10" placeholder="linkedin.com/in/yourprofile" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-white/50 mb-1 block">Brief Bio</label>
-                    <textarea value={data.bio} onChange={(e) => update({ bio: e.target.value })} className="input-field resize-none" rows={2} placeholder="A sentence about yourself (optional — AI generates this for you)" />
-                  </div>
-                </div>
-                <div className="flex gap-3 mt-6">
-                  <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={goNext} disabled={!canProceed(1)} className="btn-primary flex-1 flex items-center justify-center gap-2">Continue <ArrowRight className="w-4 h-4" /></button>
-                </div>
-              </motion.div>
-            )}
 
-            {/* ─── Step 2: Career ──────────── */}
-            {step === 2 && (
-              <motion.div key="step-2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-purple to-pink-400 flex items-center justify-center"><Briefcase className="w-5 h-5 text-white" /></div>
+                  {/* Target Role */}
                   <div>
-                    <h2 className="text-lg font-bold">Career Goals</h2>
-                    <p className="text-xs text-white/40">Where are you heading?</p>
-                  </div>
-                  {resumeParsed && data.targetRole && <span className="ml-auto px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-medium">Auto-filled</span>}
-                </div>
-
-                <div className="space-y-5">
-                  <div>
-                    <label className="text-xs text-white/50 mb-1.5 block">What role are you targeting? *</label>
+                    <label className="text-xs text-white/50 mb-1.5 block">Target Role *</label>
                     <input value={data.targetRole} onChange={(e) => update({ targetRole: e.target.value })} className="input-field mb-2" placeholder="e.g. Software Engineer" />
                     <div className="flex flex-wrap gap-1.5">
                       {suggestedRoles.slice(0, 8).map((role) => (
@@ -883,6 +780,7 @@ export default function OnboardingPage() {
                     </motion.div>
                   )}
 
+                  {/* Experience Level */}
                   <div>
                     <label className="text-xs text-white/50 mb-1.5 block">Experience Level *</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -896,114 +794,11 @@ export default function OnboardingPage() {
                     </div>
                   </div>
 
+                  {/* Skills (inline, compact) */}
                   <div>
-                    <label className="text-xs text-white/50 mb-1.5 block">Current Status *</label>
-                    <div className="flex flex-wrap gap-2">
-                      {currentStatuses.map((s) => (
-                        <button key={s.value} onClick={() => update({ currentStatus: s.value })}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${data.currentStatus === s.value ? 'bg-neon-green/15 border border-neon-green/40 text-neon-green' : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60'}`}>{s.label}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {(data.currentStatus === 'employed' || data.currentStatus === 'career-change' || data.currentStatus === 'freelancer') && (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs text-white/50">Work Experience</label>
-                        <button onClick={addExperience} className="text-[11px] text-neon-blue hover:text-neon-blue/80 flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
-                      </div>
-                      {data.experiences.length === 0 && (
-                        <button onClick={addExperience} className="w-full p-3 rounded-xl border border-dashed border-white/10 text-xs text-white/30 hover:text-white/50 hover:border-white/20 transition-all">
-                          + Add your most recent work experience
-                        </button>
-                      )}
-                      {data.experiences.map((exp, i) => (
-                        <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 mb-2 space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-white/30">Experience {i + 1}</span>
-                            <button onClick={() => removeExperience(i)} className="text-white/20 hover:text-red-400"><X className="w-3 h-3" /></button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <input value={exp.title} onChange={(e) => updateExperience(i, 'title', e.target.value)} className="input-field text-xs py-1.5" placeholder="Job Title" />
-                            <input value={exp.company} onChange={(e) => updateExperience(i, 'company', e.target.value)} className="input-field text-xs py-1.5" placeholder="Company" />
-                          </div>
-                          <input value={exp.duration} onChange={(e) => updateExperience(i, 'duration', e.target.value)} className="input-field text-xs py-1.5" placeholder="Duration (e.g. Jan 2022 - Present)" />
-                          <textarea value={exp.description} onChange={(e) => updateExperience(i, 'description', e.target.value)} className="input-field text-xs py-1.5 resize-none" rows={2} placeholder="Key achievements (optional)" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={goNext} disabled={!canProceed(2)} className="btn-primary flex-1 flex items-center justify-center gap-2">Continue <ArrowRight className="w-4 h-4" /></button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ─── Step 3: Education ────────── */}
-            {step === 3 && (
-              <motion.div key="step-3" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-white" /></div>
-                  <div>
-                    <h2 className="text-lg font-bold">Education</h2>
-                    <p className="text-xs text-white/40">Your academic background</p>
-                  </div>
-                  {resumeParsed && data.educationLevel && <span className="ml-auto px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-medium">Auto-filled</span>}
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-white/50 mb-1.5 block">Highest Education *</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {educationLevels.map((lvl) => (
-                        <button key={lvl} onClick={() => update({ educationLevel: lvl })}
-                          className={`p-2.5 rounded-xl text-xs font-medium text-left transition-all ${data.educationLevel === lvl ? 'bg-amber-500/10 border border-amber-500/40 text-amber-400' : 'bg-white/[0.03] border border-white/5 text-white/50 hover:bg-white/5'}`}>{lvl}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-white/50 mb-1 block">Field of Study</label>
-                      <input value={data.fieldOfStudy} onChange={(e) => update({ fieldOfStudy: e.target.value })} className="input-field" placeholder="e.g. Computer Science" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-white/50 mb-1 block">Graduation Year</label>
-                      <input value={data.graduationYear} onChange={(e) => update({ graduationYear: e.target.value })} className="input-field" placeholder="e.g. 2024" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-white/50 mb-1 block">Institution</label>
-                    <input value={data.institution} onChange={(e) => update({ institution: e.target.value })} className="input-field" placeholder="University or school name" />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={goNext} disabled={!canProceed(3)} className="btn-primary flex-1 flex items-center justify-center gap-2">Continue <ArrowRight className="w-4 h-4" /></button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ─── Step 4: Skills ──────────── */}
-            {step === 4 && (
-              <motion.div key="step-4" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-green to-emerald-400 flex items-center justify-center"><Sparkles className="w-5 h-5 text-white" /></div>
-                  <div>
-                    <h2 className="text-lg font-bold">Your Skills</h2>
-                    <p className="text-xs text-white/40">Select at least 2 skills (powers your AI recommendations)</p>
-                  </div>
-                  {resumeParsed && data.skills.length > 0 && <span className="ml-auto px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-medium">{data.skills.length} from resume</span>}
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-white/50 mb-1.5 block">{data.targetRole ? `Recommended for ${data.targetRole}` : 'Popular Skills'}</label>
+                    <label className="text-xs text-white/50 mb-1.5 block">{data.targetRole ? `Skills for ${data.targetRole}` : 'Skills'} <span className="text-white/30">(optional)</span></label>
                     <div className="flex flex-wrap gap-1.5">
-                      {suggestedSkills.map((skill) => {
+                      {suggestedSkills.slice(0, 10).map((skill) => {
                         const isSelected = data.skills.includes(skill);
                         return (
                           <button key={skill} onClick={() => toggleSkill(skill)}
@@ -1013,177 +808,91 @@ export default function OnboardingPage() {
                         );
                       })}
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-white/50 mb-1 block">Add your own</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mt-2">
                       <input value={customSkill} onChange={(e) => setCustomSkill(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill(); } }}
-                        className="input-field flex-1" placeholder="Type a skill and press Enter" />
+                        className="input-field flex-1 text-xs" placeholder="Add a custom skill" />
                       <button onClick={addCustomSkill} disabled={!customSkill.trim()} className="btn-secondary px-3"><Plus className="w-4 h-4" /></button>
                     </div>
-                  </div>
-
-                  {data.skills.length > 0 && (
-                    <div>
-                      <label className="text-xs text-white/50 mb-1 block">Selected ({data.skills.length})</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {data.skills.map((skill) => (
+                    {data.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {data.skills.filter(s => !suggestedSkills.slice(0, 10).includes(s)).map((skill) => (
                           <span key={skill} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-neon-blue/10 border border-neon-blue/30 text-neon-blue">
                             {skill}
                             <button onClick={() => toggleSkill(skill)} className="hover:text-white"><X className="w-3 h-3" /></button>
                           </span>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">
                   <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={goNext} disabled={!canProceed(4)} className="btn-primary flex-1 flex items-center justify-center gap-2">Continue <ArrowRight className="w-4 h-4" /></button>
+                  <button onClick={goNext} disabled={!canProceed(1)} className="btn-primary flex-1 flex items-center justify-center gap-2">Continue <ArrowRight className="w-4 h-4" /></button>
                 </div>
               </motion.div>
             )}
 
-            {/* ─── Step 5: Meet Your Agents + Configure ──── */}
-            {step === 5 && (
-              <motion.div key="step-5" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
-                <div className="text-center mb-4">
-                  <h2 className="text-xl font-bold">Meet Your AI Agents</h2>
-                  <p className="text-xs text-white/40 mt-1 max-w-md mx-auto">Your personal team of AI agents will work together to accelerate your career.</p>
-                </div>
+            {/* ─── Step 2: You're All Set ────────── */}
+            {step === 2 && (
+              <motion.div key="step-2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
+                <div className="text-center py-6">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                    className="w-16 h-16 rounded-full bg-gradient-to-br from-neon-green to-emerald-400 flex items-center justify-center mx-auto mb-5"
+                  >
+                    <Check className="w-8 h-8 text-white" />
+                  </motion.div>
+                  <h2 className="text-xl font-bold mb-2">You&apos;re All Set!</h2>
+                  <p className="text-sm text-white/40 max-w-md mx-auto mb-6">
+                    Your profile is ready. Our AI agents will personalize your experience based on your goals.
+                  </p>
 
-                {/* Agent overview cards — compact */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-5">
-                  {[
-                    { emoji: '\uD83D\uDD0D', name: 'Scout', desc: 'Finds jobs', borderColor: 'border-l-blue-500' },
-                    { emoji: '\uD83D\uDCC4', name: 'Forge', desc: 'Optimizes resume', borderColor: 'border-l-orange-500' },
-                    { emoji: '\uD83D\uDCE8', name: 'Archer', desc: 'Auto-applies', borderColor: 'border-l-green-500' },
-                    { emoji: '\uD83C\uDFAF', name: 'Atlas', desc: 'Interview prep', borderColor: 'border-l-purple-500' },
-                    { emoji: '\uD83D\uDCDA', name: 'Sage', desc: 'Skill training', borderColor: 'border-l-teal-500' },
-                    { emoji: '\uD83D\uDEE1\uFE0F', name: 'Sentinel', desc: 'Quality review', borderColor: 'border-l-rose-500' },
-                  ].map((a) => (
-                    <div key={a.name} className={`p-2 rounded-lg bg-white/[0.03] border border-white/5 border-l-[3px] ${a.borderColor}`}>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm">{a.emoji}</span>
-                        <span className="text-xs font-bold text-white">{a.name}</span>
+                  {/* Summary */}
+                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-left space-y-2 mb-6 max-w-sm mx-auto">
+                    {data.fullName && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <User className="w-3.5 h-3.5 text-white/30" />
+                        <span className="text-white/60">{data.fullName}</span>
                       </div>
-                      <p className="text-[10px] text-white/40 pl-6">{a.desc}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ── Agent Configuration ── */}
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 mb-4">
-                  <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-neon-blue" /> Configure Automation
-                  </h3>
-
-                  {/* Agent toggles */}
-                  <div className="space-y-2 mb-4">
-                    {[
-                      { key: 'scoutEnabled' as const, label: 'Scout', desc: 'Auto-discover jobs matching your profile', color: 'text-blue-400' },
-                      { key: 'forgeEnabled' as const, label: 'Forge', desc: 'Auto-optimize your resume for each job', color: 'text-orange-400' },
-                      { key: 'archerEnabled' as const, label: 'Archer', desc: 'Auto-apply to matched jobs', color: 'text-green-400' },
-                    ].map((agent) => (
-                      <div key={agent.key} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02]">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold ${agent.color}`}>{agent.label}</span>
-                          <span className="text-[10px] text-white/30">{agent.desc}</span>
-                        </div>
-                        <button
-                          onClick={() => setAgentConfig(prev => ({ ...prev, [agent.key]: !prev[agent.key] }))}
-                          className="flex-shrink-0"
-                        >
-                          {agentConfig[agent.key] ? (
-                            <ToggleRight className="w-5 h-5 text-neon-green" />
-                          ) : (
-                            <ToggleLeft className="w-5 h-5 text-white/30" />
-                          )}
-                        </button>
+                    )}
+                    {data.targetRole && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Briefcase className="w-3.5 h-3.5 text-neon-blue" />
+                        <span className="text-white/80 font-medium">{data.targetRole}</span>
                       </div>
-                    ))}
+                    )}
+                    {data.location && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <MapPin className="w-3.5 h-3.5 text-white/30" />
+                        <span className="text-white/60">{data.location}</span>
+                      </div>
+                    )}
+                    {data.experienceLevel && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Sparkles className="w-3.5 h-3.5 text-neon-purple" />
+                        <span className="text-white/60">{experienceLevels.find(l => l.value === data.experienceLevel)?.label || data.experienceLevel}</span>
+                      </div>
+                    )}
+                    {data.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {data.skills.slice(0, 6).map((skill) => (
+                          <span key={skill} className="px-2 py-0.5 rounded-full text-[10px] bg-neon-green/10 text-neon-green border border-neon-green/20">{skill}</span>
+                        ))}
+                        {data.skills.length > 6 && <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-white/30">+{data.skills.length - 6} more</span>}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Schedule presets */}
-                  <h4 className="text-xs font-semibold text-white/50 mb-2">Schedule Pace</h4>
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    {(Object.entries(SCHEDULE_PRESETS) as [SchedulePreset, typeof SCHEDULE_PRESETS[SchedulePreset]][]).map(([key, preset]) => {
-                      const isActive = agentConfig.preset === key;
-                      const PresetIcon = key === 'aggressive' ? Zap : key === 'balanced' ? Target : Clock;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setAgentConfig(prev => ({ ...prev, preset: key }))}
-                          className={`p-2.5 rounded-lg border text-left transition-all ${
-                            isActive
-                              ? 'border-neon-blue/40 bg-neon-blue/10'
-                              : 'border-white/5 bg-white/[0.02] hover:border-white/10'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <PresetIcon className={`w-3 h-3 ${isActive ? 'text-neon-blue' : 'text-white/30'}`} />
-                            <span className={`text-xs font-bold ${isActive ? 'text-neon-blue' : 'text-white/60'}`}>{preset.label}</span>
-                          </div>
-                          <p className="text-[9px] text-white/30 leading-tight">{preset.desc}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Token estimate */}
-                  {(() => {
-                    const selectedPreset = SCHEDULE_PRESETS[agentConfig.preset];
-                    const estimate = estimateTotalMonthlyTokens({
-                      scoutEnabled: agentConfig.scoutEnabled,
-                      scoutInterval: selectedPreset.scoutInterval,
-                      forgeEnabled: agentConfig.forgeEnabled,
-                      forgeInterval: selectedPreset.forgeInterval,
-                      forgeMode: 'on_demand',
-                      archerEnabled: agentConfig.archerEnabled,
-                      archerInterval: selectedPreset.archerInterval,
-                      archerMaxPerRun: 10,
-                    });
-                    const limit = PLAN_TOKEN_LIMITS[userPlan as keyof typeof PLAN_TOKEN_LIMITS] ?? 200;
-                    const warning = getTokenWarningLevel(estimate, userPlan as any);
-                    return (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-[10px] text-white/40">
-                          <span>Estimated: ~{estimate} tokens/month</span>
-                          <span>Your plan: {limit}/month</span>
-                        </div>
-                        {estimate > 0 && (
-                          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                warning.level === 'error' ? 'bg-red-500' : warning.level === 'warning' ? 'bg-amber-500' : 'bg-neon-green'
-                              }`}
-                              style={{ width: `${Math.min(100, (estimate / limit) * 100)}%` }}
-                            />
-                          </div>
-                        )}
-                        {warning.level !== 'none' && (
-                          <div className={`flex items-start gap-1.5 text-[10px] ${
-                            warning.level === 'error' ? 'text-red-400' : 'text-amber-400'
-                          }`}>
-                            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                            <span>{warning.message}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <div className="p-3 rounded-xl bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 border border-white/5 text-center mb-4">
-                  <p className="text-[11px] text-white/40">Agents are coordinated by <span className="text-neon-blue font-semibold">Cortex</span>. You can adjust these settings anytime in the Command Center.</p>
+                  <p className="text-[11px] text-white/30 mb-4">You can update these details anytime in Settings.</p>
                 </div>
 
                 <div className="flex gap-3">
                   <button onClick={goBack} className="btn-secondary flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={handleSubmit} disabled={!canProceed(5) || loading}
+                  <button onClick={handleSubmit} disabled={loading}
                     className="btn-primary flex-1 flex items-center justify-center gap-2 text-base py-3">
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Rocket className="w-5 h-5" /> Launch My Career</>}
                   </button>

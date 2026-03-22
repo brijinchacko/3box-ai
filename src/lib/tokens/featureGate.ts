@@ -1,6 +1,6 @@
 /**
  * Feature Gate — server-side check for whether a FREE user
- * has exhausted their lifetime application limit and should
+ * has exhausted their weekly application limit and should
  * be blocked from ALL features (not just applications).
  *
  * PRO/MAX users are never feature-locked.
@@ -31,7 +31,7 @@ export async function checkFeatureGate(userId: string): Promise<FeatureGateResul
   if (plan !== 'FREE') return { locked: false };
 
   const limit = APP_LIMITS.FREE;
-  const total = limit.type === 'lifetime' ? (limit.total ?? 10) : 10;
+  const total = limit.type === 'weekly' ? (limit.perWeek ?? 5) : 5;
 
   if (user.totalAppsUsed >= total) {
     return {

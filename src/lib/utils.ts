@@ -56,7 +56,7 @@ export const PLAN_FEATURES = {
       { label: 'Unlimited PDF exports', included: true },
       { label: 'Full career plan', included: true },
       { label: 'AI coach (full access)', included: true },
-      { label: '10 job applications (lifetime)', included: true },
+      { label: '5 job applications per week', included: true },
       { label: 'Daily application limit', included: false },
       { label: 'Priority support', included: false },
     ],

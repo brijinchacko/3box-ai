@@ -10,6 +10,7 @@ import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import FeatureLockedOverlay from '@/components/dashboard/shared/FeatureLockedOverlay';
 import DashboardStatusBar from '@/components/dashboard/layout/DashboardStatusBar';
+import NextStepBanner from '@/components/dashboard/shared/NextStepBanner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -109,6 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <MobileNav onOpen={() => setMobileOpen(true)} />
       <main className={`flex-1 overflow-auto pt-14 lg:pt-0 ${isAgentic ? 'text-white' : ''}`}>
         <DashboardStatusBar />
+        <NextStepBanner />
         <ErrorBoundary>
           {children}
         </ErrorBoundary>

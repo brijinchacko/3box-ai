@@ -84,7 +84,7 @@ const plans: PlanDef[] = [
     tagline: 'Great for trying out the platform',
     recommended: false,
     features: [
-      '10 total lifetime job applications',
+      '5 job applications per week',
       'All 6 AI agents unlocked',
       'AI-powered resume builder',
       'Interview prep',
@@ -131,11 +131,11 @@ const plans: PlanDef[] = [
 const faqs = [
   {
     q: 'What do I get on the Free plan?',
-    a: 'You get 10 total lifetime job applications with full access to all 6 AI agents, the resume builder, interview prep, and job search across 6+ platforms.',
+    a: 'You get 5 job applications per week (resets every Monday) with full access to all 6 AI agents, the resume builder, interview prep, and job search across 6+ platforms.',
   },
   {
     q: 'What counts as a job application?',
-    a: 'Each time you apply to a job through the platform counts as one application. On the Free plan this is a lifetime total; on Pro and Max it resets daily.',
+    a: 'Each time you apply to a job through the platform counts as one application. On the Free plan this resets every Monday; on Pro and Max it resets daily.',
   },
   {
     q: 'Can I switch plans anytime?',
@@ -634,7 +634,7 @@ export default function PricingPageClient() {
                 <tbody className="text-gray-400">
                   <tr className="border-b border-white/5">
                     <td className="py-3 pr-4">Job applications</td>
-                    <td className="text-center py-3 px-4">10 lifetime</td>
+                    <td className="text-center py-3 px-4">5/week</td>
                     <td className="text-center py-3 px-4 font-medium text-white">20/day</td>
                     <td className="text-center py-3 px-4 font-medium text-white">50/day</td>
                   </tr>

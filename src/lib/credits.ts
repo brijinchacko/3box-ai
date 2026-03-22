@@ -2,7 +2,7 @@
  * Application limit utility — checks if user is approaching their application limit
  * and sends email alerts.
  *
- * FREE plan: 10 lifetime applications
+ * FREE plan: 5 applications / week
  * PRO plan:  20 applications / day
  * MAX plan:  50 applications / day
  */
@@ -39,7 +39,7 @@ export async function checkAndAlertLowApplications(userId: string) {
 
     if (alreadySent) return;
 
-    const limitLabel = APP_LIMITS[plan].type === 'lifetime' ? 'lifetime' : 'daily';
+    const limitLabel = APP_LIMITS[plan].type === 'weekly' ? 'weekly' : 'daily';
     await sendCreditLowEmail(user.email, user.name || 'there', remaining);
 
     await prisma.emailLog.create({

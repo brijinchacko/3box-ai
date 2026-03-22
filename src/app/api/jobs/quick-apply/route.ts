@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     if (!cap.allowed) {
       return NextResponse.json({
         error: 'limit_reached',
-        message: `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType === 'lifetime' ? 'total' : 'today'}).`,
+        message: `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType === 'weekly' ? 'this week' : 'today'}).`,
         cap,
       }, { status: 429 });
     }

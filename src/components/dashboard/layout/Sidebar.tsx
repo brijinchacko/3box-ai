@@ -1,25 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard,
   Search,
-  Columns3,
-  ListFilter,
   FileText,
   FileEdit,
   Mic,
-  Globe,
   ChevronLeft,
   ChevronRight,
   Sparkles,
   X,
-  Zap,
-  Bot,
-  AlertTriangle,
+  GraduationCap,
+  Briefcase,
+  Settings,
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import UserMenu from '../UserMenu';
@@ -30,28 +26,13 @@ import CortexAvatar from '@/components/brand/CortexAvatar';
 import Logo from '@/components/brand/Logo';
 import type { AgentId } from '@/lib/agents/registry';
 
-/* ── Autopilot: standalone top item ──────────────────── */
-const AUTOPILOT_TOP = { label: 'Overview', href: '/dashboard', icon: LayoutDashboard };
+/* ── Copilot: standalone top item ───────────────────── */
+const COPILOT_TOP = { label: 'Home', href: '/dashboard', icon: LayoutDashboard };
 
-/* ── Autopilot nav items (grouped into 3 boxes) ─────── */
-const AUTOPILOT_NAV_GROUPS = [
+/* ── Copilot nav items (consolidated into 3 groups) ──── */
+const COPILOT_NAV_GROUPS = [
   {
-    category: 'BOX 1 — PROFILE',
-    color: 'blue',
-    activeBg: 'bg-blue-50 dark:bg-blue-500/10',
-    activeText: 'text-blue-700 dark:text-blue-400',
-    activeIcon: 'text-blue-600 dark:text-blue-400',
-    headerText: 'text-blue-500 dark:text-blue-400/70',
-    iconColor: 'text-blue-500 dark:text-blue-400',
-    iconBg: 'bg-blue-50 dark:bg-blue-500/10',
-    iconBorder: 'border-blue-200 dark:border-blue-500/20',
-    items: [
-      { label: 'Resume', href: '/dashboard/resume', icon: FileEdit },
-      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic },
-    ],
-  },
-  {
-    category: 'BOX 2 — JOB HUNT',
+    category: 'DISCOVER & APPLY',
     color: 'green',
     activeBg: 'bg-green-50 dark:bg-green-500/10',
     activeText: 'text-green-700 dark:text-green-400',
@@ -61,23 +42,39 @@ const AUTOPILOT_NAV_GROUPS = [
     iconBg: 'bg-green-50 dark:bg-green-500/10',
     iconBorder: 'border-green-200 dark:border-green-500/20',
     items: [
-      { label: 'Job Search', href: '/dashboard/jobs', icon: Search },
-      { label: 'Board', href: '/dashboard/board', icon: Columns3 },
-      { label: 'All Matches', href: '/dashboard/matches', icon: ListFilter },
+      { label: 'Find Jobs', href: '/dashboard/jobs', icon: Search },
+      { label: 'My Resume', href: '/dashboard/resume', icon: FileEdit },
+      { label: 'Applications', href: '/dashboard/applications', icon: FileText },
     ],
   },
   {
-    category: 'BOX 3 — APPLY',
-    color: 'purple',
-    activeBg: 'bg-purple-50 dark:bg-purple-500/10',
-    activeText: 'text-purple-700 dark:text-purple-400',
-    activeIcon: 'text-purple-600 dark:text-purple-400',
-    headerText: 'text-purple-500 dark:text-purple-400/70',
-    iconColor: 'text-purple-500 dark:text-purple-400',
-    iconBg: 'bg-purple-50 dark:bg-purple-500/10',
-    iconBorder: 'border-purple-200 dark:border-purple-500/20',
+    category: 'PREPARE & GROW',
+    color: 'blue',
+    activeBg: 'bg-blue-50 dark:bg-blue-500/10',
+    activeText: 'text-blue-700 dark:text-blue-400',
+    activeIcon: 'text-blue-600 dark:text-blue-400',
+    headerText: 'text-blue-500 dark:text-blue-400/70',
+    iconColor: 'text-blue-500 dark:text-blue-400',
+    iconBg: 'bg-blue-50 dark:bg-blue-500/10',
+    iconBorder: 'border-blue-200 dark:border-blue-500/20',
     items: [
-      { label: 'My Applications', href: '/dashboard/applications', icon: FileText },
+      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic },
+      { label: 'Skill Growth', href: '/dashboard/learning', icon: GraduationCap },
+      { label: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase },
+    ],
+  },
+  {
+    category: 'SETTINGS',
+    color: 'gray',
+    activeBg: 'bg-gray-100 dark:bg-white/[0.06]',
+    activeText: 'text-gray-900 dark:text-gray-200',
+    activeIcon: 'text-gray-700 dark:text-gray-300',
+    headerText: 'text-gray-400 dark:text-gray-500',
+    iconColor: 'text-gray-400 dark:text-gray-500',
+    iconBg: 'bg-gray-50 dark:bg-gray-800',
+    iconBorder: 'border-gray-200 dark:border-gray-700',
+    items: [
+      { label: 'Settings', href: '/dashboard/settings', icon: Settings },
     ],
   },
 ];
@@ -101,36 +98,15 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
-  const { setMode, isAgentic } = useDashboardMode();
+  const { isAgentic } = useDashboardMode();
 
   const plan = normalizePlan((session?.user as any)?.plan || 'FREE');
   const planInfo = PLAN_PRICING[plan];
   const isFree = plan === 'FREE';
-  const [showBetaWarning, setShowBetaWarning] = useState(false);
-
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
-  }
-
-  /* ── Mode switch with navigation ── */
-  function switchToAutopilot() {
-    if (!isAgentic) return;
-    setMode('autopilot');
-    router.push('/dashboard');
-  }
-
-  function switchToAgentic() {
-    if (isAgentic) return;
-    setShowBetaWarning(true);
-  }
-
-  function confirmAgentic() {
-    setShowBetaWarning(false);
-    setMode('agentic');
-    router.push('/dashboard/chat');
   }
 
   return (
@@ -195,63 +171,6 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
             )}
           </button>
         </div>
-
-        {/* Mode toggle */}
-        {!collapsed && (
-          <div className={cn(
-            'px-3 py-2.5',
-            isAgentic ? 'border-b border-white/[0.06]' : 'border-b border-gray-100 dark:border-gray-800',
-          )}>
-            <div className={cn(
-              'flex items-center rounded-lg p-0.5',
-              isAgentic ? 'bg-white/[0.04]' : 'bg-gray-100 dark:bg-gray-800',
-            )}>
-              <button
-                onClick={switchToAutopilot}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
-                  !isAgentic
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-white/40 hover:text-white/60',
-                )}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Autopilot</span>
-              </button>
-              <button
-                onClick={switchToAgentic}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
-                  isAgentic
-                    ? 'bg-white/[0.08] text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-                )}
-              >
-                <Bot className="w-3.5 h-3.5" />
-                <span>Agentic</span>
-              </button>
-            </div>
-          </div>
-        )}
-        {collapsed && (
-          <div className={cn(
-            'px-2 py-2.5 flex justify-center',
-            isAgentic ? 'border-b border-white/[0.06]' : 'border-b border-gray-100 dark:border-gray-800',
-          )}>
-            <button
-              onClick={isAgentic ? switchToAutopilot : switchToAgentic}
-              title={isAgentic ? 'Switch to Autopilot' : 'Switch to Agentic'}
-              className={cn(
-                'p-1.5 rounded-lg transition-colors',
-                isAgentic
-                  ? 'bg-purple-500/10 text-purple-400'
-                  : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
-              )}
-            >
-              {isAgentic ? <Bot className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
-            </button>
-          </div>
-        )}
 
         {/* ── AGENTIC MODE: Agent list ─────────────────────── */}
         {isAgentic ? (
@@ -332,14 +251,14 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
             </div>
           </nav>
         ) : (
-          /* ── AUTOPILOT MODE: Overview + 3 Box groups ────── */
+          /* ── COPILOT MODE: Home + consolidated groups ──── */
           <nav className="flex-1 overflow-y-auto py-2 px-2">
-            {/* Standalone Overview */}
+            {/* Standalone Home */}
             {(() => {
-              const active = isActive(AUTOPILOT_TOP.href);
+              const active = isActive(COPILOT_TOP.href);
               return (
                 <Link
-                  href={AUTOPILOT_TOP.href}
+                  href={COPILOT_TOP.href}
                   onClick={onMobileClose}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-3',
@@ -348,16 +267,16 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200',
                     collapsed && 'justify-center px-2',
                   )}
-                  title={collapsed ? AUTOPILOT_TOP.label : undefined}
+                  title={collapsed ? COPILOT_TOP.label : undefined}
                 >
-                  <AUTOPILOT_TOP.icon className={cn('w-[18px] h-[18px] shrink-0', active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500')} />
-                  {!collapsed && <span>{AUTOPILOT_TOP.label}</span>}
+                  <COPILOT_TOP.icon className={cn('w-[18px] h-[18px] shrink-0', active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500')} />
+                  {!collapsed && <span>{COPILOT_TOP.label}</span>}
                 </Link>
               );
             })()}
 
-            {/* 3 Box groups */}
-            {AUTOPILOT_NAV_GROUPS.map((group, idx) => (
+            {/* Consolidated nav groups */}
+            {COPILOT_NAV_GROUPS.map((group, idx) => (
               <div key={group.category} className="mb-2">
                 {/* Separator line between groups */}
                 {!collapsed && idx > 0 && (
@@ -443,39 +362,6 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
         </div>
       </aside>
 
-      {/* Agentic Beta Warning Modal */}
-      {showBetaWarning && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-md mx-4 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Agentic Mode (Beta)</h3>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Agentic mode is currently in <span className="font-semibold text-amber-600 dark:text-amber-400">beta</span> and may produce errors or unexpected results.
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              We recommend using <span className="font-semibold text-blue-600 dark:text-blue-400">Autopilot mode</span> for the best experience.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowBetaWarning(false)}
-                className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Stay on Autopilot
-              </button>
-              <button
-                onClick={confirmAgentic}
-                className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Continue Anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

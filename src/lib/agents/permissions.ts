@@ -14,7 +14,7 @@ export const LEGACY_PLAN_MAP: Record<string, PlanTier> = {
 
 /**
  * All agents are available on all plans.
- * The only limit is job applications (FREE=10 lifetime, PRO=20/day, MAX=50/day).
+ * The only limit is job applications (FREE=5/week, PRO=20/day, MAX=50/day).
  */
 export function isAgentAvailable(_agentId: AgentId, _plan: PlanTier): boolean {
   return true;

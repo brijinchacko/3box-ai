@@ -5,8 +5,8 @@ export type PlanTier = 'FREE' | 'PRO' | 'MAX';
 export type LegacyPlanTier = 'BASIC' | 'STARTER' | 'ULTRA';
 
 export interface PlanFeatures {
-  applications: number;      // Daily limit (PRO/MAX) or lifetime limit (FREE)
-  applicationType: 'lifetime' | 'daily';
+  applications: number;      // Daily limit (PRO/MAX) or weekly limit (FREE)
+  applicationType: 'weekly' | 'daily';
   resumes: number;
   exports: number;
 }

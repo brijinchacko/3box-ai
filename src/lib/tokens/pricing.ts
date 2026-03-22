@@ -1,8 +1,7 @@
 /**
  * Application Limits — Central source of truth for plan-based application caps.
  *
- * The token/credit system is replaced by simple application limits:
- * - FREE: 10 total lifetime applications (all agents unlocked)
+ * - FREE: 5 applications per week (resets every Monday at midnight UTC)
  * - PRO:  20 applications per day (resets at midnight UTC)
  * - MAX:  50 applications per day (resets at midnight UTC)
  *
@@ -28,16 +27,16 @@ export function normalizePlan(plan: string): PlanTier {
 }
 
 // ─── Application Limits ─────────────────────────────────────
-export type LimitType = 'lifetime' | 'daily';
+export type LimitType = 'weekly' | 'daily';
 
 export interface PlanLimit {
   type: LimitType;
-  total?: number;   // For lifetime limits (FREE plan)
-  perDay?: number;  // For daily limits (PRO/MAX plans)
+  perWeek?: number;  // For weekly limits (FREE plan)
+  perDay?: number;   // For daily limits (PRO/MAX plans)
 }
 
 export const APP_LIMITS: Record<PlanTier, PlanLimit> = {
-  FREE: { type: 'lifetime', total: 10 },
+  FREE: { type: 'weekly', perWeek: 5 },
   PRO:  { type: 'daily', perDay: 20 },
   MAX:  { type: 'daily', perDay: 50 },
 };
@@ -48,22 +47,21 @@ export const APP_LIMITS: Record<PlanTier, PlanLimit> = {
  * Check if the user can send another application.
  *
  * @param plan - User's current plan (FREE, PRO, MAX)
- * @param totalAppsUsed - Lifetime total applications (for FREE plan)
- * @param dailyAppsUsed - Applications sent today (for PRO/MAX plans)
+ * @param periodAppsUsed - Applications in the current period (this week for FREE, today for PRO/MAX)
  */
 export function canApply(
   plan: PlanTier,
-  totalAppsUsed: number,
-  dailyAppsUsed: number
+  _totalAppsUsed: number,
+  periodAppsUsed: number
 ): boolean {
   const limit = APP_LIMITS[plan];
 
-  if (limit.type === 'lifetime') {
-    return totalAppsUsed < (limit.total ?? 0);
+  if (limit.type === 'weekly') {
+    return periodAppsUsed < (limit.perWeek ?? 0);
   }
 
   // Daily limit (PRO/MAX)
-  return dailyAppsUsed < (limit.perDay ?? 0);
+  return periodAppsUsed < (limit.perDay ?? 0);
 }
 
 /**
@@ -71,16 +69,16 @@ export function canApply(
  */
 export function getApplicationsRemaining(
   plan: PlanTier,
-  totalAppsUsed: number,
-  dailyAppsUsed: number
+  _totalAppsUsed: number,
+  periodAppsUsed: number
 ): number {
   const limit = APP_LIMITS[plan];
 
-  if (limit.type === 'lifetime') {
-    return Math.max(0, (limit.total ?? 0) - totalAppsUsed);
+  if (limit.type === 'weekly') {
+    return Math.max(0, (limit.perWeek ?? 0) - periodAppsUsed);
   }
 
-  return Math.max(0, (limit.perDay ?? 0) - dailyAppsUsed);
+  return Math.max(0, (limit.perDay ?? 0) - periodAppsUsed);
 }
 
 /**
@@ -88,18 +86,18 @@ export function getApplicationsRemaining(
  */
 export function getUsagePercent(
   plan: PlanTier,
-  totalAppsUsed: number,
-  dailyAppsUsed: number
+  _totalAppsUsed: number,
+  periodAppsUsed: number
 ): number {
   const limit = APP_LIMITS[plan];
 
-  if (limit.type === 'lifetime') {
-    const cap = limit.total ?? 1;
-    return Math.min(100, Math.round((totalAppsUsed / cap) * 100));
+  if (limit.type === 'weekly') {
+    const cap = limit.perWeek ?? 1;
+    return Math.min(100, Math.round((periodAppsUsed / cap) * 100));
   }
 
   const cap = limit.perDay ?? 1;
-  return Math.min(100, Math.round((dailyAppsUsed / cap) * 100));
+  return Math.min(100, Math.round((periodAppsUsed / cap) * 100));
 }
 
 /**
@@ -107,7 +105,7 @@ export function getUsagePercent(
  */
 export function getPlanLimit(plan: PlanTier): number {
   const limit = APP_LIMITS[plan];
-  return limit.type === 'lifetime' ? (limit.total ?? 0) : (limit.perDay ?? 0);
+  return limit.type === 'weekly' ? (limit.perWeek ?? 0) : (limit.perDay ?? 0);
 }
 
 /**
@@ -116,11 +114,32 @@ export function getPlanLimit(plan: PlanTier): number {
 export function getPlanLimitLabel(plan: PlanTier): string {
   const limit = APP_LIMITS[plan];
 
-  if (limit.type === 'lifetime') {
-    return `${limit.total} applications total`;
+  if (limit.type === 'weekly') {
+    return `${limit.perWeek} applications per week`;
   }
 
   return `${limit.perDay} applications per day`;
+}
+
+/**
+ * Get the start of the current week (Monday at 00:00 UTC).
+ */
+export function getWeekStart(): Date {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const diff = day === 0 ? 6 : day - 1; // Days since Monday
+  const monday = new Date(now);
+  monday.setUTCDate(now.getUTCDate() - diff);
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday;
+}
+
+/**
+ * Get reset label for UI.
+ */
+export function getResetLabel(plan: PlanTier): string {
+  if (plan === 'FREE') return 'Resets every Monday';
+  return 'Resets at midnight';
 }
 
 // ─── Plan Pricing (for UI display) ──────────────────────────

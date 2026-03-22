@@ -455,7 +455,7 @@ export default function DashboardStatusBar() {
   // Usage bar
   const percent = limit > 0 ? Math.round((used / limit) * 100) : 0;
   const barColor = isLocked ? 'bg-red-500' : percent >= 90 ? 'bg-red-500' : percent >= 60 ? 'bg-amber-500' : 'bg-blue-500';
-  const periodLabel = limitType === 'lifetime' ? 'total' : 'today';
+  const periodLabel = limitType === 'weekly' ? 'this week' : 'today';
 
   // Auto-apply status — only Active when resume verified + pipelines running
   const statusDot = status.dailyLimitReached

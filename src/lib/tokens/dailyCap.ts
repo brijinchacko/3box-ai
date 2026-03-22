@@ -1,7 +1,7 @@
 /**
  * Application Cap — Database-backed per-user application limits
  *
- * FREE plan: 10 total lifetime applications (never resets)
+ * FREE plan: 5 applications per week (resets every Monday at midnight UTC)
  * PRO plan:  20 applications per day (resets at midnight UTC)
  * MAX plan:  50 applications per day (resets at midnight UTC)
  */
@@ -9,9 +9,9 @@ import { prisma } from '@/lib/db/prisma';
 import {
   type PlanTier,
   APP_LIMITS,
-  canApply,
   getApplicationsRemaining,
   normalizePlan,
+  getWeekStart,
 } from './pricing';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -20,8 +20,8 @@ export interface ApplicationCapStatus {
   used: number;
   limit: number;
   remaining: number;
-  limitType: 'lifetime' | 'daily';
-  resetsAt: Date | null; // null for lifetime (FREE) plan
+  limitType: 'weekly' | 'daily';
+  resetsAt: Date | null;
 }
 
 // ─── Core Functions ───────────────────────────────────────────
@@ -36,31 +36,45 @@ function startOfTomorrowUTC(): Date {
   return new Date(today.getTime() + 86400000);
 }
 
+function nextMondayUTC(): Date {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysUntilMonday = day === 0 ? 1 : 8 - day;
+  const next = new Date(now);
+  next.setUTCDate(now.getUTCDate() + daysUntilMonday);
+  next.setUTCHours(0, 0, 0, 0);
+  return next;
+}
+
 function needsReset(resetAt: Date): boolean {
   return resetAt < startOfTodayUTC();
 }
 
 /**
- * Get the daily limit for a plan tier.
- * FREE plan uses lifetime limit (checked separately), returns 0 here.
+ * Get the period limit for a plan tier.
  */
-export function getDailyLimit(plan: PlanTier): number {
+export function getPeriodLimit(plan: PlanTier): number {
   const limit = APP_LIMITS[plan];
-  return limit.type === 'daily' ? (limit.perDay ?? 0) : 0;
+  return limit.type === 'weekly' ? (limit.perWeek ?? 0) : (limit.perDay ?? 0);
 }
 
 /**
- * Get the lifetime limit for a plan tier.
- * Only applies to FREE plan.
+ * Count applications for this week (for FREE plan).
  */
-export function getLifetimeLimit(plan: PlanTier): number {
-  const limit = APP_LIMITS[plan];
-  return limit.type === 'lifetime' ? (limit.total ?? 0) : 0;
+async function getWeeklyAppCount(userId: string): Promise<number> {
+  const weekStart = getWeekStart();
+  const count = await prisma.jobApplication.count({
+    where: {
+      userId,
+      createdAt: { gte: weekStart },
+    },
+  });
+  return count;
 }
 
 /**
  * Check if the user can send another application.
- * Performs a lazy reset of the daily counter if it's stale.
+ * FREE: counts applications since Monday. PRO/MAX: uses dailyAppsUsed with lazy reset.
  */
 export async function checkApplicationCap(userId: string): Promise<ApplicationCapStatus> {
   const user = await prisma.user.findUnique({
@@ -79,7 +93,7 @@ export async function checkApplicationCap(userId: string): Promise<ApplicationCa
       used: 0,
       limit: 0,
       remaining: 0,
-      limitType: 'lifetime',
+      limitType: 'weekly',
       resetsAt: null,
     };
   }
@@ -87,17 +101,17 @@ export async function checkApplicationCap(userId: string): Promise<ApplicationCa
   const plan = normalizePlan(user.plan);
   const planLimit = APP_LIMITS[plan];
 
-  // FREE plan — lifetime limit
-  if (planLimit.type === 'lifetime') {
-    const total = planLimit.total ?? 0;
-    const used = user.totalAppsUsed;
+  // FREE plan — weekly limit (count from DB)
+  if (planLimit.type === 'weekly') {
+    const weeklyUsed = await getWeeklyAppCount(userId);
+    const perWeek = planLimit.perWeek ?? 0;
     return {
-      allowed: used < total,
-      used,
-      limit: total,
-      remaining: Math.max(0, total - used),
-      limitType: 'lifetime',
-      resetsAt: null,
+      allowed: weeklyUsed < perWeek,
+      used: weeklyUsed,
+      limit: perWeek,
+      remaining: Math.max(0, perWeek - weeklyUsed),
+      limitType: 'weekly',
+      resetsAt: nextMondayUTC(),
     };
   }
 

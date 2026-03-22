@@ -200,6 +200,41 @@ export default function BoardPage() {
   } | null>(null);
   const [autoApplyError, setAutoApplyError] = useState<string | null>(null);
 
+  // Application Preview Modal state
+  const [showApplyPreview, setShowApplyPreview] = useState(false);
+  const [previewJob, setPreviewJob] = useState<LiveSearchJob | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const openApplyPreview = (job: LiveSearchJob) => {
+    setAutoApplyError(null);
+    // Check resume first
+    if (autoApplyStatus && !autoApplyStatus.resumeReady) {
+      setAutoApplyError('resume');
+      return;
+    }
+    // Check cap
+    if (autoApplyStatus && !autoApplyStatus.cap.allowed) {
+      setAutoApplyError('limit');
+      return;
+    }
+    setPreviewJob(job);
+    setShowApplyPreview(true);
+  };
+
+  const confirmApply = async () => {
+    if (!previewJob) return;
+    setPreviewLoading(true);
+    setShowApplyPreview(false);
+    await autoApply(previewJob);
+    setPreviewLoading(false);
+    setPreviewJob(null);
+  };
+
+  const cancelPreview = () => {
+    setShowApplyPreview(false);
+    setPreviewJob(null);
+  };
+
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
@@ -715,8 +750,8 @@ export default function BoardPage() {
                         </span>
                       ) : (
                         <button
-                          onClick={() => autoApply(job)}
-                          disabled={applyingJobId === job.id}
+                          onClick={() => openApplyPreview(job)}
+                          disabled={applyingJobId === job.id || previewLoading}
                           className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-medium hover:from-blue-700 hover:to-purple-700 transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                         >
                           {applyingJobId === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
@@ -988,6 +1023,146 @@ export default function BoardPage() {
         </div>
       )}
       </>)}
+
+      {/* ═══ APPLICATION PREVIEW MODAL ═══ */}
+      {showApplyPreview && previewJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelPreview} />
+
+          {/* Modal */}
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header gradient bar */}
+            <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600" />
+
+            <div className="p-6">
+              {/* Title */}
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{previewJob.title}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{previewJob.company} &middot; {previewJob.location}</p>
+                </div>
+                <button onClick={cancelPreview} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Preview details */}
+              <div className="space-y-3 mb-6">
+                {/* Resume */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                  <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex-shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Resume</p>
+                    {autoApplyStatus?.resumeReady ? (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                        Finalized resume ({autoApplyStatus.resumeStatus === 'APPROVED' ? 'Verified' : 'Pending review'})
+                        {previewJob.matchScore && (
+                          <span className={cn(
+                            'ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold',
+                            previewJob.matchScore >= 80
+                              ? 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400'
+                              : previewJob.matchScore >= 60
+                              ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                          )}>
+                            ATS Score: {Math.round(previewJob.matchScore)}%
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-red-500 mt-0.5 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> No resume uploaded
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cover Letter */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                  <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex-shrink-0">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Cover Letter</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      Will be auto-generated for this role
+                    </p>
+                  </div>
+                </div>
+
+                {/* Application Channel */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                  <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                    <Globe className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Channel</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      Best available (ATS API &rarr; Cold Email &rarr; Portal Queue)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Match Score */}
+                {previewJob.matchScore != null && (
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                    <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex-shrink-0">
+                      <BarChart3 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Match Score</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all',
+                              previewJob.matchScore >= 80 ? 'bg-green-500' : previewJob.matchScore >= 60 ? 'bg-amber-500' : 'bg-gray-400',
+                            )}
+                            style={{ width: `${previewJob.matchScore}%` }}
+                          />
+                        </div>
+                        <span className={cn(
+                          'text-sm font-bold',
+                          previewJob.matchScore >= 80 ? 'text-green-600 dark:text-green-400' : previewJob.matchScore >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500',
+                        )}>
+                          {Math.round(previewJob.matchScore)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Cap info */}
+              {autoApplyStatus?.cap && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 text-center">
+                  {autoApplyStatus.cap.remaining} of {autoApplyStatus.cap.limit} applications remaining {autoApplyStatus.cap.limitType === 'daily' ? 'today' : ''}
+                </p>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelPreview}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmApply}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-4 h-4" />
+                  Confirm & Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

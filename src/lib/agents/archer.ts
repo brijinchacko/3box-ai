@@ -196,7 +196,7 @@ export async function applyToJob(
     const cap = await checkApplicationCap(userId);
     if (!cap.allowed) {
       if (ctx) logActivity(ctx, 'archer', 'cap_reached', `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType})`);
-      return { success: false, method: 'none', channel: 'portal_queue', strategy: 'standard', details: `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType === 'lifetime' ? 'total' : 'today'})` };
+      return { success: false, method: 'none', channel: 'portal_queue', strategy: 'standard', details: `Application limit reached (${cap.used}/${cap.limit} ${cap.limitType === 'weekly' ? 'this week' : 'today'})` };
     }
   }
 

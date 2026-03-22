@@ -4,456 +4,559 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
-import { Plus, Search, MapPin, Pause, Play, Trash2, Loader2, FileEdit, Mic, Target, CheckCircle2, Sparkles, ArrowRight, Chrome, X, Zap, Power } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle2,
+  ArrowRight,
+  Upload,
+  Search,
+  Send,
+  BarChart3,
+  FileText,
+  Target,
+  TrendingUp,
+  Mic,
+  ChevronDown,
+  Clock,
+  Briefcase,
+  Trophy,
+} from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-/* ── Autopilot imports ── */
-import StatsCards from '@/components/dashboard/overview/StatsCards';
-import QuickActions from '@/components/dashboard/overview/QuickActions';
-import RecentActivity from '@/components/dashboard/overview/RecentActivity';
-import ApplicationLimitBar from '@/components/dashboard/shared/ApplicationLimitBar';
-import SearchProfileWizard from '@/components/dashboard/jobs/SearchProfileWizard';
+/* ── Agent icons for activity feed ── */
+import { Shield, BookOpen, Compass, Brain, FileEdit } from 'lucide-react';
 
-interface SearchProfile {
+const agentIcons: Record<string, { icon: React.ElementType; color: string }> = {
+  scout: { icon: Search, color: 'text-blue-500' },
+  forge: { icon: FileEdit, color: 'text-orange-500' },
+  archer: { icon: Target, color: 'text-green-500' },
+  atlas: { icon: Compass, color: 'text-purple-500' },
+  sage: { icon: BookOpen, color: 'text-teal-500' },
+  sentinel: { icon: Shield, color: 'text-rose-500' },
+  cortex: { icon: Brain, color: 'text-blue-400' },
+};
+
+/* ═══════════════════════════════════════════════════════
+   PIPELINE STEP DEFINITIONS
+   ═══════════════════════════════════════════════════════ */
+interface PipelineStep {
+  key: string;
+  label: string;
+  href: string;
+}
+
+const PIPELINE_STEPS: PipelineStep[] = [
+  { key: 'profile', label: 'Profile', href: '/dashboard/onboarding' },
+  { key: 'resume', label: 'Resume', href: '/dashboard/resume' },
+  { key: 'findJobs', label: 'Find Jobs', href: '/dashboard/jobs' },
+  { key: 'apply', label: 'Apply', href: '/dashboard/board' },
+  { key: 'interview', label: 'Interview', href: '/dashboard/interview' },
+  { key: 'offer', label: 'Offer!', href: '/dashboard/applications' },
+];
+
+/* ═══════════════════════════════════════════════════════
+   PIPELINE STATUS TYPES
+   ═══════════════════════════════════════════════════════ */
+type StepStatus = 'completed' | 'current' | 'future';
+
+interface PipelineData {
+  profileDone: boolean;
+  resumeDone: boolean;
+  jobsFound: boolean;
+  hasApplications: boolean;
+  jobsCount: number;
+  appsCount: number;
+}
+
+interface ActivityItem {
   id: string;
-  name: string;
-  jobTitle: string;
-  location: string;
-  remote?: boolean;
-  active: boolean;
-  jobsFound: number;
-  appliedCount: number;
+  agent: string;
+  action: string;
+  summary: string;
   createdAt: string;
 }
 
+interface Stats {
+  jobsFound: number;
+  appsSent: number;
+  interviews: number;
+  responseRate: number;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ROOT PAGE
+   ═══════════════════════════════════════════════════════ */
 export default function DashboardOverviewPage() {
   const { data: session } = useSession();
   const { isAutopilot } = useDashboardMode();
   const firstName = session?.user?.name?.split(' ')[0] || 'there';
 
   if (isAutopilot) {
-    return <AutopilotDashboard firstName={firstName} />;
+    return <PipelineDashboard firstName={firstName} />;
   }
 
-  /* Agentic mode — render Cortex workspace (same as /dashboard/chat) */
   return <AgenticWorkspace agentId="cortex" />;
 }
 
 /* ═══════════════════════════════════════════════════════
-   CHROME EXTENSION BANNER
+   PIPELINE DASHBOARD
    ═══════════════════════════════════════════════════════ */
-function ExtensionBanner() {
-  const [dismissed, setDismissed] = useState(false);
+function PipelineDashboard({ firstName }: { firstName: string }) {
+  const [pipeline, setPipeline] = useState<PipelineData | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  /* Fetch all pipeline data in parallel */
   useEffect(() => {
-    try {
-      if (localStorage.getItem('3box_ext_banner_dismissed')) setDismissed(true);
-    } catch {}
+    async function fetchPipeline() {
+      try {
+        const [profileRes, resumeRes, jobsRes, appsRes] = await Promise.allSettled([
+          fetch('/api/user/profile').then(r => r.ok ? r.json() : null),
+          fetch('/api/user/resume').then(r => r.ok ? r.json() : null),
+          fetch('/api/user/board-jobs').then(r => r.ok ? r.json() : null),
+          fetch('/api/applications?limit=1').then(r => r.ok ? r.json() : null),
+        ]);
+
+        const profile = profileRes.status === 'fulfilled' ? profileRes.value : null;
+        const resume = resumeRes.status === 'fulfilled' ? resumeRes.value : null;
+        const jobs = jobsRes.status === 'fulfilled' ? jobsRes.value : null;
+        const apps = appsRes.status === 'fulfilled' ? appsRes.value : null;
+
+        const jobsCount = jobs?.jobs?.length ?? jobs?.count ?? 0;
+        const appsCount = apps?.applications?.length ?? apps?.count ?? apps?.total ?? 0;
+
+        setPipeline({
+          profileDone: !!(profile?.onboardingComplete || profile?.completed),
+          resumeDone: !!(resume?.isFinalized || resume?.hasResume),
+          jobsFound: jobsCount > 0,
+          hasApplications: appsCount > 0,
+          jobsCount,
+          appsCount,
+        });
+      } catch {
+        setPipeline({
+          profileDone: false,
+          resumeDone: false,
+          jobsFound: false,
+          hasApplications: false,
+          jobsCount: 0,
+          appsCount: 0,
+        });
+      }
+      setLoading(false);
+    }
+
+    fetchPipeline();
   }, []);
 
-  if (dismissed) return null;
+  /* Fetch stats (only matters if user has apps) */
+  useEffect(() => {
+    fetch('/api/user/stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setStats(data); })
+      .catch(() => {});
+  }, []);
 
-  const dismiss = () => {
-    setDismissed(true);
-    try { localStorage.setItem('3box_ext_banner_dismissed', '1'); } catch {}
-  };
+  /* Fetch recent activity */
+  useEffect(() => {
+    fetch('/api/agents/activity?limit=5')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.activities) setActivities(data.activities);
+      })
+      .catch(() => {});
+  }, []);
+
+  /* Determine step statuses */
+  const getStepStatuses = useCallback((): StepStatus[] => {
+    if (!pipeline) return PIPELINE_STEPS.map(() => 'future');
+
+    const { profileDone, resumeDone, jobsFound, hasApplications } = pipeline;
+
+    // Determine current index
+    let currentIndex = 0;
+    if (profileDone) currentIndex = 1;
+    if (profileDone && resumeDone) currentIndex = 2;
+    if (profileDone && resumeDone && jobsFound) currentIndex = 3;
+    if (profileDone && resumeDone && jobsFound && hasApplications) currentIndex = 4;
+    // index 5 (Offer) stays as future until we have interview tracking
+
+    return PIPELINE_STEPS.map((_, i) => {
+      if (i < currentIndex) return 'completed';
+      if (i === currentIndex) return 'current';
+      return 'future';
+    });
+  }, [pipeline]);
+
+  const statuses = getStepStatuses();
+  const currentStepIndex = statuses.indexOf('current');
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-4 p-4 rounded-xl border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/5 flex items-center gap-4">
-      <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-        <Chrome className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Welcome back, {firstName}
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          Here&apos;s your job search pipeline at a glance.
+        </p>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-white">Auto-apply on LinkedIn, Indeed, Naukri & more</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">Install the 3BOX Chrome Extension to apply directly on job portals with one click.</p>
+
+      {/* ═══ SECTION 1: Pipeline Visualization ═══ */}
+      <PipelineVisualization statuses={statuses} />
+
+      {/* ═══ SECTION 2: Action Card ═══ */}
+      <ActionCard pipeline={pipeline} currentStepIndex={currentStepIndex} />
+
+      {/* ═══ SECTION 3: Quick Stats (only if 1+ applications) ═══ */}
+      {pipeline?.hasApplications && stats && (
+        <QuickStatsGrid stats={stats} />
+      )}
+
+      {/* ═══ SECTION 4: Recent Activity (collapsed by default) ═══ */}
+      {activities.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+          <button
+            onClick={() => setActivityOpen(prev => !prev)}
+            className="w-full flex items-center justify-between p-5 text-left"
+          >
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Recent Activity
+            </h3>
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 text-gray-400 transition-transform duration-200',
+                activityOpen && 'rotate-180',
+              )}
+            />
+          </button>
+          {activityOpen && (
+            <div className="px-5 pb-5 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+              {activities.map((item) => {
+                const agent = agentIcons[item.agent] || agentIcons.cortex;
+                const Icon = agent.icon;
+                return (
+                  <div key={item.id} className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <Icon className={cn('w-3.5 h-3.5', agent.color)} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1">
+                        {item.summary}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {formatTimeAgo(item.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PIPELINE VISUALIZATION
+   ═══════════════════════════════════════════════════════ */
+function PipelineVisualization({ statuses }: { statuses: StepStatus[] }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+      {/* Desktop: horizontal layout */}
+      <div className="hidden sm:flex items-center justify-between">
+        {PIPELINE_STEPS.map((step, i) => (
+          <div key={step.key} className="flex items-center flex-1 last:flex-initial">
+            {/* Step node */}
+            <Link
+              href={step.href}
+              className="flex flex-col items-center gap-2 group relative"
+            >
+              <div
+                className={cn(
+                  'w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300',
+                  statuses[i] === 'completed' &&
+                    'bg-green-500 border-green-500 text-white',
+                  statuses[i] === 'current' &&
+                    'bg-blue-500 border-blue-500 text-white animate-pulse shadow-lg shadow-blue-500/30',
+                  statuses[i] === 'future' &&
+                    'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 group-hover:border-gray-400 dark:group-hover:border-gray-500',
+                )}
+              >
+                {statuses[i] === 'completed' ? (
+                  <CheckCircle2 className="w-5 h-5" />
+                ) : statuses[i] === 'current' ? (
+                  <span className="w-3 h-3 rounded-full bg-white" />
+                ) : (
+                  <span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" />
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-xs font-medium whitespace-nowrap',
+                  statuses[i] === 'completed' && 'text-green-600 dark:text-green-400',
+                  statuses[i] === 'current' && 'text-blue-600 dark:text-blue-400 font-semibold',
+                  statuses[i] === 'future' && 'text-gray-400 dark:text-gray-500',
+                )}
+              >
+                {step.label}
+              </span>
+            </Link>
+
+            {/* Connector line */}
+            {i < PIPELINE_STEPS.length - 1 && (
+              <div className="flex-1 mx-2 relative">
+                <div
+                  className={cn(
+                    'h-0.5 w-full rounded-full transition-colors duration-300',
+                    statuses[i] === 'completed'
+                      ? 'bg-green-400 dark:bg-green-500'
+                      : 'bg-gray-200 dark:bg-gray-700',
+                  )}
+                />
+                {statuses[i] === 'completed' && (
+                  <ArrowRight
+                    className="w-3 h-3 text-green-400 dark:text-green-500 absolute -right-1.5 top-1/2 -translate-y-1/2"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <Link
-          href="/extension-auth"
-          className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
-        >
-          Get Extension
-        </Link>
-        <button onClick={dismiss} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-          <X className="w-4 h-4" />
-        </button>
+
+      {/* Mobile: vertical compact layout */}
+      <div className="sm:hidden space-y-3">
+        {PIPELINE_STEPS.map((step, i) => (
+          <Link
+            key={step.key}
+            href={step.href}
+            className="flex items-center gap-3"
+          >
+            <div
+              className={cn(
+                'w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0',
+                statuses[i] === 'completed' &&
+                  'bg-green-500 border-green-500 text-white',
+                statuses[i] === 'current' &&
+                  'bg-blue-500 border-blue-500 text-white animate-pulse',
+                statuses[i] === 'future' &&
+                  'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400',
+              )}
+            >
+              {statuses[i] === 'completed' ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-current" />
+              )}
+            </div>
+            <span
+              className={cn(
+                'text-sm font-medium',
+                statuses[i] === 'completed' && 'text-green-600 dark:text-green-400',
+                statuses[i] === 'current' && 'text-blue-600 dark:text-blue-400 font-semibold',
+                statuses[i] === 'future' && 'text-gray-400 dark:text-gray-500',
+              )}
+            >
+              {step.label}
+            </span>
+            {statuses[i] === 'current' && (
+              <span className="ml-auto text-xs text-blue-500 dark:text-blue-400 font-medium">
+                You are here
+              </span>
+            )}
+          </Link>
+        ))}
       </div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   AUTOPILOT DASHBOARD — Clean, minimal overview
+   ACTION CARD — one primary CTA
    ═══════════════════════════════════════════════════════ */
-function AutopilotDashboard({ firstName }: { firstName: string }) {
-  const [showWizard, setShowWizard] = useState(false);
-  const [profiles, setProfiles] = useState<SearchProfile[]>([]);
-  const [loadingProfiles, setLoadingProfiles] = useState(true);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [bulkToggling, setBulkToggling] = useState(false);
-  const [resumeVerified, setResumeVerified] = useState(false);
+function ActionCard({
+  pipeline,
+  currentStepIndex,
+}: {
+  pipeline: PipelineData | null;
+  currentStepIndex: number;
+}) {
+  if (!pipeline) return null;
 
-  const activeCount = profiles.filter(p => p.active).length;
-  const totalFound = profiles.reduce((sum, p) => sum + p.jobsFound, 0);
-  const totalApplied = profiles.reduce((sum, p) => sum + p.appliedCount, 0);
-  const hasProfiles = profiles.length > 0;
-  const allPaused = hasProfiles && activeCount === 0;
-  // Auto-apply is truly active only when resume is verified AND pipelines are running
-  const isActive = activeCount > 0 && resumeVerified;
-  const needsSetup = activeCount > 0 && !resumeVerified;
+  const { resumeDone, jobsFound, hasApplications, jobsCount, appsCount } = pipeline;
 
-  const fetchProfiles = useCallback(() => {
-    fetch('/api/user/loops')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.profiles) setProfiles(data.profiles);
-        setLoadingProfiles(false);
-      })
-      .catch(() => setLoadingProfiles(false));
-  }, []);
+  let icon: React.ElementType = Upload;
+  let title = 'Upload your resume to get started';
+  let description = 'Your resume is the foundation. Upload it and our AI will parse, enhance, and optimize it for your target roles.';
+  let buttonLabel = 'Upload Resume';
+  let href = '/dashboard/resume';
+  let gradient = 'from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5';
+  let borderColor = 'border-blue-200 dark:border-blue-500/20';
+  let btnColor = 'bg-blue-600 hover:bg-blue-700';
+  let iconColor = 'text-blue-600 dark:text-blue-400';
 
-  useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
+  if (resumeDone && !jobsFound) {
+    icon = Search;
+    title = 'Run Scout to find matching jobs';
+    description = 'Your resume is ready. Let our AI Scout agent search across job boards to find roles that match your profile.';
+    buttonLabel = 'Find Jobs';
+    href = '/dashboard/jobs';
+    gradient = 'from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5';
+    borderColor = 'border-green-200 dark:border-green-500/20';
+    btnColor = 'bg-green-600 hover:bg-green-700';
+    iconColor = 'text-green-600 dark:text-green-400';
+  } else if (resumeDone && jobsFound && !hasApplications) {
+    icon = Briefcase;
+    title = `${jobsCount} matching job${jobsCount !== 1 ? 's' : ''} ready to apply`;
+    description = 'We found great matches for you. Review them on your board and start applying with one click.';
+    buttonLabel = 'View Job Board';
+    href = '/dashboard/board';
+    gradient = 'from-purple-500/10 to-pink-500/10 dark:from-purple-500/5 dark:to-pink-500/5';
+    borderColor = 'border-purple-200 dark:border-purple-500/20';
+    btnColor = 'bg-purple-600 hover:bg-purple-700';
+    iconColor = 'text-purple-600 dark:text-purple-400';
+  } else if (hasApplications) {
+    icon = BarChart3;
+    title = `Track your ${appsCount} application${appsCount !== 1 ? 's' : ''}`;
+    description = 'Stay on top of your applications. See responses, follow up, and prepare for interviews all in one place.';
+    buttonLabel = 'View Applications';
+    href = '/dashboard/applications';
+    gradient = 'from-amber-500/10 to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5';
+    borderColor = 'border-amber-200 dark:border-amber-500/20';
+    btnColor = 'bg-amber-600 hover:bg-amber-700';
+    iconColor = 'text-amber-600 dark:text-amber-400';
+  }
 
-  // Check resume verification status
-  useEffect(() => {
-    fetch('/api/user/resume')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.isFinalized) setResumeVerified(true); })
-      .catch(() => {});
-  }, []);
-
-  const toggleProfile = async (id: string, active: boolean) => {
-    setTogglingId(id);
-    try {
-      await fetch(`/api/user/loops/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !active }),
-      });
-      setProfiles(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
-    } catch {}
-    setTogglingId(null);
-  };
-
-  const bulkToggle = async (action: 'pause_all' | 'resume_all') => {
-    setBulkToggling(true);
-    try {
-      const res = await fetch('/api/user/loops', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.profiles) setProfiles(data.profiles);
-      }
-    } catch {}
-    setBulkToggling(false);
-  };
-
-  const deleteProfile = async (id: string) => {
-    try {
-      await fetch(`/api/user/loops/${id}`, { method: 'DELETE' });
-      setProfiles(prev => prev.filter(p => p.id !== id));
-    } catch {}
-  };
+  const Icon = icon;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {firstName}
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Here&apos;s what your 3BOX is doing for you.
+    <div
+      className={cn(
+        'relative rounded-xl border p-6 sm:p-8 bg-gradient-to-br overflow-hidden',
+        gradient,
+        borderColor,
+      )}
+    >
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div className={cn('w-14 h-14 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm shrink-0')}>
+          <Icon className={cn('w-7 h-7', iconColor)} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+            {title}
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-lg">
+            {description}
           </p>
         </div>
-        {hasProfiles && (
-          <button
-            onClick={() => setShowWizard(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            New Pipeline
-          </button>
-        )}
-      </div>
-
-      {/* ═══ AUTO-APPLY STATUS BANNER ═══ */}
-      {!loadingProfiles && (
-        <>
-          {isActive && (
-            <div className="mb-6 p-4 rounded-xl border border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-green-800 dark:text-green-300">Auto-Apply is Active</p>
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                      </span>
-                    </div>
-                    <p className="text-xs text-green-600 dark:text-green-400/70 mt-0.5">
-                      {activeCount} pipeline{activeCount !== 1 ? 's' : ''} running — {totalFound} jobs found, {totalApplied} applied
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => bulkToggle('pause_all')}
-                  disabled={bulkToggling}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm font-medium hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
-                >
-                  {bulkToggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
-                  Pause All
-                </button>
-              </div>
-            </div>
+        <Link
+          href={href}
+          className={cn(
+            'inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-semibold transition-all shadow-sm hover:shadow-md shrink-0',
+            btnColor,
           )}
-
-          {needsSetup && (
-            <div className="mb-6 p-4 rounded-xl border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-red-800 dark:text-red-300">Auto-Apply Needs Setup</p>
-                    <p className="text-xs text-red-600 dark:text-red-400/70 mt-0.5">
-                      Verify your resume before auto-apply can start sending applications.
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  href="/dashboard/resume"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-300 dark:border-red-500/30 bg-white dark:bg-red-500/10 text-red-700 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors"
-                >
-                  Verify Resume
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {allPaused && (
-            <div className="mb-6 p-4 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
-                    <Pause className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Auto-Apply is Paused</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400/70 mt-0.5">
-                      {profiles.length} pipeline{profiles.length !== 1 ? 's' : ''} paused — resume to continue searching & applying
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => bulkToggle('resume_all')}
-                  disabled={bulkToggling}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
-                >
-                  {bulkToggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  Resume All
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!hasProfiles && (
-            <div className="mb-6 p-6 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Start Auto-Applying to Jobs</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-                Set up your pipeline in 3 simple steps: verify your resume, choose your target role, and let AI agents search & apply automatically.
-              </p>
-              <button
-                onClick={() => setShowWizard(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Power className="w-4 h-4" />
-                Set Up Auto-Apply
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      <StatsCards />
-
-      {/* 3BOX Status Strip */}
-      <div className="grid grid-cols-3 gap-4 mt-6">
-        <Link href="/dashboard/resume" className="p-4 rounded-xl border-2 border-blue-200 dark:border-blue-500/20 bg-white dark:bg-gray-900 hover:border-blue-400 dark:hover:border-blue-500/40 hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl border-2 border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-              <FileEdit className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400/70">Box 1</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Profile</p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Resume, LinkedIn & Interview Prep</p>
-        </Link>
-
-        <Link href="/dashboard/jobs" className="p-4 rounded-xl border-2 border-green-200 dark:border-green-500/20 bg-white dark:bg-gray-900 hover:border-green-400 dark:hover:border-green-500/40 hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl border-2 border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 flex items-center justify-center">
-              <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-green-500 dark:text-green-400/70">Box 2</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Job Hunt</p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Search, match & discover opportunities</p>
-        </Link>
-
-        <Link href="/dashboard/applications" className="p-4 rounded-xl border-2 border-purple-200 dark:border-purple-500/20 bg-white dark:bg-gray-900 hover:border-purple-400 dark:hover:border-purple-500/40 hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl border-2 border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-500 dark:text-purple-400/70">Box 3</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Apply</p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Auto-apply & track applications</p>
+        >
+          {buttonLabel}
+          <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
-
-      {/* Chrome Extension CTA */}
-      <ExtensionBanner />
-
-      {/* Search Profiles / Pipelines section */}
-      {(hasProfiles || loadingProfiles) && (
-        <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-              Your 3BOX Pipelines
-            </h3>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400">
-                {activeCount} active of {profiles.length}
-              </span>
-              {profiles.length > 1 && (
-                <button
-                  onClick={() => bulkToggle(isActive ? 'pause_all' : 'resume_all')}
-                  disabled={bulkToggling}
-                  className="text-xs text-blue-500 hover:text-blue-600 font-medium"
-                >
-                  {bulkToggling ? '...' : isActive ? 'Pause all' : 'Resume all'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {loadingProfiles ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {profiles.map((profile) => (
-                <div
-                  key={profile.id}
-                  className={cn(
-                    'flex items-center justify-between p-3 rounded-lg border transition-all',
-                    profile.active
-                      ? 'border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5'
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-60',
-                  )}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center',
-                      profile.active
-                        ? 'bg-blue-100 dark:bg-blue-500/10'
-                        : 'bg-gray-200 dark:bg-gray-700',
-                    )}>
-                      <Search className={cn(
-                        'w-4 h-4',
-                        profile.active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400',
-                      )} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{profile.jobTitle}</p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {profile.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {profile.location}
-                          </span>
-                        )}
-                        <span>{profile.jobsFound} found</span>
-                        <span>{profile.appliedCount} applied</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => toggleProfile(profile.id, profile.active)}
-                      disabled={togglingId === profile.id}
-                      className={cn(
-                        'p-1.5 rounded-lg transition-colors',
-                        profile.active
-                          ? 'hover:bg-amber-50 dark:hover:bg-amber-500/10 text-amber-500 hover:text-amber-600'
-                          : 'hover:bg-green-50 dark:hover:bg-green-500/10 text-green-500 hover:text-green-600',
-                      )}
-                      title={profile.active ? 'Pause pipeline' : 'Resume pipeline'}
-                    >
-                      {togglingId === profile.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : profile.active ? (
-                        <Pause className="w-4 h-4" />
-                      ) : (
-                        <Play className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => deleteProfile(profile.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Delete pipeline"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2 space-y-6">
-          <QuickActions />
-          <RecentActivity />
-        </div>
-        <div className="space-y-6">
-          <ApplicationLimitBar />
-        </div>
-      </div>
-
-      {/* Search Profile Wizard Modal */}
-      {showWizard && (
-        <SearchProfileWizard
-          onClose={() => setShowWizard(false)}
-          onComplete={() => {
-            setShowWizard(false);
-            fetchProfiles();
-          }}
-        />
-      )}
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════════════════
+   QUICK STATS GRID
+   ═══════════════════════════════════════════════════════ */
+function QuickStatsGrid({ stats }: { stats: Stats }) {
+  const cards = [
+    {
+      label: 'Applications This Week',
+      value: stats.appsSent,
+      icon: Send,
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-500/10',
+    },
+    {
+      label: 'Match Score',
+      value: `${stats.responseRate}%`,
+      icon: Target,
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-500/10',
+    },
+    {
+      label: 'Jobs Found',
+      value: stats.jobsFound,
+      icon: Search,
+      color: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-50 dark:bg-purple-500/10',
+    },
+    {
+      label: 'Response Rate',
+      value: `${stats.responseRate}%`,
+      icon: TrendingUp,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-500/10',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center', card.bg)}>
+              <card.icon className={cn('w-4 h-4', card.color)} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
+            {card.value}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {card.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════ */
+function formatTimeAgo(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMs / 3600000);
+    const days = Math.floor(diffMs / 86400000);
+
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  } catch {
+    return '';
+  }
 }
