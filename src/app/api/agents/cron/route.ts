@@ -51,12 +51,12 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
-    // ── TTL Cleanup: expire old ScoutJobs (30 days) ──
+    // ── TTL Cleanup: expire old ScoutJobs (14 days) ──
     try {
       await prisma.scoutJob.updateMany({
         where: {
           status: { in: ['NEW', 'READY', 'FORGE_READY'] },
-          discoveredAt: { lt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+          discoveredAt: { lt: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) },
         },
         data: { status: 'EXPIRED' },
       });

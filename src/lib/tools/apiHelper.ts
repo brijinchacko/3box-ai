@@ -8,6 +8,7 @@ import { checkFreeUsage, buildUsageCookie } from '@/lib/usage/serverUsageCheck';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
+import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
 
 export interface ToolAPIConfig {
   /** Cookie name for usage tracking, e.g. "3box-resumesum-uses" */
@@ -28,6 +29,8 @@ export interface ToolAPIConfig {
   errorMessage?: string;
   /** Max free uses before requiring subscription (default 2) */
   maxFreeUses?: number;
+  /** CTA message to include in successful responses to drive signups */
+  cta?: string;
 }
 
 export async function handleToolRequest(
@@ -35,6 +38,18 @@ export async function handleToolRequest(
   config: ToolAPIConfig
 ): Promise<NextResponse> {
   try {
+    // ── IP rate limiting ────────────────────────
+    const ip = getClientIP(request);
+    const toolName = config.cookieName.replace('3box-', '').replace('-uses', '');
+    const rateLimit = checkRateLimit(ip, toolName);
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000);
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Sign up for free unlimited access!', retryAfter },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
 
     // ── Validate required fields ────────────────
@@ -134,7 +149,12 @@ export async function handleToolRequest(
     const newCount = realCount + 1;
     const cookieString = buildUsageCookie(config.cookieName, newCount);
 
-    const response = NextResponse.json({ success: true, result });
+    const responseBody: Record<string, any> = { success: true, result };
+    if (config.cta) {
+      responseBody.cta = config.cta;
+      responseBody.signupUrl = 'https://3box.ai/signup';
+    }
+    const response = NextResponse.json(responseBody);
     response.headers.set('Set-Cookie', cookieString);
     return response;
   } catch (error) {

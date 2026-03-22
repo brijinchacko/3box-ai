@@ -17,5 +17,6 @@ export async function POST(request: NextRequest) {
     },
     responseFormat: 'text',
     maxFreeUses: 2,
+    cta: 'Cover letter ready! Sign up free to save it and auto-apply to matching jobs.',
   });
 }

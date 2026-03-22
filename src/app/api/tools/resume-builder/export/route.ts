@@ -3,6 +3,7 @@ import { buildResumeHTML } from '@/lib/resume/buildHTML';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { cookies } from 'next/headers';
+import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
 
 /**
  * Free Resume Builder - Export Endpoint
@@ -18,6 +19,17 @@ const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
 export async function POST(req: Request) {
   try {
+    // ── IP rate limiting ─────────────────────
+    const ip = getClientIP(req);
+    const rateLimit = checkRateLimit(ip, 'resume-builder-export');
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000);
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Sign up for free unlimited access!', retryAfter },
+        { status: 429 }
+      );
+    }
+
     // ── 1. Parse body ────────────────────────────
     const body = await req.json();
     const { resumeData, template, clientCount } = body;
@@ -95,6 +107,8 @@ export async function POST(req: Request) {
       },
     });
 
+    response.headers.set('X-CTA', 'Sign up free to export unlimited resumes and auto-apply to matching jobs.');
+    response.headers.set('X-Signup-URL', 'https://3box.ai/signup');
     response.headers.set(
       'Set-Cookie',
       `${COOKIE_NAME}=${newCount}; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax; Path=/`,

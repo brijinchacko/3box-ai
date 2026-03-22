@@ -3,9 +3,21 @@ import { aiChatWithFallback, AI_MODELS } from '@/lib/ai/openrouter';
 import { checkFreeUsage, buildUsageCookie } from '@/lib/usage/serverUsageCheck';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
+import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
+    // ── IP rate limiting ─────────────────────
+    const ip = getClientIP(request);
+    const rateLimit = checkRateLimit(ip, 'ats-checker');
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000);
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Sign up for free unlimited access!', retryAfter },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { resumeText, targetJob, clientCount } = body;
 
@@ -174,7 +186,11 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
           analysis = JSON.parse(jsonMatch[0]);
         } else {
           // Fallback to rule-based analysis
-          const fallbackResponse = NextResponse.json(ruleBasedResults);
+          const fallbackResponse = NextResponse.json({
+            ...ruleBasedResults,
+            cta: `Your ATS score is ${ruleBasedResults.score}/100. Sign up free to get AI-optimized improvements and auto-apply to matching jobs.`,
+            signupUrl: 'https://3box.ai/signup',
+          });
           const newCount = realCount + 1;
           fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('3box-ats-uses', newCount));
           return fallbackResponse;
@@ -182,14 +198,17 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
       }
 
       // Merge AI results with rule-based results (60% AI, 40% rule-based)
+      const mergedScore = Math.round((analysis.score * 0.6) + (ruleBasedResults.score * 0.4));
       const mergedResults = {
-        score: Math.round((analysis.score * 0.6) + (ruleBasedResults.score * 0.4)),
+        score: mergedScore,
         issues: [...(analysis.issues || []), ...ruleBasedResults.issues.filter((i: { type: string; message: string }) => !analysis.issues?.some((ai: { type: string; message: string }) => ai.message.toLowerCase().includes(i.message.toLowerCase().split(' ')[0])))],
         keywords: analysis.keywords || ruleBasedResults.keywords,
         formatting: analysis.formatting || ruleBasedResults.formatting,
         sections: analysis.sections || ruleBasedResults.sections,
         atsParseability: analysis.atsParseability || { canParse: true, risks: [] },
         improvementPlan: analysis.improvementPlan || [],
+        cta: `Your ATS score is ${mergedScore}/100. Sign up free to get AI-optimized improvements and auto-apply to matching jobs.`,
+        signupUrl: 'https://3box.ai/signup',
       };
 
       const response = NextResponse.json(mergedResults);
@@ -198,7 +217,11 @@ Be STRICT and SPECIFIC. Do NOT give inflated scores. A resume with no metrics an
       return response;
     } catch (aiError) {
       console.error('AI analysis failed, using rule-based:', aiError);
-      const fallbackResponse = NextResponse.json(ruleBasedResults);
+      const fallbackResponse = NextResponse.json({
+        ...ruleBasedResults,
+        cta: `Your ATS score is ${ruleBasedResults.score}/100. Sign up free to get AI-optimized improvements and auto-apply to matching jobs.`,
+        signupUrl: 'https://3box.ai/signup',
+      });
       const newCount = realCount + 1;
       fallbackResponse.headers.set('Set-Cookie', buildUsageCookie('3box-ats-uses', newCount));
       return fallbackResponse;

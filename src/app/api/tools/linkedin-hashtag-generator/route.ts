@@ -13,5 +13,6 @@ export async function POST(request: NextRequest) {
     },
     responseFormat: 'json',
     maxFreeUses: 2,
+    cta: 'Get unlimited AI tools and auto-apply to jobs. Sign up free at 3box.ai',
   });
 }

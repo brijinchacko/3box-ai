@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { aiChat, AI_MODELS, extractJSON } from '@/lib/ai/openrouter';
+import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
 
 /**
  * Free Resume Builder - AI Enhancement Endpoint
  * No auth required. Enhances individual resume sections using AI.
- * Rate limited: 10 requests per hour per IP.
+ * Rate limited via shared rateLimit module (5/tool/hr + 20/day).
  * Uses free-tier model with fallback chain.
  */
 
@@ -15,41 +16,6 @@ const FREE_MODEL_CHAIN = [
   'google/gemma-3-27b-it:free',
   'mistralai/mistral-small-3.1-24b-instruct:free',
 ];
-
-// ── In-memory IP rate limiting ────────────────────
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-
-  entry.count += 1;
-  return true;
-}
-
-// Clean up stale entries periodically (every 10 minutes)
-if (typeof globalThis !== 'undefined') {
-  const cleanup = () => {
-    const now = Date.now();
-    for (const [ip, entry] of rateLimitMap.entries()) {
-      if (now > entry.resetAt) {
-        rateLimitMap.delete(ip);
-      }
-    }
-  };
-  setInterval(cleanup, 10 * 60 * 1000);
-}
 
 // ── Section-specific prompts ─────────────────────
 
@@ -92,12 +58,12 @@ function getPromptForSection(
 export async function POST(req: Request) {
   try {
     // ── 1. Rate limit by IP ──────────────────────
-    const forwarded = req.headers.get('x-forwarded-for');
-    const ip = forwarded?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
-
-    if (!checkRateLimit(ip)) {
+    const ip = getClientIP(req);
+    const rateLimit = checkRateLimit(ip, 'resume-builder-enhance');
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000);
       return NextResponse.json(
-        { error: 'rate_limited', message: 'Too many requests. Please try again later.' },
+        { error: 'Rate limit exceeded. Sign up for free unlimited access!', retryAfter },
         { status: 429 },
       );
     }
@@ -180,7 +146,11 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ enhanced: parsedResult });
+    return NextResponse.json({
+      enhanced: parsedResult,
+      cta: 'Get unlimited AI tools and auto-apply to jobs. Sign up free at 3box.ai',
+      signupUrl: 'https://3box.ai/signup',
+    });
   } catch (error) {
     console.error('[Resume Enhance]', error);
     return NextResponse.json(

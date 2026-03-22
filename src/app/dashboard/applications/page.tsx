@@ -152,15 +152,27 @@ function AutopilotApplications() {
           <Loader2 className="w-6 h-6 text-gray-400 dark:text-gray-500 animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <Inbox className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">
-            {total === 0 ? 'No applications yet. Start applying to jobs!' : 'No applications match your filters.'}
-          </p>
-          {total === 0 && (
-            <Link href="/dashboard/jobs" className="inline-flex items-center gap-1.5 mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline">
-              <Search className="w-4 h-4" /> Search for Jobs
-            </Link>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          {total === 0 ? (
+            <>
+              <Send className="w-16 h-16 text-white/10 mb-4" />
+              <h3 className="text-lg font-semibold text-white/70 mb-2">No applications yet</h3>
+              <p className="text-sm text-white/40 mb-6 max-w-md">
+                Find matching jobs first, then apply with one click
+              </p>
+              <Link
+                href="/dashboard/jobs"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all"
+              >
+                <Search className="w-4 h-4" /> Find Jobs
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </>
+          ) : (
+            <>
+              <Inbox className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">No applications match your filters.</p>
+            </>
           )}
         </div>
       ) : (

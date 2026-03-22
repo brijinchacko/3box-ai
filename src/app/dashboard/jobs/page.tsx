@@ -127,6 +127,26 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 30)} month(s) ago`;
 }
 
+/** Color-coded job age badge: green (0-7d), yellow (8-14d), red (15d+) */
+function jobAgeBadgeLabel(dateStr: string): string {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (diffDays === 0) return 'Posted today';
+  if (diffDays === 1) return 'Posted 1d ago';
+  return `Posted ${diffDays}d ago`;
+}
+
+function jobAgeBadgeColor(dateStr: string, mode: 'dark' | 'light' = 'dark'): string {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (mode === 'light') {
+    if (diffDays <= 7) return 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400';
+    if (diffDays <= 14) return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400';
+    return 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400';
+  }
+  if (diffDays <= 7) return 'bg-green-500/10 text-green-400';
+  if (diffDays <= 14) return 'bg-amber-500/10 text-amber-400';
+  return 'bg-red-500/10 text-red-400';
+}
+
 const SAVED_JOBS_KEY = '3box_saved_jobs';
 
 // ── Job Detail Overlay for Grid View ───────────────────
@@ -218,8 +238,8 @@ function JobDetailOverlay({
               {job.remote && <span className="text-cyan-400/60 ml-1">(Remote)</span>}
             </span>
             {job.salary && <span className="text-cyan-400/60">{job.salary}</span>}
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
+            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${jobAgeBadgeColor(job.postedAt)}`}>
+              <Clock className="w-3 h-3" /> {jobAgeBadgeLabel(job.postedAt)}
             </span>
             {job.source && (
               <span className="px-2 py-0.5 rounded-full bg-white/5 text-white/30 text-[10px]">{job.source}</span>
@@ -727,9 +747,9 @@ function AutopilotJobSearch() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mt-3 text-xs text-gray-400 dark:text-gray-500">
-                          <span className="flex items-center gap-1">
+                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${jobAgeBadgeColor(job.postedAt, 'light')}`}>
                             <Clock className="w-3 h-3" />
-                            {timeAgo(job.postedAt)}
+                            {jobAgeBadgeLabel(job.postedAt)}
                           </span>
                           {job.source && (
                             <span className="capitalize">{job.source}</span>
@@ -1413,11 +1433,19 @@ export default function JobsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="card text-center py-12"
+              className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <Search className="w-12 h-12 text-white/20 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-1">No jobs found</h3>
-              <p className="text-sm text-white/40">Try adjusting your search keywords or filters.</p>
+              <Search className="w-16 h-16 text-white/10 mb-4" />
+              <h3 className="text-lg font-semibold text-white/70 mb-2">No jobs found yet</h3>
+              <p className="text-sm text-white/40 mb-6 max-w-md">
+                Tell us your target role and let Scout find matching jobs across 6+ platforms
+              </p>
+              <button
+                onClick={() => setShowMissionModal(true)}
+                className="btn-primary text-sm px-5 py-2.5 inline-flex items-center gap-2"
+              >
+                <Play className="w-4 h-4" /> Start Job Search
+              </button>
             </motion.div>
           )}
 
@@ -1475,8 +1503,8 @@ export default function JobsPage() {
                         {job.salary && (
                           <span className="text-cyan-400/80 font-medium">{job.salary}</span>
                         )}
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${jobAgeBadgeColor(job.postedAt)}`}>
+                          <Clock className="w-3 h-3" /> {jobAgeBadgeLabel(job.postedAt)}
                         </span>
                       </div>
                       <p className="text-sm text-white/30 line-clamp-2 leading-relaxed">

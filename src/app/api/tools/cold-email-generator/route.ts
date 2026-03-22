@@ -18,5 +18,6 @@ export async function POST(request: NextRequest) {
     responseFormat: 'json',
     maxTokens: 1500,
     maxFreeUses: 2,
+    cta: 'Email drafted! Sign up free to auto-send applications with personalized cover letters.',
   });
 }

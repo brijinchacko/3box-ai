@@ -15,5 +15,6 @@ export async function POST(request: NextRequest) {
     responseFormat: 'json',
     maxTokens: 3000,
     maxFreeUses: 2,
+    cta: 'Get personalized suggestions from our AI resume optimizer. Sign up free.',
   });
 }

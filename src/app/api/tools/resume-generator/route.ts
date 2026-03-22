@@ -23,5 +23,6 @@ export async function POST(request: NextRequest) {
     maxTokens: 4096,
     temperature: 0.6,
     maxFreeUses: 2,
+    cta: 'Your resume draft is ready. Sign up free to save it, get ATS optimization, and auto-apply to jobs.',
   });
 }

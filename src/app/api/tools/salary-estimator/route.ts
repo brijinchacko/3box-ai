@@ -3,9 +3,21 @@ import { getAggregatedSalaryEstimate } from '@/lib/salary/aggregator';
 import { checkFreeUsage, buildUsageCookie } from '@/lib/usage/serverUsageCheck';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
+import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
+    // ── IP rate limiting ─────────────────────
+    const ip = getClientIP(request);
+    const rateLimit = checkRateLimit(ip, 'salary-estimator');
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000);
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Sign up for free unlimited access!', retryAfter },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { role, location, experience, skills, clientCount } = body;
 
@@ -59,7 +71,12 @@ export async function POST(request: NextRequest) {
         skills: Array.isArray(skills) ? skills : undefined,
       });
 
-      const response = NextResponse.json(estimate);
+      const salaryRange = `$${(estimate.low / 1000).toFixed(0)}K–$${(estimate.high / 1000).toFixed(0)}K`;
+      const response = NextResponse.json({
+        ...estimate,
+        cta: `${salaryRange} for ${role}. Our Scout agent can find you these jobs. Sign up free.`,
+        signupUrl: 'https://3box.ai/signup',
+      });
       const newCount = realCount + 1;
       response.headers.set('Set-Cookie', buildUsageCookie('3box-salary-uses', newCount));
       return response;
@@ -81,7 +98,11 @@ export async function POST(request: NextRequest) {
         dataSources: [] as string[],
       };
 
-      const response = NextResponse.json(defaultEstimate);
+      const response = NextResponse.json({
+        ...defaultEstimate,
+        cta: `$50K–$100K for ${role}. Our Scout agent can find you these jobs. Sign up free.`,
+        signupUrl: 'https://3box.ai/signup',
+      });
       const newCount = realCount + 1;
       response.headers.set('Set-Cookie', buildUsageCookie('3box-salary-uses', newCount));
       return response;

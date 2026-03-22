@@ -260,7 +260,7 @@ export default function FreeAutoApplyHero() {
                   <Rocket className="w-3.5 h-3.5" /> Try it now — completely free
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-                  Get <span className="gradient-text">20 Free Applications</span>
+                  Get <span className="gradient-text">5 Free Applications/Week</span>
                 </h2>
                 <p className="text-sm text-white/40">Upload your resume. Pick a role. AI does the rest.</p>
               </div>

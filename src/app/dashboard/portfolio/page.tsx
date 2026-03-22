@@ -6,7 +6,7 @@ import {
   FolderOpen, Plus, ExternalLink, Eye, Edit3, Code, Star,
   Globe, Github, CheckCircle2, Sparkles, Share2, Copy,
   Loader2, Wand2, Lightbulb, X, Save, Trash2, Upload,
-  Mail, MapPin, Linkedin, ArrowUpRight
+  Mail, MapPin, Linkedin, ArrowUpRight, Briefcase
 } from 'lucide-react';
 
 interface Project {
@@ -904,6 +904,27 @@ export default function PortfolioPage() {
           </div>
         ))}
       </div>
+
+      {/* Empty State for Builder */}
+      {projects.length === 0 && !showAddForm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center py-20 text-center mb-6"
+        >
+          <Briefcase className="w-16 h-16 text-white/10 mb-4" />
+          <h3 className="text-lg font-semibold text-white/70 mb-2">Showcase your work</h3>
+          <p className="text-sm text-white/40 mb-6 max-w-md">
+            Build a professional portfolio to share with employers
+          </p>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="btn-primary text-sm px-5 py-2.5 inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Create Portfolio
+          </button>
+        </motion.div>
+      )}
 
       {/* Projects Grid */}
       <div className="grid md:grid-cols-2 gap-4 mb-6">

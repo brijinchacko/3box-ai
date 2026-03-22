@@ -65,8 +65,8 @@ export const LONG_TAIL_KEYWORDS = [
 // ─── Page-Specific SEO Configurations ──────────────────
 export const PAGE_SEO = {
   home: {
-    title: '3BOX AI \u2014 AI Applies to Jobs For You | 20 Free Applications',
-    description: 'Stop applying to jobs manually. Upload your resume, pick your target role, and AI finds 20 matching jobs and applies automatically. Free. Works with Naukri, LinkedIn, Indeed.',
+    title: '3BOX AI \u2014 AI Applies to Jobs For You | 5 Free Applications Every Week',
+    description: 'Stop applying to jobs manually. Upload your resume, pick your target role, and AI finds matching jobs and applies automatically. 5 free applications every week. Works with Naukri, LinkedIn, Indeed.',
     keywords: 'AI job application agent, automated job applications, AI resume builder, AI career platform, ATS resume builder, job search automation, AI apply to jobs, AI auto apply, free job applications AI, AI apply jobs India',
     canonical: '/',
     h1: 'Stop Applying to Jobs. Let AI Agents Do It For You.',

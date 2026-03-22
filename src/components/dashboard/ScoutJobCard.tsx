@@ -42,6 +42,21 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+/** Color-coded job age badge: green (0-7d), yellow (8-14d), red (15d+) */
+function jobAgeBadgeLabel(dateStr: string): string {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (diffDays === 0) return 'Posted today';
+  if (diffDays === 1) return 'Posted 1d ago';
+  return `Posted ${diffDays}d ago`;
+}
+
+function jobAgeBadgeColor(dateStr: string): string {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (diffDays <= 7) return 'bg-green-500/10 text-green-400';
+  if (diffDays <= 14) return 'bg-amber-500/10 text-amber-400';
+  return 'bg-red-500/10 text-red-400';
+}
+
 function getScoreColor(score: number) {
   if (score >= 70) return 'bg-blue-400/10 text-blue-400 border-blue-400/20';
   if (score >= 40) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
@@ -106,8 +121,8 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave }: 
             {job.salary && (
               <span className="text-blue-400/60">{job.salary}</span>
             )}
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" /> {timeAgo(job.postedAt)}
+            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${jobAgeBadgeColor(job.postedAt)}`}>
+              <Clock className="w-3 h-3" /> {jobAgeBadgeLabel(job.postedAt)}
             </span>
           </div>
         </div>

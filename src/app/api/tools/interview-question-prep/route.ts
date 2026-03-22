@@ -18,5 +18,6 @@ export async function POST(request: NextRequest) {
     maxTokens: 4096,
     temperature: 0.7,
     maxFreeUses: 2,
+    cta: 'Practice these questions with Atlas, our AI interview coach. Sign up free.',
   });
 }
