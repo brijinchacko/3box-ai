@@ -29,9 +29,12 @@ export async function GET() {
     const recentApps = await prisma.jobApplication.findMany({
       where: {
         userId,
-        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        OR: [
+          { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+          { status: 'INTERVIEW', updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        ],
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       take: 10,
       select: {
         id: true,
@@ -40,6 +43,7 @@ export async function GET() {
         status: true,
         createdAt: true,
         appliedAt: true,
+        updatedAt: true,
       },
     });
 
@@ -51,6 +55,15 @@ export async function GET() {
           title: 'Application Sent',
           message: `Applied to ${app.jobTitle} at ${app.company}`,
           time: (app.appliedAt || app.createdAt).toISOString(),
+          read: false,
+        });
+      } else if (app.status === 'INTERVIEW') {
+        notifications.push({
+          id: `app-interview-${app.id}`,
+          type: 'success',
+          title: 'Interview Prep Ready',
+          message: `Interview prep is ready for ${app.company} — ${app.jobTitle}`,
+          time: (app.updatedAt || app.createdAt).toISOString(),
           read: false,
         });
       } else if (app.status === 'FAILED') {
@@ -138,7 +151,32 @@ export async function GET() {
       });
     }
 
-    // 4. Search pipeline status
+    // 4. Recent Atlas auto-interview prep notifications
+    const recentInterviewPreps = await prisma.agentActivity.findMany({
+      where: {
+        userId,
+        agent: 'atlas',
+        action: 'auto_interview_prep',
+        createdAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, summary: true, details: true, createdAt: true },
+    });
+
+    for (const prep of recentInterviewPreps) {
+      const details = prep.details as any;
+      notifications.push({
+        id: `atlas-prep-${prep.id}`,
+        type: 'success',
+        title: 'Interview Prep Ready',
+        message: `Interview prep is ready for ${details?.company || 'your interview'}`,
+        time: prep.createdAt.toISOString(),
+        read: false,
+      });
+    }
+
+    // 5. Search pipeline status
     const loops = await prisma.searchProfile.findMany({
       where: { userId },
       select: { active: true },

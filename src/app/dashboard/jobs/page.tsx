@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,6 +28,8 @@ import {
   Shield,
   AlertTriangle,
   ArrowRight,
+  Flag,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -47,6 +49,7 @@ import ScoutReportHeader from '@/components/dashboard/ScoutReportHeader';
 import { useScoutStatus } from '@/hooks/useScoutStatus';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { detectScamSignals, type ScamSignals } from '@/lib/jobs/scamDetector';
+import { analyseSkillGap } from '@/lib/jobs/skillGap';
 import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
 // ── Types ──────────────────────────────────────────────
@@ -156,17 +159,28 @@ function JobDetailOverlay({
   isSaved,
   onSave,
   onClose,
+  onReport,
+  userSkills,
 }: {
   job: Job;
   userPlan: PlanTier;
   isSaved: boolean;
   onSave: () => void;
   onClose: () => void;
+  onReport?: (jobId: string) => void;
+  userSkills?: Record<string, number> | null;
 }) {
   const overlayRouter = useRouter();
   const [scamCheck, setScamCheck] = useState<ScamSignals | null>(null);
+  const [reportConfirm, setReportConfirm] = useState(false);
+  const [reported, setReported] = useState(false);
   const sentinelAvailable = isAgentAvailable('sentinel', userPlan);
   const forgeAvailable = isAgentAvailable('forge', userPlan);
+
+  const skillGap = useMemo(() => {
+    if (!userSkills) return null;
+    return analyseSkillGap(job.description, userSkills);
+  }, [job.description, userSkills]);
 
   const goToImproveScore = () => {
     const params = new URLSearchParams();
@@ -249,6 +263,30 @@ function JobDetailOverlay({
           {/* Description */}
           <p className="text-xs text-white/40 leading-relaxed">{job.description}</p>
 
+          {/* Skill Gap Indicator */}
+          {skillGap && skillGap.totalRequired >= 2 && (
+            <div className={`flex items-start gap-2 p-2.5 rounded-lg text-xs border ${
+              skillGap.ratio >= 0.8
+                ? 'bg-green-500/5 border-green-500/10 text-green-400/90'
+                : skillGap.ratio >= 0.5
+                  ? 'bg-amber-500/5 border-amber-500/10 text-amber-400/90'
+                  : 'bg-red-500/5 border-red-500/10 text-red-400/90'
+            }`}>
+              <Zap className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              <div>
+                <span className="font-semibold">
+                  Skills: {skillGap.matched}/{skillGap.totalRequired} matched
+                </span>
+                {skillGap.missing.length > 0 && (
+                  <span className="opacity-70">
+                    {' '}| Missing: {skillGap.missing.slice(0, 5).join(', ')}
+                    {skillGap.missing.length > 5 && ` +${skillGap.missing.length - 5} more`}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Scam check result */}
           {scamCheck && (
             <div className={`p-3 rounded-xl text-xs border ${
@@ -301,6 +339,38 @@ function JobDetailOverlay({
                 <AgentAvatar agentId="forge" size={16} />
                 Tailor Resume
               </a>
+              {/* Report as scam */}
+              {!reported ? (
+                reportConfirm ? (
+                  <span className="flex items-center gap-1.5 text-[11px] text-red-400/80">
+                    <span>Report as suspicious?</span>
+                    <button
+                      onClick={() => { setReported(true); setReportConfirm(false); onReport?.(job.id); }}
+                      className="px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-all"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setReportConfirm(false)}
+                      className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-white/40 font-medium transition-all"
+                    >
+                      No
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setReportConfirm(true)}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all"
+                    title="Report this job as a scam"
+                  >
+                    <Flag className="w-3 h-3" />
+                  </button>
+                )
+              ) : (
+                <span className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-red-400/60">
+                  <Flag className="w-3 h-3" /> Reported
+                </span>
+              )}
               <button
                 onClick={onSave}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
@@ -835,6 +905,9 @@ export default function JobsPage() {
   // Saved jobs
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
 
+  // User skills from CareerTwin for skill gap analysis
+  const [userSkills, setUserSkills] = useState<Record<string, number> | null>(null);
+
   const isMax = userPlan === 'MAX';
 
   useEffect(() => {
@@ -842,6 +915,19 @@ export default function JobsPage() {
       const stored = localStorage.getItem(SAVED_JOBS_KEY);
       if (stored) setSavedJobs(JSON.parse(stored));
     } catch {}
+  }, []);
+
+  // Fetch user skills from CareerTwin on mount
+  useEffect(() => {
+    fetch('/api/user/profile')
+      .then((r) => r.json())
+      .then((data) => {
+        const snap = data?.careerTwin?.skillSnapshot;
+        if (snap && typeof snap === 'object') {
+          setUserSkills(snap);
+        }
+      })
+      .catch(() => {}); // non-critical — skill gap just won't show
   }, []);
 
   // Fetch latest scout results on mount (persists across navigation)
@@ -926,6 +1012,23 @@ export default function JobsPage() {
   };
 
   const isJobSaved = (jobId: string) => savedJobs.some(j => j.id === jobId);
+
+  // ── Report scam ──────────────────────────────────────
+  const handleReportScam = async (jobId: string) => {
+    try {
+      await fetch('/api/jobs/report-scam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId }),
+      });
+      // Remove reported job from the scout list
+      setScoutJobs(prev => prev.filter((j: any) => j.id !== jobId));
+      // Close overlay if the reported job is currently shown
+      if (detailJob?.id === jobId) setDetailJob(null);
+    } catch (err) {
+      console.error('Failed to report scam:', err);
+    }
+  };
 
   // ── Fetch Jobs ─────────────────────────────────────
   const fetchJobs = useCallback(async (q: string, loc: string, remote: boolean, pg: number) => {
@@ -1042,6 +1145,8 @@ export default function JobsPage() {
             isSaved={isJobSaved(detailJob.id)}
             onSave={() => toggleSaveJob(detailJob)}
             onClose={() => setDetailJob(null)}
+            onReport={handleReportScam}
+            userSkills={userSkills}
           />
         )}
       </AnimatePresence>
@@ -1314,6 +1419,8 @@ export default function JobsPage() {
                     isSaved={isJobSaved(job.id)}
                     onSave={() => toggleSaveJob(job)}
                     onClick={() => setDetailJob(job)}
+                    onReport={handleReportScam}
+                    userSkills={userSkills}
                   />
                 ))}
               </div>
@@ -1330,6 +1437,8 @@ export default function JobsPage() {
                     userPlan={userPlan}
                     isSaved={isJobSaved(job.id)}
                     onSave={() => toggleSaveJob(job)}
+                    onReport={handleReportScam}
+                    userSkills={userSkills}
                   />
                 ))}
               </div>

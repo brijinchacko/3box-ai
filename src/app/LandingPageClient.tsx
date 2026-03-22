@@ -9,6 +9,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import CortexAvatar from '@/components/brand/CortexAvatar';
+import LiveApplicationCounter from '@/components/landing/LiveApplicationCounter';
 import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
 
 const steps = [
@@ -80,10 +81,27 @@ export default function LandingPageClient() {
                 >
                   Get Started <ArrowRight className="w-5 h-5" />
                 </Link>
+                <Link
+                  href="/get-started"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/60 text-sm font-medium hover:text-white hover:border-white/20 transition-colors"
+                >
+                  <Rocket className="w-4 h-4" /> Try it free — no signup needed
+                </Link>
                 <p className="text-xs text-white/30">7-day money-back guarantee &middot; Cancel anytime</p>
               </>
             )}
           </motion.div>
+
+          {!session && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.45 }}
+              className="flex justify-center mt-6"
+            >
+              <LiveApplicationCounter />
+            </motion.div>
+          )}
         </div>
       </section>
 

@@ -1,7 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Bookmark, ExternalLink } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { MapPin, Clock, Bookmark, ExternalLink, Flag, Zap } from 'lucide-react';
+import { analyseSkillGap, type SkillGapResult } from '@/lib/jobs/skillGap';
 
 interface ScoutJob {
   id: string;
@@ -23,6 +25,8 @@ interface ScoutJobGridCardProps {
   isSaved: boolean;
   onSave: () => void;
   onClick: () => void;
+  onReport?: (jobId: string) => void;
+  userSkills?: Record<string, number> | null;
 }
 
 function timeAgo(dateStr: string): string {
@@ -59,7 +63,15 @@ function getScoreColor(score: number) {
   return 'bg-white/5 text-white/40 border-white/10';
 }
 
-export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick }: ScoutJobGridCardProps) {
+export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick, onReport, userSkills }: ScoutJobGridCardProps) {
+  const [reportConfirm, setReportConfirm] = useState(false);
+  const [reported, setReported] = useState(false);
+
+  const skillGap = useMemo<SkillGapResult | null>(() => {
+    if (!userSkills) return null;
+    return analyseSkillGap(job.description, userSkills);
+  }, [job.description, userSkills]);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -104,8 +116,60 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick 
         </div>
       </div>
 
+      {/* Skill Gap Indicator */}
+      {skillGap && skillGap.totalRequired >= 2 && (
+        <div className={`flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg text-[10px] font-medium ${
+          skillGap.ratio >= 0.8
+            ? 'bg-green-500/5 text-green-400/80'
+            : skillGap.ratio >= 0.5
+              ? 'bg-amber-500/5 text-amber-400/80'
+              : 'bg-red-500/5 text-red-400/80'
+        }`}>
+          <Zap className="w-3 h-3 flex-shrink-0" />
+          <span>{skillGap.matched}/{skillGap.totalRequired} skills</span>
+          {skillGap.missing.length > 0 && (
+            <span className="opacity-60 truncate">
+              | Gap: {skillGap.missing.slice(0, 3).join(', ')}
+              {skillGap.missing.length > 3 && ` +${skillGap.missing.length - 3}`}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Bottom actions */}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
+        {/* Report as scam */}
+        {!reported ? (
+          reportConfirm ? (
+            <span className="flex items-center gap-1 text-[10px] text-red-400/80" onClick={(e) => e.stopPropagation()}>
+              <span>Scam?</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setReported(true); setReportConfirm(false); onReport?.(job.id); }}
+                className="px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-all"
+              >
+                Yes
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setReportConfirm(false); }}
+                className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-white/40 font-medium transition-all"
+              >
+                No
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setReportConfirm(true); }}
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg text-[11px] bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all"
+              title="Report this job as a scam"
+            >
+              <Flag className="w-3 h-3" />
+            </button>
+          )
+        ) : (
+          <span className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-red-400/60">
+            <Flag className="w-3 h-3" /> Reported
+          </span>
+        )}
         <button
           onClick={(e) => { e.stopPropagation(); onSave(); }}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${

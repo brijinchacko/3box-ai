@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
+import { prepareInterview } from '@/lib/agents/atlas';
 
 /**
  * GET /api/applications
@@ -105,5 +106,82 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error('[API] /api/applications error:', err);
     return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/applications
+ * Update a job application's status. Auto-triggers interview prep when status → INTERVIEW.
+ *
+ * Body: { id: string, status: string, notes?: string }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const body = await request.json();
+    const { id, status, notes } = body;
+
+    if (!id || !status) {
+      return NextResponse.json({ error: 'id and status are required' }, { status: 400 });
+    }
+
+    // Verify ownership
+    const existing = await prisma.jobApplication.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    const updateData: Record<string, unknown> = { status };
+    if (notes !== undefined) updateData.notes = notes;
+
+    const updated = await prisma.jobApplication.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // Auto-trigger interview prep when status changes to INTERVIEW
+    if (status === 'INTERVIEW' && existing.status !== 'INTERVIEW') {
+      // Fire-and-forget: generate interview prep in the background
+      const resume = await prisma.resume.findFirst({
+        where: { userId },
+        select: { content: true },
+      });
+      const skills = resume?.content && typeof resume.content === 'object'
+        ? ((resume.content as any).skills || []).map((s: any) => typeof s === 'string' ? s : s.name || '')
+        : [];
+
+      prepareInterview(
+        userId,
+        existing.jobTitle,
+        existing.company,
+        '', // job description not stored on JobApplication
+        skills.length > 0 ? skills : ['General skills'],
+      ).then(() => {
+        return prisma.agentActivity.create({
+          data: {
+            userId,
+            agent: 'atlas',
+            action: 'auto_interview_prep',
+            summary: `Auto-generated interview prep for ${existing.company} — ${existing.jobTitle}`,
+            details: { company: existing.company, jobTitle: existing.jobTitle, trigger: 'status_change_to_interview' },
+          },
+        });
+      }).catch((err) => {
+        console.error('[Atlas] Auto interview prep failed for JobApplication:', err);
+      });
+    }
+
+    return NextResponse.json({ application: updated });
+  } catch (err) {
+    console.error('[API] /api/applications PATCH error:', err);
+    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
   }
 }
