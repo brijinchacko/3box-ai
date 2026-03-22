@@ -5,8 +5,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { aiChatWithFallback, extractJSON } from '@/lib/ai/openrouter';
 import { type AgentContext, getContextSummary, getAgentHandoff, logActivity } from './context';
-// Token system removed — AI operations are unlimited
-const TOKEN_COSTS = { per_job_rewrite: 0 } as const;
 
 interface ResumeContent {
   contact: { name: string; email: string; phone: string; location: string; linkedin?: string };
@@ -781,7 +779,7 @@ export async function runIndependentForge(
             },
           });
 
-          creditsUsed += TOKEN_COSTS.per_job_rewrite;
+          creditsUsed += 1;
           jobsProcessed++;
         } catch (err) {
           console.error(`[Forge Independent] Failed for ${scoutJob.title}:`, err);

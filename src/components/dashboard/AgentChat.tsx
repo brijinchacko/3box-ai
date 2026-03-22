@@ -512,9 +512,9 @@ export default function AgentChat({
               <div className="flex items-start gap-2 px-4 py-2.5 bg-amber-400/5 border-t border-amber-400/10">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-[10px] text-amber-400/80 font-medium">Auto-Hunt will increase token usage</p>
+                  <p className="text-[10px] text-amber-400/80 font-medium">Auto-Hunt will use your daily applications</p>
                   <p className="text-[9px] text-amber-400/50 mt-0.5 leading-relaxed">
-                    Scout will run automatically on your schedule and consume tokens each time.
+                    Scout will run automatically on your schedule and count toward your daily limit each time.
                     {!autoTargetRole?.trim() && ' Please set your Target Role below before enabling.'}
                     {' '}Review your Daily Limit and Hunt Frequency below.
                   </p>

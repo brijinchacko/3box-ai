@@ -84,6 +84,86 @@ export interface SkillGapResult {
  * @param userSkills   The user's CareerTwin skillSnapshot (Record<string, number>).
  *                     Keys prefixed with "_" are metadata and ignored.
  */
+/**
+ * Quick ATS compatibility check (zero AI cost).
+ *
+ * Extracts keywords from the job description, compares against the
+ * user's skill snapshot, and returns a 0-100 score with color tier.
+ * Mirrors the server-side quickATSScore logic but works client-side
+ * with just the userSkills map + job description.
+ */
+export interface QuickATSResult {
+  /** ATS compatibility score 0-100 */
+  score: number;
+  /** Color tier: 'green' (70+), 'yellow' (50-69), 'red' (<50) */
+  tier: 'green' | 'yellow' | 'red';
+  /** Number of JD keywords matched */
+  matched: number;
+  /** Total unique JD keywords found */
+  total: number;
+  /** Top missing keywords (up to 5) */
+  topMissing: string[];
+}
+
+export function quickATSCheck(
+  description: string,
+  userSkills: Record<string, number>,
+): QuickATSResult | null {
+  if (!description || !userSkills || Object.keys(userSkills).length === 0) {
+    return null;
+  }
+
+  // Extract skill keywords from the job description using the same regex
+  const matches = description.match(SKILL_REGEX);
+  if (!matches || matches.length === 0) return null;
+
+  // Deduplicate (case-insensitive)
+  const seen = new Map<string, string>();
+  for (const m of matches) {
+    const key = normalise(m);
+    if (!seen.has(key)) seen.set(key, m);
+  }
+
+  const requiredSkills = Array.from(seen.values());
+  if (requiredSkills.length === 0) return null;
+
+  // Normalise user skills for comparison
+  const userNormalised = new Set(
+    Object.keys(userSkills)
+      .filter((k) => !k.startsWith('_'))
+      .map(normalise),
+  );
+
+  // Also include raw JD word overlap (words > 3 chars) for broader coverage
+  const userSkillText = Object.keys(userSkills)
+    .filter((k) => !k.startsWith('_'))
+    .join(' ')
+    .toLowerCase();
+
+  const matchedSkills: string[] = [];
+  const missing: string[] = [];
+
+  for (const skill of requiredSkills) {
+    if (userNormalised.has(normalise(skill)) || userSkillText.includes(normalise(skill))) {
+      matchedSkills.push(skill);
+    } else {
+      missing.push(skill);
+    }
+  }
+
+  const ratio = requiredSkills.length > 0 ? matchedSkills.length / requiredSkills.length : 0;
+  const score = Math.min(100, Math.round(ratio * 120)); // Slight boost (mirrors server logic)
+  const tier: 'green' | 'yellow' | 'red' = score >= 70 ? 'green' : score >= 50 ? 'yellow' : 'red';
+
+  return {
+    score,
+    tier,
+    matched: matchedSkills.length,
+    total: requiredSkills.length,
+    topMissing: missing.slice(0, 5),
+  };
+}
+
 export function analyseSkillGap(
   description: string,
   userSkills: Record<string, number>,

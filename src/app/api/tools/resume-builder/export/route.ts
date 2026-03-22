@@ -9,7 +9,7 @@ import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
  * Free Resume Builder - Export Endpoint
  * No auth required. Free export with watermark + download tracking.
  * - 2 free downloads tracked via cookie + clientCount
- * - PRO/ULTRA users get unlimited clean exports
+ * - PRO/MAX users get unlimited clean exports
  * - Modern template: no watermark; other templates: watermark for free users
  */
 
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     const cookieCount = cookieVal ? parseInt(cookieVal, 10) || 0 : 0;
     const realCount = Math.max(cookieCount, clientCount ?? 0);
 
-    // ── 3. Check session for PRO/ULTRA bypass ────
+    // ── 3. Check session for PRO/MAX bypass ────
     let isPaidUser = false;
     try {
       const session = await getServerSession(authOptions);
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
     // ── 5. Determine watermark ───────────────────
     // Modern template: no watermark
-    // Other templates: watermark for anonymous/free users, no watermark for PRO/ULTRA
+    // Other templates: watermark for anonymous/free users, no watermark for PRO/MAX
     const selectedTemplate = template ?? 'modern';
     let showWatermark = false;
     if (selectedTemplate !== 'modern' && !isPaidUser) {

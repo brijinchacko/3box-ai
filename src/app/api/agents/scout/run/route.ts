@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     });
     // All agents are available on all plans — no plan gate needed
 
-    // Parse body early so we can calculate token cost
+    // Parse body early so we can validate inputs
     const body = await request.json();
     const {
       platforms,

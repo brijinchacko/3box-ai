@@ -390,7 +390,7 @@ export function serializeUserContext(ctx: UserContextDocument): string {
     lines.push(`Market Readiness: ${Math.round(p.marketReadiness)}% | Hire Probability: ${Math.round(p.hireProbability)}%`);
   }
 
-  // Skills (capped to reduce token count)
+  // Skills (capped to keep context concise)
   const skillKeys = Object.keys(ctx.skills.snapshot);
   if (skillKeys.length > 0) {
     const skillStr = skillKeys.slice(0, 8).map(k => `${k} (${ctx.skills.snapshot[k]})`).join(', ');

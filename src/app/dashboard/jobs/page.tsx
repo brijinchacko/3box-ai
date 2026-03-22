@@ -30,6 +30,7 @@ import {
   ArrowRight,
   Flag,
   Zap,
+  FileCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -49,7 +50,7 @@ import ScoutReportHeader from '@/components/dashboard/ScoutReportHeader';
 import { useScoutStatus } from '@/hooks/useScoutStatus';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { detectScamSignals, type ScamSignals } from '@/lib/jobs/scamDetector';
-import { analyseSkillGap } from '@/lib/jobs/skillGap';
+import { analyseSkillGap, quickATSCheck, type QuickATSResult } from '@/lib/jobs/skillGap';
 import { notifyAgentCompleted } from '@/lib/notifications/toast';
 
 // ── Types ──────────────────────────────────────────────
@@ -174,6 +175,7 @@ function JobDetailOverlay({
   const [scamCheck, setScamCheck] = useState<ScamSignals | null>(null);
   const [reportConfirm, setReportConfirm] = useState(false);
   const [reported, setReported] = useState(false);
+  const [atsResult, setAtsResult] = useState<QuickATSResult | null>(null);
   const sentinelAvailable = isAgentAvailable('sentinel', userPlan);
   const forgeAvailable = isAgentAvailable('forge', userPlan);
 
@@ -287,6 +289,32 @@ function JobDetailOverlay({
             </div>
           )}
 
+          {/* Quick ATS Check result */}
+          {atsResult && (
+            <div className={`flex items-start gap-2 p-2.5 rounded-lg text-xs border ${
+              atsResult.tier === 'green'
+                ? 'bg-green-500/5 border-green-500/10 text-green-400/90'
+                : atsResult.tier === 'yellow'
+                  ? 'bg-amber-500/5 border-amber-500/10 text-amber-400/90'
+                  : 'bg-red-500/5 border-red-500/10 text-red-400/90'
+            }`}>
+              <FileCheck className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              <div>
+                <span className="font-semibold">
+                  ATS Score: {atsResult.score}%
+                </span>
+                <span className="opacity-70">
+                  {' '}({atsResult.matched}/{atsResult.total} keywords)
+                </span>
+                {atsResult.topMissing.length > 0 && (
+                  <span className="opacity-60 block mt-0.5">
+                    Missing: {atsResult.topMissing.join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Scam check result */}
           {scamCheck && (
             <div className={`p-3 rounded-xl text-xs border ${
@@ -318,6 +346,19 @@ function JobDetailOverlay({
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-white/5">
             <span className="text-[10px] text-white/25">Scout found this match. What&apos;s next?</span>
             <div className="flex items-center gap-2 ml-auto flex-wrap">
+              {!atsResult && userSkills && (
+                <button
+                  onClick={() => {
+                    const result = quickATSCheck(job.description, userSkills);
+                    if (result) setAtsResult(result);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 transition-all"
+                  title="Quick ATS compatibility check (free, no AI cost)"
+                >
+                  <FileCheck className="w-3.5 h-3.5" />
+                  ATS Check
+                </button>
+              )}
               {!scamCheck && (
                 <button
                   onClick={handleVerify}

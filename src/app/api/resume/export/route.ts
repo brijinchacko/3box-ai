@@ -7,8 +7,8 @@ import { buildResumeHTML } from '@/lib/resume/buildHTML';
 /**
  * Resume PDF Export API
  * - FREE plan: blocked (403 upgrade_required)
- * - STARTER plan: export with watermark
- * - PRO / ULTRA plan: clean export
+ * - PRO plan: export with watermark
+ * - MAX plan: clean export
  *
  * Returns structured HTML that the client opens in a new tab.
  * The HTML includes an auto-print script that triggers the

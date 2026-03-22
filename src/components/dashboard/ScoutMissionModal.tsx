@@ -7,9 +7,6 @@ import AgentAvatar from '@/components/brand/AgentAvatar';
 import AgentLoader from '@/components/brand/AgentLoader';
 import { getInsightsForRole, type JobInsight } from '@/lib/data/jobMarketInsights';
 import { useTokens } from '@/hooks/useTokens';
-// Token system removed — AI operations are now unlimited
-const TOKEN_COSTS = { scout_search_per_platform: 0 } as const;
-const estimateScoutCost = (_count: number) => 0;
 import { notifyAgentStarted, notifyAgentError } from '@/lib/notifications/toast';
 
 interface ScoutMissionModalProps {
@@ -58,10 +55,7 @@ export default function ScoutMissionModal({ open, onClose, onComplete, onBackgro
   const [isDeploying, setIsDeploying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const { remaining, canAfford, refresh: refreshTokens } = useTokens();
-
-  const estimatedCost = estimateScoutCost(selectedPlatforms.length);
-  const hasEnoughTokens = canAfford(estimatedCost);
+  const { remaining, refresh: refreshTokens } = useTokens();
 
   // Pre-fill from localStorage
   useEffect(() => {
@@ -117,16 +111,16 @@ export default function ScoutMissionModal({ open, onClose, onComplete, onBackgro
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data.code === 'INSUFFICIENT_TOKENS') {
+        if (data.code === 'LIMIT_REACHED') {
           refreshTokens();
-          throw new Error(`Insufficient tokens — need ${data.required}, you have ${data.remaining}. Buy more tokens to continue.`);
+          throw new Error(data.error || 'You have reached your daily application limit. Upgrade for more.');
         }
         throw new Error(data.error || 'Scout mission failed');
       }
 
       const result = await res.json();
       abortRef.current = null;
-      refreshTokens(); // Update token counter
+      refreshTokens(); // Update usage counter
       onComplete(result);
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -337,30 +331,17 @@ export default function ScoutMissionModal({ open, onClose, onComplete, onBackgro
                   </div>
                 </div>
 
-                {/* Token Estimation */}
-                <div className={`p-3 rounded-xl border ${hasEnoughTokens ? 'bg-neon-blue/5 border-neon-blue/15' : 'bg-red-500/5 border-red-500/20'}`}>
+                {/* Platform Summary */}
+                <div className="p-3 rounded-xl border bg-neon-blue/5 border-neon-blue/15">
                   <div className="flex items-center gap-2 mb-1">
-                    <Zap className={`w-3.5 h-3.5 ${hasEnoughTokens ? 'text-neon-blue' : 'text-red-400'}`} />
-                    <span className={`text-xs font-semibold ${hasEnoughTokens ? 'text-neon-blue' : 'text-red-400'}`}>
-                      Estimated Cost: {estimatedCost} tokens
+                    <Zap className="w-3.5 h-3.5 text-neon-blue" />
+                    <span className="text-xs font-semibold text-neon-blue">
+                      {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? 's' : ''} selected
                     </span>
                   </div>
                   <p className="text-[11px] text-white/40 pl-5.5">
-                    {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? 's' : ''} x {TOKEN_COSTS.scout_search_per_platform} tokens each
-                    {' '}&middot;{' '}
-                    <span className={hasEnoughTokens ? 'text-white/50' : 'text-red-400'}>
-                      {remaining === Infinity ? 'Unlimited' : `${remaining} tokens remaining`}
-                    </span>
+                    {remaining === Infinity ? 'Unlimited usage' : `${remaining} applications remaining`}
                   </p>
-                  {!hasEnoughTokens && (
-                    <a
-                      href="/pricing"
-                      className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-medium text-neon-blue hover:underline"
-                    >
-                      <Zap className="w-3 h-3" />
-                      Buy More Tokens
-                    </a>
-                  )}
                 </div>
 
                 {/* Error */}
@@ -381,15 +362,10 @@ export default function ScoutMissionModal({ open, onClose, onComplete, onBackgro
                 </button>
                 <button
                   onClick={handleDeploy}
-                  disabled={!hasEnoughTokens}
-                  className={`text-sm px-5 py-2.5 flex items-center gap-2 ${
-                    hasEnoughTokens
-                      ? 'btn-primary'
-                      : 'rounded-xl bg-white/5 text-white/25 cursor-not-allowed border border-white/10'
-                  }`}
+                  className="text-sm px-5 py-2.5 flex items-center gap-2 btn-primary"
                 >
                   <Rocket className="w-4 h-4" />
-                  {hasEnoughTokens ? 'Deploy Scout' : 'Insufficient Tokens'}
+                  Deploy Scout
                 </button>
               </div>
             </>

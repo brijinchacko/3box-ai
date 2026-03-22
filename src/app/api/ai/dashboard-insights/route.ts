@@ -99,7 +99,7 @@ export async function GET() {
       careerPlans.length > 0 ||
       resumes.length > 0;
 
-    // If no data yet, return onboarding insights (no token cost)
+    // If no data yet, return onboarding insights (no AI call needed)
     if (!hasData) {
       return NextResponse.json({
         insights: GENERIC_ONBOARDING_INSIGHTS,

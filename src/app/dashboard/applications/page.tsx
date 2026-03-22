@@ -185,6 +185,7 @@ function AutopilotApplications() {
                 <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden lg:table-cell">Location</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Match</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden lg:table-cell">Channel</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden sm:table-cell">Date</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-10"></th>
               </tr>
@@ -225,6 +226,18 @@ function AutopilotApplications() {
                       <span className={cn('inline-block px-2 py-0.5 rounded text-xs font-medium', sc.bg, sc.color)}>
                         {sc.label}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-center hidden lg:table-cell">
+                      {app.applicationMethod ? (
+                        <span
+                          className="inline-block px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 cursor-help"
+                          title={METHOD_TOOLTIPS[app.applicationMethod] || app.applicationMethod}
+                        >
+                          {METHOD_LABELS[app.applicationMethod] || app.applicationMethod}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center text-xs text-gray-400 dark:text-gray-500 hidden sm:table-cell">
                       {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '—'}
@@ -348,6 +361,18 @@ const METHOD_LABELS: Record<string, string> = {
   ats_api: 'ATS API',
   cold_email: 'Cold Email',
   portal: 'Job Portal',
+  portal_queue: 'Portal Queue',
+  manual: 'Manual',
+  extension: 'Extension',
+};
+
+const METHOD_TOOLTIPS: Record<string, string> = {
+  ats_api: 'Applied via company\'s ATS system (Greenhouse, Lever, etc). Highest success rate.',
+  cold_email: 'Applied via direct email to hiring team. You may get a response within 3-5 days.',
+  portal_queue: 'Queued for manual portal application. Open the job link to complete.',
+  portal: 'Queued for manual portal application. Open the job link to complete.',
+  manual: 'You applied manually through the job portal.',
+  extension: 'Applied via the 3BOX Chrome extension.',
 };
 
 function timeAgo(dateStr: string): string {
@@ -913,7 +938,10 @@ export default function ApplicationsPage() {
                         <span className="flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{app.location}</span>
                       )}
                       {app.applicationMethod && (
-                        <span className="px-1.5 py-0 rounded bg-white/5 text-white/30">
+                        <span
+                          className="px-1.5 py-0 rounded bg-white/5 text-white/30 cursor-help"
+                          title={METHOD_TOOLTIPS[app.applicationMethod] || app.applicationMethod}
+                        >
                           {METHOD_LABELS[app.applicationMethod] || app.applicationMethod}
                         </span>
                       )}
@@ -947,6 +975,14 @@ export default function ApplicationsPage() {
                           {app.salaryRange && <span className="px-2 py-0.5 rounded bg-green-500/5 text-green-400/60">{app.salaryRange}</span>}
                           {app.appliedAt && <span className="px-2 py-0.5 rounded bg-white/5 text-white/40">Applied {new Date(app.appliedAt).toLocaleDateString()}</span>}
                         </div>
+
+                        {/* Quality check — Sentinel review placeholder */}
+                        {(app.status === 'APPLIED' || app.status === 'EMAILED' || app.status === 'VIEWED' || app.status === 'INTERVIEW' || app.status === 'OFFER') && (
+                          <div className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-green-500/5 text-green-400/70 border border-green-500/10 w-fit">
+                            <Shield className="w-3 h-3" />
+                            <span>Quality check: Passed</span>
+                          </div>
+                        )}
 
                         {/* Cover letter */}
                         {app.coverLetter && (

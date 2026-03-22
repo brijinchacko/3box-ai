@@ -2,8 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { MapPin, Clock, Bookmark, ExternalLink, Flag, Zap } from 'lucide-react';
-import { analyseSkillGap, type SkillGapResult } from '@/lib/jobs/skillGap';
+import { MapPin, Clock, Bookmark, ExternalLink, Flag, Zap, FileCheck } from 'lucide-react';
+import { analyseSkillGap, type SkillGapResult, quickATSCheck, type QuickATSResult } from '@/lib/jobs/skillGap';
 
 interface ScoutJob {
   id: string;
@@ -66,6 +66,7 @@ function getScoreColor(score: number) {
 export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick, onReport, userSkills }: ScoutJobGridCardProps) {
   const [reportConfirm, setReportConfirm] = useState(false);
   const [reported, setReported] = useState(false);
+  const [atsResult, setAtsResult] = useState<QuickATSResult | null>(null);
 
   const skillGap = useMemo<SkillGapResult | null>(() => {
     if (!userSkills) return null;
@@ -136,8 +137,39 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick,
         </div>
       )}
 
+      {/* Quick ATS Check result */}
+      {atsResult && (
+        <div className={`flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg text-[10px] font-medium ${
+          atsResult.tier === 'green'
+            ? 'bg-green-500/5 text-green-400/80'
+            : atsResult.tier === 'yellow'
+              ? 'bg-amber-500/5 text-amber-400/80'
+              : 'bg-red-500/5 text-red-400/80'
+        }`}>
+          <FileCheck className="w-3 h-3 flex-shrink-0" />
+          <span>ATS: {atsResult.score}%</span>
+          <span className="opacity-60 truncate">
+            ({atsResult.matched}/{atsResult.total} keywords)
+          </span>
+        </div>
+      )}
+
       {/* Bottom actions */}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
+        {/* Quick ATS Check button */}
+        {!atsResult && userSkills && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const result = quickATSCheck(job.description, userSkills);
+              if (result) setAtsResult(result);
+            }}
+            className="flex items-center gap-1 px-1.5 py-1 rounded-lg text-[11px] bg-white/5 hover:bg-white/10 text-white/30 hover:text-white/60 transition-all"
+            title="Quick ATS compatibility check (free)"
+          >
+            <FileCheck className="w-3 h-3" />
+          </button>
+        )}
         {/* Report as scam */}
         {!reported ? (
           reportConfirm ? (
