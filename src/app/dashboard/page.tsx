@@ -527,10 +527,10 @@ function QuickStatsGrid({ stats }: { stats: Stats }) {
               <card.icon className={cn('w-4 h-4', card.color)} />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
             {card.value}
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {card.label}
           </p>
         </div>

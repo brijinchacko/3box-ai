@@ -208,7 +208,7 @@ export default function NextStepBanner() {
         {/* Inner card */}
         <div
           className={cn(
-            'relative flex items-center gap-3 sm:gap-4 rounded-[11px] px-4 py-3',
+            'relative flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 rounded-[11px] px-4 py-3',
             isAgentic
               ? 'bg-[#0c0c14]'
               : 'bg-white dark:bg-gray-950',
@@ -229,7 +229,7 @@ export default function NextStepBanner() {
           {/* Text */}
           <p
             className={cn(
-              'flex-1 text-sm font-medium min-w-0',
+              'flex-1 text-xs sm:text-sm font-medium min-w-0 basis-[calc(100%-3.5rem)] sm:basis-auto',
               isAgentic
                 ? 'text-white/80'
                 : 'text-gray-800 dark:text-gray-200',
@@ -238,25 +238,11 @@ export default function NextStepBanner() {
             {step.text}
           </p>
 
-          {/* CTA Button */}
-          <Link
-            href={step.href}
-            className={cn(
-              'flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-              isAgentic
-                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400',
-            )}
-          >
-            {step.cta}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-
-          {/* Dismiss X */}
+          {/* Dismiss X — positioned top-right on mobile via order */}
           <button
             onClick={handleDismiss}
             className={cn(
-              'flex-shrink-0 p-1 rounded-md transition-colors',
+              'flex-shrink-0 p-1 rounded-md transition-colors order-first sm:order-last absolute top-2 right-2 sm:static',
               isAgentic
                 ? 'text-white/30 hover:text-white/60 hover:bg-white/[0.06]'
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-800',
@@ -265,6 +251,20 @@ export default function NextStepBanner() {
           >
             <X className="w-3.5 h-3.5" />
           </button>
+
+          {/* CTA Button */}
+          <Link
+            href={step.href}
+            className={cn(
+              'flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ml-11 sm:ml-0',
+              isAgentic
+                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400',
+            )}
+          >
+            {step.cta}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
     </div>

@@ -12,7 +12,11 @@ import { prisma } from '@/lib/db/prisma';
 // Use separate OAuth credentials for Gmail (different scopes than NextAuth Google login)
 const GMAIL_CLIENT_ID = process.env.GOOGLE_GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
 const GMAIL_CLIENT_SECRET = process.env.GOOGLE_GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-const SCOPES = ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/userinfo.email'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly', // Required by reply scanner (sentinel agent)
+  'https://www.googleapis.com/auth/userinfo.email',
+];
 
 function getOAuth2Client(redirectUri: string) {
   return new google.auth.OAuth2(GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, redirectUri);
