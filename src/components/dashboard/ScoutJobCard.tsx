@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, ExternalLink, Bookmark, Shield, Hammer, ChevronDown, ChevronUp, BarChart3, Wifi, AlertTriangle, Flag, Zap, FileCheck } from 'lucide-react';
+import { MapPin, Clock, ExternalLink, Bookmark, Shield, Hammer, ChevronDown, ChevronUp, BarChart3, Wifi, AlertTriangle, Flag, Zap, FileCheck, RefreshCw, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import { isAgentAvailable, type PlanTier } from '@/lib/agents/permissions';
 import { detectScamSignals, type ScamSignals } from '@/lib/jobs/scamDetector';
@@ -73,6 +73,22 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave, on
   const [reportConfirm, setReportConfirm] = useState(false);
   const [reported, setReported] = useState(false);
   const [atsResult, setAtsResult] = useState<QuickATSResult | null>(null);
+  const [availabilityStatus, setAvailabilityStatus] = useState<'idle' | 'checking' | 'active' | 'expired'>('idle');
+
+  const handleCheckAvailability = async () => {
+    setAvailabilityStatus('checking');
+    try {
+      const res = await fetch('/api/jobs/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      const data = await res.json();
+      setAvailabilityStatus(data.available ? 'active' : 'expired');
+    } catch {
+      setAvailabilityStatus('expired');
+    }
+  };
 
   // Skill gap analysis (memoised to avoid recalculating on every render)
   const skillGap = useMemo<SkillGapResult | null>(() => {
@@ -103,7 +119,7 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave, on
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="group rounded-xl border border-white/5 bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04] transition-all"
+      className={`group rounded-xl border border-white/5 bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04] transition-all ${availabilityStatus === 'expired' ? 'opacity-50' : ''}`}
     >
       {/* Compact summary row */}
       <div
@@ -304,6 +320,29 @@ export default function ScoutJobCard({ job, index, userPlan, isSaved, onSave, on
               ) : (
                 <span className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-red-400/60">
                   <Flag className="w-3 h-3" /> Reported
+                </span>
+              )}
+              {/* Check availability */}
+              {availabilityStatus === 'idle' ? (
+                <button
+                  onClick={handleCheckAvailability}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 transition-all"
+                  title="Check if job listing is still live"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Check availability
+                </button>
+              ) : availabilityStatus === 'checking' ? (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-white/40">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking...
+                </span>
+              ) : availabilityStatus === 'active' ? (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                  <CheckCircle className="w-3.5 h-3.5" /> Still Active
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                  <XCircle className="w-3.5 h-3.5" /> Expired
                 </span>
               )}
               <button

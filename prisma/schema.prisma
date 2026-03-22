@@ -85,6 +85,7 @@ model User {
   totalAppsUsed    Int       @default(0)     // Lifetime application counter (for FREE plan)
   dailyAppsUsed    Int       @default(0)     // Daily application counter (for PRO/MAX plans)
   dailyAppsResetAt DateTime  @default(now()) // Daily counter reset timestamp
+  bonusApps        Int       @default(0)     // Bonus applications from referrals (added to current period limit)
   // Legacy fields kept for backward compatibility during migration
   aiCreditsUsed   Int       @default(0)
   aiCreditsLimit  Int       @default(10)
@@ -273,7 +274,7 @@ model Referral {
   referredId  String
   referred    User           @relation("ReferredReferrals", fields: [referredId], references: [id], onDelete: Cascade)
   status      ReferralStatus @default(PENDING)
-  rewardType  String         @default("pro_month") // pro_month | credits_100
+  rewardType  String         @default("bonus_apps_5") // bonus_apps_5 | pro_month | credits_100
   createdAt   DateTime       @default(now())
 
   @@unique([referrerId, referredId])

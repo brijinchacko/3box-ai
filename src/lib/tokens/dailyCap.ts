@@ -84,6 +84,7 @@ export async function checkApplicationCap(userId: string): Promise<ApplicationCa
       totalAppsUsed: true,
       dailyAppsUsed: true,
       dailyAppsResetAt: true,
+      bonusApps: true,
     },
   });
 
@@ -101,10 +102,13 @@ export async function checkApplicationCap(userId: string): Promise<ApplicationCa
   const plan = normalizePlan(user.plan);
   const planLimit = APP_LIMITS[plan];
 
+  // Bonus applications from referrals (added to current period limit)
+  const bonus = user.bonusApps ?? 0;
+
   // FREE plan — weekly limit (count from DB)
   if (planLimit.type === 'weekly') {
     const weeklyUsed = await getWeeklyAppCount(userId);
-    const perWeek = planLimit.perWeek ?? 0;
+    const perWeek = (planLimit.perWeek ?? 0) + bonus;
     return {
       allowed: weeklyUsed < perWeek,
       used: weeklyUsed,
@@ -128,7 +132,7 @@ export async function checkApplicationCap(userId: string): Promise<ApplicationCa
     dailyUsed = 0;
   }
 
-  const perDay = planLimit.perDay ?? 0;
+  const perDay = (planLimit.perDay ?? 0) + bonus;
   const remaining = Math.max(0, perDay - dailyUsed);
 
   return {

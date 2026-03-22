@@ -31,6 +31,8 @@ import {
   Flag,
   Zap,
   FileCheck,
+  RefreshCw,
+  CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -176,8 +178,24 @@ function JobDetailOverlay({
   const [reportConfirm, setReportConfirm] = useState(false);
   const [reported, setReported] = useState(false);
   const [atsResult, setAtsResult] = useState<QuickATSResult | null>(null);
+  const [availabilityStatus, setAvailabilityStatus] = useState<'idle' | 'checking' | 'active' | 'expired'>('idle');
   const sentinelAvailable = isAgentAvailable('sentinel', userPlan);
   const forgeAvailable = isAgentAvailable('forge', userPlan);
+
+  const handleCheckAvailability = async () => {
+    setAvailabilityStatus('checking');
+    try {
+      const res = await fetch('/api/jobs/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      const data = await res.json();
+      setAvailabilityStatus(data.available ? 'active' : 'expired');
+    } catch {
+      setAvailabilityStatus('expired');
+    }
+  };
 
   const skillGap = useMemo(() => {
     if (!userSkills) return null;
@@ -221,7 +239,7 @@ function JobDetailOverlay({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl glass border border-white/10 rounded-2xl overflow-hidden max-h-[80vh] overflow-y-auto"
+        className={`w-full max-w-xl glass border border-white/10 rounded-2xl overflow-hidden max-h-[80vh] overflow-y-auto ${availabilityStatus === 'expired' ? 'opacity-60' : ''}`}
       >
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <div className="flex-1 min-w-0">
@@ -410,6 +428,29 @@ function JobDetailOverlay({
               ) : (
                 <span className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-red-400/60">
                   <Flag className="w-3 h-3" /> Reported
+                </span>
+              )}
+              {/* Check availability */}
+              {availabilityStatus === 'idle' ? (
+                <button
+                  onClick={handleCheckAvailability}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 transition-all"
+                  title="Check if job listing is still live"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Check availability
+                </button>
+              ) : availabilityStatus === 'checking' ? (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-white/40">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking...
+                </span>
+              ) : availabilityStatus === 'active' ? (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                  <CheckCircle className="w-3.5 h-3.5" /> Still Active
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                  <XCircle className="w-3.5 h-3.5" /> Expired
                 </span>
               )}
               <button

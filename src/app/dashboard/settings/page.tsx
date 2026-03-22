@@ -1065,7 +1065,7 @@ export default function SettingsPage() {
                   <div>
                     <h3 className="font-semibold">Refer & Earn</h3>
                     <p className="text-sm text-white/40">
-                      For each friend who signs up and upgrades, you both get 1 month of Pro free!
+                      Both you and your friend get +5 extra applications this week when they sign up!
                     </p>
                   </div>
                 </div>

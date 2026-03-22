@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         },
       });
 
-      // Handle referral
+      // Handle referral — grant +5 bonus apps to both
       if (ref) {
         const referrer = await prisma.user.findFirst({
           where: { referralCode: ref },
@@ -151,8 +151,19 @@ export async function POST(req: Request) {
             data: {
               referrerId: referrer.id,
               referredId: user.id,
-              status: 'PENDING',
+              status: 'REWARDED',
+              rewardType: 'bonus_apps_5',
             },
+          });
+
+          // Grant +5 bonus applications to both referrer and referred user
+          await prisma.user.update({
+            where: { id: referrer.id },
+            data: { bonusApps: { increment: 5 } },
+          });
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { bonusApps: { increment: 5 } },
           });
         }
       }

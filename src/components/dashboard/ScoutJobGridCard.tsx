@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { MapPin, Clock, Bookmark, ExternalLink, Flag, Zap, FileCheck } from 'lucide-react';
+import { MapPin, Clock, Bookmark, ExternalLink, Flag, Zap, FileCheck, RefreshCw, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { analyseSkillGap, type SkillGapResult, quickATSCheck, type QuickATSResult } from '@/lib/jobs/skillGap';
 
 interface ScoutJob {
@@ -67,6 +67,23 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick,
   const [reportConfirm, setReportConfirm] = useState(false);
   const [reported, setReported] = useState(false);
   const [atsResult, setAtsResult] = useState<QuickATSResult | null>(null);
+  const [availabilityStatus, setAvailabilityStatus] = useState<'idle' | 'checking' | 'active' | 'expired'>('idle');
+
+  const handleCheckAvailability = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAvailabilityStatus('checking');
+    try {
+      const res = await fetch('/api/jobs/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      const data = await res.json();
+      setAvailabilityStatus(data.available ? 'active' : 'expired');
+    } catch {
+      setAvailabilityStatus('expired');
+    }
+  };
 
   const skillGap = useMemo<SkillGapResult | null>(() => {
     if (!userSkills) return null;
@@ -79,7 +96,7 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick,
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.03 }}
       onClick={onClick}
-      className="group relative rounded-xl border border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05] transition-all cursor-pointer p-4 flex flex-col min-h-[180px]"
+      className={`group relative rounded-xl border border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05] transition-all cursor-pointer p-4 flex flex-col min-h-[180px] ${availabilityStatus === 'expired' ? 'opacity-50' : ''}`}
     >
       {/* Top row: score + source */}
       <div className="flex items-center justify-between mb-3">
@@ -200,6 +217,28 @@ export default function ScoutJobGridCard({ job, index, isSaved, onSave, onClick,
         ) : (
           <span className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-red-400/60">
             <Flag className="w-3 h-3" /> Reported
+          </span>
+        )}
+        {/* Check availability */}
+        {availabilityStatus === 'idle' ? (
+          <button
+            onClick={handleCheckAvailability}
+            className="flex items-center gap-1 px-1.5 py-1 rounded-lg text-[11px] bg-white/5 hover:bg-white/10 text-white/30 hover:text-white/60 transition-all"
+            title="Check if job listing is still live"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
+        ) : availabilityStatus === 'checking' ? (
+          <span className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-white/40">
+            <Loader2 className="w-3 h-3 animate-spin" />
+          </span>
+        ) : availabilityStatus === 'active' ? (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+            <CheckCircle className="w-3 h-3" /> Active
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+            <XCircle className="w-3 h-3" /> Expired
           </span>
         )}
         <button

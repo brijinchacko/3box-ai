@@ -359,11 +359,11 @@ export async function sendPaymentFailedEmail(to: string, name: string) {
 export async function sendReferralInviteEmail(to: string, referrerName: string, referralCode: string) {
   return sendEmail({
     to,
-    subject: `${referrerName} invited you to 3BOX AI — Get 1 month Pro free`,
+    subject: `${referrerName} invited you to 3BOX AI — Get +5 extra applications`,
     html: baseTemplate(`
       <div class="card">
         <h2>${referrerName} thinks you'd love 3BOX AI</h2>
-        <p>You've been invited to join the most advanced AI career platform. Sign up and both you and ${referrerName} get <strong>1 month of Pro</strong> free!</p>
+        <p>You've been invited to join the most advanced AI career platform. Sign up and both you and ${referrerName} get <strong>+5 extra applications</strong> this week!</p>
         <p style="text-align: center; margin-top: 24px;">
           <a href="${APP_URL}/signup?ref=${referralCode}" class="btn">Join 3BOX AI Free</a>
         </p>
@@ -413,6 +413,10 @@ export async function sendAccountActivityEmail(to: string, name: string, activit
 }
 
 // ─── Weekly Career Digest Email ─────────────────
+// The enhanced weekly digest is now in src/lib/email/digest.ts
+// which includes: stats, top unfilled jobs, career twin, skill gaps.
+// Use sendWeeklyDigest(userId) from '@/lib/email/digest' for the full version.
+// The legacy function below is kept for backward compatibility.
 
 export async function sendWeeklyDigestEmail(
   to: string,
