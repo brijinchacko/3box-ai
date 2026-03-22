@@ -945,6 +945,12 @@ export interface IndependentArcherConfig {
   resumeId?: string;
   forgeEnabled: boolean;
   forgeMode: string;
+  // Smart auto-apply options
+  smartAutoEnabled?: boolean;
+  autoApplyMinScore?: number;
+  excludedCompanies?: string[];
+  allowColdEmail?: boolean;
+  maxDailyPreference?: number;
 }
 
 export interface IndependentArcherResult {
@@ -1021,15 +1027,85 @@ export async function runIndependentArcher(
       return { runId: run.id, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0 };
     }
 
+    // ── Smart Auto-Apply Filtering ──
+    // When smart-auto is enabled, apply threshold + exclusion filters
+    let jobsToApply = readyJobs;
+    let smartAutoSkipped = 0;
+    let smartAutoQueued = 0;
+
+    if (config.smartAutoEnabled) {
+      const minScore = config.autoApplyMinScore ?? 80;
+      const excluded = (config.excludedCompanies ?? []).map(c => c.toLowerCase().trim());
+      const allowCold = config.allowColdEmail ?? true;
+      const dailyMax = config.maxDailyPreference ?? 20;
+
+      // Count today's applications for daily preference cap
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayApplied = await prisma.scoutJob.count({
+        where: { userId, status: 'APPLIED', appliedAt: { gte: todayStart } },
+      });
+      const remainingDaily = Math.max(0, dailyMax - todayApplied);
+
+      const applyList: typeof readyJobs = [];
+      for (const job of readyJobs) {
+        // Check excluded companies
+        if (excluded.length > 0 && excluded.includes(job.company.toLowerCase().trim())) {
+          await prisma.scoutJob.update({ where: { id: job.id }, data: { status: 'SKIPPED' } }).catch(() => {});
+          smartAutoSkipped++;
+          continue;
+        }
+
+        // Check cold email preference — if not allowed, skip jobs that would only route via cold email
+        if (!allowCold && !job.jobUrl) {
+          await prisma.scoutJob.update({ where: { id: job.id }, data: { status: 'SKIPPED' } }).catch(() => {});
+          smartAutoSkipped++;
+          continue;
+        }
+
+        // Check match score threshold — below threshold goes to review queue
+        const score = job.matchScore ?? 0;
+        if (score < minScore) {
+          await prisma.scoutJob.update({ where: { id: job.id }, data: { status: 'READY' } }).catch(() => {});
+          smartAutoQueued++;
+          continue;
+        }
+
+        // Respect daily preference cap
+        if (applyList.length >= remainingDaily) {
+          await prisma.scoutJob.update({ where: { id: job.id }, data: { status: 'READY' } }).catch(() => {});
+          smartAutoQueued++;
+          continue;
+        }
+
+        applyList.push(job);
+      }
+
+      jobsToApply = applyList;
+
+      if (jobsToApply.length === 0) {
+        await prisma.autoApplyRun.update({
+          where: { id: run.id },
+          data: {
+            status: 'completed',
+            completedAt: new Date(),
+            jobsSkipped: smartAutoSkipped,
+            summary: `Smart auto-apply: ${smartAutoSkipped} skipped, ${smartAutoQueued} queued for review, 0 applied`,
+          },
+        });
+        return { runId: run.id, jobsApplied: 0, jobsSkipped: smartAutoSkipped + smartAutoQueued, creditsUsed: 0 };
+      }
+    }
+
     // Mark jobs as APPLYING
-    const jobIds = readyJobs.map(j => j.id);
+    const jobIds = jobsToApply.map(j => j.id);
     await prisma.scoutJob.updateMany({
       where: { id: { in: jobIds } },
       data: { status: 'APPLYING' },
     });
 
     // Convert ScoutJob records → JobForApplication format
-    const jobsForApplication: JobForApplication[] = readyJobs.map(sj => ({
+    const jobsForApplication: JobForApplication[] = jobsToApply.map(sj => ({
       id: sj.id,
       title: sj.title,
       company: sj.company,
@@ -1082,9 +1158,11 @@ export async function runIndependentArcher(
           completedAt: new Date(),
           jobsFound: readyJobs.length,
           jobsApplied: batchResult.applied,
-          jobsSkipped: batchResult.failed + batchResult.skipped,
+          jobsSkipped: batchResult.failed + batchResult.skipped + smartAutoSkipped,
           creditsUsed,
-          summary: `Archer applied to ${batchResult.applied} jobs (${batchResult.emailed} email, ${batchResult.queued} portal, ${batchResult.failed} failed)`,
+          summary: config.smartAutoEnabled
+            ? `Smart auto-apply: ${batchResult.applied} applied, ${smartAutoQueued} queued for review, ${smartAutoSkipped} excluded (${batchResult.failed} failed)`
+            : `Archer applied to ${batchResult.applied} jobs (${batchResult.emailed} email, ${batchResult.queued} portal, ${batchResult.failed} failed)`,
           details: JSON.parse(JSON.stringify({
             applied: batchResult.applied,
             emailed: batchResult.emailed,
@@ -1107,7 +1185,7 @@ export async function runIndependentArcher(
     return {
       runId: run.id,
       jobsApplied: batchResult.applied,
-      jobsSkipped: batchResult.failed + batchResult.skipped,
+      jobsSkipped: batchResult.failed + batchResult.skipped + smartAutoSkipped + smartAutoQueued,
       creditsUsed,
     };
   } catch (err) {

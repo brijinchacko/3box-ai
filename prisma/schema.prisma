@@ -124,6 +124,7 @@ model User {
   chatMessages       AgentChatMessage[]
   searchProfiles     SearchProfile[]
   emailConnections   UserEmailConnection[]
+  autoApplyDigests   AutoApplyDigest[]
 
   @@index([email])
   @@index([referralCode])
@@ -300,6 +301,7 @@ enum EmailType {
   SUBSCRIPTION_CANCELED
   PAYMENT_FAILED
   ACCOUNT_ACTIVITY
+  AUTO_APPLY_DIGEST
 }
 
 model EmailLog {
@@ -616,8 +618,36 @@ model AutoApplyConfig {
   archerLastRunAt     DateTime?
   archerMaxPerRun     Int       @default(10)
 
+  // ── Smart Auto-Apply Settings ──
+  autoApplyEnabled    Boolean   @default(false)
+  autoApplyMinScore   Int       @default(80)
+  excludedCompanies   String[]  @default([])
+  allowColdEmail      Boolean   @default(true)
+  maxDailyPreference  Int?
+  notifyOnApply       Boolean   @default(true)
+  notifyDigestTime    String?   @default("09:00")  // HH:MM for daily digest
+  schedulePreset      String?   @default("balanced") // aggressive | balanced | relaxed
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+}
+
+model AutoApplyDigest {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime @default(now())
+  jobsScanned     Int      @default(0)
+  jobsApplied     Int      @default(0)
+  jobsQueued      Int      @default(0)   // Sent to review queue (below threshold)
+  jobsSkipped     Int      @default(0)   // Excluded companies, cold email blocked, etc.
+  topMatches      Json?                  // Top job matches summary
+  viewed          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, viewed])
+  @@index([date])
 }
 
 model AutoApplyRun {

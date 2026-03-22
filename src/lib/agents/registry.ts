@@ -1,6 +1,6 @@
 export type AgentId = 'scout' | 'archer' | 'forge' | 'atlas' | 'sage' | 'sentinel';
 
-export type AutomationMode = 'copilot' | 'autopilot' | 'full-agent';
+export type AutomationMode = 'copilot' | 'autopilot' | 'full-agent' | 'smart-auto';
 
 export interface AutomationModeDefinition {
   id: AutomationMode;
@@ -35,6 +35,14 @@ export const AUTOMATION_MODES: Record<AutomationMode, AutomationModeDefinition> 
     description: 'Agents handle everything end-to-end. Search, apply, follow up — zero intervention needed.',
     icon: 'BrainCircuit',
     color: 'text-neon-green',
+  },
+  'smart-auto': {
+    id: 'smart-auto',
+    name: 'Smart Auto',
+    label: 'Score-Based',
+    description: 'All agents run automatically. Archer auto-applies to high-scoring jobs and queues lower-scoring ones for your review.',
+    icon: 'Target',
+    color: 'text-purple-400',
   },
 };
 

@@ -101,7 +101,7 @@ export interface AgentContext {
     experienceLevel: string;
     location: string;
   };
-  automationMode: 'copilot' | 'autopilot' | 'full-agent';
+  automationMode: 'copilot' | 'autopilot' | 'full-agent' | 'smart-auto';
   // Shared data written by each agent
   discoveredJobs: DiscoveredJobSummary[];
   optimizedResumes: ResumeVariantSummary[];

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import OvernightActivity from '@/components/dashboard/OvernightActivity';
 
 /* ── Agent icons for activity feed ── */
 import { Shield, BookOpen, Compass, Brain, FileEdit } from 'lucide-react';
@@ -213,6 +214,9 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
           Here&apos;s your job search pipeline at a glance.
         </p>
       </div>
+
+      {/* ═══ Overnight Activity Card ═══ */}
+      <OvernightActivity />
 
       {/* ═══ SECTION 1: Pipeline Visualization ═══ */}
       <PipelineVisualization statuses={statuses} />

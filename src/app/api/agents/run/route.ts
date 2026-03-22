@@ -69,9 +69,9 @@ export async function POST(request: NextRequest) {
     let automationMode: AutomationMode = 'autopilot';
     try {
       const body = await request.json().catch(() => ({}));
-      if (body?.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(body.automationMode)) {
+      if (body?.automationMode && ['copilot', 'autopilot', 'full-agent', 'smart-auto'].includes(body.automationMode)) {
         automationMode = body.automationMode as AutomationMode;
-      } else if (autoConfig.automationMode && ['copilot', 'autopilot', 'full-agent'].includes(autoConfig.automationMode)) {
+      } else if (autoConfig.automationMode && ['copilot', 'autopilot', 'full-agent', 'smart-auto'].includes(autoConfig.automationMode)) {
         automationMode = autoConfig.automationMode as AutomationMode;
       }
     } catch {

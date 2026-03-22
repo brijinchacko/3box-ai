@@ -11,6 +11,7 @@
 
 import { aiChatWithFallback } from '@/lib/ai/openrouter';
 import { uniquifyCoverLetter } from './humanBehavior';
+import { getRedisConnection } from '@/lib/queue/connection';
 
 // ─── Types ──────────────────────────────────────────
 
@@ -40,31 +41,68 @@ export interface CoverLetterResult {
   generationTimeMs: number;
 }
 
-// ─── Cache ──────────────────────────────────────────
+// ─── Cache (Redis with in-memory fallback) ──────────
 
-const coverLetterCache = new Map<string, { letter: string; tier: CoverLetterTier; timestamp: number }>();
-const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const REDIS_PREFIX = 'cover_letter:';
+const CACHE_TTL_S = 24 * 60 * 60; // 24 hours (up from 12h in-memory)
+
+// In-memory fallback when Redis is unavailable
+const memoryCache = new Map<string, { letter: string; tier: CoverLetterTier; timestamp: number }>();
+const MEMORY_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours for memory
 
 function getCacheKey(jobId: string, resumeName: string): string {
   return `${jobId}:${resumeName.toLowerCase().replace(/\s+/g, '')}`;
 }
 
-function getCached(key: string): { letter: string; tier: CoverLetterTier } | null {
-  const entry = coverLetterCache.get(key);
+async function getCached(key: string): Promise<{ letter: string; tier: CoverLetterTier } | null> {
+  // Try Redis first
+  try {
+    const redis = getRedisConnection();
+    if (redis) {
+      const data = await redis.get(`${REDIS_PREFIX}${key}`);
+      if (data) {
+        const parsed = JSON.parse(data);
+        return { letter: parsed.letter, tier: parsed.tier };
+      }
+      return null;
+    }
+  } catch (err) {
+    console.warn('[CoverLetter] Redis get failed, falling back to memory:', (err as Error).message);
+  }
+
+  // Fallback to memory
+  const entry = memoryCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    coverLetterCache.delete(key);
+  if (Date.now() - entry.timestamp > MEMORY_TTL_MS) {
+    memoryCache.delete(key);
     return null;
   }
   return { letter: entry.letter, tier: entry.tier };
 }
 
-function setCache(key: string, letter: string, tier: CoverLetterTier): void {
-  if (coverLetterCache.size > 2000) {
-    const oldest = coverLetterCache.keys().next().value;
-    if (oldest) coverLetterCache.delete(oldest);
+async function setCache(key: string, letter: string, tier: CoverLetterTier): Promise<void> {
+  // Try Redis first
+  try {
+    const redis = getRedisConnection();
+    if (redis) {
+      await redis.set(
+        `${REDIS_PREFIX}${key}`,
+        JSON.stringify({ letter, tier }),
+        'EX',
+        CACHE_TTL_S,
+      );
+      return;
+    }
+  } catch (err) {
+    console.warn('[CoverLetter] Redis set failed, falling back to memory:', (err as Error).message);
   }
-  coverLetterCache.set(key, { letter, tier, timestamp: Date.now() });
+
+  // Fallback to memory
+  if (memoryCache.size > 2000) {
+    const oldest = memoryCache.keys().next().value;
+    if (oldest) memoryCache.delete(oldest);
+  }
+  memoryCache.set(key, { letter, tier, timestamp: Date.now() });
 }
 
 // ─── Cover Letter Generation ────────────────────────
@@ -195,15 +233,15 @@ export async function generateCoverLettersBatch(
         const startTime = Date.now();
         const cacheKey = getCacheKey(job.id, resume.name);
 
-        // Check cache first
-        const cached = getCached(cacheKey);
-        if (cached) {
+        // Check cache first (Redis or in-memory)
+        const cachedEntry = await getCached(cacheKey);
+        if (cachedEntry) {
           // Uniquify even cached letters
-          const uniqueLetter = uniquifyCoverLetter(cached.letter, job.id);
+          const uniqueLetter = uniquifyCoverLetter(cachedEntry.letter, job.id);
           return {
             jobId: job.id,
             coverLetter: uniqueLetter,
-            tier: cached.tier,
+            tier: cachedEntry.tier,
             cached: true,
             generationTimeMs: Date.now() - startTime,
           };
@@ -226,9 +264,9 @@ export async function generateCoverLettersBatch(
             break;
         }
 
-        // Uniquify and cache
+        // Uniquify and cache (Redis or in-memory)
         coverLetter = uniquifyCoverLetter(coverLetter, job.id);
-        setCache(cacheKey, coverLetter, tier);
+        await setCache(cacheKey, coverLetter, tier);
 
         return {
           jobId: job.id,

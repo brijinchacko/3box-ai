@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
           { forgeEnabled: true },
           { archerEnabled: true },
           { enabled: true }, // Legacy: full pipeline users
+          { autoApplyEnabled: true }, // Smart auto-apply users
         ],
       },
       include: {
@@ -107,6 +108,17 @@ export async function GET(request: NextRequest) {
 
       const plan = normalizePlan(config.user.plan);
       const hasPerAgentConfig = config.scoutEnabled || config.forgeEnabled || config.archerEnabled;
+      const isSmartAuto = config.autoApplyEnabled;
+
+      // ── Determine smart-auto interval from schedulePreset ──
+      let smartAutoIntervalHours = 12; // balanced default
+      if (isSmartAuto && config.schedulePreset) {
+        switch (config.schedulePreset) {
+          case 'aggressive': smartAutoIntervalHours = 6; break;
+          case 'balanced': smartAutoIntervalHours = 12; break;
+          case 'relaxed': smartAutoIntervalHours = 24; break;
+        }
+      }
 
       // ── Legacy path: old-style scheduleTime pipeline ──
       if (config.enabled && !hasPerAgentConfig) {
@@ -183,11 +195,75 @@ export async function GET(request: NextRequest) {
               resumeId: config.resumeId || undefined,
               forgeEnabled: config.forgeEnabled,
               forgeMode: config.forgeMode,
+              // Pass smart-auto config if enabled
+              smartAutoEnabled: isSmartAuto,
+              autoApplyMinScore: config.autoApplyMinScore,
+              excludedCompanies: config.excludedCompanies || [],
+              allowColdEmail: config.allowColdEmail,
+              maxDailyPreference: config.maxDailyPreference ?? undefined,
             });
-            results.push({ userId: config.userId, agent: 'archer', status: 'completed', jobsApplied: result.jobsApplied });
+            results.push({ userId: config.userId, agent: 'archer', status: 'completed', jobsApplied: result.jobsApplied, jobsSkipped: result.jobsSkipped });
           } catch (err: any) {
             results.push({ userId: config.userId, agent: 'archer', status: 'failed', error: err.message });
           }
+        }
+      }
+
+      // ── Smart Auto-Apply Standalone Dispatch ──
+      // For users who have autoApplyEnabled but not per-agent archerEnabled
+      if (isSmartAuto && !config.archerEnabled && shouldRunAgent(config.archerLastRunAt, smartAutoIntervalHours, now)) {
+        const appCapCheck = await checkApplicationCap(config.userId);
+        if (appCapCheck.allowed) {
+          try {
+            const result = await runIndependentArcher(config.userId, {
+              maxPerRun: config.maxDailyPreference || 20,
+              resumeId: config.resumeId || undefined,
+              forgeEnabled: config.forgeEnabled,
+              forgeMode: config.forgeMode,
+              smartAutoEnabled: true,
+              autoApplyMinScore: config.autoApplyMinScore,
+              excludedCompanies: config.excludedCompanies || [],
+              allowColdEmail: config.allowColdEmail,
+              maxDailyPreference: config.maxDailyPreference ?? undefined,
+            });
+            results.push({ userId: config.userId, agent: 'smart-auto', status: 'completed', jobsApplied: result.jobsApplied, jobsSkipped: result.jobsSkipped });
+          } catch (err: any) {
+            results.push({ userId: config.userId, agent: 'smart-auto', status: 'failed', error: err.message });
+          }
+        }
+      }
+
+      // ── Create AutoApplyDigest for smart-auto users ──
+      if (isSmartAuto) {
+        try {
+          const userAgentResults = results.filter(r => r.userId === config.userId);
+          const totalApplied = userAgentResults.reduce((sum, r) => sum + (r.jobsApplied || 0), 0);
+          const totalSkipped = userAgentResults.reduce((sum, r) => sum + (r.jobsSkipped || 0), 0);
+          const totalScanned = userAgentResults.reduce((sum, r) => sum + (r.jobsNew || 0), 0);
+
+          // Only create digest if something happened
+          if (totalApplied > 0 || totalSkipped > 0 || totalScanned > 0) {
+            // Fetch top matches for digest
+            const digestMatches = await prisma.scoutJob.findMany({
+              where: { userId: config.userId, status: { in: ['APPLIED', 'READY'] } },
+              orderBy: { matchScore: 'desc' },
+              take: 5,
+              select: { title: true, company: true, matchScore: true, status: true },
+            });
+
+            await prisma.autoApplyDigest.create({
+              data: {
+                userId: config.userId,
+                jobsScanned: totalScanned,
+                jobsApplied: totalApplied,
+                jobsQueued: totalSkipped, // Jobs sent to review queue
+                jobsSkipped: totalSkipped,
+                topMatches: digestMatches as any,
+              },
+            });
+          }
+        } catch (digestErr) {
+          console.error(`[Cron] Failed to create digest for ${config.userId}:`, digestErr);
         }
       }
 

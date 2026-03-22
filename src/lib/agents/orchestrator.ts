@@ -68,6 +68,9 @@ function shouldAutoRun(
       return ['scout', 'forge', 'sentinel'].includes(agentId);
     case 'full-agent':
       return true;
+    case 'smart-auto':
+      // All agents run, but Archer has a threshold gate (handled in Archer itself)
+      return true;
     default:
       return false;
   }

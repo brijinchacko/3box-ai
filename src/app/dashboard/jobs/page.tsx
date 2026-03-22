@@ -480,6 +480,145 @@ function JobDetailOverlay({
   );
 }
 
+// ── Review Queue — Jobs needing user review ───────────────────────────────
+
+function ReviewQueue() {
+  const [reviewJobs, setReviewJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actioning, setActioning] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchReviewJobs() {
+      try {
+        const res = await fetch('/api/agents/scout-jobs?status=READY&belowThreshold=true&limit=10');
+        if (res.ok) {
+          const data = await res.json();
+          setReviewJobs(data.jobs || []);
+        }
+      } catch {}
+      setLoading(false);
+    }
+    fetchReviewJobs();
+  }, []);
+
+  const handleApply = async (jobId: string) => {
+    setActioning(jobId);
+    try {
+      await fetch('/api/agents/quick-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId }),
+      });
+      setReviewJobs((prev) => prev.filter((j) => j.id !== jobId));
+    } catch {}
+    setActioning(null);
+  };
+
+  const handleSkip = async (jobId: string) => {
+    setActioning(jobId);
+    try {
+      await fetch(`/api/agents/scout-jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'SKIPPED' }),
+      });
+      setReviewJobs((prev) => prev.filter((j) => j.id !== jobId));
+    } catch {}
+    setActioning(null);
+  };
+
+  if (loading || reviewJobs.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6"
+    >
+      <div className="bg-amber-50 dark:bg-amber-500/5 rounded-xl border border-amber-200 dark:border-amber-500/20 overflow-hidden">
+        <div className="flex items-center gap-2.5 px-5 pt-4 pb-3">
+          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            Needs Your Review
+          </h3>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium">
+            {reviewJobs.length}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 px-5 pb-3">
+          These jobs scored below your auto-apply threshold and need a manual decision.
+        </p>
+        <div className="px-5 pb-4 space-y-2">
+          <AnimatePresence>
+            {reviewJobs.map((job) => (
+              <motion.div
+                key={job.id}
+                layout
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center justify-between gap-3 bg-white dark:bg-gray-900/60 rounded-lg border border-gray-200 dark:border-gray-800 px-4 py-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {job.title}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {job.company}
+                    </span>
+                    {job.missingSkills && job.missingSkills.length > 0 && (
+                      <span className="text-[10px] text-red-500 dark:text-red-400 flex items-center gap-0.5">
+                        <AlertTriangle className="w-3 h-3" />
+                        {job.missingSkills.length} missing skill{job.missingSkills.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {typeof job.matchScore === 'number' && (
+                    <span
+                      className={cn(
+                        'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
+                        job.matchScore >= 70
+                          ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20'
+                          : job.matchScore >= 50
+                            ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                            : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20',
+                      )}
+                    >
+                      {job.matchScore}%
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleApply(job.id)}
+                    disabled={actioning === job.id}
+                    className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+                  >
+                    {actioning === job.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      'Apply'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleSkip(job.id)}
+                    disabled={actioning === job.id}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Autopilot Mode — Job Search with Saved Search Profiles ────────────────
 
 
@@ -579,6 +718,9 @@ function AutopilotJobSearch() {
           New Search Profile
         </button>
       </div>
+
+      {/* Review Queue — jobs below auto-apply threshold */}
+      <ReviewQueue />
 
       {/* Search Profile Wizard Modal */}
       {showWizard && (

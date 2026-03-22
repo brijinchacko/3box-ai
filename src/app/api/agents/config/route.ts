@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest) {
 
     const data: any = {};
     if (typeof enabled === 'boolean') data.enabled = enabled;
-    if (typeof automationMode === 'string' && ['copilot', 'autopilot', 'full-agent'].includes(automationMode)) {
+    if (typeof automationMode === 'string' && ['copilot', 'autopilot', 'full-agent', 'smart-auto'].includes(automationMode)) {
       data.automationMode = automationMode;
     }
     if (resumeId !== undefined) data.resumeId = resumeId;
