@@ -261,11 +261,12 @@ export default function LandingPageClient() {
           >
             <Chrome className="w-12 h-12 text-neon-blue mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-3">
-              Install the Chrome Extension
+              Chrome Extension — Coming Soon
             </h3>
             <p className="text-white/40 max-w-md mx-auto mb-6 text-sm leading-relaxed">
               Auto-apply to jobs directly on LinkedIn, Indeed, Naukri, Glassdoor, Workday, and iCIMS.
               The extension auto-fills forms with your resume and syncs everything back to your dashboard.
+              Currently under review — join the waitlist to get early access.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a
