@@ -361,7 +361,7 @@ export default function LearningPathPage() {
   const [moduleProgress, setModuleProgress] = useState<Record<string, number>>({});
   const [gapReports, setGapReports] = useState<ApplicationGapReport[]>([]);
 
-  // Load saved learning path, progress, and application gap reports on mount
+  // Load saved learning path, progress, fetch profile targetRole, and gap reports on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -376,6 +376,30 @@ export default function LearningPathPage() {
     } catch (e) {
       console.error('Failed to load saved learning path:', e);
     }
+
+    // Fetch user profile to get correct targetRole (overrides localStorage)
+    fetch('/api/user/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(profile => {
+        if (profile?.targetRole) {
+          localStorage.setItem(ROLE_STORAGE_KEY, profile.targetRole);
+          // If we have a saved learning path for a DIFFERENT role, show a re-gen prompt
+          const savedPath = localStorage.getItem(STORAGE_KEY);
+          if (savedPath) {
+            try {
+              const parsed = JSON.parse(savedPath);
+              if (parsed.targetRole && parsed.targetRole !== profile.targetRole) {
+                // Role changed since path was generated — clear old path
+                setLearningPath(null);
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(PROGRESS_KEY);
+                setModuleProgress({});
+              }
+            } catch {}
+          }
+        }
+      })
+      .catch(() => {});
 
     // Fetch application-based gap analysis
     fetch('/api/agents/skill-gaps')

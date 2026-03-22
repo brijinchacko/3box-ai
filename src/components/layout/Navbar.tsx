@@ -190,7 +190,7 @@ function ToolsMegaMenu({ onClose }: { onClose: () => void }) {
               </span>
             </div>
             <Link
-              href="/resume"
+              href="/tools"
               onClick={onClose}
               className="text-xs font-medium text-neon-green hover:text-white transition-colors flex items-center gap-1"
             >
@@ -348,7 +348,7 @@ export default function Navbar() {
               className="relative"
             >
               <Link
-                href="/resume"
+                href="/tools"
                 className={`btn-ghost text-sm flex items-center gap-1 ${
                   pathname === '/resume' || activeMenu === 'tools' ? 'text-white' : ''
                 }`}
@@ -510,7 +510,7 @@ export default function Navbar() {
                   );
                 })}
                 <Link
-                  href="/resume"
+                  href="/tools"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-1 px-3 py-2 text-xs text-neon-green hover:text-white transition-colors"
                 >

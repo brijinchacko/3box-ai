@@ -11,7 +11,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
 export const metadata: Metadata = {
   title: '3BOX AI vs Jobscan — The Better Jobscan Alternative (2026)',
   description:
-    'Looking for a Jobscan alternative? 3BOX AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one at $12/mo vs Jobscan $49.95/mo. Compare features side by side.',
+    'Looking for a Jobscan alternative? 3BOX AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one at $29/mo vs Jobscan $49.95/mo. Compare features side by side.',
   keywords:
     'Jobscan alternative, 3BOX AI vs Jobscan, Jobscan competitor, best ATS resume checker, AI resume builder vs Jobscan, Jobscan pricing alternative, cheaper Jobscan alternative 2026',
   alternates: {
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/compare/jobscan`,
     title: '3BOX AI vs Jobscan — The Better Jobscan Alternative',
     description:
-      'All-in-one AI career platform at $12/mo vs Jobscan $49.95/mo. Resume builder, ATS checker, career coaching, and more.',
+      'All-in-one AI career platform at $29/mo vs Jobscan $49.95/mo. Resume builder, ATS checker, career coaching, and more.',
     siteName: '3BOX AI',
     images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: '3BOX AI vs Jobscan — The Better Alternative',
-    description: 'All-in-one AI career platform at $12/mo vs Jobscan $49.95/mo.',
+    description: 'All-in-one AI career platform at $29/mo vs Jobscan $49.95/mo.',
     creator: '@3boxai',
   },
 };
@@ -42,7 +42,7 @@ const data: ComparisonData = {
     'Jobscan focuses narrowly on ATS keyword matching. 3BOX AI gives you the complete career toolkit — resume building, career coaching, skills assessment, salary insights, and job matching — at a fraction of the price.',
   verdict: '3BOX AI wins on value, features, and price.',
   verdictDetail:
-    'While Jobscan is a solid ATS keyword scanner, it only covers one part of the job search. 3BOX AI provides 8+ career tools in a single platform at $12/mo compared to Jobscan\'s $49.95/mo for just resume scanning and LinkedIn optimization.',
+    'While Jobscan is a solid ATS keyword scanner, it only covers one part of the job search. 3BOX AI provides 8+ career tools in a single platform at $29/mo compared to Jobscan\'s $49.95/mo for just resume scanning and LinkedIn optimization.',
   features: [
     { feature: 'AI Resume Builder', boxAi: true, competitor: false },
     { feature: 'ATS Resume Checker', boxAi: true, competitor: true },
@@ -57,9 +57,9 @@ const data: ComparisonData = {
     { feature: 'Job Tracking', boxAi: true, competitor: true },
     { feature: 'Keyword Optimization', boxAi: true, competitor: true },
   ],
-  boxAiPrice: '$12/mo',
+  boxAiPrice: '$29/mo',
   competitorPrice: '$49.95/mo',
-  boxAiEntryPlan: 'Starter Duo — $12/mo with 100 AI credits, 7-day money-back guarantee',
+  boxAiEntryPlan: 'Pro — $29/mo with all 6 AI agents and unlimited operations',
   competitorEntryPlan: 'Limited — 5 scans/mo',
   boxAiRating: '4.8',
   competitorRating: '4.4',
@@ -70,7 +70,7 @@ const data: ComparisonData = {
       icon: 'dollar',
       title: '76% Lower Cost',
       description:
-        'Get 8+ career tools at $12/mo. Jobscan charges $49.95/mo for just ATS scanning and keyword optimization — a single tool.',
+        'Get 8+ career tools at $29/mo. Jobscan charges $49.95/mo for just ATS scanning and keyword optimization — a single tool.',
     },
     {
       icon: 'zap',
@@ -95,7 +95,7 @@ const data: ComparisonData = {
     {
       question: 'Is 3BOX AI a good Jobscan alternative?',
       answer:
-        'Yes. 3BOX AI offers everything Jobscan does (ATS checking, keyword optimization) plus a full AI resume builder, career coaching, salary estimator, skills assessment, portfolio builder, and job matching — all at $12/mo vs Jobscan\'s $49.95/mo.',
+        'Yes. 3BOX AI offers everything Jobscan does (ATS checking, keyword optimization) plus a full AI resume builder, career coaching, salary estimator, skills assessment, portfolio builder, and job matching — all at $29/mo vs Jobscan\'s $49.95/mo.',
     },
     {
       question: 'Does 3BOX AI have ATS scanning like Jobscan?',

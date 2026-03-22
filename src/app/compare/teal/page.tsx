@@ -57,9 +57,9 @@ const data: ComparisonData = {
     { feature: 'Chrome Extension', boxAi: 'Coming Soon', competitor: true },
     { feature: 'LinkedIn Integration', boxAi: true, competitor: true },
   ],
-  boxAiPrice: '$12/mo',
+  boxAiPrice: '$29/mo',
   competitorPrice: '$29/mo (Pro+)',
-  boxAiEntryPlan: 'Starter Duo — $12/mo with 100 AI credits, 7-day money-back guarantee',
+  boxAiEntryPlan: 'Pro — $29/mo with all 6 AI agents and unlimited operations',
   competitorEntryPlan: 'Yes — limited resume builder, job tracker',
   boxAiRating: '4.8',
   competitorRating: '4.5',
@@ -105,7 +105,7 @@ const data: ComparisonData = {
     {
       question: 'How does 3BOX AI compare to Teal on pricing?',
       answer:
-        '3BOX AI Pro starts at $12/mo with access to all career tools. Teal Pro+ costs $29/mo and still lacks salary tools, skills assessment, portfolio builder, and career coaching. 3BOX AI offers significantly more value.',
+        '3BOX AI Pro starts at $29/mo with access to all career tools. Teal Pro+ costs $29/mo and still lacks salary tools, skills assessment, portfolio builder, and career coaching. 3BOX AI offers significantly more value.',
     },
     {
       question: 'Can I import my Teal data to 3BOX AI?',

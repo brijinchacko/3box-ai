@@ -42,7 +42,7 @@ const data: ComparisonData = {
     'Rezi is a focused AI resume builder. 3BOX AI takes you beyond the resume with career coaching, salary insights, skills assessment, job matching, and a portfolio builder — the complete career toolkit.',
   verdict: '3BOX AI is the full career platform that Rezi is not.',
   verdictDetail:
-    'Rezi builds strong resumes with its AI writer and ATS optimization. But your career is more than a resume. 3BOX AI adds career coaching, salary estimator, skills assessment, portfolio builder, and AI job matching at $12/mo vs Rezi\'s $29/mo.',
+    'Rezi builds strong resumes with its AI writer and ATS optimization. But your career is more than a resume. 3BOX AI adds career coaching, salary estimator, skills assessment, portfolio builder, and AI job matching at $29/mo vs Rezi\'s $29/mo.',
   features: [
     { feature: 'AI Resume Builder', boxAi: true, competitor: true },
     { feature: 'ATS Resume Checker', boxAi: true, competitor: true },
@@ -57,9 +57,9 @@ const data: ComparisonData = {
     { feature: 'Multiple Templates', boxAi: true, competitor: true },
     { feature: 'PDF Export', boxAi: true, competitor: true },
   ],
-  boxAiPrice: '$12/mo',
+  boxAiPrice: '$29/mo',
   competitorPrice: '$29/mo',
-  boxAiEntryPlan: 'Starter Duo — $12/mo with 100 AI credits, 7-day money-back guarantee',
+  boxAiEntryPlan: 'Pro — $29/mo with all 6 AI agents and unlimited operations',
   competitorEntryPlan: 'Yes — limited resume builder (1 resume)',
   boxAiRating: '4.8',
   competitorRating: '4.6',
@@ -74,9 +74,9 @@ const data: ComparisonData = {
     },
     {
       icon: 'dollar',
-      title: 'Better Value at $12/mo',
+      title: 'Better Value at $29/mo',
       description:
-        '3BOX AI Pro costs $12/mo for 8+ career tools. Rezi charges $29/mo for a resume builder and cover letter tool — significantly less value per dollar.',
+        '3BOX AI Pro costs $29/mo for 8+ career tools. Rezi charges $29/mo for a resume builder and cover letter tool — significantly less value per dollar.',
     },
     {
       icon: 'trophy',
@@ -105,7 +105,7 @@ const data: ComparisonData = {
     {
       question: 'Is 3BOX AI cheaper than Rezi?',
       answer:
-        'Yes. 3BOX AI Pro is $12/mo for all features including career coaching, salary tools, and job matching. Rezi Pro is $29/mo for just resume and cover letter building.',
+        'Yes. 3BOX AI Pro is $29/mo for all features including career coaching, salary tools, and job matching. Rezi Pro is $29/mo for just resume and cover letter building.',
     },
     {
       question: 'Does 3BOX AI have ATS optimization like Rezi?',

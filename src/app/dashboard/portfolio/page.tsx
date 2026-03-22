@@ -890,20 +890,22 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid sm:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Projects', value: projects.length, color: 'text-neon-blue' },
-          { label: 'Verified', value: verifiedCount, color: 'text-neon-green' },
-          { label: 'Avg Score', value: avgScore > 0 ? `${avgScore}` : '--', color: 'text-neon-purple' },
-          { label: 'Total Skills', value: totalSkills, color: 'text-yellow-400' },
-        ].map((s) => (
-          <div key={s.label} className="card text-center">
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-white/40">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      {/* Stats — only show when user has projects */}
+      {projects.length > 0 && (
+        <div className="grid sm:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Projects', value: projects.length, color: 'text-neon-blue' },
+            { label: 'Verified', value: verifiedCount, color: 'text-neon-green' },
+            { label: 'Avg Score', value: avgScore > 0 ? `${avgScore}` : '--', color: 'text-neon-purple' },
+            { label: 'Total Skills', value: totalSkills, color: 'text-yellow-400' },
+          ].map((s) => (
+            <div key={s.label} className="card text-center">
+              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+              <div className="text-xs text-white/40">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty State for Builder */}
       {projects.length === 0 && !showAddForm && (

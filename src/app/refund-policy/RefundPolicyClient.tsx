@@ -15,7 +15,7 @@ const sections = [
     title: '7-Day Money-Back Guarantee',
     color: 'text-neon-green',
     content: [
-      'All paid plans (Starter Duo, Job Hunter Pack, Full Squad) purchased directly through 3BOX AI include a 7-day money-back guarantee from the date of initial purchase.',
+      'All paid plans (Pro and Max) purchased directly through 3BOX AI include a 7-day money-back guarantee from the date of initial purchase.',
       'If you are not satisfied with the platform for any reason, you may request a full refund within 7 calendar days of your first payment.',
       'This guarantee applies to the initial subscription purchase only. Renewals (monthly or annual) are not covered under this guarantee.',
     ],
@@ -34,7 +34,7 @@ const sections = [
       },
       {
         icon: Coins,
-        text: 'More than 50% of your monthly AI credit allocation has been consumed.',
+        text: 'More than 50% of your weekly application limit has been used.',
       },
       {
         icon: CalendarDays,
@@ -42,7 +42,7 @@ const sections = [
       },
       {
         icon: CreditCard,
-        text: 'Any add-on credit packs have been purchased. Credit pack purchases are non-refundable.',
+        text: 'The account has been used extensively beyond the initial trial period.',
       },
       {
         icon: XCircle,
@@ -59,7 +59,7 @@ const sections = [
     title: 'How to Request a Refund',
     color: 'text-neon-blue',
     content: [
-      'To request a refund, send an email to nishinth.m@wartens.com with the following information:',
+      'To request a refund, send an email to support@oforo.ai with the following information:',
     ],
     steps: [
       'Your registered account email address.',
@@ -80,12 +80,12 @@ const sections = [
   },
   {
     icon: Coins,
-    title: 'Credit Packs & Add-Ons',
+    title: 'Application Limits',
     color: 'text-amber-400',
     content: [
-      'One-time AI credit pack purchases (100, 500, or 1,000 credits) are non-refundable.',
-      'Unlimited Daily Applications add-on purchases are non-refundable.',
-      'Credits do not roll over between billing periods and are non-transferable.',
+      'Application limits reset weekly for Free plans and daily for Pro/Max plans.',
+      'Unused applications do not roll over between periods.',
+      'All plans include unlimited AI operations (resume building, interview prep, career coaching).',
     ],
   },
   {
@@ -95,7 +95,7 @@ const sections = [
     content: [
       'All approved refunds are returned to the original payment method used during purchase.',
       'Depending on your bank or payment provider, it may take an additional 5-10 business days for the refund to appear in your account after processing.',
-      'If your original payment method is no longer available, contact nishinth.m@wartens.com for alternative arrangements.',
+      'If your original payment method is no longer available, contact support@oforo.ai for alternative arrangements.',
     ],
   },
 ];
@@ -156,7 +156,7 @@ export default function RefundPolicyClient() {
                   </li>
                   <li className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-neon-blue flex-shrink-0" />
-                    Email nishinth.m@wartens.com to request a refund
+                    Email support@oforo.ai to request a refund
                   </li>
                 </ul>
               </div>

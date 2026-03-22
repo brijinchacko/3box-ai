@@ -107,7 +107,7 @@ const pricing: Record<Competitor, string> = {
 };
 
 const ratings: Record<Competitor, { score: string; count: string }> = {
-  '3BOX AI': { score: '4.8', count: '2,847' },
+  '3BOX AI': { score: 'New', count: 'Be first to review' },
   Jobscan: { score: '4.4', count: '1,200+' },
   Teal: { score: '4.5', count: '900+' },
   Rezi: { score: '4.6', count: '500+' },
@@ -135,7 +135,7 @@ const faqs = [
   {
     question: 'Is there an affordable AI career platform that includes career coaching?',
     answer:
-      'Yes. 3BOX AI Free plan starts at $0 and includes AI resume building, skill assessments, and 100 AI credits per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
+      'Yes. 3BOX AI Free plan starts at $0 and includes AI resume building, skill assessments, and unlimited AI operations per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
   },
   {
     question: 'What makes 3BOX AI different from other AI resume builders?',
@@ -406,9 +406,9 @@ export default function CompareAllClient() {
                   'Unique skills assessment that evaluates your actual abilities, creates adaptive learning paths, and connects you to matching opportunities.',
               },
               {
-                title: 'Highest User Rating',
+                title: 'Most Comprehensive Platform',
                 description:
-                  'Rated 4.8/5 by 2,847 users — the highest rating among all competitors listed. Users love the comprehensive, integrated experience.',
+                  'The widest feature set of any AI career platform — combining resume builder, job search, applications, interview prep, and career coaching in one place.',
               },
             ].map((item, i) => (
               <motion.div

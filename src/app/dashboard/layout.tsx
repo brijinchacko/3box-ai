@@ -12,6 +12,9 @@ import FeatureLockedOverlay from '@/components/dashboard/shared/FeatureLockedOve
 import DashboardStatusBar from '@/components/dashboard/layout/DashboardStatusBar';
 import NextStepBanner from '@/components/dashboard/shared/NextStepBanner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import dynamic from 'next/dynamic';
+
+const FloatingCoach = dynamic(() => import('@/components/ai-coach/FloatingCoach'), { ssr: false });
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -115,6 +118,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </ErrorBoundary>
       </main>
+
+      {/* Cortex AI Coach — floating chat widget */}
+      <FloatingCoach />
 
       {/* Feature lock overlay for FREE users who exhausted their applications */}
       {isLocked && <FeatureLockedOverlay used={used} limit={limit} />}

@@ -709,23 +709,28 @@ function AutopilotJobSearch() {
                           >
                             Edit
                           </button>
+                          {/* Toggle on/off */}
                           <button
                             onClick={() => toggleProfileActive(profile.id, !profile.active)}
-                            className={cn(
-                              'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
-                              profile.active
-                                ? 'text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 hover:bg-amber-50 dark:hover:bg-amber-500/10'
-                                : 'text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/30 hover:bg-green-50 dark:hover:bg-green-500/10',
-                            )}
+                            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                            style={{ backgroundColor: profile.active ? '#22c55e' : '#374151' }}
+                            title={profile.active ? 'Pause search — your existing results are kept' : 'Resume search — start scanning for new jobs'}
                           >
-                            {profile.active ? 'Pause' : 'Resume'}
+                            <span className={cn(
+                              'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                              profile.active ? 'translate-x-6' : 'translate-x-1'
+                            )} />
                           </button>
                           <button
-                            onClick={() => stopProfile(profile.id)}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                            title="Stop and move to history"
+                            onClick={() => {
+                              if (confirm('Delete this search profile and all its results? This cannot be undone.')) {
+                                stopProfile(profile.id);
+                              }
+                            }}
+                            className="px-2 py-1.5 text-xs text-gray-400 hover:text-red-400 transition-colors"
+                            title="Delete this search profile"
                           >
-                            Stop
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
                       </div>

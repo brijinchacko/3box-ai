@@ -13,7 +13,7 @@ const sections = [
       { heading: 'Personal Information', text: 'Name, email address, phone number (optional), profile photo, career goals and target roles.' },
       { heading: 'Career Data', text: 'Resume content, portfolio projects, skill assessment responses, job preferences, application history, and AI agent interaction data.' },
       { heading: 'Usage Data', text: 'Pages visited, features used, time spent on platform, device information, IP address.' },
-      { heading: 'AI Agent Data', text: 'Interactions with 7 AI agents (Scout, Forge, Archer, Atlas, Sage, Sentinel, Cortex), generated content, and job application activity (PII redacted from logs).' },
+      { heading: 'AI Agent Data', text: 'Interactions with 6 AI agents (Scout, Forge, Archer, Atlas, Sage, Sentinel, Cortex), generated content, and job application activity (PII redacted from logs).' },
     ],
   },
   {
@@ -32,7 +32,7 @@ const sections = [
     icon: Brain,
     title: 'AI Processing',
     content: [
-      { text: 'Your data is processed by AI models (via OpenRouter) to power your 7 AI agents including job searching, resume optimization, application sending, and interview preparation.' },
+      { text: 'Your data is processed by AI models (via OpenRouter) to power your 6 AI agents including job searching, resume optimization, application sending, and interview preparation.' },
       { text: 'PII is automatically redacted from AI interaction logs before storage.' },
       { text: 'You can opt out of AI processing at any time in Settings.' },
       { text: 'AI-generated content (resumes, cover letters, career plans) belongs to you.' },

@@ -205,13 +205,13 @@ function SetupWarnings({
   if (!status.hasResume) {
     warnings.push({
       icon: <Upload className="w-3.5 h-3.5 text-amber-500" />,
-      text: 'Upload your resume to enable auto-apply',
+      text: 'Upload your resume to start applying',
       action: { label: 'Upload', href: '/dashboard/resume' },
     });
   } else if (!status.resumeVerified) {
     warnings.push({
       icon: <FileText className="w-3.5 h-3.5 text-amber-500" />,
-      text: 'Verify your resume before auto-apply can start',
+      text: 'Verify your resume before applying to jobs',
       action: { label: 'Verify', href: '/dashboard/resume' },
     });
   }
@@ -227,7 +227,7 @@ function SetupWarnings({
   if (!status.hasConnectedEmail) {
     warnings.push({
       icon: <Mail className="w-3.5 h-3.5 text-amber-500" />,
-      text: 'Connect your email — apps go from a generic address without it',
+      text: 'Connect your email — applications will be sent from a generic address without it',
       action: { label: 'Connect', href: '/dashboard/settings' },
     });
   }
@@ -243,7 +243,7 @@ function SetupWarnings({
   if (status.activeCount === 0 && status.profileCount > 0) {
     warnings.push({
       icon: <Pause className="w-3.5 h-3.5 text-gray-400" />,
-      text: 'All pipelines are paused — resume one to start auto-applying',
+      text: 'All search pipelines are paused — resume one to find new jobs',
     });
   }
 
@@ -457,11 +457,11 @@ export default function DashboardStatusBar() {
   const barColor = isLocked ? 'bg-red-500' : percent >= 90 ? 'bg-red-500' : percent >= 60 ? 'bg-amber-500' : 'bg-blue-500';
   const periodLabel = limitType === 'weekly' ? 'this week' : 'today';
 
-  // Auto-apply status — only Active when resume verified + pipelines running
+  // Status — show honest pipeline state (NOT "Active" since auto-apply isn't built yet)
   const statusDot = status.dailyLimitReached
     ? 'bg-red-500'
     : isReady
-      ? 'bg-green-500 animate-pulse'
+      ? 'bg-blue-500'
       : criticalIssues > 0
         ? 'bg-amber-500'
         : status.activeCount > 0
@@ -471,7 +471,7 @@ export default function DashboardStatusBar() {
   const statusLabel = status.dailyLimitReached
     ? 'Limit Reached'
     : isReady
-      ? 'Active'
+      ? 'Ready'
       : criticalIssues > 0
         ? 'Needs Setup'
         : status.profileCount > 0
@@ -512,7 +512,7 @@ export default function DashboardStatusBar() {
               )}
             >
               <div className={cn('w-2 h-2 rounded-full flex-shrink-0', statusDot)} />
-              <span className="hidden sm:inline">Auto-Apply:</span>
+              <span className="hidden sm:inline">Pipeline:</span>
               <span>{statusLabel}</span>
               {setupIssues > 0 && (
                 <span className={cn(
@@ -549,9 +549,9 @@ export default function DashboardStatusBar() {
                 </span>
               )}
               {status.hasConnectedEmail && (
-                <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={`Email connected: ${status.emailProvider}`}>
                   <Mail className="w-3 h-3" />
-                  {status.emailProvider}
+                  <span className="sr-only">{status.emailProvider}</span>
                 </span>
               )}
             </div>

@@ -23,6 +23,8 @@ interface ProfileData {
   image: string | null;
   aiCreditsUsed: number;
   aiCreditsLimit: number;
+  weeklyAppsUsed?: number;
+  weeklyAppsLimit?: number;
 }
 
 interface ReferralData {
@@ -369,13 +371,13 @@ export default function SettingsPage() {
       if (stored) {
         setNotifications(JSON.parse(stored));
       } else {
-        // Default: all enabled
+        // Default: essential notifications on, optional ones off
         setNotifications({
           'New job matches': true,
-          'Learning reminders': true,
+          'Learning reminders': false,
           'Application updates': true,
           'Weekly progress digest': true,
-          'Coach tips': true,
+          'Coach tips': false,
         });
       }
     } catch { /* ignore */ }
@@ -618,6 +620,11 @@ export default function SettingsPage() {
   const creditsLimit = profile?.aiCreditsLimit ?? (session?.user as any)?.aiCreditsLimit ?? 10;
   const creditPercent = creditsLimit > 0 ? Math.min(Math.round((creditsUsed / creditsLimit) * 100), 100) : 0;
 
+  // Application limits (v1.7.0 — replaces token system)
+  const weeklyAppsUsed = profile?.weeklyAppsUsed ?? 0;
+  const weeklyAppsLimit = userPlan === 'FREE' ? 5 : userPlan === 'PRO' ? 20 : 50;
+  const appsPercent = weeklyAppsLimit > 0 ? Math.min(Math.round((weeklyAppsUsed / weeklyAppsLimit) * 100), 100) : 0;
+
   const planLabel: Record<string, string> = {
     FREE: 'Free',
     PRO: 'Pro',
@@ -626,28 +633,30 @@ export default function SettingsPage() {
 
   const planFeatures: Record<string, string[]> = {
     FREE: [
-      '10 AI credits / month',
-      '1 skill assessment / month',
-      '1 resume (watermarked)',
-      'Basic career plan',
-      'AI coach (limited)',
+      '5 job applications per week',
+      'All 6 AI agents',
+      'Unlimited AI operations',
+      'Resume builder + PDF export',
+      'Interview prep',
+      'Skill gap analysis',
+      'AI career coach (Cortex)',
     ],
     PRO: [
-      '500 AI credits / month',
-      'Unlimited assessments',
+      '20 job applications per day',
+      'All 6 AI agents',
+      'Unlimited AI operations',
       'All resume templates',
-      'Unlimited PDF exports',
       'Job matching + fit reports',
       'Interview prep + mock interviews',
-      'Scout, Forge, Archer & Atlas agents',
+      'Priority AI processing',
     ],
     MAX: [
-      'Unlimited AI credits',
-      'All 6 agents (full autopilot)',
+      '50 job applications per day',
+      'All 6 AI agents',
+      'Unlimited AI operations',
       'Priority AI processing',
       'Skill gap analysis + learning',
       'Quality assurance + verification',
-      'Dedicated career mentor',
       'Everything in Pro',
     ],
   };
@@ -973,22 +982,20 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {/* AI Credits */}
+                {/* Application Usage */}
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/40">AI Credits Used</span>
+                    <span className="text-white/40">Applications Used</span>
                     <span>
-                      {creditsUsed} / {creditsLimit === -1 ? 'Unlimited' : creditsLimit}
+                      {weeklyAppsUsed} / {weeklyAppsLimit} {userPlan === 'FREE' ? 'this week' : 'today'}
                     </span>
                   </div>
-                  {creditsLimit > 0 && (
-                    <div className="skill-bar h-2">
-                      <div
-                        className={`skill-bar-fill ${creditPercent > 80 ? 'bg-red-400' : 'bg-neon-blue'}`}
-                        style={{ width: `${creditPercent}%` }}
-                      />
-                    </div>
-                  )}
+                  <div className="skill-bar h-2">
+                    <div
+                      className={`skill-bar-fill ${appsPercent > 80 ? 'bg-red-400' : 'bg-neon-blue'}`}
+                      style={{ width: `${appsPercent}%` }}
+                    />
+                  </div>
                 </div>
 
                 {/* Plan Features */}

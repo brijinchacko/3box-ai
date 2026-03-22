@@ -1233,28 +1233,7 @@ function AutopilotResume() {
         >
           <Linkedin className="w-4 h-4 inline mr-1.5" />LinkedIn
         </button>
-        <button
-          onClick={() => {
-            setActiveTab('portfolio');
-            if (!portfolioFetched) {
-              setPortfolioLoading(true);
-              fetch('/api/portfolio')
-                .then(res => res.ok ? res.json() : null)
-                .then(data => {
-                  if (data) setPortfolio(data);
-                  setPortfolioFetched(true);
-                  setPortfolioLoading(false);
-                })
-                .catch(() => { setPortfolioLoading(false); setPortfolioFetched(true); });
-            }
-          }}
-          className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
-            activeTab === 'portfolio' ? 'border-teal-600 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-gray-400',
-          )}
-        >
-          <Globe className="w-4 h-4 inline mr-1.5" />Portfolio
-        </button>
+        {/* Portfolio removed — has its own sidebar page at /dashboard/portfolio */}
       </div>
 
       {activeTab === 'editor' && (

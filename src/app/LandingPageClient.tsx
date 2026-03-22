@@ -269,18 +269,11 @@ export default function LandingPageClient() {
               Currently under review — join the waitlist to get early access.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <a
-                href="#"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity text-sm"
+              <span
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/40 text-sm cursor-default"
               >
-                <Chrome className="w-4 h-4" /> Add to Chrome — Free
-              </a>
-              <Link
-                href="/extension-auth"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors text-sm"
-              >
-                Already installed? Connect
-              </Link>
+                <Chrome className="w-4 h-4" /> Chrome Extension — Coming Soon
+              </span>
             </div>
             <div className="flex items-center justify-center gap-6 mt-6 text-[11px] text-white/20">
               <span>LinkedIn</span>
@@ -387,7 +380,7 @@ export default function LandingPageClient() {
                 <CortexAvatar size={22} />
               </div>
             </div>
-            <p className="text-[10px] text-white/20 mt-3">7 AI agents working together to land your dream job.</p>
+            <p className="text-[10px] text-white/20 mt-3">6 AI agents + Cortex coordinator working together to land your dream job.</p>
           </motion.div>
         </div>
       </section>

@@ -41,12 +41,12 @@ const faqs = [
   {
     question: 'What is the best AI resume builder in 2026?',
     answer:
-      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at $12/mo.',
+      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at $29/mo.',
   },
   {
     question: 'How does 3BOX AI compare to Jobscan, Teal, and Rezi?',
     answer:
-      '3BOX AI offers the widest feature set of any AI career platform. While Jobscan focuses on ATS scanning ($49.95/mo), Teal on job tracking ($29/mo), and Rezi on resume building ($29/mo), 3BOX AI combines all these capabilities plus career coaching, salary estimator, skills assessment, and portfolio builder for just $12/mo.',
+      '3BOX AI offers the widest feature set of any AI career platform. While Jobscan focuses on ATS scanning ($49.95/mo), Teal on job tracking ($29/mo), and Rezi on resume building ($29/mo), 3BOX AI combines all these capabilities plus career coaching, salary estimator, skills assessment, and portfolio builder for just $29/mo.',
   },
   {
     question: 'Which AI career platform has the most features?',
@@ -56,7 +56,7 @@ const faqs = [
   {
     question: 'Is there an affordable AI career platform that includes career coaching?',
     answer:
-      'Yes. 3BOX AI Starter Duo plan starts at $12/mo and includes AI resume building, skill assessments, and 100 AI credits per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
+      'Yes. 3BOX AI Pro plan starts at $29/mo and includes AI resume building, skill assessments, and unlimited AI operations per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
   },
   {
     question: 'What makes 3BOX AI different from other AI resume builders?',

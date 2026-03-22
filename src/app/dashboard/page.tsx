@@ -129,8 +129,8 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
         const appsCount = apps?.applications?.length ?? apps?.count ?? apps?.total ?? 0;
 
         setPipeline({
-          profileDone: !!(profile?.onboardingComplete || profile?.completed),
-          resumeDone: !!(resume?.isFinalized || resume?.hasResume),
+          profileDone: !!(profile?.name && profile?.email && profile?.targetRole),
+          resumeDone: !!(resume?.isFinalized || resume?.hasResume || resume?.resumeId || resume?.resume?.contact?.name),
           jobsFound: jobsCount > 0,
           hasApplications: appsCount > 0,
           jobsCount,
@@ -225,7 +225,45 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
         <QuickStatsGrid stats={stats} />
       )}
 
-      {/* ═══ SECTION 4: Recent Activity (collapsed by default) ═══ */}
+      {/* ═══ SECTION 4: Meet Your Agents (for users without applications) ═══ */}
+      {!pipeline?.hasApplications && (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Meet Your AI Agents</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { name: 'Scout', desc: 'Finds matching jobs across 11+ sources', icon: Search, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10' },
+              { name: 'Forge', desc: 'Tailors your resume for each job', icon: FileText, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-500/10' },
+              { name: 'Archer', desc: 'Sends applications on your behalf', icon: Target, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-500/10' },
+              { name: 'Atlas', desc: 'Prepares you for interviews', icon: Mic, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10' },
+              { name: 'Sage', desc: 'Identifies skill gaps & learning paths', icon: Trophy, color: 'text-teal-500', bg: 'bg-teal-50 dark:bg-teal-500/10' },
+              { name: 'Sentinel', desc: 'Quality-checks everything before sending', icon: CheckCircle2, color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-500/10' },
+            ].map((agent) => (
+              <div key={agent.name} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', agent.bg)}>
+                  <agent.icon className={cn('w-4 h-4', agent.color)} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">{agent.name}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{agent.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ SECTION 5: Quick Tip ═══ */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-xl border border-blue-100 dark:border-blue-500/10 p-4 flex items-start gap-3">
+        <Briefcase className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">Quick Tip</p>
+          <p className="text-xs text-blue-600/70 dark:text-blue-300/50 mt-0.5">
+            Applying Tuesday through Thursday gets up to 30% more responses. Set up your search profile and let Scout find the best matches for you.
+          </p>
+        </div>
+      </div>
+
+      {/* ═══ SECTION 6: Recent Activity (collapsed by default) ═══ */}
       {activities.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
           <button

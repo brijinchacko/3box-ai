@@ -64,7 +64,7 @@ export default function CompareHubClient() {
             <p className="text-lg text-white/50 max-w-2xl mx-auto mb-8">
               3BOX AI is the only all-in-one AI career platform with resume builder, career
               coaching, salary estimator, skills assessment, portfolio builder, and job matching
-              — all starting at $12/mo.
+              — with a free plan and Pro from $29/mo.
             </p>
             <Link
               href="/compare/all"
