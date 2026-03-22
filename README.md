@@ -96,19 +96,19 @@ src/
 6. **Verified Credentials Framework** — Ready for blockchain verification
 
 ### Plan Tiers
-| Feature | Basic (Free) | Pro ($19/mo) | Ultra ($49/mo) |
-|---------|-------------|-------------|----------------|
-| Assessments | 2 | Unlimited | Unlimited |
-| AI Credits | 50/mo | 500/mo | Unlimited |
+| Feature | Free ($0) | Pro ($29/mo) | Max ($59/mo) |
+|---------|-----------|-------------|-------------|
+| Applications | 10 lifetime | 20/day | 50/day |
+| AI Features | All (Claude Sonnet) | All | All |
+| AI Agents | All 6 | All 6 | All 6 |
 | Resumes | 1 | Unlimited | Unlimited |
-| Career Plan | Basic | Full + Timeline | Full + Advanced |
-| Job Matching | — | ✓ | ✓ |
-| Auto-Apply | — | — | ✓ |
-| Interview Prep | — | ✓ | ✓ |
-| Priority AI | — | — | ✓ |
+| Job Matching | ✓ | ✓ | ✓ |
+| Auto-Apply | ✓ | ✓ | ✓ |
+| Interview Prep | ✓ | ✓ | ✓ |
+| Priority Support | — | — | ✓ |
 
 ### OFORO Internal Access
-Users with `@oforo.ai` or `@oforoai.com` email domains automatically receive full ULTRA access via allowlist logic.
+Users with `@oforo.ai` or `@oforoai.com` email domains automatically receive full MAX access via allowlist logic.
 
 ## Environment Variables
 

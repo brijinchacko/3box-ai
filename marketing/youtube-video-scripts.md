@@ -29,7 +29,7 @@ Now, when you create a free account, you get:
 - AI Skill Assessment: take an adaptive test for your target role, get a detailed skill breakdown, gap analysis, and market readiness score
 - Career Plan: AI generates a roadmap with milestones and proof-of-work projects
 - Learning Path: curated courses and resources to fill your gaps
-- AI Career Coach: chat with Horace, your always-available career advisor
+- AI Career Coach: chat with Cortex, your always-available career advisor
 - Job Matching: find jobs that match your actual skills
 - Portfolio Builder: showcase your projects with a shareable URL
 - Interview Prep: practice with AI-generated questions"

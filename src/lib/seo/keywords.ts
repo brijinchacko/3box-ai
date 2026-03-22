@@ -73,7 +73,7 @@ export const PAGE_SEO = {
   },
   pricing: {
     title: '3BOX AI Pricing — Free AI Resume Builder & Career Tools | Plans from $0',
-    description: 'Start free with AI resume builder, skill assessments, and career coaching. Pro plan at $19/mo for unlimited features. Ultra at $49/mo with automated job applications. Student discounts available.',
+    description: 'Start free with AI resume builder, skill assessments, and career coaching. Pro plan at $29/mo for unlimited features. Max at $59/mo with 50 applications/day. Student discounts available.',
     keywords: 'AI resume builder pricing, AI career tool cost, free career platform, cheap AI resume builder, AI job search tool pricing, career coaching plans, resume builder subscription',
     canonical: '/pricing',
     h1: 'Simple, Transparent Pricing for AI Career Tools',
@@ -213,7 +213,7 @@ export const PAGE_SEO = {
   },
   compareJobscan: {
     title: '3BOX AI vs Jobscan — The Better Jobscan Alternative (2026)',
-    description: 'Looking for a Jobscan alternative? 3BOX AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one at $12/mo vs Jobscan $49.95/mo.',
+    description: 'Looking for a Jobscan alternative? 3BOX AI offers AI resume builder, ATS checker, career coaching, salary estimator, and job matching — all-in-one starting free vs Jobscan $49.95/mo.',
     keywords: 'Jobscan alternative, 3BOX AI vs Jobscan, Jobscan competitor, best ATS resume checker, AI resume builder vs Jobscan, cheaper Jobscan alternative 2026',
     canonical: '/compare/jobscan',
   },

@@ -262,10 +262,10 @@ children.push(heading3("Model Tiers (mapped to plan)"));
 children.push(makeTable(
   ["Plan", "AI Model", "Tier"],
   [
-    ["BASIC (Free)", "Arcee Trinity", "Free"],
-    ["STARTER", "GPT-4o Mini", "Standard"],
+    ["FREE (Free)", "Arcee Trinity", "Free"],
+    ["PRO", "GPT-4o Mini", "Standard"],
     ["PRO", "DeepSeek Chat", "Reasoning"],
-    ["ULTRA", "Claude Sonnet", "Premium"],
+    ["MAX", "Claude Sonnet", "Premium"],
   ],
   [2400, 3600, 3360]
 ));
@@ -273,7 +273,7 @@ children.push(spacer(80));
 children.push(bullet("Automatic fallback cascade if preferred model fails"));
 children.push(bullet("PII redaction applied before logging any AI interactions"));
 children.push(bullet("Demo mode simulation with full mock responses for all features"));
-children.push(bullet("OFORO internal emails (@oforo.ai, @oforoai.com) automatically receive ULTRA access with unlimited credits"));
+children.push(bullet("OFORO internal emails (@oforo.ai, @oforoai.com) automatically receive MAX access with unlimited credits"));
 
 children.push(heading2("2.3 Request Flow"));
 children.push(...codeBlock([
@@ -387,7 +387,7 @@ children.push(heading2("4.2 Agent Definitions"));
 
 // Scout
 children.push(heading3("Agent Scout \u2014 Job Hunter"));
-children.push(bullet([{ text: "ID: ", bold: true }, "scout | Min Plan: STARTER"]));
+children.push(bullet([{ text: "ID: ", bold: true }, "scout | Min Plan: PRO"]));
 children.push(bullet([{ text: "File: ", bold: true }, "src/lib/agents/scout.ts"]));
 children.push(bullet([{ text: "Capabilities: ", bold: true }, "Multi-source job scanning, match scoring, smart filtering, exclusion rules"]));
 children.push(bullet([{ text: "Platforms: ", bold: true }, "Naukri, LinkedIn, Indeed, Google Jobs, Glassdoor, company pages (6+ sources)"]));
@@ -399,7 +399,7 @@ children.push(bullet([{ text: "runIndependentScout() ", bold: true }, "\u2014 St
 
 // Forge
 children.push(heading3("Agent Forge \u2014 Resume Optimizer"));
-children.push(bullet([{ text: "ID: ", bold: true }, "forge | Min Plan: STARTER"]));
+children.push(bullet([{ text: "ID: ", bold: true }, "forge | Min Plan: PRO"]));
 children.push(bullet([{ text: "File: ", bold: true }, "src/lib/agents/forge.ts"]));
 children.push(bullet([{ text: "Capabilities: ", bold: true }, "ATS keyword optimization, job-specific variants, score analysis, section enhancement"]));
 children.push(bullet([{ text: "Operating Modes: ", bold: true }, "on_demand, per_job, base_only"]));
@@ -441,14 +441,14 @@ children.push(bullet([{ text: "Key Function: ", bold: true }, "prepareInterview(
 
 // Sage
 children.push(heading3("Agent Sage \u2014 Skill Trainer"));
-children.push(bullet([{ text: "ID: ", bold: true }, "sage | Min Plan: ULTRA"]));
+children.push(bullet([{ text: "ID: ", bold: true }, "sage | Min Plan: MAX"]));
 children.push(bullet([{ text: "File: ", bold: true }, "src/lib/agents/sage.ts"]));
 children.push(bullet([{ text: "Capabilities: ", bold: true }, "Skill gap analysis, learning recommendations, growth tracking, market trend analysis"]));
 children.push(bullet([{ text: "Key Functions: ", bold: true }, "analyzeSkillGaps(), generateApplicationBasedGapAnalysis()"]));
 
 // Sentinel
 children.push(heading3("Agent Sentinel \u2014 Quality Reviewer"));
-children.push(bullet([{ text: "ID: ", bold: true }, "sentinel | Min Plan: ULTRA"]));
+children.push(bullet([{ text: "ID: ", bold: true }, "sentinel | Min Plan: MAX"]));
 children.push(bullet([{ text: "File: ", bold: true }, "src/lib/agents/sentinel.ts"]));
 children.push(bullet([{ text: "Capabilities: ", bold: true }, "Quality scoring, fabrication detection, relevance check, spam prevention"]));
 children.push(bullet([{ text: "Key Functions: ", bold: true }, "reviewApplication() (scam check + AI review), verifyJobAlignment() (batch alignment)"]));
@@ -483,10 +483,10 @@ children.push(heading2("4.5 Agent Access by Plan"));
 children.push(makeTable(
   ["Plan", "Agents Available", "Count"],
   [
-    ["BASIC", "None", "0"],
-    ["STARTER", "Scout, Forge", "2"],
+    ["FREE", "None", "0"],
+    ["PRO", "Scout, Forge", "2"],
     ["PRO", "Scout, Forge, Archer, Atlas", "4"],
-    ["ULTRA", "All 6 agents", "6"],
+    ["MAX", "All 6 agents", "6"],
   ],
   [2000, 5360, 2000]
 ));
@@ -500,7 +500,7 @@ children.push(heading2("5.1 Enums"));
 children.push(makeTable(
   ["Enum", "Values"],
   [
-    ["PlanTier", "BASIC, STARTER, PRO, ULTRA"],
+    ["PlanTier", "FREE, PRO, PRO, MAX"],
     ["SubscriptionStatus", "ACTIVE, PAST_DUE, CANCELED, TRIALING, INCOMPLETE"],
     ["ReferralStatus", "PENDING, ACTIVATED, REWARDED, EXPIRED"],
     ["EmailType", "WELCOME, OTP_LOGIN, OTP_SIGNUP, EMAIL_VERIFIED, ONBOARDING_DAY2/5/7, UPGRADE_NUDGE, CREDIT_LOW, WEEKLY_DIGEST, REFERRAL_INVITE, PASSWORD_RESET, SUBSCRIPTION_CONFIRM/CANCELED, PAYMENT_FAILED, ACCOUNT_ACTIVITY"],
@@ -601,7 +601,7 @@ children.push(heading2("6.4 Registration Flow"));
 children.push(bodyText("9-step registration process:"));
 children.push(bullet("1. Input validated with Zod (name, email, password min 8 chars, optional referral code)"));
 children.push(bullet("2. Duplicate email check (409 if exists)"));
-children.push(bullet("3. OFORO internal users auto-upgraded to ULTRA with unlimited credits"));
+children.push(bullet("3. OFORO internal users auto-upgraded to MAX with unlimited credits"));
 children.push(bullet("4. Student emails (.edu, .ac.* domains) flagged for discount eligibility"));
 children.push(bullet("5. Unique referral code generated per user"));
 children.push(bullet("6. CareerTwin record created (persistent career profile)"));
@@ -625,10 +625,10 @@ children.push(heading2("7.1 Plan Tiers"));
 children.push(makeTable(
   ["Plan", "Price", "Agents", "Monthly Tokens", "Key Features"],
   [
-    ["BASIC", "Free", "0", "15", "Demo access, free tools, 1 Scout run + 1 resume"],
-    ["STARTER", "$12/mo", "2", "200", "Scout + Forge, ~15 Scout runs or mix"],
+    ["FREE", "Free", "0", "15", "Demo access, free tools, 1 Scout run + 1 resume"],
+    ["PRO", "$29/mo", "2", "200", "Scout + Forge, ~15 Scout runs or mix"],
     ["PRO", "$29/mo", "4", "600", "Heavy usage, auto-apply"],
-    ["ULTRA", "$59/mo", "6", "2000", "Power users, all agents"],
+    ["MAX", "$59/mo", "6", "2000", "Power users, all agents"],
   ],
   [1400, 1400, 1200, 1800, 3560]
 ));
@@ -639,7 +639,7 @@ children.push(bullet([{ text: "Customer Portal: ", bold: true }, "POST /api/stri
 children.push(bullet([{ text: "Webhooks: ", bold: true }, "POST /api/stripe/webhook handles events:"]));
 children.push(bullet("checkout.session.completed \u2014 Provision plan", 1));
 children.push(bullet("customer.subscription.updated \u2014 Plan changes", 1));
-children.push(bullet("customer.subscription.deleted \u2014 Downgrade to BASIC", 1));
+children.push(bullet("customer.subscription.deleted \u2014 Downgrade to FREE", 1));
 children.push(bullet("invoice.payment_succeeded \u2014 Reset monthly token credits", 1));
 children.push(bullet("invoice.payment_failed \u2014 Handle failed payment", 1));
 
@@ -664,7 +664,7 @@ children.push(bodyText("One-time purchase ($149 base) permanently removes the 30
 
 children.push(heading2("7.6 Regional Pricing"));
 children.push(bodyText("Supports 11 regions with local currency pricing: India (INR), US (USD), UK (GBP), Canada (CAD), UAE (AED), Singapore (SGD), Australia (AUD), Netherlands (EUR), Philippines (PHP), Africa, and DEFAULT."));
-children.push(bodyText("Example: India STARTER is \u20B9249/mo vs $12/mo USD in the US."));
+children.push(bodyText("Example: India PRO is \u20B9249/mo vs $29/mo USD in the US."));
 
 children.push(new Paragraph({ children: [new PageBreak()] }));
 
@@ -675,10 +675,10 @@ children.push(heading2("8.1 Monthly Token Allocations"));
 children.push(makeTable(
   ["Plan", "Tokens/Month"],
   [
-    ["BASIC", "15"],
-    ["STARTER", "200"],
+    ["FREE", "15"],
+    ["PRO", "200"],
     ["PRO", "600"],
-    ["ULTRA", "2000"],
+    ["MAX", "2000"],
   ],
   [4680, 4680]
 ));
@@ -1116,18 +1116,18 @@ children.push(heading2("20.1 Overview"));
 children.push(bodyText("The orchestrator (src/lib/agents/orchestrator.ts, ~900 lines) runs the full pipeline via runAgentPipeline(). It coordinates all 6 agents in a defined sequence."));
 
 children.push(heading2("20.2 Pipeline Steps"));
-children.push(heading3("Step 1: Scout (STARTER+)"));
+children.push(heading3("Step 1: Scout (PRO+)"));
 children.push(bullet("Try reusing recent Scout results (< 24h old)"));
 children.push(bullet("If none, auto-trigger fresh Scout run"));
 children.push(bullet("Write discovered jobs to shared context"));
 
-children.push(heading3("Step 2: Forge + Quality Gate (STARTER+)"));
+children.push(heading3("Step 2: Forge + Quality Gate (PRO+)"));
 children.push(bullet("For top 5 jobs: ATS analysis, optional per-job resume variants"));
 children.push(bullet("Quality gate: scam detection + quality scoring per job"));
 children.push(bullet("Resume Readiness Verification: Hard block if name/email missing; soft warning otherwise"));
 
 children.push(heading3("Step 3: Sentinel + Archer (PRO+)"));
-children.push(bullet("Sentinel batch JD-resume alignment check (ULTRA)"));
+children.push(bullet("Sentinel batch JD-resume alignment check (MAX)"));
 children.push(bullet("Quality gate filter + alignment filter (40% threshold)"));
 children.push(bullet("Daily cap check (30/day, trimmed if near limit)"));
 children.push(bullet("Batch apply to approved jobs (multi-channel, parallel)"));
@@ -1136,7 +1136,7 @@ children.push(bullet("Networking suggestions for applied companies"));
 children.push(heading3("Step 4: Atlas (PRO+)"));
 children.push(bullet("For top 3 applied jobs: generate interview questions"));
 
-children.push(heading3("Step 5: Sage (ULTRA)"));
+children.push(heading3("Step 5: Sage (MAX)"));
 children.push(bullet("Identify skill gaps against target role + job descriptions"));
 
 children.push(heading2("20.3 Automation Mode Behavior"));

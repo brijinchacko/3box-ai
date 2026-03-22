@@ -97,7 +97,7 @@ const features: FeatureRow[] = [
 ];
 
 const pricing: Record<Competitor, string> = {
-  '3BOX AI': '$12/mo',
+  '3BOX AI': 'Free / $29/mo',
   Jobscan: '$49.95/mo',
   Teal: '$29/mo',
   Rezi: '$29/mo',
@@ -120,12 +120,12 @@ const faqs = [
   {
     question: 'What is the best AI resume builder in 2026?',
     answer:
-      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at $12/mo.',
+      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at Free.',
   },
   {
     question: 'How does 3BOX AI compare to Jobscan, Teal, and Rezi?',
     answer:
-      '3BOX AI offers the widest feature set of any AI career platform. While Jobscan focuses on ATS scanning ($49.95/mo), Teal on job tracking ($29/mo), and Rezi on resume building ($29/mo), 3BOX AI combines all these capabilities plus career coaching, salary estimator, skills assessment, and portfolio builder for just $12/mo.',
+      '3BOX AI offers the widest feature set of any AI career platform. While Jobscan focuses on ATS scanning ($49.95/mo), Teal on job tracking ($29/mo), and Rezi on resume building ($29/mo), 3BOX AI combines all these capabilities plus career coaching, salary estimator, skills assessment, and portfolio builder starting completely free.',
   },
   {
     question: 'Which AI career platform has the most features?',
@@ -135,7 +135,7 @@ const faqs = [
   {
     question: 'Is there an affordable AI career platform that includes career coaching?',
     answer:
-      'Yes. 3BOX AI Starter Duo plan starts at $12/mo and includes AI resume building, skill assessments, and 100 AI credits per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
+      'Yes. 3BOX AI Free plan starts at $0 and includes AI resume building, skill assessments, and 100 AI credits per month. All plans include a 7-day money-back guarantee. The Pro plan unlocks unlimited access to all features including AI career coaching.',
   },
   {
     question: 'What makes 3BOX AI different from other AI resume builders?',
@@ -205,7 +205,7 @@ export default function CompareAllClient() {
             <p className="text-white/50 text-sm">
               3BOX AI is the only platform that offers all 8 features — AI resume builder,
               ATS checker, career coaching, salary estimator, skills assessment, portfolio
-              builder, job matching, and interview prep — at the lowest price point of $12/mo.
+              builder, job matching, and interview prep — with a free tier and Pro at $29/mo.
             </p>
           </motion.div>
         </div>
@@ -388,7 +388,7 @@ export default function CompareAllClient() {
               {
                 title: 'Lowest Price Point',
                 description:
-                  'At $12/mo, 3BOX AI is 50-76% cheaper than competitors while offering significantly more features. Jobscan charges $49.95/mo for just ATS scanning.',
+                  'Starting free, 3BOX AI is significantly cheaper than competitors while offering significantly more features. Jobscan charges $49.95/mo for just ATS scanning.',
               },
               {
                 title: '7-Day Money-Back Guarantee',

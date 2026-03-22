@@ -23,7 +23,7 @@ Job seekers today juggle 5-8 different tools: one for resume building, another f
 - AI Skill Assessment — Adaptive tests that analyze your skills vs. target roles
 - Career Plan Generator — Personalized roadmaps with milestones and proof-of-work projects
 - Adaptive Learning Paths — AI-curated courses from Coursera, Udemy, freeCodeCamp
-- AI Career Coach (Horace) — Always-available coach for career advice, resume tips, interview prep
+- AI Career Coach (Cortex) — Always-available coach for career advice, resume tips, interview prep
 - Job Matching — AI matches you to jobs based on your actual skills, not just keywords
 - Portfolio Builder — Showcase projects with AI-generated descriptions
 - Interview Prep — Role-specific questions with AI-powered feedback
@@ -35,10 +35,9 @@ Job seekers today juggle 5-8 different tools: one for resume building, another f
 4. Career Twin technology — Builds a persistent model of your skills and career trajectory
 
 ### Pricing
-- Basic: Free forever (1 assessment, 10 AI credits/mo, 1 resume)
-- Starter: $12/mo (5 assessments, 100 credits, 3 templates)
-- Pro: $29/mo (unlimited + human expert interviews)
-- Ultra: $59/mo (everything + dedicated career mentor)
+- Free: $0 forever (10 lifetime applications, all AI features, all 6 agents)
+- Pro: $29/mo (20 applications/day, unlimited resumes, all templates)
+- Max: $59/mo (50 applications/day, priority support, advanced analytics)
 
 ### Built with
 Next.js 14, TypeScript, Prisma, PostgreSQL, OpenRouter AI, Tailwind CSS
@@ -68,7 +67,7 @@ We're just launching and would love your feedback. What features would make this
 2. AI Resume Builder in action
 3. Skill Assessment results dashboard
 4. Career Plan with milestones
-5. AI Coach (Horace) chat interface
+5. AI Coach (Cortex) chat interface
 6. ATS Checker results
 7. Pricing page with regional pricing
 

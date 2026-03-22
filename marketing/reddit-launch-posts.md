@@ -83,7 +83,7 @@ After spending too much money on career coaches and job search tools, I decided 
 - AI Skill Assessment — Adaptive questions that test your actual skills for your target role
 - Career Plan — AI generates a step-by-step roadmap with milestones
 - Learning Path — Curated courses and projects to fill your skill gaps
-- AI Coach — Chat with "Horace," the AI career coach, about anything career-related
+- AI Coach — Chat with "Cortex," the AI career coach, about anything career-related
 
 **What's different:**
 Most career tools just check your resume keywords. We take a skills-first approach:

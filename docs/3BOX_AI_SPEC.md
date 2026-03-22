@@ -99,15 +99,15 @@ User Request → API Route → Rate Limiter → PII Redactor → Model Router �
 
 | Plan | AI Model | Tier |
 |------|----------|------|
-| BASIC (Free) | Arcee Trinity | Free |
-| STARTER | GPT-4o Mini | Standard |
+| FREE (Free) | Arcee Trinity | Free |
+| PRO | GPT-4o Mini | Standard |
 | PRO | DeepSeek Chat | Reasoning |
-| ULTRA | Claude Sonnet | Premium |
+| MAX | Claude Sonnet | Premium |
 
 - Automatic fallback cascade if preferred model fails
 - PII redaction applied before logging any AI interactions
 - Demo mode simulation with full mock responses for all features
-- OFORO internal emails (`@oforo.ai`, `@oforoai.com`) automatically receive ULTRA access with unlimited credits
+- OFORO internal emails (`@oforo.ai`, `@oforoai.com`) automatically receive MAX access with unlimited credits
 
 ### 2.3 Request Flow
 ```
@@ -201,7 +201,7 @@ Cortex is the central intelligence that orchestrates all six specialist agents.
 
 #### Agent Scout — Job Hunter
 - **ID:** `scout`
-- **Min Plan:** STARTER
+- **Min Plan:** PRO
 - **File:** `src/lib/agents/scout.ts`
 - **Capabilities:** Multi-source job scanning, match scoring, smart filtering, exclusion rules
 - **Platforms:** Naukri, LinkedIn, Indeed, Google Jobs, Glassdoor, company pages (6+ sources)
@@ -215,7 +215,7 @@ Cortex is the central intelligence that orchestrates all six specialist agents.
 
 #### Agent Forge — Resume Optimizer
 - **ID:** `forge`
-- **Min Plan:** STARTER
+- **Min Plan:** PRO
 - **File:** `src/lib/agents/forge.ts`
 - **Capabilities:** ATS keyword optimization, job-specific variants, score analysis, section enhancement
 - **Operating Modes:**
@@ -271,7 +271,7 @@ Cortex is the central intelligence that orchestrates all six specialist agents.
 
 #### Agent Sage — Skill Trainer
 - **ID:** `sage`
-- **Min Plan:** ULTRA
+- **Min Plan:** MAX
 - **File:** `src/lib/agents/sage.ts`
 - **Capabilities:** Skill gap analysis, learning recommendations, growth tracking, market trend analysis
 - **Linked Page:** `/dashboard/learning`
@@ -282,7 +282,7 @@ Cortex is the central intelligence that orchestrates all six specialist agents.
 
 #### Agent Sentinel — Quality Reviewer
 - **ID:** `sentinel`
-- **Min Plan:** ULTRA
+- **Min Plan:** MAX
 - **File:** `src/lib/agents/sentinel.ts`
 - **Capabilities:** Quality scoring, fabrication detection, relevance check, spam prevention
 - **Linked Page:** `/dashboard/quality`
@@ -320,10 +320,10 @@ NEW → FORGE_PENDING → FORGE_READY → READY → APPLYING → APPLIED
 
 | Plan | Agents Available | Count |
 |------|-----------------|-------|
-| BASIC | None | 0 |
-| STARTER | Scout, Forge | 2 |
+| FREE | None | 0 |
+| PRO | Scout, Forge | 2 |
 | PRO | Scout, Forge, Archer, Atlas | 4 |
-| ULTRA | All 6 agents | 6 |
+| MAX | All 6 agents | 6 |
 
 ---
 
@@ -333,7 +333,7 @@ NEW → FORGE_PENDING → FORGE_READY → READY → APPLYING → APPLIED
 
 | Enum | Values |
 |------|--------|
-| `PlanTier` | BASIC, STARTER, PRO, ULTRA |
+| `PlanTier` | FREE, PRO, PRO, MAX |
 | `SubscriptionStatus` | ACTIVE, PAST_DUE, CANCELED, TRIALING, INCOMPLETE |
 | `ReferralStatus` | PENDING, ACTIVATED, REWARDED, EXPIRED |
 | `EmailType` | WELCOME, OTP_LOGIN, OTP_SIGNUP, EMAIL_VERIFIED, ONBOARDING_DAY2, ONBOARDING_DAY5, ONBOARDING_DAY7, UPGRADE_NUDGE, CREDIT_LOW, WEEKLY_DIGEST, REFERRAL_INVITE, PASSWORD_RESET, SUBSCRIPTION_CONFIRM, SUBSCRIPTION_CANCELED, PAYMENT_FAILED, ACCOUNT_ACTIVITY |
@@ -447,7 +447,7 @@ NEW → FORGE_PENDING → FORGE_READY → READY → APPLYING → APPLIED
 ### 6.4 Registration Flow
 1. Input validated with Zod (name, email, password min 8 chars, optional referral code)
 2. Duplicate email check (409 if exists)
-3. **OFORO internal users** (`@oforo.ai`, `@oforoai.com`) auto-upgraded to ULTRA with unlimited credits
+3. **OFORO internal users** (`@oforo.ai`, `@oforoai.com`) auto-upgraded to MAX with unlimited credits
 4. **Student emails** (`.edu`, `.ac.*` domains) flagged for discount eligibility
 5. Unique referral code generated per user
 6. CareerTwin record created (persistent career profile)
@@ -476,10 +476,10 @@ The middleware runs on all page routes (excludes `/api/*`, `/_next/*`, static as
 
 | Plan | Price | Agents | Monthly Tokens | Key Features |
 |------|-------|--------|---------------|--------------|
-| BASIC | Free | 0 | 15 | Demo access, free tools, 1 Scout run + 1 resume |
-| STARTER | $12/mo | 2 (Scout, Forge) | 200 | ~15 Scout runs or mix of operations |
+| FREE | Free | 0 | 15 | Demo access, free tools, 1 Scout run + 1 resume |
+| PRO | $29/mo | 2 (Scout, Forge) | 200 | ~15 Scout runs or mix of operations |
 | PRO | $29/mo | 4 (+Archer, Atlas) | 600 | Heavy usage, auto-apply |
-| ULTRA | $59/mo | 6 (all) | 2000 | Power users, all agents |
+| MAX | $59/mo | 6 (all) | 2000 | Power users, all agents |
 
 ### 7.2 Stripe Integration
 - **Checkout:** `POST /api/stripe/checkout` creates Stripe Checkout Session
@@ -487,7 +487,7 @@ The middleware runs on all page routes (excludes `/api/*`, `/_next/*`, static as
 - **Webhooks:** `POST /api/stripe/webhook` handles:
   - `checkout.session.completed` — Provision plan
   - `customer.subscription.updated` — Plan changes
-  - `customer.subscription.deleted` — Downgrade to BASIC
+  - `customer.subscription.deleted` — Downgrade to FREE
   - `invoice.payment_succeeded` — Reset monthly token credits
   - `invoice.payment_failed` — Handle failed payment
 
@@ -517,7 +517,7 @@ Stored in `CreditPurchase` model, linked to Stripe payment ID.
 ### 7.6 Regional Pricing
 Supports 11 regions with local currency pricing: India (INR), US (USD), UK (GBP), Canada (CAD), UAE (AED), Singapore (SGD), Australia (AUD), Netherlands (EUR), Philippines (PHP), Africa, and DEFAULT. Each region has custom pricing for all plans, credit packs, and student discount percentages.
 
-Example: India STARTER is ₹249/mo vs $12/mo USD in the US.
+Example: India PRO is ₹249/mo vs $29/mo USD in the US.
 
 ---
 
@@ -527,10 +527,10 @@ Example: India STARTER is ₹249/mo vs $12/mo USD in the US.
 
 | Plan | Tokens/Month |
 |------|-------------|
-| BASIC | 15 |
-| STARTER | 200 |
+| FREE | 15 |
+| PRO | 200 |
 | PRO | 600 |
-| ULTRA | 2000 |
+| MAX | 2000 |
 
 ### 8.2 Token Costs Per Operation
 
@@ -1144,10 +1144,10 @@ npm run db:studio    # Open Prisma Studio
 
 ### 19.1 AI / LLM
 - **OpenRouter API** — Multi-model AI gateway
-  - Free tier: Arcee Trinity (BASIC plan)
-  - Standard tier: GPT-4o Mini (STARTER plan)
+  - Free tier: Arcee Trinity (FREE plan)
+  - Standard tier: GPT-4o Mini (PRO plan)
   - Reasoning tier: DeepSeek Chat (PRO plan)
-  - Premium tier: Claude Sonnet (ULTRA plan)
+  - Premium tier: Claude Sonnet (MAX plan)
   - Automatic model fallback cascade
   - Plan-to-model mapping for 12 distinct AI features
 
@@ -1321,12 +1321,12 @@ The orchestrator (`src/lib/agents/orchestrator.ts`, ~900 lines) runs the full pi
 ### 20.2 Pipeline Steps
 
 ```
-Step 1: Scout discovers jobs (STARTER+)
+Step 1: Scout discovers jobs (PRO+)
   ├── Try reusing recent Scout results (< 24h old)
   ├── If none, auto-trigger fresh Scout run
   └── Write discovered jobs to shared context
 
-Step 2: Forge optimizes resume + Quality Gate (STARTER+)
+Step 2: Forge optimizes resume + Quality Gate (PRO+)
   ├── For top 5 jobs: ATS analysis, optional per-job resume variants
   ├── Quality gate: scam detection + quality scoring per job
   └── Step 2.5: Resume Readiness Verification
@@ -1334,10 +1334,10 @@ Step 2: Forge optimizes resume + Quality Gate (STARTER+)
       └── Soft warning for other issues (proceed with caution)
 
 Step 3: Sentinel + Archer application (PRO+)
-  ├── Step 3.0: Sentinel batch JD-resume alignment check (ULTRA)
+  ├── Step 3.0: Sentinel batch JD-resume alignment check (MAX)
   ├── Quality gate filter (skip jobs with quality "skip")
   ├── Alignment filter (skip jobs below 40% alignment)
-  ├── Per-job Sentinel quality review (ULTRA)
+  ├── Per-job Sentinel quality review (MAX)
   ├── Autopilot category check (only apply to matching role categories)
   ├── Daily cap check (30/day, trimmed if near limit)
   ├── Batch apply to approved jobs (multi-channel, parallel)
@@ -1346,7 +1346,7 @@ Step 3: Sentinel + Archer application (PRO+)
 Step 4: Atlas interview prep (PRO+)
   └── For top 3 applied jobs: generate interview questions
 
-Step 5: Sage skill gap analysis (ULTRA)
+Step 5: Sage skill gap analysis (MAX)
   └── Identify skill gaps against target role + job descriptions
 ```
 

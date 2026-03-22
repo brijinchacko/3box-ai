@@ -1,47 +1,45 @@
-# jobTED AI
+# 3BOX AI
 
-> jobTED AI is an AI-powered career operating system by OFORO AI. It provides free AI resume building, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching.
+> 3BOX AI is an AI-powered career operating system by OFORO AI. It provides free AI resume building, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching with automated applications.
 
 ## Product Overview
 
-jobTED AI takes users through a complete career pipeline: Skill Assessment → Personalized Career Plan → Adaptive Learning → Resume & Portfolio Building → Verified Credentials → AI Job Matching → Automated Applications.
+3BOX AI takes users through a complete career pipeline: Skill Assessment → Personalized Career Plan → Adaptive Learning → Resume & Portfolio Building → AI Job Matching → Automated Applications.
 
 ## Key Features
 
 - **AI Resume Builder**: Free ATS-optimized resume builder with AI keyword optimization, job-specific tailoring, and PDF export.
-- **AI Career Coach (Career Twin)**: Persistent AI model that learns user goals, tracks progress, and predicts hire probability.
+- **AI Career Coach (Cortex)**: Persistent AI coach that learns user goals, tracks progress, and predicts hire probability.
 - **AI Skill Assessment**: Adaptive testing with MCQ, scenarios, and hands-on tasks. Instant skill scoring and gap analysis.
 - **AI Career Plan Generator**: Personalized career roadmaps with milestones, proof-of-work projects, and timeline estimates.
 - **Adaptive AI Learning Paths**: Personalized learning recommendations that evolve with user progress.
 - **AI Job Matching**: Skills-based job matching with fit scores, improvement suggestions, and explainable matching.
-- **Automated Job Applications**: AI-powered auto-apply with compliance controls, audit trails, and smart targeting (Ultra plan).
-- **Proof-of-Skill Engine**: AI-scored projects that become verifiable evidence of abilities.
+- **Automated Job Applications**: AI-powered auto-apply with compliance controls, audit trails, and smart targeting.
+- **6 AI Agents**: Scout (job discovery), Forge (resume optimization), Archer (auto-apply), Atlas (career planning), Sage (coaching), Sentinel (quality monitoring) — all available on every plan.
 - **Market Readiness Score**: Real-time AI employability scoring against market demand.
 - **Hire Probability Forecasting**: Know chances before applying with AI probability estimates.
-- **Role Simulator**: Explore alternate career paths with probability and timeline for each.
-- **Verified Credentials Framework**: Ready for blockchain verification of skills and achievements.
 
 ## Pricing
 
-- **Basic (Free)**: 2 assessments, 50 AI credits/month, 1 resume, basic career plan
-- **Pro ($19/month)**: Unlimited assessments, 500 AI credits/month, all templates, job matching, interview prep
-- **Ultra ($49/month)**: Unlimited everything, automation agent, auto-apply, advanced analytics, priority AI
+- **Free ($0)**: 10 lifetime applications, all AI features, all 6 agents, 1 resume, basic career plan
+- **Pro ($29/month)**: 20 applications/day, unlimited resumes, all templates, job matching, interview prep
+- **Max ($59/month)**: 50 applications/day, unlimited everything, priority support, advanced analytics
 
-Student discount: 30% off Pro and Ultra with .edu email.
+All plans use Claude Sonnet AI. Student discount: 30% off Pro and Max with .edu email.
 
 ## Technology
 
-Built with Next.js 14, TypeScript, Tailwind CSS, PostgreSQL, Prisma ORM, NextAuth.js, OpenRouter AI, Stripe billing, BullMQ queues, and Redis caching.
+Built with Next.js 14, TypeScript, Tailwind CSS, PostgreSQL, Prisma ORM, NextAuth.js, OpenRouter AI (Claude Sonnet), Stripe billing, BullMQ queues, and Redis caching.
 
 ## Company
 
-jobTED AI is a product of OFORO AI (https://oforo.ai).
+3BOX AI is a product of OFORO AI (https://oforo.ai).
 
 ## Links
 
-- Website: https://jobted.ai
-- Pricing: https://jobted.ai/pricing
-- About: https://jobted.ai/about
-- Security: https://jobted.ai/security
-- Login: https://jobted.ai/login
-- Sign Up: https://jobted.ai/signup
+- Website: https://3box.ai
+- Pricing: https://3box.ai/pricing
+- About: https://3box.ai/about
+- Security: https://3box.ai/security
+- Login: https://3box.ai/login
+- Sign Up: https://3box.ai/signup

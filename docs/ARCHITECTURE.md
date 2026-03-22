@@ -57,7 +57,7 @@ Signup/Login → NextAuth → JWT Token → Protected Routes
        ├── Email/Password (bcrypt)
        └── Google OAuth
               │
-              └── OFORO Domain Check → Auto-ULTRA upgrade
+              └── OFORO Domain Check → Auto-MAX upgrade
 ```
 
 ## Subscription Gating
@@ -66,10 +66,10 @@ Signup/Login → NextAuth → JWT Token → Protected Routes
 Route Access → Check JWT → Extract Plan → Apply Limits
                                │
                     ┌──────────┴──────────────┐
-                    │ BASIC: limited access     │
+                    │ FREE: limited access     │
                     │ PRO: full features        │
-                    │ ULTRA: everything + auto  │
-                    │ OFORO: auto-ULTRA         │
+                    │ MAX: everything + auto  │
+                    │ OFORO: auto-MAX         │
                     └─────────────────────────┘
 ```
 

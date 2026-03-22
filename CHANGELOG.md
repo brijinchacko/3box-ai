@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.0] - 2026-03-07
 
 ### Added
-- **Plan Gating Fix** — Restored proper `isAgentAvailable()` logic that was bypassed during testing. Agents are now correctly locked based on user plan tier: BASIC (0 agents), STARTER (Scout + Forge), PRO (+ Archer + Atlas), ULTRA (all 6).
+- **Plan Gating Fix** — Restored proper `isAgentAvailable()` logic that was bypassed during testing. Agents are now correctly locked based on user plan tier: FREE (0 agents), PRO (Scout + Forge), PRO (+ Archer + Atlas), MAX (all 6).
 - **Scam Detection Engine** — Rule-based `scamDetector.ts` with 12 detection rules (zero AI cost): vague company names, urgency language, payment demands, resume harvesting, free email domains, salary mismatches, MLM signals, missing descriptions, excessive caps, WhatsApp numbers. Verdicts: safe / suspicious / likely_scam.
 - **Application Quality Scoring** — `qualityScore.ts` with weighted scoring (jobFit 30%, resumeOptimization 20%, companyReachability 15%, competitionLevel 15%, scamRisk 20%). Recommendations: apply_now / optimize_first / review / skip.
 - **Per-Job Resume Tailoring** — Forge now generates optimized resume variants for each job: rewrites summary, reorders skills (most relevant first), enhances experience bullets. Validates against original profile to prevent fabrication.
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Skill Gaps API** — `/api/agents/skill-gaps` endpoint for application-based gap analysis.
 
 ### Changed
-- **Agent minPlan Values** — Fixed 4 agents with incorrect tier assignments: Archer (STARTER → PRO), Atlas (STARTER → PRO), Sage (STARTER → ULTRA), Sentinel (STARTER → ULTRA).
+- **Agent minPlan Values** — Fixed 4 agents with incorrect tier assignments: Archer (PRO → PRO), Atlas (PRO → PRO), Sage (PRO → MAX), Sentinel (PRO → MAX).
 - **Sentinel Agent** — Now performs pre-flight scam check (zero AI cost) before AI quality review. Auto-rejects likely_scam jobs with detailed signals.
 - **Scout Agent** — Integrated scam filtering after job discovery. Scam jobs are filtered before reaching downstream agents.
 - **Matcher Scoring** — Added scam penalty: suspicious jobs get -15 score, likely_scam get -30 score.
@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Sidebar Restructure** — Active/hired agents displayed at top of sidebar; sleeping/non-purchased agents pinned to bottom just above user profile.
 - **FloatingCoach (Cortex)** — Moved from dashboard-only to global (root layout) so Cortex appears on all pages. Auth-aware: adapts greetings and quick actions for public vs dashboard contexts.
-- **Billing Prices** — Corrected plan prices in Settings billing tab to match actual pricing (Starter $12/mo, Pro $29/mo, Ultra $59/mo).
+- **Billing Prices** — Corrected plan prices in Settings billing tab to match actual pricing (Free $0, Pro $29/mo, Max $59/mo).
 - **Coach Settings** — Removed editable coach name field; name is now hardcoded to "Cortex". Personality selector remains.
 
 ### Removed
@@ -107,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Onboarding Flow** — Multi-step onboarding wizard collecting career profile, skills, experience, and goals.
 - **Career Twin (Skill Snapshot)** — AI-generated skill assessment stored per user with target role mapping.
 - **Agent Registry** — Centralized agent definitions with IDs, roles, colors, avatars, plan requirements, and linked pages.
-- **Agent Permissions** — Plan-gated agent access system with tier hierarchy (BASIC < STARTER < PRO < ULTRA).
+- **Agent Permissions** — Plan-gated agent access system with tier hierarchy (FREE < PRO < PRO < MAX).
 
 ---
 

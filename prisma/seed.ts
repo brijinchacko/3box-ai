@@ -30,7 +30,7 @@ async function main() {
       name: 'OFORO Admin',
       email: 'nishinth.m@wartens.com',
       hashedPassword,
-      plan: 'ULTRA',
+      plan: 'MAX',
       isOforoInternal: true,
       aiCreditsUsed: 0,
       aiCreditsLimit: -1, // unlimited
