@@ -214,13 +214,12 @@ function AutopilotResume() {
   const portfolioAutoCreated = useRef(false);
   const userHasEdited = useRef(false);
 
-  // A4 preview scale calculation
+  // A4 preview scale calculation (794px = A4 width at 96dpi)
   useEffect(() => {
     const updateScale = () => {
       if (previewRef.current) {
-        const containerWidth = previewRef.current.offsetWidth;
-        const a4WidthPx = 210 * 3.7795; // mm to px (approx)
-        setPreviewScale(Math.min(1, containerWidth / a4WidthPx));
+        const containerWidth = previewRef.current.offsetWidth - 32; // subtract wrapper padding
+        setPreviewScale(Math.min(1, containerWidth / 794));
       }
     };
     updateScale();
@@ -1739,7 +1738,7 @@ function AutopilotResume() {
         {resume.template === 'modern' ? (
           /* ── MODERN: Two-column sidebar layout ── */
           <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
-            <div className="flex" style={{ minHeight: '267mm', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+            <div className="flex" style={{ minHeight: 0, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
               {/* Sidebar */}
               <div className="w-[30%] bg-[#f0f4f8] p-8 flex flex-col">
                 <h1 className="text-base font-bold mb-2.5" style={{ color: '#2563eb' }}>{resume.contact.name || 'Your Name'}</h1>
@@ -1842,7 +1841,7 @@ function AutopilotResume() {
         ) : resume.template === 'classic' ? (
           /* ── CLASSIC: Centered header, serif, traditional ── */
           <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
-            <div className="px-12 py-10" style={{ minHeight: '267mm', fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            <div className="px-12 py-10" style={{ minHeight: 0, fontFamily: "Georgia, 'Times New Roman', serif" }}>
               <div className="text-center pb-3.5 mb-5" style={{ borderBottom: '2px solid #1e293b' }}>
                 <h1 className="text-[22px] font-bold uppercase tracking-wide" style={{ color: '#1e293b' }}>{resume.contact.name || 'Your Name'}</h1>
                 <div className="text-[11px] text-gray-500 mt-2 flex justify-center flex-wrap gap-x-1">
@@ -1938,7 +1937,7 @@ function AutopilotResume() {
         ) : resume.template === 'minimal' ? (
           /* ── MINIMAL: Clean whitespace, thin dividers ── */
           <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
-            <div className="px-[52px] py-12" style={{ minHeight: '267mm', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+            <div className="px-[52px] py-12" style={{ minHeight: 0, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
               <div className="mb-6">
                 <h1 className="text-[26px] font-light text-gray-900 tracking-tight">{resume.contact.name || 'Your Name'}</h1>
                 <div className="text-[11px] text-gray-400 mt-1.5">
@@ -2034,7 +2033,7 @@ function AutopilotResume() {
         ) : (
           /* ── CREATIVE: Gradient banner header, accent bars ── */
           <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
-            <div style={{ minHeight: '267mm', fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}>
+            <div style={{ minHeight: 0, fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}>
               {/* Gradient header banner */}
               <div className="px-10 py-9" style={{ background: 'linear-gradient(135deg, #a855f7, #00d4ff, #00ff88)' }}>
                 <h1 className="text-2xl font-extrabold text-white">{resume.contact.name || 'Your Name'}</h1>
