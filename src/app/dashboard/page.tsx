@@ -109,6 +109,31 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [activityOpen, setActivityOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [applyMode, setApplyMode] = useState<'copilot' | 'smart-auto' | 'full-agent'>('copilot');
+  const [userPlan, setUserPlan] = useState('FREE');
+  const [modeSaving, setModeSaving] = useState(false);
+  const [modeToast, setModeToast] = useState('');
+
+  const saveApplyMode = async (mode: 'copilot' | 'smart-auto' | 'full-agent') => {
+    setApplyMode(mode);
+    setModeSaving(true);
+    const labels: Record<string, string> = {
+      copilot: 'Manual review mode',
+      'smart-auto': 'Auto-apply to great matches',
+      'full-agent': 'Full autopilot mode',
+    };
+    try {
+      await fetch('/api/agents/auto-apply/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ automationMode: mode, autoApplyEnabled: mode !== 'copilot' }),
+      });
+      setModeToast(labels[mode] || 'Mode updated');
+      setTimeout(() => setModeToast(''), 3000);
+    } catch {} finally {
+      setModeSaving(false);
+    }
+  };
 
   /* Fetch all pipeline data in parallel */
   useEffect(() => {
@@ -125,6 +150,18 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
         const resume = resumeRes.status === 'fulfilled' ? resumeRes.value : null;
         const jobs = jobsRes.status === 'fulfilled' ? jobsRes.value : null;
         const apps = appsRes.status === 'fulfilled' ? appsRes.value : null;
+
+        // Set user plan
+        if (profile?.plan) setUserPlan(profile.plan.toUpperCase());
+
+        // Fetch current auto-apply mode
+        try {
+          const configRes = await fetch('/api/agents/auto-apply/setup');
+          if (configRes.ok) {
+            const config = await configRes.json();
+            if (config?.automationMode) setApplyMode(config.automationMode);
+          }
+        } catch {}
 
         const jobsCount = jobs?.jobs?.length ?? jobs?.count ?? 0;
         const appsCount = apps?.applications?.length ?? apps?.count ?? apps?.total ?? 0;
@@ -226,33 +263,73 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
 
       {/* ═══ SECTION 2.5: How do you want to apply? (Plain English mode selector) ═══ */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">How do you want to apply?</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">How do you want to apply?</h3>
+          {modeToast && (
+            <span className="text-xs text-green-500 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> {modeToast}
+            </span>
+          )}
+        </div>
         <div className="space-y-3">
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5 cursor-pointer">
-            <input type="radio" name="applyMode" defaultChecked className="mt-1 accent-blue-600" />
+          <label
+            onClick={() => saveApplyMode('copilot')}
+            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              applyMode === 'copilot'
+                ? 'border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5'
+                : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+            }`}
+          >
+            <input type="radio" name="applyMode" checked={applyMode === 'copilot'} readOnly className="mt-1 accent-blue-600" />
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">I&apos;ll review and apply myself</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Scout finds jobs, you decide which to apply to</p>
             </div>
           </label>
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
-            <input type="radio" name="applyMode" className="mt-1 accent-blue-600" />
+          <label
+            onClick={() => saveApplyMode('smart-auto')}
+            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              applyMode === 'smart-auto'
+                ? 'border-blue-200 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5'
+                : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+            }`}
+          >
+            <input type="radio" name="applyMode" checked={applyMode === 'smart-auto'} readOnly className="mt-1 accent-blue-600" />
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Apply automatically to great matches</p>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">PRO</span>
-              </div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Apply automatically to great matches</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">AI applies to 80%+ match jobs. You review the rest.</p>
+              {applyMode === 'smart-auto' && (
+                <p className="text-xs text-blue-500 dark:text-blue-400 mt-1.5">
+                  {userPlan === 'FREE' ? 'Your plan includes 5 auto-applications per week. Resets every Monday.'
+                    : userPlan === 'PRO' ? 'Your plan includes 20 auto-applications per day.'
+                    : 'Your plan includes 50 auto-applications per day.'}
+                </p>
+              )}
             </div>
           </label>
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
-            <input type="radio" name="applyMode" className="mt-1 accent-blue-600" />
+          <label
+            onClick={() => {
+              if (userPlan === 'MAX') {
+                saveApplyMode('full-agent');
+              }
+            }}
+            className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+              userPlan !== 'MAX' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+            } ${
+              applyMode === 'full-agent'
+                ? 'border-purple-200 dark:border-purple-500/20 bg-purple-50/50 dark:bg-purple-500/5'
+                : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+            }`}
+          >
+            <input type="radio" name="applyMode" checked={applyMode === 'full-agent'} readOnly className="mt-1 accent-purple-600" disabled={userPlan !== 'MAX'} />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">Full autopilot, apply to everything</p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">MAX</span>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">AI handles the entire process end-to-end</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {userPlan === 'MAX' ? 'AI handles the entire process end-to-end' : 'Upgrade to MAX to unlock full autopilot'}
+              </p>
             </div>
           </label>
         </div>
