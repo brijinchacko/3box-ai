@@ -645,6 +645,7 @@ interface SavedProfile {
 
 function AutopilotJobSearch() {
   const autopilotRouter = useRouter();
+  const jobSearchParams = useSearchParams();
   // My Profiles state
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -657,7 +658,48 @@ function AutopilotJobSearch() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profiles' | 'search'>('profiles');
+  const [activeTab, setActiveTab] = useState<'profiles' | 'search'>(
+    jobSearchParams.get('tab') === 'search' ? 'search' : 'profiles'
+  );
+  const [scoutJobsLoaded, setScoutJobsLoaded] = useState(false);
+
+  // Fetch ScoutJob records (jobs discovered by Scout agent)
+  const fetchScoutJobs = useCallback(async () => {
+    if (scoutJobsLoaded) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/agents/scout/jobs?limit=50');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.jobs && data.jobs.length > 0) {
+          setJobs(data.jobs.map((j: any) => ({
+            id: j.id,
+            title: j.title || '',
+            company: j.company || '',
+            location: j.location || '',
+            description: j.description || '',
+            salary: j.salary || '',
+            remote: j.remote || false,
+            matchScore: j.matchScore,
+            url: j.jobUrl || '',
+            source: j.source || '',
+          })));
+          setTotal(data.total || data.jobs.length);
+          setHasSearched(true);
+        }
+      }
+    } catch {} finally {
+      setLoading(false);
+      setScoutJobsLoaded(true);
+    }
+  }, [scoutJobsLoaded]);
+
+  // Auto-load scout jobs when switching to Search Results tab
+  useEffect(() => {
+    if (activeTab === 'search' && !hasSearched && !scoutJobsLoaded) {
+      fetchScoutJobs();
+    }
+  }, [activeTab, hasSearched, scoutJobsLoaded, fetchScoutJobs]);
 
   // Fetch saved search profiles
   const fetchProfiles = useCallback(async () => {
@@ -929,7 +971,14 @@ function AutopilotJobSearch() {
               {!loading && !hasSearched && (
                 <div className="text-center py-16">
                   <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500 dark:text-gray-400">Create a search profile and click &quot;Search Now&quot; to see results.</p>
+                  {profiles.length > 0 ? (
+                    <>
+                      <p className="text-gray-500 dark:text-gray-400">Scout is searching for jobs matching your profile.</p>
+                      <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Results will appear here shortly.</p>
+                    </>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">Create a search profile to find matching jobs.</p>
+                  )}
                 </div>
               )}
 

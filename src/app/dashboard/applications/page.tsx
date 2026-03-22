@@ -56,6 +56,15 @@ function AutopilotApplications() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<{ total: number; queued: number; emailed: number; applied: number; interview: number; offer: number; rejected: number } | null>(null);
+  const [scoutJobCount, setScoutJobCount] = useState(0);
+
+  // Fetch scout job count for empty state CTA
+  useEffect(() => {
+    fetch('/api/agents/scout/jobs?limit=1')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.total) setScoutJobCount(d.total); })
+      .catch(() => {});
+  }, []);
 
   const fetchApps = useCallback(async (status: string, pg: number) => {
     setLoading(true);
@@ -158,13 +167,15 @@ function AutopilotApplications() {
               <Send className="w-16 h-16 text-white/10 mb-4" />
               <h3 className="text-lg font-semibold text-white/70 mb-2">No applications yet</h3>
               <p className="text-sm text-white/40 mb-6 max-w-md">
-                Find matching jobs first, then apply with one click
+                {scoutJobCount > 0
+                  ? `You have ${scoutJobCount} matching job${scoutJobCount === 1 ? '' : 's'} ready to apply.`
+                  : 'Set up a job search to find matching roles.'}
               </p>
               <Link
-                href="/dashboard/jobs"
+                href="/dashboard/jobs?tab=search"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all"
               >
-                <Search className="w-4 h-4" /> Find Jobs
+                <Search className="w-4 h-4" /> {scoutJobCount > 0 ? 'View Jobs & Apply' : 'Find Jobs'}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </>
