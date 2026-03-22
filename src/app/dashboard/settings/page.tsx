@@ -605,7 +605,7 @@ export default function SettingsPage() {
   };
 
   const showComingSoon = (feature: string) => {
-    setComingSoonMsg(`${feature} — coming soon!`);
+    setComingSoonMsg(`${feature}, coming soon!`);
     setTimeout(() => setComingSoonMsg(''), 2000);
   };
 
@@ -860,7 +860,7 @@ export default function SettingsPage() {
               <div className="card text-left">
                 <h3 className="font-semibold mb-2 text-left">Connected Email Accounts</h3>
                 <p className="text-sm text-white/40 mb-6 text-left">
-                  Connect your Gmail so job applications are sent from your personal email — boosting response rates.
+                  Connect your Gmail so job applications are sent from your personal email, boosting response rates.
                 </p>
 
                 {/* Warning: applications go from our email if not connected */}
@@ -914,6 +914,13 @@ export default function SettingsPage() {
                         >
                           {emailDisconnecting === 'gmail' ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Disconnect'}
                         </button>
+                      ) : userPlan === 'FREE' ? (
+                        <a
+                          href="/pricing"
+                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 border border-neon-purple/30 text-neon-purple text-xs hover:from-neon-blue/30 hover:to-neon-purple/30 transition-colors shrink-0"
+                        >
+                          Upgrade to PRO
+                        </a>
                       ) : (
                         <a
                           href="/api/auth/gmail/connect"
@@ -924,7 +931,14 @@ export default function SettingsPage() {
                       )}
                     </div>
 
-                    {/* Outlook — Coming Soon */}
+                    {userPlan === 'FREE' && (
+                      <div className="p-4 rounded-xl border border-neon-purple/20 bg-neon-purple/5">
+                        <p className="text-xs text-white/60 mb-2">Applications sent from your personal email have 3x higher response rates.</p>
+                        <a href="/pricing" className="text-xs text-neon-purple hover:underline">Upgrade to PRO to connect your email</a>
+                      </div>
+                    )}
+
+                    {/* Outlook, Coming Soon */}
                     <div className="p-4 rounded-xl border border-white/10 bg-white/[.02] flex items-center justify-between opacity-50">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -948,7 +962,7 @@ export default function SettingsPage() {
                   <ul className="text-xs text-white/40 space-y-1.5 list-disc pl-4">
                     <li>Applications sent from your personal email have 3x higher response rates</li>
                     <li>Employers see your name, not a generic company address</li>
-                    <li>We only use the &quot;send email&quot; permission — we never read your inbox</li>
+                    <li>We only use the &quot;send email&quot; permission. We never read your inbox</li>
                     <li>You can disconnect at any time</li>
                   </ul>
                 </div>

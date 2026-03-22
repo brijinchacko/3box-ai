@@ -60,7 +60,7 @@ function resolveStep(state: PipelineState): StepInfo {
 
   if (!state.scoutRanOnce) {
     return {
-      text: 'Find matching jobs — Search Now',
+      text: 'Find matching jobs. Search Now',
       href: '/dashboard/jobs',
       cta: 'Search Now',
       icon: <Search className="w-4 h-4" />,
@@ -69,7 +69,7 @@ function resolveStep(state: PipelineState): StepInfo {
 
   if (state.matchingJobCount > 0 && !state.hasApplications) {
     return {
-      text: `You have ${state.matchingJobCount} matching job${state.matchingJobCount === 1 ? '' : 's'} — Start applying`,
+      text: `You have ${state.matchingJobCount} matching job${state.matchingJobCount === 1 ? '' : 's'}. Start applying`,
       href: '/dashboard/board',
       cta: 'Start Applying',
       icon: <Briefcase className="w-4 h-4" />,
@@ -96,7 +96,7 @@ function resolveStep(state: PipelineState): StepInfo {
 
   // Default
   return {
-    text: 'Keep applying — Scout finds new jobs daily',
+    text: 'Keep applying. Scout finds new jobs daily',
     href: '/dashboard/jobs',
     cta: 'Find Jobs',
     icon: <Sparkles className="w-4 h-4" />,

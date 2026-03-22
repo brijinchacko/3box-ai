@@ -227,7 +227,7 @@ function SetupWarnings({
   if (!status.hasConnectedEmail) {
     warnings.push({
       icon: <Mail className="w-3.5 h-3.5 text-amber-500" />,
-      text: 'Connect your email — applications will be sent from a generic address without it',
+      text: 'Connect your email. Applications will be sent from a generic address without it',
       action: { label: 'Connect', href: '/dashboard/settings' },
     });
   }
@@ -243,14 +243,14 @@ function SetupWarnings({
   if (status.activeCount === 0 && status.profileCount > 0) {
     warnings.push({
       icon: <Pause className="w-3.5 h-3.5 text-gray-400" />,
-      text: 'All search pipelines are paused — resume one to find new jobs',
+      text: 'All search pipelines are paused. Resume one to find new jobs',
     });
   }
 
   if (!status.autoSearchOn && status.activeCount > 0) {
     warnings.push({
       icon: <RefreshCw className="w-3.5 h-3.5 text-amber-500" />,
-      text: 'Auto-search is off — jobs won\'t be discovered automatically',
+      text: 'Auto-search is off. Jobs won\'t be discovered automatically',
       action: { label: 'Settings', href: '/dashboard/settings' },
     });
   }
@@ -258,7 +258,7 @@ function SetupWarnings({
   if (status.dailyLimitReached) {
     warnings.push({
       icon: <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
-      text: 'Daily application limit reached — will resume tomorrow',
+      text: 'Daily application limit reached. Will resume tomorrow',
     });
   }
 
@@ -640,7 +640,7 @@ export default function DashboardStatusBar() {
             isAgentic ? 'bg-red-500/10 text-red-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
           )}>
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span className="font-medium">Quota exhausted — </span>
+            <span className="font-medium">Quota exhausted.</span>
             <Link href="/pricing" className="underline font-semibold">Upgrade to continue</Link>
           </div>
         )}

@@ -71,7 +71,7 @@ export default function FeatureLockedOverlay({ used, limit }: FeatureLockedOverl
                 '20 job applications per day',
                 'Auto-apply automation',
                 'ATS-optimized resumes per job',
-                'All 6 AI agents — unlimited AI usage',
+                'All 6 AI agents, unlimited AI usage',
                 'Priority processing & email support',
               ].map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-xs text-gray-400">

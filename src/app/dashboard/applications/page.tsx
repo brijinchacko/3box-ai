@@ -558,7 +558,7 @@ export default function ApplicationsPage() {
               </span>
             </h1>
             <p className="text-xs text-white/40">
-              {running ? 'Running pipeline — finding and applying to jobs...' : 'Sends applications to matched jobs on your behalf'}
+              {running ? 'Running pipeline, finding and applying to jobs...' : 'Sends applications to matched jobs on your behalf'}
             </p>
           </div>
           <button

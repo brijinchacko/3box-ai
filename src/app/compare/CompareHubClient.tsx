@@ -64,7 +64,7 @@ export default function CompareHubClient() {
             <p className="text-lg text-white/50 max-w-2xl mx-auto mb-8">
               3BOX AI is the only all-in-one AI career platform with resume builder, career
               coaching, salary estimator, skills assessment, portfolio builder, and job matching
-              — with a free plan and Pro from $29/mo.
+              , with a free plan and Pro from $29/mo.
             </p>
             <Link
               href="/compare/all"
@@ -133,7 +133,7 @@ export default function CompareHubClient() {
             </h2>
             <p className="text-white/50 mb-8 max-w-lg mx-auto">
               3BOX AI replaces 5+ career tools. Resume builder, ATS checker, career coach,
-              salary estimator, skills assessment, portfolio builder, and job matching — all in one.
+              salary estimator, skills assessment, portfolio builder, and job matching, all in one.
             </p>
             <Link href="/signup" className="btn-primary inline-flex items-center gap-2">
               Get Started Today <ArrowRight className="w-4 h-4" />

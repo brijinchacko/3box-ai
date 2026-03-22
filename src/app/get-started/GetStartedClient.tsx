@@ -864,7 +864,7 @@ export default function GetStartedClient() {
                   {/* Role-based suggestions */}
                   <div>
                     <div className="text-xs text-white/25 mb-2">
-                      {data.targetRole ? `Suggested for ${data.targetRole}` : 'Popular skills'} — tap to add
+                      {data.targetRole ? `Suggested for ${data.targetRole}` : 'Popular skills'}, tap to add
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {getSkillSuggestions(data.targetRole)

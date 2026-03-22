@@ -336,7 +336,7 @@ export default function AgentDashboardPage() {
             <p className="text-white/40 text-sm">
               One command activates all agents &middot;{' '}
               <span className="text-neon-green">{activeAgentCount} agents active</span>
-              {effectivePlan === 'FREE' && <span className="text-white/30"> — Upgrade to unlock agents</span>}
+              {effectivePlan === 'FREE' && <span className="text-white/30"> - Upgrade to unlock agents</span>}
             </p>
           </div>
         </div>
@@ -633,7 +633,7 @@ export default function AgentDashboardPage() {
                 <Timer className="w-4 h-4 text-neon-purple" /> Independent Agent Scheduling
               </h4>
               <p className="text-xs text-white/30 mb-4">
-                Enable agents to run independently on their own schedules. Each agent works autonomously — Scout discovers jobs, Forge optimizes resumes, Archer applies.
+                Enable agents to run independently on their own schedules. Each agent works autonomously: Scout discovers jobs, Forge optimizes resumes, Archer applies.
               </p>
 
               <div className="space-y-4">
@@ -824,7 +824,7 @@ export default function AgentDashboardPage() {
               <div className="flex-1">
                 <h3 className="font-semibold mb-0.5">Let agents work while you sleep</h3>
                 <p className="text-sm text-white/40">
-                  Set a daily schedule and your agents will automatically discover jobs, optimize resumes, and send applications — all in the background.
+                  Set a daily schedule and your agents will automatically discover jobs, optimize resumes, and send applications, all in the background.
                 </p>
               </div>
               <button

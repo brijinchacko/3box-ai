@@ -9,7 +9,7 @@ import ComparePageClient, { type ComparisonData } from '../ComparePageClient';
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
 
 export const metadata: Metadata = {
-  title: '3BOX AI vs Teal — The Better Teal Alternative (2026)',
+  title: '3BOX AI vs Teal - The Better Teal Alternative (2026)',
   description:
     'Looking for a Teal alternative? 3BOX AI offers salary tools, skills assessment, portfolio builder, AI career coaching, and job matching that Teal lacks. Compare features, pricing, and ratings.',
   keywords:
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: `${SITE_URL}/compare/teal`,
-    title: '3BOX AI vs Teal — The Better Teal Alternative',
+    title: '3BOX AI vs Teal - The Better Teal Alternative',
     description:
       'Salary tools, skills assessment, portfolio builder, and AI career coaching that Teal lacks.',
     siteName: '3BOX AI',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '3BOX AI vs Teal — The Better Alternative',
+    title: '3BOX AI vs Teal - The Better Alternative',
     description: 'Skills assessment, salary tools, portfolio builder, and more.',
     creator: '@3boxai',
   },
@@ -37,9 +37,9 @@ export const metadata: Metadata = {
 const data: ComparisonData = {
   competitorName: 'Teal',
   competitorSlug: 'teal',
-  heroTitle: '3BOX AI vs Teal — The Better Alternative',
+  heroTitle: '3BOX AI vs Teal - The Better Alternative',
   heroSubtitle:
-    'Teal offers job tracking and a basic resume builder. 3BOX AI adds salary insights, skills assessment, AI portfolio builder, career coaching, and intelligent job matching — the tools Teal is missing.',
+    'Teal offers job tracking and a basic resume builder. 3BOX AI adds salary insights, skills assessment, AI portfolio builder, career coaching, and intelligent job matching, the tools Teal is missing.',
   verdict: '3BOX AI goes deeper where Teal stops.',
   verdictDetail:
     'Teal is great for organizing your job search with its tracker and basic resume tools. But it lacks salary data, skills assessment, career coaching, and a portfolio builder. 3BOX AI fills every gap and offers more at a comparable price.',
@@ -59,8 +59,8 @@ const data: ComparisonData = {
   ],
   boxAiPrice: '$29/mo',
   competitorPrice: '$29/mo (Pro+)',
-  boxAiEntryPlan: 'Pro — $29/mo with all 6 AI agents and unlimited operations',
-  competitorEntryPlan: 'Yes — limited resume builder, job tracker',
+  boxAiEntryPlan: 'Pro at $29/mo with all 6 AI agents and unlimited operations',
+  competitorEntryPlan: 'Yes, limited resume builder, job tracker',
   boxAiRating: '4.8',
   competitorRating: '4.5',
   boxAiReviewCount: '2,847',
@@ -115,7 +115,7 @@ const data: ComparisonData = {
     {
       question: 'Is 3BOX AI better for career changers than Teal?',
       answer:
-        'Yes. 3BOX AI is particularly strong for career changers because it offers skill gap analysis, adaptive learning paths, career transition planning, and AI coaching — features that Teal does not have.',
+        'Yes. 3BOX AI is particularly strong for career changers because it offers skill gap analysis, adaptive learning paths, career transition planning, and AI coaching, features that Teal does not have.',
     },
   ],
 };
@@ -133,7 +133,7 @@ export default function TealComparePage() {
       <StructuredData data={faqPageSchema(data.faqs)} />
       <StructuredData
         data={comparisonPageSchema({
-          title: '3BOX AI vs Teal — The Better Teal Alternative',
+          title: '3BOX AI vs Teal - The Better Teal Alternative',
           description: metadata.description as string,
           url: `${SITE_URL}/compare/teal`,
           competitors: ['Teal'],

@@ -859,7 +859,7 @@ function AutopilotJobSearch() {
                             onClick={() => toggleProfileActive(profile.id, !profile.active)}
                             className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                             style={{ backgroundColor: profile.active ? '#22c55e' : '#374151' }}
-                            title={profile.active ? 'Pause search — your existing results are kept' : 'Resume search — start scanning for new jobs'}
+                            title={profile.active ? 'Pause search - your existing results are kept' : 'Resume search - start scanning for new jobs'}
                           >
                             <span className={cn(
                               'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
@@ -900,7 +900,7 @@ function AutopilotJobSearch() {
                             <div>
                               <span className="text-sm text-gray-600 dark:text-gray-400">{profile.jobTitle}</span>
                               <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
-                                {profile.location || 'Any location'} — {profile.jobsFound} found, {profile.appliedCount} applied
+                                {profile.location || 'Any location'} | {profile.jobsFound} found, {profile.appliedCount} applied
                               </span>
                             </div>
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
@@ -1495,7 +1495,7 @@ export default function JobsPage() {
                   {runHistory.slice(0, 5).map(run => (
                     <div key={run.runId} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-white/50 truncate">{run.summary?.split(' — ')[0] || 'Scout mission'}</span>
+                        <span className="text-white/50 truncate">{run.summary?.split(' - ')[0] || 'Scout mission'}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] flex-shrink-0 ${
                           run.status === 'completed' ? 'bg-blue-400/10 text-blue-400' :
                           run.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :

@@ -16,7 +16,7 @@ const team = [
 const values = [
   { icon: Target, title: 'Mission-Driven', description: 'Every feature exists to help people land their dream jobs faster and with more confidence.' },
   { icon: Heart, title: 'User-First', description: 'We build what users need, not what looks good in demos. Real outcomes over vanity metrics.' },
-  { icon: Zap, title: 'AI-Native', description: 'AI isn\'t an add-on — it\'s the core of every workflow, from assessment to application.' },
+  { icon: Zap, title: 'AI-Native', description: 'AI isn\'t an add-on. It\'s the core of every workflow, from assessment to application.' },
   { icon: Globe, title: 'Accessible', description: 'Career advancement tools should be available to everyone, everywhere. Plans for every budget.' },
 ];
 
@@ -68,10 +68,10 @@ export default function AboutPageClient() {
             <h2 className="text-2xl font-bold mb-4">Our Story</h2>
             <div className="space-y-4 text-white/50 text-sm leading-relaxed">
               <p>
-                Career development is broken. Job seekers juggle dozens of tools — one for assessments, another for learning, a third for resume building, and yet another for job applications. Each tool works in isolation, with no shared understanding of the user&apos;s goals or progress.
+                Career development is broken. Job seekers juggle dozens of tools: one for assessments, another for learning, a third for resume building, and yet another for job applications. Each tool works in isolation, with no shared understanding of the user&apos;s goals or progress.
               </p>
               <p>
-                3BOX AI was born from a simple question: what if one AI system could understand your entire career journey and guide you through every step? From identifying your skills and gaps, to building proof of your abilities, to connecting you with the right opportunities — all in one place.
+                3BOX AI was born from a simple question: what if one AI system could understand your entire career journey and guide you through every step? From identifying your skills and gaps, to building proof of your abilities, to connecting you with the right opportunities, all in one place.
               </p>
               <p>
                 We call it a Career Operating System. Powered by AI, it adapts to you, learns from your progress, and continuously optimizes your path to employment. The result is faster career transitions, higher interview success rates, and a more confident job search experience.
@@ -88,7 +88,7 @@ export default function AboutPageClient() {
             className="text-center scroll-mt-24"
           >
             <h2 className="text-2xl font-bold mb-4">Get in Touch</h2>
-            <p className="text-white/40 mb-6">We&apos;d love to hear from you — whether you&apos;re a user, partner, or investor.</p>
+            <p className="text-white/40 mb-6">We&apos;d love to hear from you, whether you&apos;re a user, partner, or investor.</p>
             <div className="flex items-center justify-center gap-4">
               <a href="mailto:nishinth.m@wartens.com" className="btn-secondary text-sm flex items-center gap-2">
                 <Mail className="w-4 h-4" /> nishinth.m@wartens.com

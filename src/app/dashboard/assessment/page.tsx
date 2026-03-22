@@ -406,7 +406,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
                 <label className="block text-sm text-white/60 mb-1.5">Years of experience</label>
                 <select className="input-field" value={experience} onChange={(e) => setExperience(e.target.value)}>
                   <option value="">Select...</option>
-                  <option value="0">0 — Career changer</option>
+                  <option value="0">0 - Career changer</option>
                   <option value="1-2">1-2 years</option>
                   <option value="3-5">3-5 years</option>
                   <option value="5+">5+ years</option>
@@ -558,7 +558,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
                 <div className="flex items-center gap-3">
                   <Lock className="w-8 h-8 text-yellow-400 flex-shrink-0" />
                   <div>
-                    <h3 className="font-bold text-yellow-400">Score: {results.overallScore}% — Need 85% to unlock jobs</h3>
+                    <h3 className="font-bold text-yellow-400">Score: {results.overallScore}%. Need 85% to unlock jobs</h3>
                     <p className="text-sm text-white/50">
                       Complete the learning path to improve your skills, then re-take the assessment.
                     </p>
@@ -594,7 +594,7 @@ Include 5-8 skill scores relevant to ${targetRole}. Include 2-4 gaps. Include 3-
                   <div key={s.skill}>
                     <div className="flex justify-between mb-1.5">
                       <span className="text-sm font-medium">{s.skill}</span>
-                      <span className="text-xs text-white/40">{s.score}% — {s.level}</span>
+                      <span className="text-xs text-white/40">{s.score}% - {s.level}</span>
                     </div>
                     <div className="skill-bar">
                       <motion.div

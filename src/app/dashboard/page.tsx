@@ -249,7 +249,7 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
             <input type="radio" name="applyMode" className="mt-1 accent-blue-600" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Full autopilot — apply to everything</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Full autopilot, apply to everything</p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">MAX</span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">AI handles the entire process end-to-end</p>

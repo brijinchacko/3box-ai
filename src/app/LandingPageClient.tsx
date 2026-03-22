@@ -20,7 +20,7 @@ const steps = [
 ];
 
 const faqItems = [
-  { q: 'Is there a money-back guarantee?', a: 'Yes. All paid plans include a 7-day money-back guarantee. If you\'re not satisfied, request a full refund within 7 days of purchase — subject to our usage conditions. See our Refund Policy for details.' },
+  { q: 'Is there a money-back guarantee?', a: 'Yes. All paid plans include a 7-day money-back guarantee. If you\'re not satisfied, request a full refund within 7 days of purchase, subject to our usage conditions. See our Refund Policy for details.' },
   { q: 'How does the AI actually apply?', a: 'Agent Archer generates a unique cover letter for each job, then submits through job portals or sends a professional email to HR. Every application is tracked in your dashboard.' },
   { q: 'Will it send wrong or spammy applications?', a: 'No. Agent Sentinel reviews every application for quality before it goes out. Each has a unique, tailored cover letter \u2014 not a template.' },
   { q: 'Is my data safe?', a: 'All data is encrypted in transit and at rest. We never sell your information. You can delete your account and all data anytime.' },
@@ -85,7 +85,7 @@ export default function LandingPageClient() {
                   href="/get-started"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/60 text-sm font-medium hover:text-white hover:border-white/20 transition-colors"
                 >
-                  <Rocket className="w-4 h-4" /> Try it free — no signup needed
+                  <Rocket className="w-4 h-4" /> Try it free, no signup needed
                 </Link>
                 <p className="text-xs text-white/30">7-day money-back guarantee &middot; Cancel anytime</p>
               </>
@@ -261,18 +261,18 @@ export default function LandingPageClient() {
           >
             <Chrome className="w-12 h-12 text-neon-blue mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-3">
-              Chrome Extension — Coming Soon
+              Chrome Extension - Coming Soon
             </h3>
             <p className="text-white/40 max-w-md mx-auto mb-6 text-sm leading-relaxed">
               Auto-apply to jobs directly on LinkedIn, Indeed, Naukri, Glassdoor, Workday, and iCIMS.
               The extension auto-fills forms with your resume and syncs everything back to your dashboard.
-              Currently under review — join the waitlist to get early access.
+              Currently under review. Join the waitlist to get early access.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <span
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/40 text-sm cursor-default"
               >
-                <Chrome className="w-4 h-4" /> Chrome Extension — Coming Soon
+                <Chrome className="w-4 h-4" /> Chrome Extension - Coming Soon
               </span>
             </div>
             <div className="flex items-center justify-center gap-6 mt-6 text-[11px] text-white/20">

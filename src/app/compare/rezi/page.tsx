@@ -9,7 +9,7 @@ import ComparePageClient, { type ComparisonData } from '../ComparePageClient';
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
 
 export const metadata: Metadata = {
-  title: '3BOX AI vs Rezi — The Better Rezi Alternative (2026)',
+  title: '3BOX AI vs Rezi - The Better Rezi Alternative (2026)',
   description:
     'Looking for a Rezi alternative? 3BOX AI offers AI career coaching, salary estimator, skills assessment, job matching, and portfolio builder that Rezi lacks. Compare AI resume builders side by side.',
   keywords:
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: `${SITE_URL}/compare/rezi`,
-    title: '3BOX AI vs Rezi — The Better Rezi Alternative',
+    title: '3BOX AI vs Rezi - The Better Rezi Alternative',
     description:
       'Career coaching, salary estimator, skills assessment, and job matching that Rezi lacks.',
     siteName: '3BOX AI',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '3BOX AI vs Rezi — The Better Alternative',
+    title: '3BOX AI vs Rezi - The Better Alternative',
     description: 'Full career platform vs resume-only tool.',
     creator: '@3boxai',
   },
@@ -37,9 +37,9 @@ export const metadata: Metadata = {
 const data: ComparisonData = {
   competitorName: 'Rezi',
   competitorSlug: 'rezi',
-  heroTitle: '3BOX AI vs Rezi — The Better Alternative',
+  heroTitle: '3BOX AI vs Rezi - The Better Alternative',
   heroSubtitle:
-    'Rezi is a focused AI resume builder. 3BOX AI takes you beyond the resume with career coaching, salary insights, skills assessment, job matching, and a portfolio builder — the complete career toolkit.',
+    'Rezi is a focused AI resume builder. 3BOX AI takes you beyond the resume with career coaching, salary insights, skills assessment, job matching, and a portfolio builder, the complete career toolkit.',
   verdict: '3BOX AI is the full career platform that Rezi is not.',
   verdictDetail:
     'Rezi builds strong resumes with its AI writer and ATS optimization. But your career is more than a resume. 3BOX AI adds career coaching, salary estimator, skills assessment, portfolio builder, and AI job matching at $29/mo vs Rezi\'s $29/mo.',
@@ -59,8 +59,8 @@ const data: ComparisonData = {
   ],
   boxAiPrice: '$29/mo',
   competitorPrice: '$29/mo',
-  boxAiEntryPlan: 'Pro — $29/mo with all 6 AI agents and unlimited operations',
-  competitorEntryPlan: 'Yes — limited resume builder (1 resume)',
+  boxAiEntryPlan: 'Pro at $29/mo with all 6 AI agents and unlimited operations',
+  competitorEntryPlan: 'Yes, limited resume builder (1 resume)',
   boxAiRating: '4.8',
   competitorRating: '4.6',
   boxAiReviewCount: '2,847',
@@ -70,13 +70,13 @@ const data: ComparisonData = {
       icon: 'zap',
       title: 'Beyond the Resume',
       description:
-        'Rezi stops at the resume. 3BOX AI covers your entire career journey — from skill assessment through coaching to job matching and automated applications.',
+        'Rezi stops at the resume. 3BOX AI covers your entire career journey, from skill assessment through coaching to job matching and automated applications.',
     },
     {
       icon: 'dollar',
       title: 'Better Value at $29/mo',
       description:
-        '3BOX AI Pro costs $29/mo for 8+ career tools. Rezi charges $29/mo for a resume builder and cover letter tool — significantly less value per dollar.',
+        '3BOX AI Pro costs $29/mo for 8+ career tools. Rezi charges $29/mo for a resume builder and cover letter tool, significantly less value per dollar.',
     },
     {
       icon: 'trophy',
@@ -95,7 +95,7 @@ const data: ComparisonData = {
     {
       question: 'Is 3BOX AI a good Rezi alternative?',
       answer:
-        'Yes. 3BOX AI matches Rezi on AI resume building and ATS checking, then adds career coaching, salary estimator, skills assessment, portfolio builder, and job matching — all at a lower price.',
+        'Yes. 3BOX AI matches Rezi on AI resume building and ATS checking, then adds career coaching, salary estimator, skills assessment, portfolio builder, and job matching, all at a lower price.',
     },
     {
       question: 'How does 3BOX AI\'s resume builder compare to Rezi?',
@@ -110,7 +110,7 @@ const data: ComparisonData = {
     {
       question: 'Does 3BOX AI have ATS optimization like Rezi?',
       answer:
-        'Yes. 3BOX AI includes a full ATS resume checker that analyzes keyword match, formatting, and readability — similar to Rezi. Plus, 3BOX AI gives you a learning path to fill actual skill gaps, not just keyword gaps.',
+        'Yes. 3BOX AI includes a full ATS resume checker that analyzes keyword match, formatting, and readability, similar to Rezi. Plus, 3BOX AI gives you a learning path to fill actual skill gaps, not just keyword gaps.',
     },
     {
       question: 'Can Rezi help with career coaching?',
@@ -133,7 +133,7 @@ export default function ReziComparePage() {
       <StructuredData data={faqPageSchema(data.faqs)} />
       <StructuredData
         data={comparisonPageSchema({
-          title: '3BOX AI vs Rezi — The Better Rezi Alternative',
+          title: '3BOX AI vs Rezi - The Better Rezi Alternative',
           description: metadata.description as string,
           url: `${SITE_URL}/compare/rezi`,
           competitors: ['Rezi'],

@@ -400,7 +400,7 @@ function AutopilotInterviewPrep() {
         <div className="space-y-6">
           {/* Summary card */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Session Results — {targetRole}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Session Results - {targetRole}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{(results.reduce((a, r) => a + r.evaluation.score, 0) / results.length).toFixed(1)}</div>

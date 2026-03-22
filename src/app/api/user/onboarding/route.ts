@@ -273,7 +273,31 @@ export async function POST(request: NextRequest) {
       console.warn('[Onboarding] AutoApplyConfig setup failed:', e);
     }
 
-    // 4. TRIGGER first Scout run in background (fire-and-forget)
+    // 4. AUTO-CREATE Portfolio skeleton from onboarding data
+    try {
+      const existingPortfolio = await prisma.portfolio.findUnique({ where: { userId } });
+      if (!existingPortfolio) {
+        const slug = (profile?.fullName || session.user.name || 'user')
+          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        await prisma.portfolio.create({
+          data: {
+            userId,
+            slug: `${slug}-${userId.slice(-4)}`,
+            title: profile?.fullName || session.user.name || '',
+            bio: profile?.bio || `${targetRole} with ${profile?.experienceLevel || ''} experience`,
+            skills: profile?.skills || [],
+            projects: [],
+            theme: 'midnight',
+            isPublic: false,
+          },
+        });
+        console.log(`[Onboarding] Auto-created portfolio for user ${userId}`);
+      }
+    } catch (e) {
+      console.warn('[Onboarding] Portfolio auto-creation failed:', e);
+    }
+
+    // 5. TRIGGER first Scout run in background (fire-and-forget)
     //    This runs async — don't block the response
     try {
       const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';

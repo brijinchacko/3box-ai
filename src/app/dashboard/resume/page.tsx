@@ -159,7 +159,7 @@ function AutopilotResume() {
   const [resumeLoaded, setResumeLoaded] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin' | 'portfolio'>('preview');
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin'>('preview');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState('contact');
   const [generating, setGenerating] = useState(false);
@@ -372,11 +372,11 @@ function AutopilotResume() {
   const generateAISuggestions = (resumeData: any) => {
     const suggestions: { text: string; section: string }[] = [];
     if (!resumeData.contact?.phone) suggestions.push({ text: 'Add your phone number for recruiters to reach you', section: 'contact' });
-    if (!resumeData.contact?.linkedin) suggestions.push({ text: 'Add your LinkedIn profile URL — recruiters check this first', section: 'contact' });
+    if (!resumeData.contact?.linkedin) suggestions.push({ text: 'Add your LinkedIn profile URL - recruiters check this first', section: 'contact' });
     if (!resumeData.contact?.portfolio) suggestions.push({ text: 'Create a portfolio to showcase your work', section: 'contact' });
-    if (!resumeData.contact?.location) suggestions.push({ text: 'Add your location — many jobs filter by location', section: 'contact' });
+    if (!resumeData.contact?.location) suggestions.push({ text: 'Add your location - many jobs filter by location', section: 'contact' });
     if (!resumeData.summary || resumeData.summary.length < 50) suggestions.push({ text: 'Write a compelling 3-4 sentence professional summary', section: 'summary' });
-    if (!resumeData.experience || resumeData.experience.length === 0) suggestions.push({ text: 'Add your work experience — even internships count', section: 'experience' });
+    if (!resumeData.experience || resumeData.experience.length === 0) suggestions.push({ text: 'Add your work experience - even internships count', section: 'experience' });
     if (resumeData.experience?.length > 0) {
       const hasWeakBullets = resumeData.experience.some((e: any) => !e.bullets || e.bullets.length < 3);
       if (hasWeakBullets) suggestions.push({ text: 'Add more bullet points with measurable achievements', section: 'experience' });
@@ -797,7 +797,7 @@ function AutopilotResume() {
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
-      showToast('Resume opened — use the print dialog to save as PDF.', 'success');
+      showToast('Resume opened - use the print dialog to save as PDF.', 'success');
     } catch { showToast('Export failed.', 'error'); }
     finally { setExporting(false); }
   };
@@ -1007,7 +1007,7 @@ function AutopilotResume() {
                   <Download className="w-10 h-10 text-blue-500 mx-auto mb-3" />
                 )}
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Upload Resume</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">PDF or DOCX — we&apos;ll parse and import it</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">PDF or DOCX - we&apos;ll parse and import it</p>
               </div>
             </label>
 
@@ -1551,7 +1551,7 @@ function AutopilotResume() {
                             updated[i] = { ...updated[i], bullets };
                             setResume(prev => ({ ...prev, experience: updated }));
                           }}
-                          placeholder="Paste or type your achievements here — one per line&#10;e.g. Led a team of 10 engineers to deliver project 2 weeks early&#10;Reduced operational costs by 25% through process optimization"
+                          placeholder="Paste or type your achievements here, one per line&#10;e.g. Led a team of 10 engineers to deliver project 2 weeks early&#10;Reduced operational costs by 25% through process optimization"
                           rows={5}
                           className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-y"
                         />
@@ -1800,7 +1800,7 @@ function AutopilotResume() {
                       {resume.experience.map(exp => (
                         <div key={exp.id}>
                           <div className="flex justify-between items-baseline">
-                            <div><span className="text-[13px] font-semibold text-gray-900">{exp.role}</span> <span className="text-[12px] text-gray-500">— {exp.company}</span></div>
+                            <div><span className="text-[13px] font-semibold text-gray-900">{exp.role}</span> <span className="text-[12px] text-gray-500">| {exp.company}</span></div>
                             <span className="text-[11px] text-gray-400 flex-shrink-0 ml-3">{exp.startDate}{(exp.startDate || exp.endDate) ? ' – ' : ''}{exp.endDate || (exp.startDate ? 'Present' : '')}</span>
                           </div>
                           {exp.location && <div className="text-[11px] text-gray-400">{exp.location}</div>}
@@ -1864,7 +1864,7 @@ function AutopilotResume() {
                     {resume.experience.map(exp => (
                       <div key={exp.id}>
                         <div className="flex justify-between items-baseline">
-                          <div><span className="text-[13px] font-bold text-gray-900">{exp.role}</span> <span className="text-[12px] text-gray-600">— {exp.company}{exp.location ? `, ${exp.location}` : ''}</span></div>
+                          <div><span className="text-[13px] font-bold text-gray-900">{exp.role}</span> <span className="text-[12px] text-gray-600">| {exp.company}{exp.location ? `, ${exp.location}` : ''}</span></div>
                           <span className="text-[11px] text-gray-400 flex-shrink-0 ml-3">{exp.startDate}{(exp.startDate || exp.endDate) ? ' – ' : ''}{exp.endDate || (exp.startDate ? 'Present' : '')}</span>
                         </div>
                         {exp.bullets && exp.bullets.filter(Boolean).length > 0 && (
@@ -1911,7 +1911,7 @@ function AutopilotResume() {
                   <h2 className="text-[11px] font-bold uppercase tracking-[2px] pb-1 mb-2" style={{ color: '#1e293b', borderBottom: '1px solid #d1d5db' }}>Certifications</h2>
                   {resume.certifications.map(cert => (
                     <div key={cert.id} className="text-[12px] text-gray-700 mb-1">
-                      <span className="font-semibold text-gray-900">{cert.name}</span>{cert.issuer ? ` — ${cert.issuer}` : ''}
+                      <span className="font-semibold text-gray-900">{cert.name}</span>{cert.issuer ? ` - ${cert.issuer}` : ''}
                     </div>
                   ))}
                 </div>
@@ -1960,7 +1960,7 @@ function AutopilotResume() {
                     {resume.experience.map(exp => (
                       <div key={exp.id}>
                         <div className="flex justify-between items-baseline">
-                          <div><span className="text-[13px] font-semibold text-gray-900">{exp.role}</span> <span className="text-[12px] text-gray-400">— {exp.company}</span></div>
+                          <div><span className="text-[13px] font-semibold text-gray-900">{exp.role}</span> <span className="text-[12px] text-gray-400">| {exp.company}</span></div>
                           <span className="text-[11px] text-gray-300 flex-shrink-0 ml-3">{exp.startDate}{(exp.startDate || exp.endDate) ? ' – ' : ''}{exp.endDate || (exp.startDate ? 'Present' : '')}</span>
                         </div>
                         {exp.bullets && exp.bullets.filter(Boolean).length > 0 && (
@@ -2006,7 +2006,7 @@ function AutopilotResume() {
                   <div className="h-px bg-gray-200 mb-2.5" />
                   {resume.certifications.map(cert => (
                     <div key={cert.id} className="text-[12px] text-gray-500 mb-1 font-light">
-                      <span className="font-medium text-gray-700">{cert.name}</span>{cert.issuer ? ` — ${cert.issuer}` : ''}
+                      <span className="font-medium text-gray-700">{cert.name}</span>{cert.issuer ? ` - ${cert.issuer}` : ''}
                     </div>
                   ))}
                 </div>
@@ -2110,7 +2110,7 @@ function AutopilotResume() {
                     <h2 className="text-[10px] font-bold uppercase tracking-[2px] text-[#7c3aed] mb-2 flex items-center gap-2">Certifications<span className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, #7c3aed40, transparent)' }} /></h2>
                     {resume.certifications.map(cert => (
                       <div key={cert.id} className="text-[12px] text-gray-700 mb-1">
-                        <span className="font-semibold text-gray-900">{cert.name}</span>{cert.issuer ? ` — ${cert.issuer}` : ''}
+                        <span className="font-semibold text-gray-900">{cert.name}</span>{cert.issuer ? ` - ${cert.issuer}` : ''}
                       </div>
                     ))}
                   </div>
@@ -2403,7 +2403,7 @@ function AutopilotResume() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">Generic Cover Letter</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-generated based on your resume — ready to use for any application.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-generated based on your resume, ready to use for any application.</p>
               </div>
               <button
                 onClick={handleGenericCoverLetter}
@@ -2491,7 +2491,7 @@ function AutopilotResume() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-green-700 dark:text-green-400">LinkedIn Profile Verified</h3>
-                <p className="text-xs text-green-600/70 dark:text-green-400/60">All checklist items completed — your LinkedIn profile is fully optimized!</p>
+                <p className="text-xs text-green-600/70 dark:text-green-400/60">All checklist items completed. Your LinkedIn profile is fully optimized!</p>
               </div>
             </div>
           ) : (
@@ -2579,7 +2579,7 @@ function AutopilotResume() {
                 { key: 'photo', label: 'Upload a professional profile photo and cover banner', desc: 'Profiles with photos get 21x more views and 9x more connection requests' },
                 { key: 'about', label: 'Enhance the About section as per the suggestion above', desc: 'Copy the AI-generated About section and personalize it on LinkedIn' },
                 { key: 'openToWork', label: 'Enable "Open to Work" status', desc: 'Let recruiters know you\'re actively looking for opportunities' },
-                { key: 'experience', label: 'Update Experience and Education sections in line with your latest CV', desc: 'Ensure your LinkedIn matches your resume — consistency matters to recruiters' },
+                { key: 'experience', label: 'Update Experience and Education sections in line with your latest CV', desc: 'Ensure your LinkedIn matches your resume - consistency matters to recruiters' },
                 { key: 'skills', label: 'Add key skills from your resume', desc: resume.skills?.length ? `Suggested: ${resume.skills.slice(0, 6).join(', ')}` : 'Add your top technical and professional skills' },
                 { key: 'location', label: 'Update your location', desc: 'Make sure your location matches where you\'re seeking opportunities' },
                 { key: 'uploadCV', label: 'Upload your latest CV to LinkedIn, CV Library, Indeed, and Naukri', desc: 'Maximize visibility across multiple job platforms' },
@@ -2635,146 +2635,7 @@ function AutopilotResume() {
         </div>
       )}
 
-      {activeTab === 'portfolio' && (
-        <div className="space-y-6">
-          {portfolioLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-            </div>
-          ) : portfolio ? (
-            <>
-              {/* Portfolio Preview Card */}
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-500/10 flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{portfolio.title || 'My Portfolio'}</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Theme: <span className="capitalize font-medium">{portfolio.theme || 'midnight'}</span>
-                        {portfolio.isPublic && (
-                          <span className="ml-2 text-green-500">
-                            <CheckCircle2 className="w-3 h-3 inline mr-0.5" />Published
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/dashboard/portfolio"
-                    className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
-                  >
-                    <Edit3 className="w-4 h-4" /> Edit Portfolio
-                  </Link>
-                </div>
-
-                {portfolio.bio && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{portfolio.bio}</p>
-                )}
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{portfolio.projects?.length || 0}</p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Projects</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{portfolio.skills?.length || 0}</p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Skills</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{portfolio.theme || 'midnight'}</p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Theme</p>
-                  </div>
-                </div>
-
-                {/* Public URL */}
-                {portfolio.isPublic && portfolio.slug && (
-                  <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-500/5 border border-teal-200 dark:border-teal-500/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-teal-700 dark:text-teal-400 font-medium mb-1">Public URL</p>
-                        <p className="text-sm text-teal-800 dark:text-teal-300 font-mono">
-                          {typeof window !== 'undefined' ? window.location.origin : ''}/p/{portfolio.slug}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/p/${portfolio.slug}`);
-                          showToast('Portfolio URL copied!', 'success');
-                        }}
-                        className="px-3 py-1.5 text-xs font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-500/10 rounded-lg transition-colors"
-                      >
-                        <Copy className="w-3.5 h-3.5 inline mr-1" />Copy
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Add to resume prompt */}
-                {portfolio.isPublic && portfolio.slug && !resume.contact.portfolio && (
-                  <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Add portfolio link to your resume?</p>
-                        <p className="text-xs text-blue-600/70 dark:text-blue-400/60 mt-0.5">
-                          This will add your public portfolio URL to your resume contact info.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            const portfolioUrl = `${window.location.origin}/p/${portfolio.slug}`;
-                            setResume(prev => ({
-                              ...prev,
-                              contact: { ...prev.contact, portfolio: portfolioUrl },
-                            }));
-                            showToast('Portfolio link added to resume!', 'success');
-                          }}
-                          className="px-4 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Yes, Add It
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {portfolio.isPublic && portfolio.slug && resume.contact.portfolio && (
-                  <div className="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-500/5 border border-green-200 dark:border-green-500/20">
-                    <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Portfolio link is included in your resume.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            /* No portfolio yet */
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-teal-100 dark:bg-teal-500/10 flex items-center justify-center mx-auto mb-4">
-                <Globe className="w-8 h-8 text-teal-500 dark:text-teal-400 opacity-50" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Create Your Portfolio</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
-                Build a beautiful portfolio page with multiple themes. Showcase your projects and skills with a public URL you can share with recruiters.
-              </p>
-              <Link
-                href="/dashboard/portfolio"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-700 transition-colors"
-              >
-                <Sparkles className="w-4 h-4" /> Create Portfolio
-              </Link>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                5 beautiful themes available: Midnight, Arctic, Sunset, Forest & Neon
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Portfolio tab removed, use /dashboard/portfolio instead */}
       </>)}
     </div>
   );
@@ -3185,7 +3046,7 @@ function AgenticResumePage() {
       const edu = resume.education.find(e => e.id === eduId);
       if (!edu) return;
 
-      const content = `${edu.degree} ${edu.field ? `in ${edu.field}` : ''} at ${edu.institution}. ${edu.startDate} — ${edu.endDate}. ${edu.gpa ? `GPA: ${edu.gpa}` : ''}`;
+      const content = `${edu.degree} ${edu.field ? `in ${edu.field}` : ''} at ${edu.institution}. ${edu.startDate} - ${edu.endDate}. ${edu.gpa ? `GPA: ${edu.gpa}` : ''}`;
       const res = await fetch('/api/ai/resume/enhance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3267,7 +3128,7 @@ function AgenticResumePage() {
         if (isFree) incrementAIUses();
         showToast(`Added ${Math.min(suggestedSkills.length, 10)} suggested skills!`, 'success');
       } else {
-        showToast('No new skills suggested — your skill set looks comprehensive!', 'success');
+        showToast('No new skills suggested - your skill set looks comprehensive!', 'success');
       }
     } catch (error) {
       console.error('Suggest skills error:', error);
@@ -3823,7 +3684,7 @@ function AgenticResumePage() {
                       {wizardResult.experience?.map((exp: any, i: number) => (
                         <div key={i} className="mt-2">
                           <p className="text-sm font-medium">{exp.role} at {exp.company}</p>
-                          <p className="text-xs text-white/30">{exp.startDate} — {exp.endDate}</p>
+                          <p className="text-xs text-white/30">{exp.startDate} - {exp.endDate}</p>
                         </div>
                       ))}
                     </div>
@@ -4122,7 +3983,7 @@ function AgenticResumePage() {
                         <div>
                           <h4 className="font-semibold">{exp.role}</h4>
                           <p className="text-sm text-white/40">{exp.company} • {exp.location}</p>
-                          <p className="text-xs text-white/30">{exp.startDate} — {exp.endDate}</p>
+                          <p className="text-xs text-white/30">{exp.startDate} - {exp.endDate}</p>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -4269,7 +4130,7 @@ function AgenticResumePage() {
                         <div>
                           <h4 className="font-semibold text-sm">{edu.degree} {edu.field && `in ${edu.field}`}</h4>
                           <p className="text-xs text-white/40">{edu.institution}</p>
-                          <p className="text-xs text-white/30">{edu.startDate} — {edu.endDate}{edu.gpa && ` | GPA: ${edu.gpa}`}</p>
+                          <p className="text-xs text-white/30">{edu.startDate} - {edu.endDate}{edu.gpa && ` | GPA: ${edu.gpa}`}</p>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -4731,7 +4592,7 @@ function AgenticResumePage() {
                     {resume.experience.map(exp => (
                       <div key={exp.id} className="mb-4">
                         <div className="flex justify-between items-baseline">
-                          <div><span className="font-semibold text-sm">{exp.role}</span> <span className="text-sm text-gray-400">— {exp.company}</span></div>
+                          <div><span className="font-semibold text-sm">{exp.role}</span> <span className="text-sm text-gray-400">| {exp.company}</span></div>
                           <span className="text-xs text-gray-400">{exp.startDate} – {exp.endDate}</span>
                         </div>
                         <p className="text-xs text-gray-400 mb-1">{exp.location}</p>
@@ -4744,7 +4605,7 @@ function AgenticResumePage() {
                     <h2 className="text-xs font-bold uppercase tracking-wider text-cyan-600 mb-2 border-b border-cyan-100 pb-1">Education</h2>
                     {resume.education.map(edu => (
                       <div key={edu.id} className="flex justify-between items-baseline mb-2">
-                        <div><span className="font-semibold text-sm">{edu.degree} {edu.field}</span> <span className="text-sm text-gray-400">— {edu.institution}</span>{edu.gpa && <span className="text-xs text-gray-400 ml-2">GPA: {edu.gpa}</span>}</div>
+                        <div><span className="font-semibold text-sm">{edu.degree} {edu.field}</span> <span className="text-sm text-gray-400">| {edu.institution}</span>{edu.gpa && <span className="text-xs text-gray-400 ml-2">GPA: {edu.gpa}</span>}</div>
                         <span className="text-xs text-gray-400">{edu.startDate} – {edu.endDate}</span>
                       </div>
                     ))}
@@ -4785,7 +4646,7 @@ function AgenticResumePage() {
                 {resume.experience.length > 0 && <div className="mb-5"><h2 className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-1 border-b border-gray-300 pb-1">Experience</h2>{resume.experience.map(exp => (<div key={exp.id} className="mb-4 mt-2"><div className="flex justify-between items-baseline"><div><span className="font-bold text-sm">{exp.role}</span><span className="text-sm text-gray-500">, {exp.company}</span></div><span className="text-xs text-gray-400 italic">{exp.startDate} – {exp.endDate}</span></div><p className="text-xs text-gray-400 italic">{exp.location}</p><ul className="mt-1 space-y-0.5">{exp.bullets.map((b, i) => <li key={i} className="text-sm text-gray-600 flex items-start gap-2"><span className="text-gray-400 mt-0.5">•</span>{b}</li>)}</ul></div>))}</div>}
                 {resume.education.length > 0 && <div className="mb-5"><h2 className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-1 border-b border-gray-300 pb-1">Education</h2>{resume.education.map(edu => (<div key={edu.id} className="flex justify-between items-baseline mt-2 mb-1"><div><span className="font-bold text-sm">{edu.degree} in {edu.field}</span><span className="text-sm text-gray-500">, {edu.institution}</span>{edu.gpa && <span className="text-xs text-gray-400 ml-2">(GPA: {edu.gpa})</span>}</div><span className="text-xs text-gray-400 italic">{edu.startDate} – {edu.endDate}</span></div>))}</div>}
                 {resume.skills.length > 0 && <div className="mb-5"><h2 className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-1 border-b border-gray-300 pb-1">Skills</h2><p className="text-sm text-gray-600 mt-2">{resume.skills.join(' • ')}</p></div>}
-                {resume.certifications.length > 0 && <div className="mb-5"><h2 className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-1 border-b border-gray-300 pb-1">Certifications</h2>{resume.certifications.map(cert => (<div key={cert.id} className="flex items-center gap-2 text-sm text-gray-600 mt-1">{cert.verified && <CheckCircle2 className="w-3 h-3 text-green-600" />}<span className="font-medium">{cert.name}</span><span className="text-gray-400">— {cert.issuer} ({cert.date})</span></div>))}</div>}
+                {resume.certifications.length > 0 && <div className="mb-5"><h2 className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-1 border-b border-gray-300 pb-1">Certifications</h2>{resume.certifications.map(cert => (<div key={cert.id} className="flex items-center gap-2 text-sm text-gray-600 mt-1">{cert.verified && <CheckCircle2 className="w-3 h-3 text-green-600" />}<span className="font-medium">{cert.name}</span><span className="text-gray-400">- {cert.issuer} ({cert.date})</span></div>))}</div>}
                 {resume.projects.length > 0 && <div><h2 className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-1 border-b border-gray-300 pb-1">Projects</h2>{resume.projects.map(p => (<div key={p.id} className="mb-2 mt-2"><span className="font-bold text-sm">{p.name}</span><p className="text-sm text-gray-500">{p.description}</p>{p.technologies.length > 0 && <p className="text-xs text-gray-400 mt-0.5">{p.technologies.join(' · ')}</p>}</div>))}</div>}
               </div>
             ) : resume.template === 'minimal' ? (
@@ -4802,7 +4663,7 @@ function AgenticResumePage() {
                 {resume.experience.length > 0 && <div className="mb-8"><h2 className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-3">Experience</h2>{resume.experience.map(exp => (<div key={exp.id} className="mb-5"><div className="text-sm font-medium text-gray-800">{exp.role} <span className="font-normal text-gray-400">at {exp.company}</span></div><div className="text-xs text-gray-400 mb-2">{exp.startDate} – {exp.endDate} · {exp.location}</div><ul className="space-y-1">{exp.bullets.map((b, i) => <li key={i} className="text-sm text-gray-500 pl-3 relative before:content-[''] before:absolute before:left-0 before:top-2 before:w-1 before:h-1 before:bg-gray-300 before:rounded-full">{b}</li>)}</ul></div>))}</div>}
                 {resume.education.length > 0 && <div className="mb-8"><h2 className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-3">Education</h2>{resume.education.map(edu => (<div key={edu.id} className="mb-2"><div className="text-sm font-medium text-gray-800">{edu.degree} {edu.field}</div><div className="text-xs text-gray-400">{edu.institution} · {edu.startDate} – {edu.endDate}{edu.gpa && ` · GPA: ${edu.gpa}`}</div></div>))}</div>}
                 {resume.skills.length > 0 && <div className="mb-8"><h2 className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-3">Skills</h2><p className="text-sm text-gray-500">{resume.skills.join(' · ')}</p></div>}
-                {resume.certifications.length > 0 && <div className="mb-8"><h2 className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-3">Certifications</h2>{resume.certifications.map(cert => (<div key={cert.id} className="text-sm text-gray-500 mb-1">{cert.name} — {cert.issuer}</div>))}</div>}
+                {resume.certifications.length > 0 && <div className="mb-8"><h2 className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-3">Certifications</h2>{resume.certifications.map(cert => (<div key={cert.id} className="text-sm text-gray-500 mb-1">{cert.name} - {cert.issuer}</div>))}</div>}
                 {resume.projects.length > 0 && <div><h2 className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-3">Projects</h2>{resume.projects.map(p => (<div key={p.id} className="mb-2"><div className="text-sm font-medium text-gray-800">{p.name}</div><p className="text-sm text-gray-500">{p.description}</p>{p.technologies.length > 0 && <p className="text-xs text-gray-300 mt-0.5">{p.technologies.join(' · ')}</p>}</div>))}</div>}
               </div>
             ) : (

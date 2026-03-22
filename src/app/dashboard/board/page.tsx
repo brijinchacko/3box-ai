@@ -795,7 +795,7 @@ export default function BoardPage() {
               <Radar className="w-12 h-12 text-blue-300 dark:text-blue-600 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Search jobs across the web</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                Search LinkedIn, Naukri, Indeed, Google Jobs, Adzuna, and Jooble — all from one place. Enter a job title to get started.
+                Search LinkedIn, Naukri, Indeed, Google Jobs, Adzuna, and Jooble, all from one place. Enter a job title to get started.
               </p>
             </div>
           )}

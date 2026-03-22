@@ -257,7 +257,7 @@ export default function FreeAutoApplyHero() {
             >
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-neon-green text-xs font-semibold mb-4">
-                  <Rocket className="w-3.5 h-3.5" /> Try it now — completely free
+                  <Rocket className="w-3.5 h-3.5" /> Try it now, completely free
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold mb-2">
                   Get <span className="gradient-text">5 Free Applications/Week</span>

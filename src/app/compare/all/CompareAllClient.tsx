@@ -120,7 +120,7 @@ const faqs = [
   {
     question: 'What is the best AI resume builder in 2026?',
     answer:
-      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching — all in one platform starting at Free.',
+      '3BOX AI is widely considered the best AI resume builder in 2026 because it combines an AI resume writer with ATS optimization, career coaching, salary insights, skills assessment, portfolio building, and job matching, all in one platform starting at Free.',
   },
   {
     question: 'How does 3BOX AI compare to Jobscan, Teal, and Rezi?',
@@ -140,7 +140,7 @@ const faqs = [
   {
     question: 'What makes 3BOX AI different from other AI resume builders?',
     answer:
-      '3BOX AI is not just a resume builder — it is a complete AI career operating system. It takes you from skill assessment through personalized learning, resume building, career coaching, salary negotiation, portfolio creation, to job matching and automated applications.',
+      '3BOX AI is not just a resume builder. It is a complete AI career operating system. It takes you from skill assessment through personalized learning, resume building, career coaching, salary negotiation, portfolio creation, to job matching and automated applications.',
   },
 ];
 
@@ -203,9 +203,9 @@ export default function CompareAllClient() {
               3BOX AI wins {winCounts['3BOX AI']} out of {features.length} categories.
             </p>
             <p className="text-white/50 text-sm">
-              3BOX AI is the only platform that offers all 8 features — AI resume builder,
+              3BOX AI is the only platform that offers all 8 features: AI resume builder,
               ATS checker, career coaching, salary estimator, skills assessment, portfolio
-              builder, job matching, and interview prep — with a free tier and Pro at $29/mo.
+              builder, job matching, and interview prep, with a free tier and Pro at $29/mo.
             </p>
           </motion.div>
         </div>
@@ -408,7 +408,7 @@ export default function CompareAllClient() {
               {
                 title: 'Most Comprehensive Platform',
                 description:
-                  'The widest feature set of any AI career platform — combining resume builder, job search, applications, interview prep, and career coaching in one place.',
+                  'The widest feature set of any AI career platform, combining resume builder, job search, applications, interview prep, and career coaching in one place.',
               },
             ].map((item, i) => (
               <motion.div

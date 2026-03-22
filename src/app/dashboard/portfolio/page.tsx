@@ -226,6 +226,7 @@ export default function PortfolioPage() {
   const [portfolioBio, setPortfolioBio] = useState('');
   const [portfolioSkills, setPortfolioSkills] = useState<string[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [userPlan, setUserPlan] = useState('FREE');
 
   // Load portfolio from API on mount
   useEffect(() => {
@@ -282,6 +283,7 @@ export default function PortfolioPage() {
           if (data?.email) setUserEmail(data.email);
           if (data?.location) setUserLocation(data.location);
           if (data?.linkedin) setUserLinkedin(data.linkedin);
+          if (data?.plan) setUserPlan(data.plan.toUpperCase());
         })
         .catch(() => {});
     }
@@ -345,8 +347,14 @@ export default function PortfolioPage() {
   }, [savePortfolioToAPI]);
 
   // Publish portfolio
+  const canPublish = userPlan === 'MAX' || userPlan === 'PRO';
+
   const publishPortfolio = async () => {
-    // First ensure portfolio is saved
+    if (!canPublish) {
+      setComingSoonMsg('Upgrade to PRO or MAX to publish your portfolio');
+      setTimeout(() => setComingSoonMsg(''), 4000);
+      return;
+    }
     setPublishing(true);
     try {
       // Save current state first
@@ -556,14 +564,23 @@ export default function PortfolioPage() {
                 <Eye className="w-4 h-4" /> Preview
               </a>
             )}
-            <button
-              onClick={publishPortfolio}
-              disabled={publishing || projects.length === 0}
-              className="btn-primary text-sm flex items-center gap-2"
-            >
-              {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-              {isPublished ? 'Published' : 'Publish'}
-            </button>
+            {canPublish ? (
+              <button
+                onClick={publishPortfolio}
+                disabled={publishing || projects.length === 0}
+                className="btn-primary text-sm flex items-center gap-2"
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                {isPublished ? 'Published' : 'Publish'}
+              </button>
+            ) : (
+              <a
+                href="/pricing"
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 border border-neon-purple/30 text-neon-purple text-sm hover:from-neon-blue/30 hover:to-neon-purple/30 transition-colors flex items-center gap-2"
+              >
+                <Globe className="w-4 h-4" /> Upgrade to Publish
+              </a>
+            )}
             {saving && (
               <span className="text-xs text-white/30 flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Saving...
@@ -756,14 +773,20 @@ export default function PortfolioPage() {
               <div className="text-xs text-white/40">Publish your portfolio to get a shareable link</div>
             </div>
           </div>
-          <button
-            onClick={publishPortfolio}
-            disabled={publishing || projects.length === 0}
-            className="btn-primary text-xs flex items-center gap-1"
-          >
-            {publishing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-            Publish Now
-          </button>
+          {canPublish ? (
+            <button
+              onClick={publishPortfolio}
+              disabled={publishing || projects.length === 0}
+              className="btn-primary text-xs flex items-center gap-1"
+            >
+              {publishing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+              Publish Now
+            </button>
+          ) : (
+            <a href="/pricing" className="px-3 py-1.5 rounded-lg bg-neon-purple/10 border border-neon-purple/30 text-neon-purple text-xs hover:bg-neon-purple/20 transition-colors">
+              Upgrade to Publish
+            </a>
+          )}
         </div>
       )}
 

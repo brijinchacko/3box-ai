@@ -206,7 +206,7 @@ export default function AgenticWorkspace({ agentId }: AgenticWorkspaceProps) {
 
     if (isCortex) {
       // Cortex runs the full pipeline — all agents in sequence
-      addMessage(createMsg('system', 'Running full pipeline — all agents activated...'));
+      addMessage(createMsg('system', 'Running full pipeline, all agents activated...'));
 
       try {
         const res = await fetch('/api/agents/run', {
@@ -275,7 +275,7 @@ export default function AgenticWorkspace({ agentId }: AgenticWorkspaceProps) {
             )}
           </h1>
           <p className="text-white/25 text-xs">
-            Talking to <span className="text-white/50 font-medium" style={{ color: agentColor }}>{agentName}</span> — {agentRole}
+            Talking to <span className="text-white/50 font-medium" style={{ color: agentColor }}>{agentName}</span> - {agentRole}
           </p>
         </div>
         <button

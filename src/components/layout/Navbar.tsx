@@ -186,7 +186,7 @@ function ToolsMegaMenu({ onClose }: { onClose: () => void }) {
             <div className="flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-neon-green" />
               <span className="text-xs text-white/50">
-                All 17 tools are <span className="text-neon-green font-medium">included</span> — no signup required
+                All 17 tools are <span className="text-neon-green font-medium">included</span>, no signup required
               </span>
             </div>
             <Link

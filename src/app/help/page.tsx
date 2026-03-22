@@ -24,13 +24,13 @@ const categories = [
 
 const faqs: Record<string, { q: string; a: string }[]> = {
   'getting-started': [
-    { q: 'How do I get started with 3BOX AI?', a: 'Simply visit our homepage and tell Agent Cortex (our AI coordinator) what role you want to pursue. Complete the quick onboarding by sharing your experience, education, and skills. No signup required for free tools — create a free account to unlock your full career dashboard and AI agent team.' },
+    { q: 'How do I get started with 3BOX AI?', a: 'Simply visit our homepage and tell Agent Cortex (our AI coordinator) what role you want to pursue. Complete the quick onboarding by sharing your experience, education, and skills. No signup required for free tools. Create a free account to unlock your full career dashboard and AI agent team.' },
     { q: 'Is 3BOX AI really free?', a: 'Yes! Our core tools (ATS Resume Checker, Resume Builder, Salary Estimator) are 100% free with no signup required. Creating a free account gives you access to your career dashboard, AI skill assessment, and personalized career plan. Pro and Ultra plans unlock advanced features like human mentorship and auto-apply.' },
-    { q: 'What roles and industries does 3BOX AI support?', a: '3BOX AI supports all career fields — not just tech. Whether you want to be a Software Engineer, Nurse, Financial Analyst, Teacher, Graphic Designer, or Architect, our AI adapts assessments, skills, and career plans for your specific industry.' },
-    { q: 'How does the onboarding process work?', a: 'Our conversational onboarding takes about 2 minutes. Agent Cortex asks about your dream role, experience level, current situation, education, and skills. Based on your answers, we create a personalized career profile with salary data, skill gaps, and a custom learning path — then your AI agents get to work.' },
+    { q: 'What roles and industries does 3BOX AI support?', a: '3BOX AI supports all career fields, not just tech. Whether you want to be a Software Engineer, Nurse, Financial Analyst, Teacher, Graphic Designer, or Architect, our AI adapts assessments, skills, and career plans for your specific industry.' },
+    { q: 'How does the onboarding process work?', a: 'Our conversational onboarding takes about 2 minutes. Agent Cortex asks about your dream role, experience level, current situation, education, and skills. Based on your answers, we create a personalized career profile with salary data, skill gaps, and a custom learning path, then your AI agents get to work.' },
   ],
   'tools': [
-    { q: 'How does the ATS Resume Checker work?', a: 'Paste your resume text into the checker, and our AI instantly analyzes it against ATS (Applicant Tracking System) algorithms. You get a compatibility score out of 100, keyword analysis, formatting issues, and specific improvement suggestions — all for free.' },
+    { q: 'How does the ATS Resume Checker work?', a: 'Paste your resume text into the checker, and our AI instantly analyzes it against ATS (Applicant Tracking System) algorithms. You get a compatibility score out of 100, keyword analysis, formatting issues, and specific improvement suggestions, all for free.' },
     { q: 'Can I download my resume as PDF?', a: 'Yes! The Free Resume Builder lets you create a professional resume with live preview and download it as a PDF. No signup or watermark. Choose from clean templates optimized for both ATS systems and human readers.' },
     { q: 'How accurate is the Salary Estimator?', a: 'Our salary data is sourced from industry reports and updated regularly. Estimates are based on role, location, experience level, and skills. We show salary ranges for US, EU, UK, India, Australia, and global markets.' },
     { q: 'Do I need an account to use the free tools?', a: 'No! All three free tools (ATS Resume Checker, Resume Builder, Salary Estimator) work without any signup. We believe career tools should be accessible to everyone.' },
@@ -42,13 +42,13 @@ const faqs: Record<string, { q: string; a: string }[]> = {
     { q: 'Can I delete my account and data?', a: 'Yes. Go to Dashboard > Settings > Account and click "Delete Account." This permanently removes all your data within 30 days, in compliance with GDPR. You can also request data export before deletion.' },
   ],
   'ai-features': [
-    { q: 'How does the AI Skill Assessment work?', a: 'Our adaptive assessment uses MCQ questions, real-world scenario analysis, and hands-on coding/task challenges to evaluate your skills. The AI adjusts difficulty based on your responses. After AI scoring, a real human expert reviews your results before finalizing — no AI-only guesswork.' },
-    { q: 'What is Agent Cortex?', a: 'Agent Cortex is your AI coordinator that leads a team of 6 specialized agents (Scout, Forge, Archer, Atlas, Sage, Sentinel). Cortex learns your goals, coordinates all agents, and provides personalized recommendations. Your agents work while you sleep — discovering jobs, optimizing resumes, and sending applications.' },
+    { q: 'How does the AI Skill Assessment work?', a: 'Our adaptive assessment uses MCQ questions, real-world scenario analysis, and hands-on coding/task challenges to evaluate your skills. The AI adjusts difficulty based on your responses. After AI scoring, a real human expert reviews your results before finalizing. No AI-only guesswork.' },
+    { q: 'What is Agent Cortex?', a: 'Agent Cortex is your AI coordinator that leads a team of 6 specialized agents (Scout, Forge, Archer, Atlas, Sage, Sentinel). Cortex learns your goals, coordinates all agents, and provides personalized recommendations. Your agents work while you sleep, discovering jobs, optimizing resumes, and sending applications.' },
     { q: 'How does auto-apply work?', a: 'Available on the Ultra plan, our AI agent finds jobs matching your profile, tailors your resume and cover letter for each application, and submits applications on your behalf. You set filters (role, location, salary range) and approve applications before they go out. Full audit trail included.' },
     { q: 'What is the Market Readiness Score?', a: 'A real-time employability score (0-100) that measures how ready you are for your target role compared to current market demand. It factors in your skills, experience, portfolio projects, and resume quality against what employers are looking for.' },
   ],
   'career': [
-    { q: 'How is the AI Career Plan personalized?', a: 'Your career plan is built from your specific profile — target role, current skills, experience gaps, education, and location. It includes weekly milestones, curated learning resources, proof-of-skill projects, and estimated timeline to job-readiness.' },
+    { q: 'How is the AI Career Plan personalized?', a: 'Your career plan is built from your specific profile: target role, current skills, experience gaps, education, and location. It includes weekly milestones, curated learning resources, proof-of-skill projects, and estimated timeline to job-readiness.' },
     { q: 'What are Proof-of-Skill Projects?', a: 'Real-world projects scored by AI that demonstrate your abilities to employers. Unlike certificates, these prove you can actually do the work. Completed projects become part of your verified portfolio that employers can review.' },
     { q: 'Can I switch my target role mid-journey?', a: 'Absolutely. Go to Dashboard > Career Plan and update your target role anytime. The AI will recalculate your skill gaps, update your learning path, and adjust your career plan accordingly. Your completed work is preserved.' },
     { q: 'How does job matching work?', a: 'Our AI analyzes job listings across major platforms, scores each against your profile (skills, experience, location, salary expectations), and presents the best matches with a fit percentage. You can filter by remote/onsite, salary range, company size, and more.' },
@@ -108,7 +108,7 @@ export default function HelpCenterPage() {
             transition={{ delay: 0.1 }}
             className="text-white/40 text-lg mb-8"
           >
-            Documentation, FAQs, and community — everything you need.
+            Documentation, FAQs, and community. Everything you need.
           </motion.p>
 
           {/* Search */}
