@@ -1748,7 +1748,7 @@ function AutopilotResume() {
                   {resume.contact.phone && <div>{resume.contact.phone}</div>}
                   {resume.contact.location && <div>{resume.contact.location}</div>}
                   {resume.contact.linkedin && <div className="break-all">{resume.contact.linkedin}</div>}
-                  {resume.contact.portfolio && <div className="break-all">{resume.contact.portfolio}</div>}
+                  {resume.contact.portfolio && <div className="break-all text-[10px]">{resume.contact.portfolio.replace(/^https?:\/\//, '').replace(/\/$/, '')}</div>}
                 </div>
                 {resume.skills.length > 0 && (
                   <>
@@ -1898,11 +1898,7 @@ function AutopilotResume() {
               {resume.skills.length > 0 && (
                 <div className="mb-4">
                   <h2 className="text-[11px] font-bold uppercase tracking-[2px] pb-1 mb-2" style={{ color: '#1e293b', borderBottom: '1px solid #d1d5db' }}>Skills</h2>
-                  <div className="flex flex-wrap gap-1.5">
-                    {resume.skills.map(s => (
-                      <span key={s} className="text-[11px] px-2.5 py-0.5 rounded-full border text-gray-700" style={{ borderColor: '#1e293b40', backgroundColor: '#1e293b08' }}>{s}</span>
-                    ))}
-                  </div>
+                  <p className="text-[11px] text-gray-700 leading-relaxed">{resume.skills.join('  \u2022  ')}</p>
                 </div>
               )}
               {resume.certifications.length > 0 && (
@@ -2035,7 +2031,7 @@ function AutopilotResume() {
           <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
             <div style={{ minHeight: 0, fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}>
               {/* Gradient header banner */}
-              <div className="px-10 py-9" style={{ background: 'linear-gradient(135deg, #a855f7, #00d4ff, #00ff88)' }}>
+              <div className="px-10 py-5" style={{ background: 'linear-gradient(135deg, #a855f7, #00d4ff, #00ff88)' }}>
                 <h1 className="text-2xl font-extrabold text-white">{resume.contact.name || 'Your Name'}</h1>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-white/80">
                   {resume.contact.email && <span>{resume.contact.email}</span>}
@@ -2046,16 +2042,11 @@ function AutopilotResume() {
                 </div>
               </div>
               <div className="px-10 py-7">
-                {/* Colorful skill pills at top */}
+                {/* Skills as compact text */}
                 {resume.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-5">
-                    {resume.skills.slice(0, 10).map((s, i) => {
-                      const colors = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316'];
-                      const c = colors[i % colors.length];
-                      return (
-                        <span key={s} className="text-[10px] px-2.5 py-0.5 rounded-full" style={{ background: `${c}12`, border: `1px solid ${c}30`, color: c }}>{s}</span>
-                      );
-                    })}
+                  <div className="mb-4">
+                    <h2 className="text-[10px] font-bold uppercase tracking-[2px] text-[#7c3aed] mb-2 flex items-center gap-2">Skills<span className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, #7c3aed40, transparent)' }} /></h2>
+                    <p className="text-[11px] text-gray-600 leading-relaxed">{resume.skills.join('  \u2022  ')}</p>
                   </div>
                 )}
                 {resume.summary && (

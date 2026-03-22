@@ -1,0 +1,42 @@
+/* Override driver.js to match 3BOX dark theme */
+.driver-popover {
+  background: #1e1e2e !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #2d2d50 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  max-width: 360px !important;
+}
+.driver-popover-title {
+  color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+.driver-popover-description {
+  color: #cbd5e1 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+.driver-popover-progress-text {
+  color: #64748b !important;
+}
+.driver-popover-next-btn {
+  background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 500 !important;
+}
+.driver-popover-prev-btn {
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+}
+.driver-popover-close-btn {
+  color: #94a3b8 !important;
+}
+.driver-overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+}

@@ -40,7 +40,7 @@ interface ReferralData {
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
-  { id: 'email', label: 'Connected Email', icon: Mail },
+  { id: 'email', label: 'Email', icon: Mail },
   { id: 'billing', label: 'Billing', icon: CreditCard },
   { id: 'referral', label: 'Refer & Earn', icon: Gift },
   { id: 'coach', label: 'AI Coach', icon: Bot },
@@ -695,7 +695,7 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${
                   activeTab === tab.id
                     ? 'bg-white/10 text-white'
                     : 'text-white/40 hover:text-white/60 hover:bg-white/5'

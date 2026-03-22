@@ -42,9 +42,9 @@ const COPILOT_NAV_GROUPS = [
     iconBg: 'bg-green-50 dark:bg-green-500/10',
     iconBorder: 'border-green-200 dark:border-green-500/20',
     items: [
-      { label: 'Find Jobs', href: '/dashboard/jobs', icon: Search },
-      { label: 'My Resume', href: '/dashboard/resume', icon: FileEdit },
-      { label: 'Applications', href: '/dashboard/applications', icon: FileText },
+      { label: 'Find Jobs', href: '/dashboard/jobs', icon: Search, dataSidebar: 'find-jobs' },
+      { label: 'My Resume', href: '/dashboard/resume', icon: FileEdit, dataSidebar: 'my-resume' },
+      { label: 'Applications', href: '/dashboard/applications', icon: FileText, dataSidebar: 'applications' },
     ],
   },
   {
@@ -58,9 +58,9 @@ const COPILOT_NAV_GROUPS = [
     iconBg: 'bg-blue-50 dark:bg-blue-500/10',
     iconBorder: 'border-blue-200 dark:border-blue-500/20',
     items: [
-      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic },
-      { label: 'Skill Growth', href: '/dashboard/learning', icon: GraduationCap },
-      { label: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase },
+      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic, dataSidebar: 'interview-prep' },
+      { label: 'Skill Growth', href: '/dashboard/learning', icon: GraduationCap, dataSidebar: 'skill-growth' },
+      { label: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase, dataSidebar: 'portfolio' },
     ],
   },
   {
@@ -74,7 +74,7 @@ const COPILOT_NAV_GROUPS = [
     iconBg: 'bg-gray-50 dark:bg-gray-800',
     iconBorder: 'border-gray-200 dark:border-gray-700',
     items: [
-      { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+      { label: 'Settings', href: '/dashboard/settings', icon: Settings, dataSidebar: 'settings' },
     ],
   },
 ];
@@ -298,6 +298,7 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
                         key={item.href}
                         href={item.href}
                         onClick={onMobileClose}
+                        data-sidebar={item.dataSidebar}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                           active

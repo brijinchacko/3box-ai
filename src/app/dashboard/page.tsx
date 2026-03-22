@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
 import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
+
+const GuidedTour = dynamic(() => import('@/components/dashboard/GuidedTour'), { ssr: false });
 import {
   Loader2,
   CheckCircle2,
@@ -242,6 +245,9 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Guided Tour */}
+      <GuidedTour isFirstVisit={!!pipeline?.profileDone} />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -262,7 +268,7 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
       <ActionCard pipeline={pipeline} currentStepIndex={currentStepIndex} />
 
       {/* ═══ SECTION 2.5: How do you want to apply? (Plain English mode selector) ═══ */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+      <div className="apply-mode-selector bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">How do you want to apply?</h3>
           {modeToast && (
@@ -430,7 +436,7 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
    ═══════════════════════════════════════════════════════ */
 function PipelineVisualization({ statuses }: { statuses: StepStatus[] }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+    <div className="pipeline-progress bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
       {/* Desktop: horizontal layout */}
       <div className="hidden sm:flex items-center justify-between">
         {PIPELINE_STEPS.map((step, i) => (
@@ -601,7 +607,7 @@ function ActionCard({
   return (
     <div
       className={cn(
-        'relative rounded-xl border p-6 sm:p-8 bg-gradient-to-br overflow-hidden',
+        'action-card relative rounded-xl border p-6 sm:p-8 bg-gradient-to-br overflow-hidden',
         gradient,
         borderColor,
       )}

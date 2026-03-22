@@ -119,8 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ErrorBoundary>
       </main>
 
-      {/* Cortex AI Coach — floating chat widget */}
-      <FloatingCoach />
+      {/* Cortex AI Coach — removed per user request. Code kept in /components/ai-coach/ */}
 
       {/* Feature lock overlay for FREE users who exhausted their applications */}
       {isLocked && <FeatureLockedOverlay used={used} limit={limit} />}
