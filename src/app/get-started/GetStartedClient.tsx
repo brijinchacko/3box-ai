@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import {
-  User, Briefcase, Target, Zap, FileText, ArrowRight, ArrowLeft,
-  Check, MapPin, Sparkles, Mail, Lock, Eye, EyeOff, ShieldCheck, Chrome, UserPlus,
+  User, Zap, FileText, ArrowRight, ArrowLeft,
+  Check, MapPin, Mail, Lock, Eye, EyeOff, ShieldCheck, Chrome, UserPlus,
   Upload, ClipboardPaste, Loader2, X, CheckCircle2, Linkedin,
 } from 'lucide-react';
 import CortexAvatar from '@/components/brand/CortexAvatar';
@@ -41,37 +41,60 @@ const suggestedRoles = [
   'Marketing Manager', 'Project Manager', 'Cybersecurity Analyst', 'Cloud Architect',
 ];
 
-const industries = [
-  'Technology', 'Finance / Banking', 'Healthcare', 'E-Commerce', 'EdTech',
-  'Consulting', 'Media & Entertainment', 'Manufacturing', 'Government',
-  'Startup', 'Telecom', 'Other',
-];
+const roleSkillMap: Record<string, string[]> = {
+  'plc': ['Siemens TIA Portal', 'Allen-Bradley Studio 5000', 'SCADA', 'HMI Design', 'Ladder Logic', 'Structured Text', 'Industrial Networking', 'VFD Configuration', 'Modbus/Profinet', 'PLC Troubleshooting'],
+  'automation': ['Siemens TIA Portal', 'Allen-Bradley', 'SCADA Systems', 'HMI Design', 'Industrial IoT', 'Robotics Programming', 'Process Control', 'Instrumentation'],
+  'software engineer': ['JavaScript', 'Python', 'React', 'Node.js', 'SQL', 'Git', 'Docker', 'AWS', 'TypeScript', 'System Design'],
+  'full stack': ['JavaScript', 'TypeScript', 'React', 'Node.js', 'Next.js', 'MongoDB', 'PostgreSQL', 'REST APIs', 'Git', 'Docker'],
+  'frontend': ['JavaScript', 'TypeScript', 'React', 'Vue.js', 'CSS/SCSS', 'HTML5', 'Tailwind CSS', 'Figma', 'Git', 'Responsive Design'],
+  'backend': ['Python', 'Java', 'Node.js', 'SQL', 'PostgreSQL', 'Redis', 'Docker', 'AWS', 'Microservices', 'REST APIs'],
+  'data scientist': ['Python', 'SQL', 'TensorFlow', 'Pandas', 'Scikit-learn', 'Statistics', 'Tableau', 'R', 'Machine Learning', 'Data Visualization'],
+  'data engineer': ['Python', 'SQL', 'Apache Spark', 'Airflow', 'Kafka', 'AWS/GCP', 'ETL Pipelines', 'Data Warehousing', 'Hadoop', 'dbt'],
+  'devops': ['Docker', 'Kubernetes', 'Terraform', 'CI/CD', 'AWS', 'Linux', 'Jenkins', 'Ansible', 'Monitoring', 'Git'],
+  'product manager': ['Product Strategy', 'User Research', 'Agile/Scrum', 'Data Analysis', 'Roadmapping', 'A/B Testing', 'SQL', 'Figma', 'Jira', 'Stakeholder Management'],
+  'ux designer': ['Figma', 'User Research', 'Wireframing', 'Prototyping', 'Usability Testing', 'Design Systems', 'Adobe XD', 'Information Architecture', 'Interaction Design', 'Accessibility'],
+  'nurse': ['Patient Assessment', 'IV Therapy', 'Electronic Health Records', 'CPR/BLS', 'Medication Administration', 'Wound Care', 'Patient Education', 'Triage'],
+  'teacher': ['Curriculum Development', 'Classroom Management', 'Assessment Design', 'Differentiated Instruction', 'EdTech Tools', 'Student Engagement', 'IEP Development', 'Communication'],
+  'marketing': ['Digital Marketing', 'SEO/SEM', 'Content Strategy', 'Social Media', 'Google Analytics', 'Email Marketing', 'Copywriting', 'HubSpot', 'A/B Testing', 'Brand Strategy'],
+  'sales': ['CRM (Salesforce)', 'Lead Generation', 'Negotiation', 'Pipeline Management', 'Cold Outreach', 'Account Management', 'Sales Presentations', 'Forecasting'],
+  'accountant': ['Financial Reporting', 'Tax Preparation', 'QuickBooks', 'GAAP', 'Budgeting', 'Auditing', 'Excel Advanced', 'Accounts Payable/Receivable', 'Payroll', 'SAP'],
+  'mechanical engineer': ['AutoCAD', 'SolidWorks', 'MATLAB', 'FEA/CFD', 'GD&T', 'Manufacturing Processes', 'Thermodynamics', '3D Modeling', 'Project Management'],
+  'electrical engineer': ['Circuit Design', 'PCB Layout', 'MATLAB', 'Embedded Systems', 'VHDL/Verilog', 'Power Systems', 'Signal Processing', 'Altium Designer', 'Oscilloscope'],
+  'civil engineer': ['AutoCAD', 'Revit', 'Structural Analysis', 'Project Management', 'Construction Management', 'Building Codes', 'SAP2000', 'Surveying', 'Environmental Compliance'],
+  'project manager': ['Agile/Scrum', 'MS Project', 'Risk Management', 'Stakeholder Management', 'Budgeting', 'Jira', 'Gantt Charts', 'Team Leadership', 'PMP', 'Communication'],
+  'cybersecurity': ['Network Security', 'Penetration Testing', 'SIEM', 'Incident Response', 'Firewall Configuration', 'Vulnerability Assessment', 'SOC Operations', 'CompTIA Security+'],
+  'ai engineer': ['Python', 'PyTorch', 'TensorFlow', 'NLP', 'Computer Vision', 'MLOps', 'LangChain', 'Fine-tuning', 'RAG', 'Vector Databases'],
+  'mobile developer': ['React Native', 'Swift', 'Kotlin', 'Flutter', 'Firebase', 'REST APIs', 'App Store Deployment', 'UI/UX Mobile', 'Git'],
+  'cloud architect': ['AWS', 'Azure', 'GCP', 'Terraform', 'Kubernetes', 'Microservices', 'Serverless', 'CI/CD', 'Cost Optimization', 'Security'],
+  'hr': ['Recruitment', 'Employee Relations', 'HRIS Systems', 'Performance Management', 'Onboarding', 'Compensation & Benefits', 'Labor Law', 'Diversity & Inclusion'],
+  'graphic designer': ['Adobe Photoshop', 'Illustrator', 'InDesign', 'Figma', 'Typography', 'Branding', 'Print Design', 'Color Theory', 'Motion Graphics'],
+  'content writer': ['SEO Writing', 'Copywriting', 'Blog Writing', 'Technical Writing', 'Social Media Content', 'Content Strategy', 'Editing', 'Research', 'WordPress'],
+};
 
-const popularSkills = [
-  'JavaScript', 'Python', 'Java', 'React', 'Node.js', 'SQL', 'TypeScript',
-  'AWS', 'Docker', 'Git', 'HTML/CSS', 'Excel', 'Data Analysis',
-  'Communication', 'Problem Solving', 'Leadership', 'Agile', 'Machine Learning',
-  'Figma', 'REST APIs',
-];
+function getSkillSuggestions(targetRole: string): string[] {
+  if (!targetRole) return ['Communication', 'Problem Solving', 'Leadership', 'Excel', 'Data Analysis', 'Agile', 'Project Management', 'Teamwork'];
+  const normalized = targetRole.toLowerCase();
+  for (const [key, skills] of Object.entries(roleSkillMap)) {
+    if (normalized.includes(key) || key.includes(normalized.split(' ')[0])) {
+      return skills;
+    }
+  }
+  // Fallback generic skills
+  return ['Communication', 'Problem Solving', 'Leadership', 'Excel', 'Data Analysis', 'Agile', 'Project Management', 'Teamwork'];
+}
 
 // ── Steps ──
 const STEPS = [
   { icon: FileText, label: 'Resume', title: 'Quick start with your resume' },
-  { icon: User, label: 'You', title: "Let's get to know you" },
-  { icon: Briefcase, label: 'Status', title: 'Where are you right now?' },
-  { icon: Target, label: 'Goal', title: 'What do you want?' },
-  { icon: Zap, label: 'Skills', title: 'What are you good at?' },
-  { icon: FileText, label: 'Bio', title: 'Tell us your story' },
+  { icon: User, label: 'Profile', title: 'Confirm your profile' },
+  { icon: Zap, label: 'Skills', title: 'Skills & preferences' },
   { icon: UserPlus, label: 'Account', title: 'Create your account' },
 ];
 
 const cortexMessages = [
   "Hi! Upload your resume to auto-fill everything, or skip to fill manually.",
-  "Hi! I'm Cortex. Let's build your career together.",
-  'Great! This helps me find the right opportunities.',
-  'Nice. I will search for the best roles for you.',
+  "Great! Let's confirm your details and career goals.",
   'Skills are your superpower. Add as many as you can!',
-  'Almost done! This bio will power your resume.',
   'Last step! Create your account to activate your agents.',
 ];
 
@@ -122,7 +145,7 @@ export default function GetStartedClient() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Signup state (Step 5)
+  // Signup state (Step 3)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -178,12 +201,9 @@ export default function GetStartedClient() {
   const canProceed = (): boolean => {
     switch (step) {
       case 0: return true; // Resume step is always skippable
-      case 1: return data.fullName.trim().length >= 2;
-      case 2: return !!data.currentStatus && !!data.experienceLevel;
-      case 3: return !!data.targetRole;
-      case 4: return data.skills.length >= 1;
-      case 5: return true; // bio is optional
-      case 6: return false; // signup step has its own submit flow
+      case 1: return data.fullName.trim().length >= 2 && !!data.targetRole && !!data.experienceLevel;
+      case 2: return data.skills.length >= 1;
+      case 3: return false; // signup step has its own submit flow
       default: return false;
     }
   };
@@ -286,7 +306,7 @@ export default function GetStartedClient() {
     update('skills', data.skills.filter((s) => s !== skill));
   };
 
-  // ── Signup handlers (Step 5) ──
+  // ── Signup handlers (Step 3) ──
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupLoading(true);
@@ -510,9 +530,9 @@ export default function GetStartedClient() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-start gap-3 mb-8"
           >
-            <CortexAvatar size={36} expression={step === 5 ? 'happy' : 'normal'} />
+            <CortexAvatar size={36} expression={step === 2 ? 'happy' : 'normal'} />
             <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-white/50">
-              {step === 6 && signupSubStep === 'verify'
+              {step === 3 && signupSubStep === 'verify'
                 ? 'Check your inbox! Enter the code to verify your email.'
                 : cortexMessages[step]}
             </div>
@@ -678,41 +698,43 @@ export default function GetStartedClient() {
                 </div>
               )}
 
-              {/* Step 1: Name + Location */}
+              {/* Step 1: Profile (merged Name, Location, Status, Experience, Target Role) */}
               {step === 1 && (
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-white/50 mb-2">
-                      Your full name
-                    </label>
-                    <input
-                      type="text"
-                      value={data.fullName}
-                      onChange={(e) => update('fullName', e.target.value)}
-                      placeholder="e.g. Priya Sharma"
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors"
-                      autoFocus
-                    />
+                <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
+                  {/* Name & Location */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-white/50 mb-2">
+                        Your full name
+                      </label>
+                      <input
+                        type="text"
+                        value={data.fullName}
+                        onChange={(e) => update('fullName', e.target.value)}
+                        placeholder="e.g. Priya Sharma"
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/50 mb-2">
+                        <MapPin className="w-3.5 h-3.5 inline mr-1" />
+                        Where are you based?
+                      </label>
+                      <input
+                        type="text"
+                        value={data.location}
+                        onChange={(e) => update('location', e.target.value)}
+                        placeholder="e.g. Bengaluru, Mumbai, Delhi..."
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/50 mb-2">
-                      <MapPin className="w-3.5 h-3.5 inline mr-1" />
-                      Where are you based?
-                    </label>
-                    <input
-                      type="text"
-                      value={data.location}
-                      onChange={(e) => update('location', e.target.value)}
-                      placeholder="e.g. Bengaluru, Mumbai, Delhi..."
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-              )}
 
-              {/* Step 2: Status + Experience */}
-              {step === 2 && (
-                <div className="space-y-6">
+                  {/* Divider */}
+                  <div className="h-px bg-white/5" />
+
+                  {/* Current Status */}
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-3">
                       Current status
@@ -734,6 +756,8 @@ export default function GetStartedClient() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Experience Level */}
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-3">
                       Experience level
@@ -755,12 +779,11 @@ export default function GetStartedClient() {
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Step 3: Target Role + Industry */}
-              {step === 3 && (
-                <div className="space-y-6">
+                  {/* Divider */}
+                  <div className="h-px bg-white/5" />
+
+                  {/* Target Role */}
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
                       What role are you targeting?
@@ -771,7 +794,6 @@ export default function GetStartedClient() {
                       onChange={(e) => update('targetRole', e.target.value)}
                       placeholder="Type or pick below..."
                       className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors mb-3"
-                      autoFocus
                     />
                     <div className="flex flex-wrap gap-2">
                       {suggestedRoles.map((r) => (
@@ -789,39 +811,13 @@ export default function GetStartedClient() {
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/50 mb-3">
-                      Preferred industry
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {industries.map((ind) => (
-                        <button
-                          key={ind}
-                          onClick={() => {
-                            const current = data.industry;
-                            if (current.includes(ind)) {
-                              update('industry', current.filter((i) => i !== ind));
-                            } else {
-                              update('industry', [...current, ind]);
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-xs transition-all ${
-                            data.industry.includes(ind)
-                              ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'
-                              : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50 border border-white/5'
-                          }`}
-                        >
-                          {ind}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* Step 4: Skills */}
-              {step === 4 && (
-                <div className="space-y-5">
+              {/* Step 2: Skills & Bio (merged) */}
+              {step === 2 && (
+                <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-1">
+                  {/* Skills input */}
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
                       Add your skills
@@ -865,11 +861,13 @@ export default function GetStartedClient() {
                     </div>
                   )}
 
-                  {/* Suggestions */}
+                  {/* Role-based suggestions */}
                   <div>
-                    <div className="text-xs text-white/25 mb-2">Popular skills — tap to add</div>
+                    <div className="text-xs text-white/25 mb-2">
+                      {data.targetRole ? `Suggested for ${data.targetRole}` : 'Popular skills'} — tap to add
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {popularSkills
+                      {getSkillSuggestions(data.targetRole)
                         .filter((s) => !data.skills.includes(s))
                         .map((s) => (
                           <button
@@ -882,53 +880,31 @@ export default function GetStartedClient() {
                         ))}
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Step 5: Bio */}
-              {step === 5 && (
-                <div className="space-y-4">
+                  {/* Divider */}
+                  <div className="h-px bg-white/5" />
+
+                  {/* Brief summary (bio) */}
                   <div>
                     <label className="block text-sm font-medium text-white/50 mb-2">
-                      Tell us about yourself (optional)
+                      Brief summary (optional)
                     </label>
-                    <p className="text-xs text-white/20 mb-3">
-                      This helps Agent Forge write a better resume and cover letters for you.
-                      Write 2-3 sentences about your background, what drives you, and what you
-                      are looking for.
-                    </p>
                     <textarea
                       value={data.bio}
                       onChange={(e) => update('bio', e.target.value)}
-                      placeholder="e.g. I am a B.Tech graduate passionate about building web applications. I have worked on two internship projects using React and Node.js. I am looking for my first full-time role at a product company..."
-                      rows={5}
+                      placeholder="e.g. B.Tech graduate passionate about building web apps. Looking for my first full-time role at a product company..."
+                      rows={3}
                       className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none transition-colors resize-none"
-                      autoFocus
                     />
                     <div className="text-xs text-white/15 mt-1 text-right">
                       {data.bio.length} characters
                     </div>
                   </div>
-
-                  {/* Summary preview */}
-                  <div className="rounded-xl bg-white/[0.03] border border-white/5 p-4">
-                    <div className="text-xs font-medium text-white/30 mb-3 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Your profile summary
-                    </div>
-                    <div className="space-y-1.5 text-sm text-white/40">
-                      {data.fullName && <div><span className="text-white/60 font-medium">{data.fullName}</span>{data.location && ` from ${data.location}`}</div>}
-                      {data.currentStatus && <div>Status: {currentStatuses.find(s => s.value === data.currentStatus)?.label}</div>}
-                      {data.experienceLevel && <div>Experience: {experienceLevels.find(e => e.value === data.experienceLevel)?.label}</div>}
-                      {data.targetRole && <div>Target: {data.targetRole}{data.industry.length > 0 && ` in ${data.industry.join(', ')}`}</div>}
-                      {data.skills.length > 0 && <div>Skills: {data.skills.slice(0, 5).join(', ')}{data.skills.length > 5 && ` +${data.skills.length - 5} more`}</div>}
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* Step 6: Account / Signup */}
-              {step === 6 && (
+              {/* Step 3: Account / Signup */}
+              {step === 3 && (
                 <div className="space-y-5">
                   <AnimatePresence mode="wait">
                     {signupSubStep === 'form' ? (
@@ -1112,7 +1088,7 @@ export default function GetStartedClient() {
           <div className="flex items-center justify-between mt-10">
             <button
               onClick={() => {
-                if (step === 6 && signupSubStep === 'verify') {
+                if (step === 3 && signupSubStep === 'verify') {
                   setSignupSubStep('form');
                   setSignupError('');
                 } else {
@@ -1129,7 +1105,7 @@ export default function GetStartedClient() {
               Back
             </button>
 
-            {step < 6 && (
+            {step < 3 && (
               <button
                 onClick={next}
                 disabled={!canProceed()}
