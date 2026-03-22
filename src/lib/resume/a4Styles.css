@@ -1,0 +1,131 @@
+/* Resume preview container — ALWAYS A4 */
+.resume-a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  padding: 15mm;
+  background: white;
+  color: #1a1a1a;
+  font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 10pt;
+  line-height: 1.4;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* For screen preview, scale to fit container */
+.resume-a4-wrapper {
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 210 / 297;
+  overflow: hidden;
+  position: relative;
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.resume-a4-wrapper .resume-a4-page {
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Page 2 */
+.resume-a4-page-2 {
+  margin-top: 20px;
+}
+
+/* Print / PDF export */
+@media print {
+  .resume-a4-page {
+    margin: 0;
+    padding: 15mm;
+    width: 210mm;
+    min-height: 297mm;
+    max-height: 297mm;
+    page-break-after: always;
+    box-shadow: none;
+  }
+}
+
+/* Section styles for A4 layout */
+.resume-a4-page h1 {
+  font-size: 20pt;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #1a1a1a;
+}
+
+.resume-a4-page .contact-line {
+  font-size: 9pt;
+  color: #666;
+  margin: 0 0 12px;
+}
+
+.resume-a4-page .section-title {
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1.5px solid #2563eb;
+  padding-bottom: 3px;
+  margin: 14px 0 8px;
+  color: #1a1a1a;
+}
+
+.resume-a4-page .experience-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 8px 0 3px;
+}
+
+.resume-a4-page .experience-title {
+  font-size: 10pt;
+  font-weight: 600;
+}
+
+.resume-a4-page .experience-date {
+  font-size: 9pt;
+  color: #666;
+  white-space: nowrap;
+}
+
+.resume-a4-page .experience-company {
+  font-size: 9.5pt;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.resume-a4-page .bullet-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style-type: disc;
+}
+
+.resume-a4-page .bullet-list li {
+  font-size: 9.5pt;
+  margin-bottom: 2px;
+  line-height: 1.35;
+}
+
+.resume-a4-page .skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.resume-a4-page .skill-tag {
+  font-size: 9pt;
+  background: #f0f4ff;
+  color: #2563eb;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.resume-a4-page .education-item {
+  margin-bottom: 6px;
+}

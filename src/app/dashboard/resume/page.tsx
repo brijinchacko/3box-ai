@@ -22,6 +22,8 @@ import { notifyAgentCompleted } from '@/lib/notifications/toast';
 import { useDashboardMode } from '@/components/providers/DashboardModeProvider';
 import AgenticWorkspace from '@/components/dashboard/shared/AgenticWorkspace';
 import { cn } from '@/lib/utils';
+import '@/lib/resume/a4Styles.css';
+import { calculatePageCount, getContentFillPercentage } from '@/lib/resume/a4Layout';
 
 const RESUME_STORAGE_KEY = '3box_resume_data';
 
@@ -199,6 +201,10 @@ function AutopilotResume() {
   const [autoGenerating, setAutoGenerating] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<{ text: string; section: string }[]>([]);
 
+  // A4 preview scaling
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewRef = useRef<HTMLDivElement>(null);
+
   // ── Revert / AI enhance state ──
   const [preEnhanceSnapshot, setPreEnhanceSnapshot] = useState<typeof emptyResume | null>(null);
   const [fieldAILoading, setFieldAILoading] = useState<string | null>(null); // e.g. 'summary', 'exp-0', 'exp-1'
@@ -207,6 +213,20 @@ function AutopilotResume() {
   // ── Auto portfolio creation guard ──
   const portfolioAutoCreated = useRef(false);
   const userHasEdited = useRef(false);
+
+  // A4 preview scale calculation
+  useEffect(() => {
+    const updateScale = () => {
+      if (previewRef.current) {
+        const containerWidth = previewRef.current.offsetWidth;
+        const a4WidthPx = 210 * 3.7795; // mm to px (approx)
+        setPreviewScale(Math.min(1, containerWidth / a4WidthPx));
+      }
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -1712,12 +1732,14 @@ function AutopilotResume() {
 
           {/* Side-by-side: Resume preview (left) + Actions sidebar (right) */}
           <div className="flex gap-4">
-          <div className="flex-1 min-w-0">
-        {/* ── Template-specific resume preview ── */}
+          <div className="flex-1 min-w-0" ref={previewRef}>
+        {/* ── Template-specific resume preview — A4 wrapper ── */}
+        <div className="resume-a4-wrapper">
+          <div className="resume-a4-page" style={{ transform: `scale(${previewScale})` }}>
         {resume.template === 'modern' ? (
           /* ── MODERN: Two-column sidebar layout ── */
-          <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden" style={{ maxWidth: 794 }}>
-            <div className="flex" style={{ minHeight: 1123, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+          <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
+            <div className="flex" style={{ minHeight: '267mm', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
               {/* Sidebar */}
               <div className="w-[30%] bg-[#f0f4f8] p-8 flex flex-col">
                 <h1 className="text-base font-bold mb-2.5" style={{ color: '#2563eb' }}>{resume.contact.name || 'Your Name'}</h1>
@@ -1819,8 +1841,8 @@ function AutopilotResume() {
           </div>
         ) : resume.template === 'classic' ? (
           /* ── CLASSIC: Centered header, serif, traditional ── */
-          <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden" style={{ maxWidth: 794 }}>
-            <div className="px-12 py-10" style={{ minHeight: 1123, fontFamily: "Georgia, 'Times New Roman', serif" }}>
+          <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
+            <div className="px-12 py-10" style={{ minHeight: '267mm', fontFamily: "Georgia, 'Times New Roman', serif" }}>
               <div className="text-center pb-3.5 mb-5" style={{ borderBottom: '2px solid #1e293b' }}>
                 <h1 className="text-[22px] font-bold uppercase tracking-wide" style={{ color: '#1e293b' }}>{resume.contact.name || 'Your Name'}</h1>
                 <div className="text-[11px] text-gray-500 mt-2 flex justify-center flex-wrap gap-x-1">
@@ -1915,8 +1937,8 @@ function AutopilotResume() {
           </div>
         ) : resume.template === 'minimal' ? (
           /* ── MINIMAL: Clean whitespace, thin dividers ── */
-          <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden" style={{ maxWidth: 794 }}>
-            <div className="px-[52px] py-12" style={{ minHeight: 1123, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+          <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
+            <div className="px-[52px] py-12" style={{ minHeight: '267mm', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
               <div className="mb-6">
                 <h1 className="text-[26px] font-light text-gray-900 tracking-tight">{resume.contact.name || 'Your Name'}</h1>
                 <div className="text-[11px] text-gray-400 mt-1.5">
@@ -2011,8 +2033,8 @@ function AutopilotResume() {
           </div>
         ) : (
           /* ── CREATIVE: Gradient banner header, accent bars ── */
-          <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden" style={{ maxWidth: 794 }}>
-            <div style={{ minHeight: 1123, fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}>
+          <div className="bg-white overflow-hidden" style={{ width: '100%' }}>
+            <div style={{ minHeight: '267mm', fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}>
               {/* Gradient header banner */}
               <div className="px-10 py-9" style={{ background: 'linear-gradient(135deg, #a855f7, #00d4ff, #00ff88)' }}>
                 <h1 className="text-2xl font-extrabold text-white">{resume.contact.name || 'Your Name'}</h1>
@@ -2114,6 +2136,8 @@ function AutopilotResume() {
             </div>
           </div>
         )}
+          </div>{/* end resume-a4-page */}
+        </div>{/* end resume-a4-wrapper */}
           </div>{/* end flex-1 resume preview column */}
 
           {/* ── Right sidebar: Actions ── */}
@@ -2150,15 +2174,26 @@ function AutopilotResume() {
                 Edit Resume
               </button>
             </>) : (<>
-              {/* ── Editing state: Verify → Export → Upload → Clear ── */}
-              <button
-                onClick={handleVerifyResume}
-                disabled={verifying || !resume.contact.name}
-                className="w-full px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                {verifying ? 'Verifying...' : 'Verify Resume'}
-              </button>
+              {/* ── Editing state: ATS Score + Export → Upload → Start Over ── */}
+              {/* Always-visible ATS Score indicator */}
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Content Fill</span>
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{getContentFillPercentage(resume as any)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${getContentFillPercentage(resume as any)}%`,
+                      backgroundColor: getContentFillPercentage(resume as any) >= 70 ? '#22c55e' : getContentFillPercentage(resume as any) >= 40 ? '#f59e0b' : '#ef4444',
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                  {calculatePageCount(resume as any) === 1 ? '1 page' : '2 pages'} estimated
+                </p>
+              </div>
 
               {/* Export PDF */}
               <button
@@ -2194,10 +2229,10 @@ function AutopilotResume() {
                 </div>
               )}
 
-              {/* Clear Resume */}
+              {/* Start Over */}
               <button
                 onClick={() => {
-                  if (confirm('This will clear all resume data and start fresh. Are you sure?')) {
+                  if (confirm('Are you sure you want to start over? This will permanently clear all resume data and cannot be undone.')) {
                     // Delete from DB first, then reset local state
                     fetch('/api/user/resume', { method: 'DELETE' }).catch(() => {});
                     setResume({ ...emptyResume });
@@ -2213,7 +2248,7 @@ function AutopilotResume() {
                 className="w-full px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1.5"
               >
                 <Trash2 className="w-4 h-4" />
-                Clear Resume
+                Start Over
               </button>
             </>)}
 
