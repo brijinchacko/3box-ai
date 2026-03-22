@@ -14,6 +14,7 @@ import CortexAvatar from '@/components/brand/CortexAvatar';
 import Logo from '@/components/brand/Logo';
 import { useStore } from '@/store/useStore';
 import { saveOnboardingProfile, getOnboardingProfile } from '@/lib/onboarding/onboardingData';
+import { getSkillSuggestions } from '@/lib/onboarding/roleSkillMap';
 
 // ── Constants (matching dashboard onboarding) ──
 const experienceLevels = [
@@ -40,48 +41,6 @@ const suggestedRoles = [
   'UX Designer', 'Business Analyst', 'Mobile Developer', 'QA Engineer',
   'Marketing Manager', 'Project Manager', 'Cybersecurity Analyst', 'Cloud Architect',
 ];
-
-const roleSkillMap: Record<string, string[]> = {
-  'plc': ['Siemens TIA Portal', 'Allen-Bradley Studio 5000', 'SCADA', 'HMI Design', 'Ladder Logic', 'Structured Text', 'Industrial Networking', 'VFD Configuration', 'Modbus/Profinet', 'PLC Troubleshooting'],
-  'automation': ['Siemens TIA Portal', 'Allen-Bradley', 'SCADA Systems', 'HMI Design', 'Industrial IoT', 'Robotics Programming', 'Process Control', 'Instrumentation'],
-  'software engineer': ['JavaScript', 'Python', 'React', 'Node.js', 'SQL', 'Git', 'Docker', 'AWS', 'TypeScript', 'System Design'],
-  'full stack': ['JavaScript', 'TypeScript', 'React', 'Node.js', 'Next.js', 'MongoDB', 'PostgreSQL', 'REST APIs', 'Git', 'Docker'],
-  'frontend': ['JavaScript', 'TypeScript', 'React', 'Vue.js', 'CSS/SCSS', 'HTML5', 'Tailwind CSS', 'Figma', 'Git', 'Responsive Design'],
-  'backend': ['Python', 'Java', 'Node.js', 'SQL', 'PostgreSQL', 'Redis', 'Docker', 'AWS', 'Microservices', 'REST APIs'],
-  'data scientist': ['Python', 'SQL', 'TensorFlow', 'Pandas', 'Scikit-learn', 'Statistics', 'Tableau', 'R', 'Machine Learning', 'Data Visualization'],
-  'data engineer': ['Python', 'SQL', 'Apache Spark', 'Airflow', 'Kafka', 'AWS/GCP', 'ETL Pipelines', 'Data Warehousing', 'Hadoop', 'dbt'],
-  'devops': ['Docker', 'Kubernetes', 'Terraform', 'CI/CD', 'AWS', 'Linux', 'Jenkins', 'Ansible', 'Monitoring', 'Git'],
-  'product manager': ['Product Strategy', 'User Research', 'Agile/Scrum', 'Data Analysis', 'Roadmapping', 'A/B Testing', 'SQL', 'Figma', 'Jira', 'Stakeholder Management'],
-  'ux designer': ['Figma', 'User Research', 'Wireframing', 'Prototyping', 'Usability Testing', 'Design Systems', 'Adobe XD', 'Information Architecture', 'Interaction Design', 'Accessibility'],
-  'nurse': ['Patient Assessment', 'IV Therapy', 'Electronic Health Records', 'CPR/BLS', 'Medication Administration', 'Wound Care', 'Patient Education', 'Triage'],
-  'teacher': ['Curriculum Development', 'Classroom Management', 'Assessment Design', 'Differentiated Instruction', 'EdTech Tools', 'Student Engagement', 'IEP Development', 'Communication'],
-  'marketing': ['Digital Marketing', 'SEO/SEM', 'Content Strategy', 'Social Media', 'Google Analytics', 'Email Marketing', 'Copywriting', 'HubSpot', 'A/B Testing', 'Brand Strategy'],
-  'sales': ['CRM (Salesforce)', 'Lead Generation', 'Negotiation', 'Pipeline Management', 'Cold Outreach', 'Account Management', 'Sales Presentations', 'Forecasting'],
-  'accountant': ['Financial Reporting', 'Tax Preparation', 'QuickBooks', 'GAAP', 'Budgeting', 'Auditing', 'Excel Advanced', 'Accounts Payable/Receivable', 'Payroll', 'SAP'],
-  'mechanical engineer': ['AutoCAD', 'SolidWorks', 'MATLAB', 'FEA/CFD', 'GD&T', 'Manufacturing Processes', 'Thermodynamics', '3D Modeling', 'Project Management'],
-  'electrical engineer': ['Circuit Design', 'PCB Layout', 'MATLAB', 'Embedded Systems', 'VHDL/Verilog', 'Power Systems', 'Signal Processing', 'Altium Designer', 'Oscilloscope'],
-  'civil engineer': ['AutoCAD', 'Revit', 'Structural Analysis', 'Project Management', 'Construction Management', 'Building Codes', 'SAP2000', 'Surveying', 'Environmental Compliance'],
-  'project manager': ['Agile/Scrum', 'MS Project', 'Risk Management', 'Stakeholder Management', 'Budgeting', 'Jira', 'Gantt Charts', 'Team Leadership', 'PMP', 'Communication'],
-  'cybersecurity': ['Network Security', 'Penetration Testing', 'SIEM', 'Incident Response', 'Firewall Configuration', 'Vulnerability Assessment', 'SOC Operations', 'CompTIA Security+'],
-  'ai engineer': ['Python', 'PyTorch', 'TensorFlow', 'NLP', 'Computer Vision', 'MLOps', 'LangChain', 'Fine-tuning', 'RAG', 'Vector Databases'],
-  'mobile developer': ['React Native', 'Swift', 'Kotlin', 'Flutter', 'Firebase', 'REST APIs', 'App Store Deployment', 'UI/UX Mobile', 'Git'],
-  'cloud architect': ['AWS', 'Azure', 'GCP', 'Terraform', 'Kubernetes', 'Microservices', 'Serverless', 'CI/CD', 'Cost Optimization', 'Security'],
-  'hr': ['Recruitment', 'Employee Relations', 'HRIS Systems', 'Performance Management', 'Onboarding', 'Compensation & Benefits', 'Labor Law', 'Diversity & Inclusion'],
-  'graphic designer': ['Adobe Photoshop', 'Illustrator', 'InDesign', 'Figma', 'Typography', 'Branding', 'Print Design', 'Color Theory', 'Motion Graphics'],
-  'content writer': ['SEO Writing', 'Copywriting', 'Blog Writing', 'Technical Writing', 'Social Media Content', 'Content Strategy', 'Editing', 'Research', 'WordPress'],
-};
-
-function getSkillSuggestions(targetRole: string): string[] {
-  if (!targetRole) return ['Communication', 'Problem Solving', 'Leadership', 'Excel', 'Data Analysis', 'Agile', 'Project Management', 'Teamwork'];
-  const normalized = targetRole.toLowerCase();
-  for (const [key, skills] of Object.entries(roleSkillMap)) {
-    if (normalized.includes(key) || key.includes(normalized.split(' ')[0])) {
-      return skills;
-    }
-  }
-  // Fallback generic skills
-  return ['Communication', 'Problem Solving', 'Leadership', 'Excel', 'Data Analysis', 'Agile', 'Project Management', 'Teamwork'];
-}
 
 // ── Steps ──
 const STEPS = [

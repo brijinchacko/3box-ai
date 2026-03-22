@@ -107,11 +107,26 @@ export async function PUT(request: NextRequest) {
         },
       });
     } else {
-      // Generate a unique slug for new portfolio
+      // Generate a unique slug for new portfolio (clean incrementing suffix)
       let slug = baseSlug;
       const taken = await prisma.portfolio.findUnique({ where: { slug } });
       if (taken) {
-        slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
+        // Try incrementing suffixes: name-2, name-3, etc.
+        let counter = 2;
+        while (true) {
+          const candidate = `${baseSlug}-${counter}`;
+          const exists = await prisma.portfolio.findUnique({ where: { slug: candidate } });
+          if (!exists) {
+            slug = candidate;
+            break;
+          }
+          counter++;
+          if (counter > 100) {
+            // Fallback to cuid-based suffix
+            slug = `${baseSlug}-${session.user.id.slice(-6)}`;
+            break;
+          }
+        }
       }
 
       // Create new portfolio

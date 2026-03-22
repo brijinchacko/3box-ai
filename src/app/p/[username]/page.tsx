@@ -17,6 +17,18 @@ async function getPortfolio(slug: string) {
           name: true,
           email: true,
           image: true,
+          resumes: {
+            where: { isFinalized: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+            select: { content: true },
+          },
+          careerTwin: {
+            select: {
+              targetRoles: true,
+              skillSnapshot: true,
+            },
+          },
         },
       },
     },
@@ -76,6 +88,13 @@ export default async function PublicPortfolioPage({ params }: PageProps) {
   // Fetch the user's story from CareerTwin
   const story = await getUserStory(portfolio.user.id);
 
+  // Extract target role from CareerTwin
+  const targetRoles = (portfolio.user.careerTwin?.targetRoles as any[]) || [];
+  const targetRole = targetRoles.length > 0 ? targetRoles[0]?.title || null : null;
+
+  // Extract resume content (experience, education, contact)
+  const resumeContent = (portfolio.user.resumes?.[0]?.content as any) || null;
+
   // Serialize dates for the client component
   const portfolioData = {
     id: portfolio.id,
@@ -103,5 +122,45 @@ export default async function PublicPortfolioPage({ params }: PageProps) {
     image: portfolio.user.image,
   };
 
-  return <PortfolioPublicClient portfolio={portfolioData} user={userData} story={story} />;
+  // Build resume data for experience/education sections
+  const resumeData = resumeContent
+    ? {
+        experience: (resumeContent.experience || []) as Array<{
+          id: string;
+          company: string;
+          role: string;
+          location: string;
+          startDate: string;
+          endDate: string;
+          current: boolean;
+          bullets: string[];
+        }>,
+        education: (resumeContent.education || []) as Array<{
+          id: string;
+          institution: string;
+          degree: string;
+          field: string;
+          startDate: string;
+          endDate: string;
+          gpa?: string;
+        }>,
+        contact: resumeContent.contact
+          ? {
+              linkedin: resumeContent.contact.linkedin || null,
+              portfolio: resumeContent.contact.portfolio || null,
+              phone: resumeContent.contact.phone || null,
+            }
+          : null,
+      }
+    : null;
+
+  return (
+    <PortfolioPublicClient
+      portfolio={portfolioData}
+      user={userData}
+      story={story}
+      targetRole={targetRole}
+      resumeData={resumeData}
+    />
+  );
 }
