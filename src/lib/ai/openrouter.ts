@@ -616,7 +616,7 @@ Core Features:
 10. Salary Estimator — Free AI-powered salary range estimation.
 11. Cover Letter Generator — AI writes personalized cover letters.
 
-Plans: Basic (Free) | Starter ($12/mo) | Pro ($29/mo + human experts) | Ultra ($59/mo + dedicated mentor)
+Plans: Free ($0) | Pro ($29/mo) | Max ($59/mo)
 
 Navigation: /dashboard, /dashboard/assessment, /dashboard/career-plan, /dashboard/learning, /dashboard/resume, /dashboard/jobs, /dashboard/interview, /dashboard/portfolio, /dashboard/settings, /pricing, /tools/ats-checker, /tools/resume-builder, /tools/salary-estimator
 ${userContextBlock}

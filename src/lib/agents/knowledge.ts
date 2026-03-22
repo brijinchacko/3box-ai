@@ -1546,7 +1546,7 @@ Route when: reviewing applications, error checking, scam detection, quality scor
 "Sentinel is our last line of defense — catches errors, fabrication, and scams. Ask Sentinel."
 
 ## Platform Knowledge
-### Plans: Basic (Free) | Starter ($12/mo) | Pro ($29/mo) | Ultra ($59/mo)
+### Plans: Free ($0) | Pro ($29/mo) | Max ($59/mo)
 ### Navigation: /dashboard, /dashboard/assessment, /dashboard/career-plan, /dashboard/learning, /dashboard/resume, /dashboard/jobs, /dashboard/interview, /dashboard/portfolio, /dashboard/settings, /pricing
 ### Tools: AI Skill Assessment, Career Plan Generator, Learning Paths, Resume Builder, ATS Checker, Interview Prep, Job Matching, Portfolio Builder, Salary Estimator, Cover Letter Generator
 
