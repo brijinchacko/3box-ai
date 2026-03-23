@@ -112,6 +112,21 @@ export function calculateMatchScore(job: JobToScore, profile: UserProfile): numb
   const isJuniorJob = juniorTerms.some(t => jobTitle.includes(t));
   if (!isSeniorJob && !isJuniorJob) score += 2; // Mid-level tends to match more people
 
+  // ── Title Relevance Gate ──
+  // If job title has ZERO keyword overlap with target role, cap the score.
+  // This prevents "Sales Executive" from scoring high for a "PLC Programmer".
+  const titleScore = score; // snapshot before adding non-title points
+  const targetKeywords = roleWords.filter(w => w.length > 2 && !['the', 'and', 'for', 'with'].includes(w));
+  const jobTitleWords = jobTitle.split(/[\s,&\-/]+/).filter(w => w.length > 2);
+  const titleOverlap = targetKeywords.filter(tw =>
+    jobTitleWords.some(jw => jw.includes(tw) || tw.includes(jw))
+  ).length;
+  if (titleOverlap === 0 && targetKeywords.length > 0) {
+    // No title keyword match at all — cap total score at 30%
+    // so irrelevant roles always rank below relevant ones
+    return Math.min(30, Math.max(0, Math.round(score)));
+  }
+
   // ── Scam Penalty (0 to -30) ──
   // Suspicious jobs get penalized so they rank lower even if keywords match
   const scam = detectScamSignals({

@@ -113,7 +113,9 @@ export default function AgentDashboardPage() {
   const { data: session } = useSession();
   const { isAutopilot, isAgentic } = useDashboardMode();
   const router = useRouter();
-  const sessionPlan = (session?.user?.plan as string) || 'FREE';
+  const rawSessionPlan = ((session?.user?.plan as string) || 'FREE').toUpperCase();
+  const PLAN_NORM: Record<string, string> = { BASIC: 'FREE', STARTER: 'PRO', ULTRA: 'MAX' };
+  const sessionPlan = PLAN_NORM[rawSessionPlan] || rawSessionPlan;
 
   // Redirect to dashboard if in Autopilot mode (Agents page is Agentic-only)
   useEffect(() => {

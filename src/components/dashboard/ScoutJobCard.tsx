@@ -32,11 +32,16 @@ interface ScoutJobCardProps {
   userSkills?: Record<string, number> | null;
 }
 
-function timeAgo(dateStr: string): string {
-  const now = new Date();
+function safeDiffDays(dateStr: string): number {
+  if (!dateStr) return -1;
   const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
+  if (isNaN(date.getTime())) return -1;
+  return Math.floor((Date.now() - date.getTime()) / 86400000);
+}
+
+function timeAgo(dateStr: string): string {
+  const diffDays = safeDiffDays(dateStr);
+  if (diffDays < 0) return 'Recently';
 
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return '1d ago';
@@ -47,15 +52,16 @@ function timeAgo(dateStr: string): string {
 
 /** Color-coded job age badge: green (0-7d), yellow (8-14d), red (15d+) */
 function jobAgeBadgeLabel(dateStr: string): string {
-  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const diffDays = safeDiffDays(dateStr);
+  if (diffDays < 0) return 'Recently posted';
   if (diffDays === 0) return 'Posted today';
   if (diffDays === 1) return 'Posted 1d ago';
   return `Posted ${diffDays}d ago`;
 }
 
 function jobAgeBadgeColor(dateStr: string): string {
-  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (diffDays <= 7) return 'bg-green-500/10 text-green-400';
+  const diffDays = safeDiffDays(dateStr);
+  if (diffDays < 0 || diffDays <= 7) return 'bg-green-500/10 text-green-400';
   if (diffDays <= 14) return 'bg-amber-500/10 text-amber-400';
   return 'bg-red-500/10 text-red-400';
 }

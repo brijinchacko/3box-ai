@@ -119,11 +119,16 @@ function JobCardSkeleton() {
 }
 
 // ── Relative Time Helper ───────────────────────────────
-function timeAgo(dateStr: string): string {
-  const now = new Date();
+function safeDiffDays(dateStr: string): number {
+  if (!dateStr) return -1;
   const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
+  if (isNaN(date.getTime())) return -1;
+  return Math.floor((Date.now() - date.getTime()) / 86400000);
+}
+
+function timeAgo(dateStr: string): string {
+  const diffDays = safeDiffDays(dateStr);
+  if (diffDays < 0) return 'Recently';
 
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return '1 day ago';
@@ -135,20 +140,21 @@ function timeAgo(dateStr: string): string {
 
 /** Color-coded job age badge: green (0-7d), yellow (8-14d), red (15d+) */
 function jobAgeBadgeLabel(dateStr: string): string {
-  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const diffDays = safeDiffDays(dateStr);
+  if (diffDays < 0) return 'Recently posted';
   if (diffDays === 0) return 'Posted today';
   if (diffDays === 1) return 'Posted 1d ago';
   return `Posted ${diffDays}d ago`;
 }
 
 function jobAgeBadgeColor(dateStr: string, mode: 'dark' | 'light' = 'dark'): string {
-  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const diffDays = safeDiffDays(dateStr);
   if (mode === 'light') {
-    if (diffDays <= 7) return 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400';
+    if (diffDays < 0 || diffDays <= 7) return 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400';
     if (diffDays <= 14) return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400';
     return 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400';
   }
-  if (diffDays <= 7) return 'bg-green-500/10 text-green-400';
+  if (diffDays < 0 || diffDays <= 7) return 'bg-green-500/10 text-green-400';
   if (diffDays <= 14) return 'bg-amber-500/10 text-amber-400';
   return 'bg-red-500/10 text-red-400';
 }
@@ -668,7 +674,7 @@ function AutopilotJobSearch() {
     if (scoutJobsLoaded) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/agents/scout/jobs?limit=50');
+      const res = await fetch('/api/agents/scout/jobs?limit=100');
       if (res.ok) {
         const data = await res.json();
         if (data.jobs && data.jobs.length > 0) {
@@ -676,12 +682,15 @@ function AutopilotJobSearch() {
             id: j.id,
             title: j.title || '',
             company: j.company || '',
+            companyLogo: null,
             location: j.location || '',
             description: j.description || '',
-            salary: j.salary || '',
+            salary: j.salary || null,
+            url: j.jobUrl || '',
+            postedAt: j.discoveredAt || new Date().toISOString(),
+            type: '',
             remote: j.remote || false,
             matchScore: j.matchScore,
-            url: j.jobUrl || '',
             source: j.source || '',
           })));
           setTotal(data.total || data.jobs.length);
@@ -1126,7 +1135,9 @@ export default function JobsPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const mainRouter = useRouter();
-  const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase() as PlanTier;
+  const rawPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase();
+  const PLAN_NORMALIZE: Record<string, PlanTier> = { BASIC: 'FREE', STARTER: 'PRO', ULTRA: 'MAX', FREE: 'FREE', PRO: 'PRO', MAX: 'MAX' };
+  const userPlan = PLAN_NORMALIZE[rawPlan] ?? 'FREE';
   const agentLocked = !isAgentAvailable('scout', userPlan);
 
   // In Autopilot mode, render simplified job search

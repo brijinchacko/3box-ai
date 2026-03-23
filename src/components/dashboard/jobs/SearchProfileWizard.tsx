@@ -183,7 +183,7 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
     }
   };
 
-  const canProceedStep0 = resumeApproved && resumeVerified;
+  const canProceedStep0 = isEditing || (resumeApproved && resumeVerified);
   const canProceedStep1 = jobTitle.trim().length > 0;
   const canSubmit = canProceedStep0 && canProceedStep1;
 
@@ -192,7 +192,9 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   };
 
   const handleBack = () => {
-    if (step > 0) setStep(step - 1);
+    // In edit mode, don't go back to step 0 (resume verification)
+    const minStep = isEditing ? 1 : 0;
+    if (step > minStep) setStep(step - 1);
   };
 
   const handleSubmit = async () => {

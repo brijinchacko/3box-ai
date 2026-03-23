@@ -78,7 +78,9 @@ const SCHEDULE_PRESETS: {
    ═══════════════════════════════════════════════════════ */
 export default function AutoApplySetupPage() {
   const { data: session } = useSession();
-  const userPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase();
+  const rawPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase();
+  const PLAN_NORM: Record<string, string> = { BASIC: 'FREE', STARTER: 'PRO', ULTRA: 'MAX' };
+  const userPlan = PLAN_NORM[rawPlan] || rawPlan;
   const isEligible = userPlan === 'PRO' || userPlan === 'MAX';
 
   const [config, setConfig] = useState<AutoApplyConfig>(DEFAULT_CONFIG);

@@ -98,6 +98,7 @@ export async function searchAdzuna(
   if (location) {
     url.searchParams.set('where', location);
   }
+  url.searchParams.set('sort_by', 'relevance');
   url.searchParams.set('content-type', 'application/json');
 
   const response = await fetch(url.toString(), {

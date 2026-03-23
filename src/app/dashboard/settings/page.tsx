@@ -613,7 +613,9 @@ export default function SettingsPage() {
   /*  Derived values                                                   */
   /* ---------------------------------------------------------------- */
 
-  const userPlan = profile?.plan || (session?.user as any)?.plan || 'FREE';
+  const rawPlan = (profile?.plan || (session?.user as any)?.plan || 'FREE').toUpperCase();
+  const PLAN_NORMALIZE: Record<string, string> = { BASIC: 'FREE', STARTER: 'PRO', ULTRA: 'MAX' };
+  const userPlan = PLAN_NORMALIZE[rawPlan] || rawPlan;
   const userName = profile?.name || session?.user?.name || 'User';
   const userEmail = profile?.email || session?.user?.email || '';
   const creditsUsed = profile?.aiCreditsUsed ?? (session?.user as any)?.aiCreditsUsed ?? 0;

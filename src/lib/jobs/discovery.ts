@@ -428,12 +428,32 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
     ),
   }));
 
+  // 6. Filter out clearly irrelevant results (no title keyword overlap + low score)
+  const targetWords = userProfile.targetRole
+    .toLowerCase()
+    .split(/[\s,&\-/]+/)
+    .filter((w) => w.length > 2 && !['the', 'and', 'for', 'with', 'jobs'].includes(w));
+
+  const relevantJobs = scoredJobs.filter((job) => {
+    const titleLower = job.title.toLowerCase();
+    const hasRelevantKeyword = targetWords.some(
+      (keyword) => titleLower.includes(keyword),
+    );
+    // Keep if title has at least one keyword match, OR score is above 50
+    if (!hasRelevantKeyword && (job.matchScore || 0) < 50) {
+      return false;
+    }
+    return true;
+  });
+
+  console.log(`[Discovery] After relevance filter: ${relevantJobs.length} (removed ${scoredJobs.length - relevantJobs.length} irrelevant)`);
+
   // Sort by match score descending
-  scoredJobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+  relevantJobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
   console.log(
-    `[Discovery] Returning top ${Math.min(limit, scoredJobs.length)} of ${scoredJobs.length} scored jobs`,
+    `[Discovery] Returning top ${Math.min(limit, relevantJobs.length)} of ${relevantJobs.length} scored jobs`,
   );
 
-  return scoredJobs.slice(0, limit);
+  return relevantJobs.slice(0, limit);
 }

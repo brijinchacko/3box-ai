@@ -62,7 +62,9 @@ export default function KanbanCard({ job }: KanbanCardProps) {
 
 function formatDate(isoString: string): string {
   try {
+    if (!isoString) return 'Recently';
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'Recently';
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
     if (diffDays === 0) return 'Today';
@@ -70,6 +72,6 @@ function formatDate(isoString: string): string {
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   } catch {
-    return '';
+    return 'Recently';
   }
 }

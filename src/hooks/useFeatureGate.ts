@@ -3,6 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 
+// Legacy plan → current plan mapping (must match server-side LEGACY_PLAN_MAP)
+const LEGACY_PLAN_MAP: Record<string, string> = {
+  BASIC: 'FREE',
+  STARTER: 'PRO',
+  PRO: 'PRO',
+  ULTRA: 'MAX',
+  FREE: 'FREE',
+  MAX: 'MAX',
+};
+
 interface FeatureGateState {
   /** Whether the user's features are locked (FREE plan exhausted) */
   isLocked: boolean;
@@ -31,7 +41,8 @@ interface FeatureGateState {
  */
 export function useFeatureGate(): FeatureGateState {
   const { data: session } = useSession();
-  const plan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase();
+  const rawPlan = ((session?.user as any)?.plan ?? 'FREE').toUpperCase();
+  const plan = LEGACY_PLAN_MAP[rawPlan] ?? rawPlan;
 
   const [state, setState] = useState<Omit<FeatureGateState, 'refresh' | 'plan'>>({
     isLocked: false,
