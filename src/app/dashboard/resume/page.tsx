@@ -2263,18 +2263,22 @@ function AutopilotResume() {
 
               {/* Start Over */}
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to start over? This will permanently clear all resume data and cannot be undone.')) {
-                    // Delete from DB first, then reset local state
-                    fetch('/api/user/resume', { method: 'DELETE' }).catch(() => {});
+                onClick={async () => {
+                  if (!confirm('Are you sure you want to start over? This will permanently clear all resume data and cannot be undone.')) return;
+                  try {
+                    const res = await fetch('/api/user/resume', { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Delete failed');
+                    // Only clear local state after successful DB delete
                     setResume({ ...emptyResume });
                     setResumeId(null as any);
                     setIsVerified(false);
                     localStorage.removeItem(RESUME_STORAGE_KEY);
                     setUploadedFileName(null);
                     setIsFirstTime(true);
-                    userHasEdited.current = false; // Reset so next load doesn't auto-save
+                    userHasEdited.current = false;
                     showToast('Resume data cleared.', 'success');
+                  } catch {
+                    showToast('Failed to clear resume. Please try again.', 'error');
                   }
                 }}
                 className="w-full px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1.5"
