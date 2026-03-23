@@ -3,7 +3,25 @@
  * Plan-based model routing, JSON mode, retry/fallback, PII redaction, and audit logging.
  */
 
+import nodeFetch from 'node-fetch';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
+
+// Use proxy agent if https_proxy is set (required in some hosting environments)
+function getProxyAgent() {
+  const proxy = process.env.https_proxy || process.env.HTTPS_PROXY;
+  return proxy ? new HttpsProxyAgent(proxy) : undefined;
+}
+
+// Proxy-aware fetch wrapper
+async function proxyFetch(url: string, init?: any): Promise<any> {
+  const agent = getProxyAgent();
+  if (agent) {
+    return nodeFetch(url, { ...init, agent });
+  }
+  return fetch(url, init);
+}
 
 // ─── Model Configuration ──────────────────────
 
@@ -189,7 +207,7 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
     body.response_format = { type: 'json_object' };
   }
 
-  const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+  const response = await proxyFetch(`${OPENROUTER_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -276,7 +294,7 @@ export async function aiChatStream(
     stream: true,
   };
 
-  const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+  const response = await proxyFetch(`${OPENROUTER_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
