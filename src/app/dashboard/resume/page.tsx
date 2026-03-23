@@ -213,6 +213,7 @@ function AutopilotResume() {
   // ── Auto portfolio creation guard ──
   const portfolioAutoCreated = useRef(false);
   const userHasEdited = useRef(false);
+  const dbLoadComplete = useRef(false); // guards localStorage writes until DB is loaded
 
   // A4 preview scale calculation (794px = A4 width at 96dpi)
   useEffect(() => {
@@ -264,7 +265,7 @@ function AutopilotResume() {
     };
   });
 
-  // Load resume from DB, then auto-generate if empty
+  // Load resume from DB (single source of truth), fallback to localStorage on error
   useEffect(() => {
     fetch('/api/user/resume')
       .then(res => res.ok ? res.json() : null)
@@ -284,14 +285,51 @@ function AutopilotResume() {
           if (data.resumeId) setResumeId(data.resumeId);
           setIsVerified(!!data.isFinalized);
           setIsFirstTime(false);
+          dbLoadComplete.current = true;
+          // Sync DB data to localStorage cache
+          localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(data.resume));
           // Only generate AI suggestions — never auto-generate over an existing DB resume
           generateAISuggestions(data.resume);
         } else {
-          // No resume at all — auto-generate
+          dbLoadComplete.current = true;
+          // No resume in DB — try pre-filling from user profile
+          fetch('/api/user/profile')
+            .then(res => res.ok ? res.json() : null)
+            .then(profileData => {
+              if (profileData) {
+                const pd = profileData.careerTwin?.skillSnapshot?._profile || {};
+                setResume(prev => ({
+                  ...prev,
+                  title: profileData.targetRole ? `${profileData.targetRole} Resume` : 'My Resume',
+                  contact: {
+                    ...prev.contact,
+                    name: profileData.name || '',
+                    email: profileData.email || '',
+                    location: profileData.location || '',
+                    phone: pd.phone || profileData.phone || '',
+                    linkedin: pd.linkedin || profileData.linkedin || '',
+                  },
+                }));
+              }
+            })
+            .catch(() => {});
+          // Auto-generate
           autoGenerateResume(session?.user?.name || '');
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // DB load failed — try localStorage as fallback
+        try {
+          const stored = localStorage.getItem(RESUME_STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setResume(parsed);
+            setIsFirstTime(false);
+            showToast('Loaded from local cache — changes may be out of date.', 'error');
+          }
+        } catch { /* localStorage also failed */ }
+        dbLoadComplete.current = true;
+      })
       .finally(() => setResumeLoaded(true));
   }, [session?.user?.email, session?.user?.name]);
 
@@ -406,6 +444,8 @@ function AutopilotResume() {
         .then(data => {
           if (data?.resumeId && !resumeId) setResumeId(data.resumeId);
           setLastSaved(new Date().toLocaleTimeString());
+          // Keep localStorage in sync with DB after successful save
+          localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));
           // Any real edit un-verifies the resume (user must re-verify)
           if (isVerified) setIsVerified(false);
 
@@ -415,7 +455,9 @@ function AutopilotResume() {
             autoCreatePortfolio();
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          showToast('Auto-save failed. Your changes may not be saved.', 'error');
+        })
         .finally(() => setSaving(false));
     }, 2000);
     return () => clearTimeout(timer);
@@ -2803,45 +2845,9 @@ function AgenticResumePage() {
   const [coverLetter, setCoverLetter] = useState('');
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
 
-  // Load resume from localStorage on mount, then fill user profile if empty
+  // Write-through localStorage cache (only after DB load is complete to prevent stale overwrites)
   useEffect(() => {
-    const stored = localStorage.getItem(RESUME_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setResume(parsed);
-        setResumeLoaded(true);
-        return;
-      } catch { /* ignore */ }
-    }
-    // No stored resume — fetch user profile to pre-fill contact
-    fetch('/api/user/profile')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          // Extract phone & linkedin from careerTwin skillSnapshot profile if available
-          const profileData = data.careerTwin?.skillSnapshot?._profile || {};
-          setResume(prev => ({
-            ...prev,
-            title: data.targetRole ? `${data.targetRole} Resume` : 'My Resume',
-            contact: {
-              ...prev.contact,
-              name: data.name || '',
-              email: data.email || '',
-              location: data.location || '',
-              phone: profileData.phone || data.phone || '',
-              linkedin: profileData.linkedin || data.linkedin || '',
-            },
-          }));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setResumeLoaded(true));
-  }, []);
-
-  // Save resume to localStorage whenever it changes (after initial load)
-  useEffect(() => {
-    if (resumeLoaded) {
+    if (resumeLoaded && dbLoadComplete.current) {
       localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));
     }
   }, [resume, resumeLoaded]);
