@@ -250,9 +250,12 @@ function AutopilotResume() {
   // Clean experience bullets from DB or AI
   const cleanExperience = (exps: any[]) => (exps || []).map((exp: any) => {
     // Fix duplicate endDate like "Dec 2021 – Dec 2021" or "Present – Present"
+    // Only split on space-surrounded dashes to avoid breaking dates like "Jan-2020"
     let endDate = exp.endDate || '';
-    const endParts = endDate.split(/\s*[–-]\s*/);
-    if (endParts.length > 1) endDate = endParts[endParts.length - 1].trim();
+    const endParts = endDate.split(/\s+[–-]\s+/);
+    if (endParts.length === 2 && endParts[0].trim() === endParts[1].trim()) {
+      endDate = endParts[0].trim();
+    }
     return {
       ...exp,
       endDate,
@@ -579,21 +582,27 @@ function AutopilotResume() {
           contact: {
             ...prev.contact,
             name: p.fullName || prev.contact.name,
+            email: p.email || prev.contact.email,
             phone: p.phone || prev.contact.phone,
             location: p.location || prev.contact.location,
             linkedin: p.linkedin || prev.contact.linkedin,
+            portfolio: p.website || p.portfolio || prev.contact.portfolio,
           },
           summary: p.bio || prev.summary,
-          experience: (p.experiences || []).map((exp: any, i: number) => ({
-            id: String(i + 1),
-            company: exp.company || '',
-            role: exp.title || '',
-            location: '',
-            startDate: exp.duration?.split(/[-–]/)[0]?.trim() || '',
-            endDate: exp.duration?.split(/[-–]/)[1]?.trim() || '',
-            current: false,
-            bullets: exp.description ? [exp.description] : [],
-          })),
+          experience: (p.experiences || []).map((exp: any, i: number) => {
+            // Parse duration safely — split on space-surrounded dashes only
+            const parts = (exp.duration || '').split(/\s+[–-]\s+/);
+            return {
+              id: String(i + 1),
+              company: exp.company || '',
+              role: exp.title || '',
+              location: '',
+              startDate: parts[0]?.trim() || '',
+              endDate: parts[1]?.trim() || '',
+              current: false,
+              bullets: exp.description ? [exp.description] : [],
+            };
+          }),
           education: p.educationLevel ? [{
             id: '1',
             institution: p.institution || '',
