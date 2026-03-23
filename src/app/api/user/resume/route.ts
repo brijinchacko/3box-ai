@@ -76,6 +76,7 @@ export async function GET() {
     experience: [],
     education: [],
     skills: [],
+    skillDescriptions: {},
     certifications: [],
     projects: [],
   };
@@ -248,6 +249,7 @@ function convertOnboardingToEditor(content: any, template?: string) {
       gpa: '',
     }] : [],
     skills: content.skills || [],
+    skillDescriptions: content.skillDescriptions || {},
     certifications: [],
     projects: [],
   };

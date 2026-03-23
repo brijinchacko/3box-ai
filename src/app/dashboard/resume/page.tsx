@@ -644,11 +644,29 @@ function AutopilotResume() {
         try {
           parsed = typeof data.enhanced === 'string' ? JSON.parse(data.enhanced) : data.enhanced;
         } catch {
-          // Not JSON — try extracting JSON from the string
+          // Not JSON — try extracting JSON from the string (non-greedy match for first complete object)
           try {
-            const jsonMatch = (data.enhanced || '').match(/\{[\s\S]*\}/);
-            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-          } catch { /* ignore */ }
+            const text = data.enhanced || '';
+            const start = text.indexOf('{');
+            if (start !== -1) {
+              let depth = 0;
+              let end = -1;
+              for (let i = start; i < text.length; i++) {
+                if (text[i] === '{') depth++;
+                else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+              }
+              if (end !== -1) parsed = JSON.parse(text.slice(start, end + 1));
+            }
+          } catch {
+            showToast('AI returned unexpected format. Some changes may not have applied.', 'error');
+          }
+        }
+
+        // Validate parsed structure before applying
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.summary && typeof parsed.summary !== 'string') parsed.summary = undefined;
+          if (parsed.experience && !Array.isArray(parsed.experience)) parsed.experience = undefined;
+          if (parsed.skills && !Array.isArray(parsed.skills)) parsed.skills = undefined;
         }
 
         if (parsed?.summary) {
@@ -695,6 +713,9 @@ function AutopilotResume() {
           const clean = (data.enhanced || '').replace(/```json[\s\S]*```/g, '').replace(/\{[\s\S]*\}/g, '').trim();
           if (clean.length > 20) {
             setResume(prev => ({ ...prev, summary: clean }));
+            showToast('AI enhancement partially applied (summary only).', 'success');
+          } else {
+            showToast('AI enhancement returned no usable data.', 'error');
           }
         }
 
