@@ -728,38 +728,6 @@ function AutopilotResume() {
           }
         }
 
-        // Skip individual experience enhancement since 'full' already covers it
-        const _skipIndividualEnhance = true;
-        if (!_skipIndividualEnhance)
-        // Legacy: enhance each experience individually if 'full' didn't return structured data
-        for (let i = 0; i < resume.experience.length; i++) {
-          const exp = resume.experience[i];
-          const bullets = (exp.bullets || []).filter(Boolean);
-          if (bullets.length > 0) {
-            try {
-              const expRes = await fetch('/api/ai/resume/enhance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  section: 'experience',
-                  content: `Role: ${exp.role} at ${exp.company}\nBullet points:\n${bullets.join('\n')}`,
-                }),
-              });
-              if (expRes.ok) {
-                const expData = await expRes.json();
-                if (expData.enhanced) {
-                  const enhancedBullets = expData.enhanced.split('\n').filter((b: string) => b.trim());
-                  setResume(prev => {
-                    const updated = [...prev.experience];
-                    updated[i] = { ...updated[i], bullets: enhancedBullets };
-                    return { ...prev, experience: updated };
-                  });
-                }
-              }
-            } catch {}
-          }
-        }
-
         showToast('Resume enhanced! Click "Revert" if you want to undo.', 'success');
       } else {
         setPreEnhanceSnapshot(null);

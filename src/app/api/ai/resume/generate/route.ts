@@ -5,7 +5,7 @@ import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
 import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
-const { prisma } = require('@/lib/db/prisma');
+import { prisma } from '@/lib/db/prisma';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
