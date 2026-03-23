@@ -6,6 +6,7 @@ import { getUserContextString } from '@/lib/ai/context';
 import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
 import { prisma } from '@/lib/db/prisma';
+import { normalizePlan } from '@/lib/tokens/pricing';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -139,7 +140,7 @@ Tone: ${tone || 'Professional'}
 
 Use my real profile information where available. Fill in realistic content for any gaps. Make it ATS-optimized and compelling.`;
 
-    const model = getModelForFeature('resume', user.plan);
+    const model = getModelForFeature('resume', normalizePlan(user.plan));
     const aiResponse = await aiChat({
       messages: [
         { role: 'system', content: systemPrompt },

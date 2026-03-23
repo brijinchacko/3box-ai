@@ -6,6 +6,7 @@ import { getUserContextString } from '@/lib/ai/context';
 import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
 import { prisma } from '@/lib/db/prisma';
+import { normalizePlan } from '@/lib/tokens/pricing';
 
 const SECTION_PROMPTS: Record<string, (targetJob?: string) => string> = {
   summary: (targetJob) =>
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
       if (userContext) {
         systemPrompt += `\n\n${userContext}\n\nIMPORTANT: Use the user's real name, skills, experience, and career goals from the context above to personalize the enhanced content. Write in first person using their actual details.`;
       }
-      const model = getModelForFeature('resume', user.plan);
+      const model = getModelForFeature('resume', normalizePlan(user.plan));
       const aiResponse = await aiChat({
         messages: [
           { role: 'system', content: systemPrompt },
