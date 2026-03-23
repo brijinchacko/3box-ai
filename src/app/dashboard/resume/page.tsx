@@ -2847,9 +2847,9 @@ function AgenticResumePage() {
   const [coverLetter, setCoverLetter] = useState('');
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
 
-  // Write-through localStorage cache (only after DB load is complete to prevent stale overwrites)
+  // Write-through localStorage cache
   useEffect(() => {
-    if (resumeLoaded && dbLoadComplete.current) {
+    if (resumeLoaded) {
       localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));
     }
   }, [resume, resumeLoaded]);
