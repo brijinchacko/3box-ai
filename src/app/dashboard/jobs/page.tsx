@@ -1185,17 +1185,61 @@ export default function JobsPage() {
 
   // Saved jobs
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
+  // DB-backed saved job IDs (ScoutJob IDs with SAVED status)
+  const [savedJobDbIds, setSavedJobDbIds] = useState<Map<string, string>>(new Map());
 
   // User skills from CareerTwin for skill gap analysis
   const [userSkills, setUserSkills] = useState<Record<string, number> | null>(null);
 
   const isMax = userPlan === 'MAX';
 
+  // Load saved jobs: merge localStorage cache with DB source of truth
   useEffect(() => {
+    // 1. Immediate: load from localStorage cache for instant UI
     try {
       const stored = localStorage.getItem(SAVED_JOBS_KEY);
       if (stored) setSavedJobs(JSON.parse(stored));
     } catch {}
+
+    // 2. Fetch DB-backed saved jobs to restore state across sessions
+    fetch('/api/user/board-jobs')
+      .then(r => r.json())
+      .then(data => {
+        if (data.jobs && Array.isArray(data.jobs)) {
+          const savedStatuses = new Set(['SAVED', 'READY', 'FORGE_READY']);
+          const dbSaved = data.jobs.filter((j: any) => savedStatuses.has(j.status));
+          // Build a map of jobUrl -> dbId for matching with search results
+          const idMap = new Map<string, string>();
+          const dbJobs: Job[] = dbSaved.map((j: any) => {
+            idMap.set(j.jobUrl, j.id);
+            return {
+              id: j.id,
+              title: j.title,
+              company: j.company,
+              companyLogo: null,
+              location: j.location || '',
+              description: '',
+              salary: null,
+              url: j.jobUrl,
+              postedAt: j.discoveredAt || '',
+              type: '',
+              remote: false,
+              matchScore: j.matchScore,
+              source: j.source,
+            };
+          });
+          setSavedJobDbIds(idMap);
+          // Merge: DB is source of truth, but keep localStorage entries that aren't in DB yet
+          setSavedJobs(prev => {
+            const dbUrls = new Set(dbJobs.map(j => j.url));
+            const localOnly = prev.filter(j => !dbUrls.has(j.url));
+            const merged = [...dbJobs, ...localOnly];
+            localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Fetch user skills from CareerTwin on mount
@@ -1285,14 +1329,51 @@ export default function JobsPage() {
 
   const toggleSaveJob = (job: Job) => {
     setSavedJobs(prev => {
-      const exists = prev.some(j => j.id === job.id);
-      const updated = exists ? prev.filter(j => j.id !== job.id) : [...prev, job];
+      const exists = prev.some(j => j.id === job.id || j.url === job.url);
+      const updated = exists ? prev.filter(j => j.id !== job.id && j.url !== job.url) : [...prev, job];
       localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(updated));
+
+      if (!exists) {
+        // Save to DB
+        fetch('/api/user/board-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: job.title,
+            company: job.company,
+            jobUrl: job.url,
+            location: job.location,
+            source: job.source || 'Job Search',
+            matchScore: job.matchScore,
+            description: job.description,
+            status: 'SAVED',
+          }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.job?.id) {
+              setSavedJobDbIds(m => new Map(m).set(job.url, data.job.id));
+            }
+          })
+          .catch(() => {});
+      } else {
+        // Unsave: update status in DB to SKIPPED
+        const dbId = savedJobDbIds.get(job.url);
+        if (dbId) {
+          fetch(`/api/user/board-jobs/${dbId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'SKIPPED' }),
+          }).catch(() => {});
+          setSavedJobDbIds(m => { const n = new Map(m); n.delete(job.url); return n; });
+        }
+      }
+
       return updated;
     });
   };
 
-  const isJobSaved = (jobId: string) => savedJobs.some(j => j.id === jobId);
+  const isJobSaved = (jobId: string, jobUrl?: string) => savedJobs.some(j => j.id === jobId || (jobUrl && j.url === jobUrl));
 
   // ── Report scam ──────────────────────────────────────
   const handleReportScam = async (jobId: string) => {
@@ -1423,7 +1504,7 @@ export default function JobsPage() {
           <JobDetailOverlay
             job={detailJob}
             userPlan={userPlan}
-            isSaved={isJobSaved(detailJob.id)}
+            isSaved={isJobSaved(detailJob.id, detailJob.url)}
             onSave={() => toggleSaveJob(detailJob)}
             onClose={() => setDetailJob(null)}
             onReport={handleReportScam}
@@ -1697,7 +1778,7 @@ export default function JobsPage() {
                     key={job.id}
                     job={job}
                     index={i}
-                    isSaved={isJobSaved(job.id)}
+                    isSaved={isJobSaved(job.id, job.url)}
                     onSave={() => toggleSaveJob(job)}
                     onClick={() => setDetailJob(job)}
                     onReport={handleReportScam}
@@ -1716,7 +1797,7 @@ export default function JobsPage() {
                     job={job}
                     index={i}
                     userPlan={userPlan}
-                    isSaved={isJobSaved(job.id)}
+                    isSaved={isJobSaved(job.id, job.url)}
                     onSave={() => toggleSaveJob(job)}
                     onReport={handleReportScam}
                     userSkills={userSkills}
@@ -1921,11 +2002,11 @@ export default function JobsPage() {
                           toggleSaveJob(job);
                         }}
                         className={`text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap ${
-                          isJobSaved(job.id) ? 'btn-primary' : 'btn-secondary'
+                          isJobSaved(job.id, job.url) ? 'btn-primary' : 'btn-secondary'
                         }`}
                       >
-                        <Bookmark className={`w-3 h-3 ${isJobSaved(job.id) ? 'fill-current' : ''}`} />
-                        {isJobSaved(job.id) ? 'Saved' : 'Save'}
+                        <Bookmark className={`w-3 h-3 ${isJobSaved(job.id, job.url) ? 'fill-current' : ''}`} />
+                        {isJobSaved(job.id, job.url) ? 'Saved' : 'Save'}
                       </button>
                     </div>
                   </div>
