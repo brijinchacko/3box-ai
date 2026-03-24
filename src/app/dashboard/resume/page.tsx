@@ -2352,75 +2352,68 @@ function AutopilotResume() {
                 {uploadingResume ? 'Parsing...' : 'Upload Resume'}
               </label>
 
-              {/* ── Use Your Own Resume section ── */}
+              {/* ── 3BOX Resume / My Resume toggle (always visible) ── */}
               <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-2">
-                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Resume for Applications</p>
-                {uploadedFileName ? (
-                  <div className="flex items-center gap-2 mb-2">
+                {uploadedFileName && (
+                  <div className="flex items-center gap-2 mb-1">
                     <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{uploadedFileName}</span>
                   </div>
-                ) : (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">Upload your own resume PDF to use for job applications</p>
                 )}
-                {/* Upload / Replace own resume (PDF only, no parsing) */}
-                <label className="cursor-pointer w-full px-3 py-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-1.5">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setUploadedFileName(file.name);
-                      // Create immediate blob preview
-                      const blobUrl = URL.createObjectURL(file);
-                      setOwnResumeUrl(blobUrl);
-                      setResumeSource('uploaded');
-                      // Upload to Cloudinary
-                      const formData = new FormData();
-                      formData.append('file', file);
-                      try {
-                        const res = await fetch('/api/user/resume/upload-pdf', { method: 'POST', body: formData });
-                        if (res.ok) {
-                          const data = await res.json();
-                          if (data.pdfUrl) setOwnResumeUrl(data.pdfUrl);
-                          setResume(prev => ({ ...prev, uploadedFileName: file.name }));
-                          showToast('Your resume uploaded successfully!', 'success');
-                        }
-                      } catch {
-                        showToast('Failed to upload resume.', 'error');
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setResumeSource('3box')}
+                    className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
+                      resumeSource === '3box'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    3BOX Resume
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (ownResumeUrl) {
+                        setResumeSource('uploaded');
+                      } else {
+                        // No uploaded resume yet — trigger file picker
+                        document.getElementById('my-resume-upload')?.click();
                       }
                     }}
-                  />
-                  <Upload className="w-3.5 h-3.5" />
-                  {uploadedFileName ? 'Replace My Resume' : 'Upload My Resume'}
-                </label>
-                {/* 3BOX Resume / My Resume toggle */}
-                {(uploadedFileName || ownResumeUrl) && (
-                  <div className="flex gap-1 mt-1">
-                    <button
-                      onClick={() => setResumeSource('3box')}
-                      className={`flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
-                        resumeSource === '3box'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      3BOX Resume
-                    </button>
-                    <button
-                      onClick={() => setResumeSource('uploaded')}
-                      className={`flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
-                        resumeSource === 'uploaded'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      My Resume
-                    </button>
-                  </div>
-                )}
+                    className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
+                      resumeSource === 'uploaded'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    My Resume
+                  </button>
+                </div>
+                <input
+                  id="my-resume-upload"
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploadedFileName(file.name);
+                    const blobUrl = URL.createObjectURL(file);
+                    setOwnResumeUrl(blobUrl);
+                    setResumeSource('uploaded');
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res = await fetch('/api/user/resume/upload-pdf', { method: 'POST', body: formData });
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.pdfUrl) setOwnResumeUrl(data.pdfUrl);
+                        setResume(prev => ({ ...prev, uploadedFileName: file.name }));
+                        showToast('Resume uploaded!', 'success');
+                      }
+                    } catch {}
+                  }}
+                />
               </div>
 
               {/* Start Over */}

@@ -458,6 +458,12 @@ export default function GetStartedClient() {
           },
         }),
       });
+      // Upload the original PDF if user uploaded one during onboarding
+      if (selectedFile && selectedFile.type === 'application/pdf') {
+        const uploadForm = new FormData();
+        uploadForm.append('file', selectedFile);
+        fetch('/api/user/resume/upload-pdf', { method: 'POST', body: uploadForm }).catch(() => {});
+      }
     } catch {}
   };
 
