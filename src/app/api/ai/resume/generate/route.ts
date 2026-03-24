@@ -5,7 +5,8 @@ import { aiChat, getModelForFeature, extractJSON } from '@/lib/ai/openrouter';
 import { getUserContextString } from '@/lib/ai/context';
 import { checkFeatureGate } from '@/lib/tokens/featureGate';
 
-const { prisma } = require('@/lib/db/prisma');
+import { prisma } from '@/lib/db/prisma';
+import { normalizePlan } from '@/lib/tokens/pricing';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -80,7 +81,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
     "linkedin": "string",
     "portfolio": "string"
   },
-  "summary": "A compelling 3-4 sentence professional summary packed with technical keywords",
+  "summary": "A punchy 2-3 sentence professional summary (50 words max) with key achievements and technical keywords",
   "experience": [
     {
       "id": "exp_1",
@@ -139,7 +140,7 @@ Tone: ${tone || 'Professional'}
 
 Use my real profile information where available. Fill in realistic content for any gaps. Make it ATS-optimized and compelling.`;
 
-    const model = getModelForFeature('resume', user.plan);
+    const model = getModelForFeature('resume', normalizePlan(user.plan));
     const aiResponse = await aiChat({
       messages: [
         { role: 'system', content: systemPrompt },

@@ -158,42 +158,54 @@ export async function sendOtpEmail(to: string, code: string, type: 'login' | 'si
 // ─── Welcome Email ──────────────────────────────
 
 export async function sendWelcomeEmail(to: string, name: string) {
+  const firstName = (name || 'there').split(' ')[0];
   return sendEmail({
     to,
-    subject: `Welcome to 3BOX AI, ${name || 'there'}! Your career journey starts now`,
+    subject: `Welcome to 3BOX AI, ${firstName}! Your AI career platform is ready`,
     html: baseTemplate(`
       <div class="card">
-        <h2>Welcome aboard, ${name || 'there'}! &#127881;</h2>
-        <p>You've just joined the most advanced AI career platform. Here's what you can do right now:</p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="margin-bottom: 8px;">Welcome to 3BOX AI, ${firstName}!</h2>
+          <p style="color: #94a3b8; margin: 0;">Your AI-powered career platform is set up and ready to go.</p>
+        </div>
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
           <tr>
-            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <strong style="color: #00d4ff;">1.</strong> Take your first skill assessment
+            <td style="padding: 14px 16px; background: #EFF6FF; border-radius: 8px; border-left: 4px solid #3B82F6;">
+              <table cellpadding="0" cellspacing="0"><tr>
+                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: #3B82F6; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">1</span></td>
+                <td style="padding-left: 12px;"><strong style="color: #1E3A5F; font-size: 15px;">Upload your resume</strong><br/><span style="color: #475569; font-size: 13px;">AI extracts your details and builds an ATS-optimized version</span></td>
+              </tr></table>
             </td>
           </tr>
+          <tr><td style="height: 10px;"></td></tr>
           <tr>
-            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <strong style="color: #00d4ff;">2.</strong> Get your personalized career roadmap
+            <td style="padding: 14px 16px; background: #F5F3FF; border-radius: 8px; border-left: 4px solid #7C3AED;">
+              <table cellpadding="0" cellspacing="0"><tr>
+                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: #7C3AED; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">2</span></td>
+                <td style="padding-left: 12px;"><strong style="color: #1E3A5F; font-size: 15px;">Let AI agents find jobs for you</strong><br/><span style="color: #475569; font-size: 13px;">Scout searches 6+ platforms and matches jobs to your skills</span></td>
+              </tr></table>
             </td>
           </tr>
+          <tr><td style="height: 10px;"></td></tr>
           <tr>
-            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <strong style="color: #00d4ff;">3.</strong> Build an ATS-optimized resume
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 12px 0;">
-              <strong style="color: #00d4ff;">4.</strong> Get matched with dream jobs
+            <td style="padding: 14px 16px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #EC4899;">
+              <table cellpadding="0" cellspacing="0"><tr>
+                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: #EC4899; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">3</span></td>
+                <td style="padding-left: 12px;"><strong style="color: #1E3A5F; font-size: 15px;">Apply with one click</strong><br/><span style="color: #475569; font-size: 13px;">AI generates cover letters, tailors your resume, and submits applications</span></td>
+              </tr></table>
             </td>
           </tr>
         </table>
+
+        <div style="background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0 0 4px; color: #64748B; font-size: 13px;">Your free plan includes</p>
+          <p style="margin: 0; color: #1E293B; font-size: 15px;"><strong>5 job applications/week</strong> &bull; <strong>Unlimited AI tools</strong> &bull; <strong>All 6 AI agents</strong></p>
+        </div>
+
         <p style="text-align: center; margin-top: 24px;">
           <a href="${APP_URL}/dashboard" class="btn">Go to Dashboard</a>
         </p>
-      </div>
-      <div class="card" style="text-align: center;">
-        <p class="text-muted text-sm">Your account includes <strong style="color: #fff;">10 free AI credits</strong> to explore all features.</p>
-        <p class="text-muted text-sm">Need unlimited access? <a href="${APP_URL}/pricing">View plans</a></p>
       </div>
     `),
   });

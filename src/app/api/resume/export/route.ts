@@ -40,20 +40,11 @@ export async function POST(req: Request) {
 
     const plan = (user.plan ?? 'FREE').toUpperCase();
 
-    // ── 3. Plan gate ─────────────────────────────
-    if (plan === 'FREE') {
-      return NextResponse.json(
-        {
-          error: 'upgrade_required',
-          message: 'Upgrade to Pro or above to export PDF',
-        },
-        { status: 403 },
-      );
-    }
-
     // ── 4. Parse body ────────────────────────────
     const body = await req.json();
-    const { resumeData, template } = body;
+    const { resumeData, template, previewOnly } = body;
+
+    // ── 3. Plan gate — all plans can export, FREE gets watermark ──
 
     if (!resumeData) {
       return NextResponse.json(
@@ -65,18 +56,20 @@ export async function POST(req: Request) {
     const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects } =
       resumeData;
 
-    // ── 5. Determine watermark ───────────────────
-    const showWatermark = plan === 'PRO';
+    // ── 5. Determine watermark (FREE/PRO get watermark, MAX clean) ──
+    const showWatermark = !previewOnly && plan !== 'MAX';
 
-    // ── 6. Track export (increment aiCreditsUsed) ─
-    try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { aiCreditsUsed: { increment: 1 } },
-      });
-    } catch {
-      // non-blocking – don't fail the export if tracking fails
-      console.warn('[Resume Export] Could not increment export count for user', user.id);
+    // ── 6. Track export (skip for preview-only) ──
+    if (!previewOnly) {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { aiCreditsUsed: { increment: 1 } },
+        });
+      } catch {
+        // non-blocking – don't fail the export if tracking fails
+        console.warn('[Resume Export] Could not increment export count for user', user.id);
+      }
     }
 
     // ── 7. Build HTML resume ─────────────────────
@@ -91,7 +84,16 @@ export async function POST(req: Request) {
       projects,
       template: template ?? 'modern',
       showWatermark,
+      isPreview: !!previewOnly,
     });
+
+    // For preview-only, return clean HTML without print script
+    if (previewOnly) {
+      return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
 
     // Inject auto-print script right before </body> so the browser
     // print dialog (Save as PDF) opens automatically on load.

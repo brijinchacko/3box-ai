@@ -9,7 +9,7 @@ import {
   Briefcase, GraduationCap, Code, Award, User, Mail, Phone,
   MapPin, Linkedin, Globe, ArrowRight, CheckCircle2, Sparkles,
   Crown, Lock, X, Loader2, Users, ShieldCheck, FileEdit, BarChart3, AlertTriangle, ClipboardCopy,
-  FolderKanban,
+  FolderKanban, Upload,
 } from 'lucide-react';
 import TemplatePreview from '@/components/resume/TemplatePreview';
 import AgentPageHeader from '@/components/dashboard/AgentPageHeader';
@@ -159,7 +159,7 @@ function AutopilotResume() {
   const [resumeLoaded, setResumeLoaded] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin'>('preview');
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin'>('editor');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState('contact');
   const [generating, setGenerating] = useState(false);
@@ -210,9 +210,19 @@ function AutopilotResume() {
   const [fieldAILoading, setFieldAILoading] = useState<string | null>(null); // e.g. 'summary', 'exp-0', 'exp-1'
   const [fieldPreSnapshots, setFieldPreSnapshots] = useState<Record<string, any>>({}); // field-key → old value
 
+  // ── Resume preview HTML (rendered via iframe for native scrolling) ──
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // ── Own resume toggle (uploaded PDF vs 3BOX resume) ──
+  const [ownResumeUrl, setOwnResumeUrl] = useState<string | null>(null);
+  const [resumeSource, setResumeSource] = useState<'3box' | 'uploaded'>('3box');
+
   // ── Auto portfolio creation guard ──
   const portfolioAutoCreated = useRef(false);
   const userHasEdited = useRef(false);
+  const dbLoadComplete = useRef(false); // guards localStorage writes until DB is loaded
 
   // A4 preview scale calculation (794px = A4 width at 96dpi)
   useEffect(() => {
@@ -226,6 +236,37 @@ function AutopilotResume() {
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, []);
+
+  // Generate preview HTML when switching to preview tab or when resume changes
+  useEffect(() => {
+    if (activeTab !== 'preview' || !resumeLoaded || !resume.contact.name) return;
+    const timer = setTimeout(() => {
+      setPreviewLoading(true);
+      fetch('/api/resume/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeData: {
+            contact: resume.contact,
+            summary: resume.summary,
+            experience: resume.experience,
+            education: resume.education,
+            skills: resume.skills,
+            skillDescriptions: resume.skillDescriptions,
+            certifications: resume.certifications,
+            projects: resume.projects,
+          },
+          template: resume.template,
+          previewOnly: true,
+        }),
+      })
+        .then(res => res.ok ? res.text() : null)
+        .then(html => { if (html) setPreviewHtml(html); })
+        .catch(() => {})
+        .finally(() => setPreviewLoading(false));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [activeTab, resume, resumeLoaded]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -249,9 +290,12 @@ function AutopilotResume() {
   // Clean experience bullets from DB or AI
   const cleanExperience = (exps: any[]) => (exps || []).map((exp: any) => {
     // Fix duplicate endDate like "Dec 2021 – Dec 2021" or "Present – Present"
+    // Only split on space-surrounded dashes to avoid breaking dates like "Jan-2020"
     let endDate = exp.endDate || '';
-    const endParts = endDate.split(/\s*[–-]\s*/);
-    if (endParts.length > 1) endDate = endParts[endParts.length - 1].trim();
+    const endParts = endDate.split(/\s+[–-]\s+/);
+    if (endParts.length === 2 && endParts[0].trim() === endParts[1].trim()) {
+      endDate = endParts[0].trim();
+    }
     return {
       ...exp,
       endDate,
@@ -264,7 +308,7 @@ function AutopilotResume() {
     };
   });
 
-  // Load resume from DB, then auto-generate if empty
+  // Load resume from DB (single source of truth), fallback to localStorage on error
   useEffect(() => {
     fetch('/api/user/resume')
       .then(res => res.ok ? res.json() : null)
@@ -282,16 +326,59 @@ function AutopilotResume() {
             skillDescriptions: data.resume.skillDescriptions || {},
           }));
           if (data.resumeId) setResumeId(data.resumeId);
+          if (data.pdfUrl) {
+            setOwnResumeUrl(data.pdfUrl);
+            // Show uploaded file info — use stored name or derive from URL
+            setUploadedFileName(data.resume?.uploadedFileName || 'Uploaded Resume.pdf');
+          }
           setIsVerified(!!data.isFinalized);
           setIsFirstTime(false);
+          dbLoadComplete.current = true;
+          // Sync DB data to localStorage cache
+          localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(data.resume));
           // Only generate AI suggestions — never auto-generate over an existing DB resume
           generateAISuggestions(data.resume);
         } else {
-          // No resume at all — auto-generate
+          dbLoadComplete.current = true;
+          setIsFirstTime(false); // Set BEFORE auto-generate to prevent welcome screen flash
+          // No resume in DB — try pre-filling from user profile
+          fetch('/api/user/profile')
+            .then(res => res.ok ? res.json() : null)
+            .then(profileData => {
+              if (profileData) {
+                const pd = profileData.careerTwin?.skillSnapshot?._profile || {};
+                setResume(prev => ({
+                  ...prev,
+                  title: profileData.targetRole ? `${profileData.targetRole} Resume` : 'My Resume',
+                  contact: {
+                    ...prev.contact,
+                    name: profileData.name || '',
+                    email: profileData.email || '',
+                    location: profileData.location || '',
+                    phone: pd.phone || profileData.phone || '',
+                    linkedin: pd.linkedin || profileData.linkedin || '',
+                  },
+                }));
+              }
+            })
+            .catch(() => {});
+          // Auto-generate
           autoGenerateResume(session?.user?.name || '');
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // DB load failed — try localStorage as fallback
+        try {
+          const stored = localStorage.getItem(RESUME_STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setResume(parsed);
+            setIsFirstTime(false);
+            showToast('Loaded from local cache — changes may be out of date.', 'error');
+          }
+        } catch { /* localStorage also failed */ }
+        dbLoadComplete.current = true;
+      })
       .finally(() => setResumeLoaded(true));
   }, [session?.user?.email, session?.user?.name]);
 
@@ -406,6 +493,8 @@ function AutopilotResume() {
         .then(data => {
           if (data?.resumeId && !resumeId) setResumeId(data.resumeId);
           setLastSaved(new Date().toLocaleTimeString());
+          // Keep localStorage in sync with DB after successful save
+          localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));
           // Any real edit un-verifies the resume (user must re-verify)
           if (isVerified) setIsVerified(false);
 
@@ -415,7 +504,9 @@ function AutopilotResume() {
             autoCreatePortfolio();
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          showToast('Auto-save failed. Your changes may not be saved.', 'error');
+        })
         .finally(() => setSaving(false));
     }, 2000);
     return () => clearTimeout(timer);
@@ -516,6 +607,20 @@ function AutopilotResume() {
     if (!file) return;
     setUploadingResume(true);
     setUploadedFileName(file.name);
+    // Create a preview URL for the original uploaded file (PDF only)
+    if (file.type === 'application/pdf') {
+      const blobUrl = URL.createObjectURL(file);
+      setOwnResumeUrl(blobUrl);
+    }
+    // Upload original PDF to cloud storage (non-blocking)
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+    fetch('/api/user/resume/upload-pdf', { method: 'POST', body: uploadFormData })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.pdfUrl) setOwnResumeUrl(data.pdfUrl);
+      })
+      .catch(() => {}); // Non-blocking
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -537,32 +642,73 @@ function AutopilotResume() {
           contact: {
             ...prev.contact,
             name: p.fullName || prev.contact.name,
+            email: p.email || prev.contact.email,
             phone: p.phone || prev.contact.phone,
             location: p.location || prev.contact.location,
             linkedin: p.linkedin || prev.contact.linkedin,
+            portfolio: p.website || p.portfolio || prev.contact.portfolio,
           },
           summary: p.bio || prev.summary,
-          experience: (p.experiences || []).map((exp: any, i: number) => ({
-            id: String(i + 1),
-            company: exp.company || '',
-            role: exp.title || '',
-            location: '',
-            startDate: exp.duration?.split(/[-–]/)[0]?.trim() || '',
-            endDate: exp.duration?.split(/[-–]/)[1]?.trim() || '',
-            current: false,
-            bullets: exp.description ? [exp.description] : [],
-          })),
-          education: p.educationLevel ? [{
-            id: '1',
-            institution: p.institution || '',
-            degree: p.educationLevel || '',
-            field: p.fieldOfStudy || '',
-            startDate: '',
-            endDate: p.graduationYear || '',
-            gpa: '',
-          }] : prev.education,
+          experience: (p.experiences || []).map((exp: any, i: number) => {
+            // Parse duration safely — split on space-surrounded dashes only
+            const parts = (exp.duration || '').split(/\s+[–-]\s+/);
+            return {
+              id: String(i + 1),
+              company: exp.company || '',
+              role: exp.title || '',
+              location: '',
+              startDate: parts[0]?.trim() || '',
+              endDate: parts[1]?.trim() || '',
+              current: false,
+              bullets: Array.isArray(exp.bullets) && exp.bullets.length > 0
+                ? exp.bullets.map((b: string) => b.replace(/^[\s\-–—*•·▪●○◦]+/, '').trim()).filter((b: string) => b.length > 5)
+                : exp.description
+                  ? [exp.description]
+                  : [],
+            };
+          }),
+          education: Array.isArray(p.education) && p.education.length > 0
+            ? p.education.map((edu: any, i: number) => ({
+                id: String(i + 1),
+                institution: edu.institution || '',
+                degree: edu.degree || '',
+                field: edu.field || '',
+                startDate: '',
+                endDate: edu.graduationYear || '',
+                gpa: edu.gpa || '',
+              }))
+            : p.educationLevel ? [{
+                id: '1',
+                institution: p.institution || '',
+                degree: p.educationLevel || '',
+                field: p.fieldOfStudy || '',
+                startDate: '',
+                endDate: p.graduationYear || '',
+                gpa: '',
+              }] : prev.education,
           skills: p.skills || prev.skills,
+          skillDescriptions: prev.skillDescriptions,
+          certifications: (p.certifications || []).length > 0
+            ? p.certifications.map((c: any, i: number) => ({
+                id: String(i + 1),
+                name: c.name || '',
+                issuer: c.issuer || '',
+                date: c.date || '',
+                verified: false,
+              }))
+            : prev.certifications,
+          projects: (p.projects || []).length > 0
+            ? p.projects.map((proj: any, i: number) => ({
+                id: String(i + 1),
+                name: proj.name || '',
+                description: proj.description || '',
+                url: proj.url || '',
+                technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
+              }))
+            : prev.projects,
         }));
+        // Store uploadedFileName in resume state so auto-save persists it
+        setResume(prev => ({ ...prev, uploadedFileName: file.name }));
         setIsFirstTime(false);
         showToast('Resume parsed successfully!', 'success');
       }
@@ -602,11 +748,29 @@ function AutopilotResume() {
         try {
           parsed = typeof data.enhanced === 'string' ? JSON.parse(data.enhanced) : data.enhanced;
         } catch {
-          // Not JSON — try extracting JSON from the string
+          // Not JSON — try extracting JSON from the string (non-greedy match for first complete object)
           try {
-            const jsonMatch = (data.enhanced || '').match(/\{[\s\S]*\}/);
-            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-          } catch { /* ignore */ }
+            const text = data.enhanced || '';
+            const start = text.indexOf('{');
+            if (start !== -1) {
+              let depth = 0;
+              let end = -1;
+              for (let i = start; i < text.length; i++) {
+                if (text[i] === '{') depth++;
+                else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+              }
+              if (end !== -1) parsed = JSON.parse(text.slice(start, end + 1));
+            }
+          } catch {
+            showToast('AI returned unexpected format. Some changes may not have applied.', 'error');
+          }
+        }
+
+        // Validate parsed structure before applying
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.summary && typeof parsed.summary !== 'string') parsed.summary = undefined;
+          if (parsed.experience && !Array.isArray(parsed.experience)) parsed.experience = undefined;
+          if (parsed.skills && !Array.isArray(parsed.skills)) parsed.skills = undefined;
         }
 
         if (parsed?.summary) {
@@ -653,38 +817,9 @@ function AutopilotResume() {
           const clean = (data.enhanced || '').replace(/```json[\s\S]*```/g, '').replace(/\{[\s\S]*\}/g, '').trim();
           if (clean.length > 20) {
             setResume(prev => ({ ...prev, summary: clean }));
-          }
-        }
-
-        // Skip individual experience enhancement since 'full' already covers it
-        const _skipIndividualEnhance = true;
-        if (!_skipIndividualEnhance)
-        // Legacy: enhance each experience individually if 'full' didn't return structured data
-        for (let i = 0; i < resume.experience.length; i++) {
-          const exp = resume.experience[i];
-          const bullets = (exp.bullets || []).filter(Boolean);
-          if (bullets.length > 0) {
-            try {
-              const expRes = await fetch('/api/ai/resume/enhance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  section: 'experience',
-                  content: `Role: ${exp.role} at ${exp.company}\nBullet points:\n${bullets.join('\n')}`,
-                }),
-              });
-              if (expRes.ok) {
-                const expData = await expRes.json();
-                if (expData.enhanced) {
-                  const enhancedBullets = expData.enhanced.split('\n').filter((b: string) => b.trim());
-                  setResume(prev => {
-                    const updated = [...prev.experience];
-                    updated[i] = { ...updated[i], bullets: enhancedBullets };
-                    return { ...prev, experience: updated };
-                  });
-                }
-              }
-            } catch {}
+            showToast('AI enhancement partially applied (summary only).', 'success');
+          } else {
+            showToast('AI enhancement returned no usable data.', 'error');
           }
         }
 
@@ -784,11 +919,6 @@ function AutopilotResume() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        if (err?.error === 'upgrade_required') {
-          setExporting(false);
-          window.location.href = '/pricing';
-          return;
-        }
         throw new Error(err?.message ?? 'Export failed');
       }
       // API returns HTML with auto-print script — open in new tab
@@ -1204,7 +1334,6 @@ function AutopilotResume() {
         >
           <FileText className="w-4 h-4 inline mr-1.5" />Resume
         </button>
-        {!isVerified && (
         <button
           onClick={() => setActiveTab('editor')}
           className={cn(
@@ -1214,7 +1343,6 @@ function AutopilotResume() {
         >
           <Edit3 className="w-4 h-4 inline mr-1.5" />Editor
         </button>
-        )}
 
         {/* Separator */}
         <span className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700 inline-block" />
@@ -1732,8 +1860,46 @@ function AutopilotResume() {
           {/* Side-by-side: Resume preview (left) + Actions sidebar (right) */}
           <div className="flex gap-4">
           <div className="flex-1 min-w-0" ref={previewRef}>
-        {/* ── Template-specific resume preview — A4 wrapper ── */}
-        <div className="resume-a4-wrapper">
+        {/* ── Resume preview via iframe for native scrolling ── */}
+        {resumeSource === 'uploaded' && ownResumeUrl ? (
+          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white" style={{ height: '80vh' }}>
+            <iframe
+              src={ownResumeUrl.startsWith('blob:') ? ownResumeUrl : `https://docs.google.com/gview?url=${encodeURIComponent(ownResumeUrl)}&embedded=true`}
+              className="w-full h-full"
+              title="Uploaded Resume Preview"
+              style={{ border: 'none' }}
+            />
+          </div>
+        ) : previewHtml ? (
+          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800" style={{ height: '80vh' }}>
+            <iframe
+              ref={previewIframeRef}
+              srcDoc={previewHtml}
+              className="w-full h-full"
+              title="Resume Preview"
+              style={{ border: 'none', background: '#e5e7eb' }}
+              sandbox="allow-same-origin"
+            />
+          </div>
+        ) : previewLoading ? (
+          <div className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style={{ height: '80vh' }}>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Generating preview...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style={{ height: '80vh' }}>
+            <div className="text-center">
+              <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Add your details in the Editor tab to see your resume preview.</p>
+            </div>
+          </div>
+        )}
+          </div>{/* end flex-1 resume preview column */}
+
+          {/* ── LEGACY A4 fallback (hidden, kept for reference) ── */}
+          {false && <div className="resume-a4-wrapper">
           <div className="resume-a4-page" style={{ transform: `scale(${previewScale})` }}>
         {resume.template === 'modern' ? (
           /* ── MODERN: Two-column sidebar layout ── */
@@ -2127,13 +2293,12 @@ function AutopilotResume() {
           </div>
         )}
           </div>{/* end resume-a4-page */}
-        </div>{/* end resume-a4-wrapper */}
-          </div>{/* end flex-1 resume preview column */}
+        </div>}{/* end resume-a4-wrapper + legacy block */}
 
           {/* ── Right sidebar: Actions ── */}
           <div className="w-64 flex-shrink-0 space-y-4">
-            {/* ── Verified state: Badge → Export → Edit ── */}
-            {isVerified ? (<>
+            {/* ── Verified badge (shown above other controls) ── */}
+            {isVerified && (
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">
                 <div className="flex items-center gap-2 mb-1">
                   <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
@@ -2141,30 +2306,9 @@ function AutopilotResume() {
                 </div>
                 <p className="text-[11px] text-green-600/70 dark:text-green-400/60">Ready for job applications</p>
               </div>
-
-              {/* Export PDF */}
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Export PDF
-              </button>
-
-              {/* Edit Resume */}
-              <button
-                onClick={() => {
-                  setIsVerified(false);
-                  setActiveTab('editor');
-                }}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Edit3 className="w-4 h-4" />
-                Edit Resume
-              </button>
-            </>) : (<>
-              {/* ── Editing state: ATS Score + Export → Upload → Start Over ── */}
+            )}
+            {/* ── Always show: Content Fill, Export, Upload, Templates ── */}
+            {(() => { return (<>
               {/* Always-visible ATS Score indicator */}
               <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-1">
@@ -2208,31 +2352,88 @@ function AutopilotResume() {
                 {uploadingResume ? 'Parsing...' : 'Upload Resume'}
               </label>
 
-              {/* Uploaded file info */}
-              {uploadedFileName && (
-                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Uploaded File</p>
-                  <div className="flex items-center gap-2">
+              {/* ── 3BOX Resume / My Resume toggle (always visible) ── */}
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-2">
+                {uploadedFileName && (
+                  <div className="flex items-center gap-2 mb-1">
                     <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{uploadedFileName}</span>
                   </div>
+                )}
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setResumeSource('3box')}
+                    className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
+                      resumeSource === '3box'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    3BOX Resume
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (ownResumeUrl) {
+                        setResumeSource('uploaded');
+                      } else {
+                        // No uploaded resume yet — trigger file picker
+                        document.getElementById('my-resume-upload')?.click();
+                      }
+                    }}
+                    className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
+                      resumeSource === 'uploaded'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    My Resume
+                  </button>
                 </div>
-              )}
+                <input
+                  id="my-resume-upload"
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploadedFileName(file.name);
+                    const blobUrl = URL.createObjectURL(file);
+                    setOwnResumeUrl(blobUrl);
+                    setResumeSource('uploaded');
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res = await fetch('/api/user/resume/upload-pdf', { method: 'POST', body: formData });
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.pdfUrl) setOwnResumeUrl(data.pdfUrl);
+                        setResume(prev => ({ ...prev, uploadedFileName: file.name }));
+                        showToast('Resume uploaded!', 'success');
+                      }
+                    } catch {}
+                  }}
+                />
+              </div>
 
               {/* Start Over */}
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to start over? This will permanently clear all resume data and cannot be undone.')) {
-                    // Delete from DB first, then reset local state
-                    fetch('/api/user/resume', { method: 'DELETE' }).catch(() => {});
+                onClick={async () => {
+                  if (!confirm('Are you sure you want to start over? This will permanently clear all resume data and cannot be undone.')) return;
+                  try {
+                    const res = await fetch('/api/user/resume', { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Delete failed');
+                    // Only clear local state after successful DB delete
                     setResume({ ...emptyResume });
                     setResumeId(null as any);
                     setIsVerified(false);
                     localStorage.removeItem(RESUME_STORAGE_KEY);
                     setUploadedFileName(null);
                     setIsFirstTime(true);
-                    userHasEdited.current = false; // Reset so next load doesn't auto-save
+                    userHasEdited.current = false;
                     showToast('Resume data cleared.', 'success');
+                  } catch {
+                    showToast('Failed to clear resume. Please try again.', 'error');
                   }
                 }}
                 className="w-full px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1.5"
@@ -2240,10 +2441,10 @@ function AutopilotResume() {
                 <Trash2 className="w-4 h-4" />
                 Start Over
               </button>
-            </>)}
+            </>); })()}
 
-            {/* Template Selector — hidden when resume is verified */}
-            {!isVerified && (
+            {/* Template Selector */}
+            {(
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Template</h4>
               <div className="grid grid-cols-2 gap-2">
@@ -2803,43 +3004,7 @@ function AgenticResumePage() {
   const [coverLetter, setCoverLetter] = useState('');
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
 
-  // Load resume from localStorage on mount, then fill user profile if empty
-  useEffect(() => {
-    const stored = localStorage.getItem(RESUME_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setResume(parsed);
-        setResumeLoaded(true);
-        return;
-      } catch { /* ignore */ }
-    }
-    // No stored resume — fetch user profile to pre-fill contact
-    fetch('/api/user/profile')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          // Extract phone & linkedin from careerTwin skillSnapshot profile if available
-          const profileData = data.careerTwin?.skillSnapshot?._profile || {};
-          setResume(prev => ({
-            ...prev,
-            title: data.targetRole ? `${data.targetRole} Resume` : 'My Resume',
-            contact: {
-              ...prev.contact,
-              name: data.name || '',
-              email: data.email || '',
-              location: data.location || '',
-              phone: profileData.phone || data.phone || '',
-              linkedin: profileData.linkedin || data.linkedin || '',
-            },
-          }));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setResumeLoaded(true));
-  }, []);
-
-  // Save resume to localStorage whenever it changes (after initial load)
+  // Write-through localStorage cache
   useEffect(() => {
     if (resumeLoaded) {
       localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));

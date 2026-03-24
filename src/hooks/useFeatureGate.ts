@@ -48,8 +48,8 @@ export function useFeatureGate(): FeatureGateState {
     isLocked: false,
     loading: true,
     used: 0,
-    limit: 10,
-    remaining: 10,
+    limit: 5,
+    remaining: 5,
     limitType: 'weekly',
   });
 

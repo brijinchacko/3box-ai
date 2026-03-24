@@ -42,6 +42,7 @@ export async function GET() {
           template: resume.template || content.template || 'modern',
         },
         isFinalized: resume.isFinalized,
+        pdfUrl: resume.pdfUrl || null,
       });
     }
 
@@ -51,6 +52,7 @@ export async function GET() {
       resumeId: resume.id,
       resume: editorResume,
       isFinalized: resume.isFinalized,
+      pdfUrl: resume.pdfUrl || null,
     });
   }
 
@@ -76,6 +78,7 @@ export async function GET() {
     experience: [],
     education: [],
     skills: [],
+    skillDescriptions: {},
     certifications: [],
     projects: [],
   };
@@ -228,16 +231,20 @@ function convertOnboardingToEditor(content: any, template?: string) {
       portfolio: '',
     },
     summary: content.summary || '',
-    experience: (content.experience || []).map((exp: any, i: number) => ({
-      id: String(i + 1),
-      company: exp.company || '',
-      role: exp.title || '',
-      location: '',
-      startDate: exp.duration?.split('-')[0]?.trim() || '',
-      endDate: exp.duration?.split('-')[1]?.trim() || '',
-      current: false,
-      bullets: exp.description ? [exp.description] : [],
-    })),
+    experience: (content.experience || []).map((exp: any, i: number) => {
+      // Parse duration safely — split on space-surrounded dashes to avoid breaking "Jan-2020"
+      const parts = (exp.duration || '').split(/\s+[–-]\s+/);
+      return {
+        id: String(i + 1),
+        company: exp.company || '',
+        role: exp.title || '',
+        location: '',
+        startDate: parts[0]?.trim() || '',
+        endDate: parts[1]?.trim() || '',
+        current: false,
+        bullets: Array.isArray(exp.bullets) && exp.bullets.length > 0 ? exp.bullets : (exp.description ? [exp.description] : []),
+      };
+    }),
     education: content.education ? [{
       id: '1',
       institution: content.education.institution || '',
@@ -248,6 +255,7 @@ function convertOnboardingToEditor(content: any, template?: string) {
       gpa: '',
     }] : [],
     skills: content.skills || [],
+    skillDescriptions: content.skillDescriptions || {},
     certifications: [],
     projects: [],
   };

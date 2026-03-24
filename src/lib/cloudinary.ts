@@ -51,4 +51,41 @@ export async function uploadAvatar(
   return result.secure_url;
 }
 
+/**
+ * Upload a resume PDF to Cloudinary.
+ */
+export async function uploadResumePdf(
+  buffer: Buffer,
+  userId: string
+): Promise<string> {
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    // No Cloudinary — return empty (PDF can't be stored as data URL practically)
+    return '';
+  }
+
+  const result = await new Promise<{ secure_url: string }>(
+    (resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: '3box/resumes',
+          public_id: `${userId}-resume`,
+          overwrite: true,
+          resource_type: 'raw',
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result as { secure_url: string });
+        }
+      );
+      uploadStream.end(buffer);
+    }
+  );
+
+  return result.secure_url;
+}
+
 export default cloudinary;
