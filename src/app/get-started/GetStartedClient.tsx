@@ -231,7 +231,7 @@ export default function GetStartedClient() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Failed to parse resume');
       const parsed = result.data;
-      // Auto-populate all fields
+      // Auto-populate all fields from resume parse
       setData((prev) => ({
         ...prev,
         fullName: parsed.fullName || prev.fullName,
@@ -242,6 +242,32 @@ export default function GetStartedClient() {
         skills: parsed.skills?.length ? parsed.skills.slice(0, 15) : prev.skills,
         bio: parsed.bio || prev.bio,
       }));
+      // Save ALL extracted fields to onboarding profile (phone, linkedin, experiences, education, etc.)
+      saveOnboardingProfile({
+        fullName: parsed.fullName || '',
+        phone: parsed.phone || '',
+        email: parsed.email || '',
+        location: parsed.location || '',
+        linkedin: parsed.linkedin || '',
+        portfolio: parsed.portfolio || '',
+        targetRole: parsed.targetRole || '',
+        currentStatus: parsed.currentStatus || '',
+        experienceLevel: parsed.experienceLevel || '',
+        skills: parsed.skills || [],
+        bio: parsed.bio || '',
+        experiences: (parsed.experiences || []).map((exp: any) => ({
+          title: exp.title || '',
+          company: exp.company || '',
+          duration: exp.duration || '',
+          description: exp.description || '',
+        })),
+        educationLevel: parsed.educationLevel || '',
+        fieldOfStudy: parsed.fieldOfStudy || '',
+        institution: parsed.institution || '',
+        graduationYear: parsed.graduationYear || '',
+        certifications: parsed.certifications || [],
+        projects: parsed.projects || [],
+      });
       if (parsed.fullName) setVisitorName(parsed.fullName);
       setResumeParsed(true);
       // Auto-advance to next step
@@ -406,18 +432,22 @@ export default function GetStartedClient() {
           interests: profile.skills?.slice(0, 5) || [],
           profile: {
             fullName: profile.fullName || data.fullName,
+            email: (profile as any).email || '',
             phone: profile.phone || '',
             location: profile.location || '',
             linkedin: profile.linkedin || '',
+            portfolio: (profile as any).portfolio || '',
             experienceLevel: profile.experienceLevel || '',
             currentStatus: profile.currentStatus || '',
-            experiences: [],
+            experiences: (profile as any).experiences || [],
             educationLevel: profile.educationLevel || '',
             fieldOfStudy: profile.fieldOfStudy || '',
             institution: profile.institution || '',
             graduationYear: profile.graduationYear || '',
             skills: profile.skills || [],
             bio: profile.bio || '',
+            certifications: (profile as any).certifications || [],
+            projects: (profile as any).projects || [],
           },
         }),
       });

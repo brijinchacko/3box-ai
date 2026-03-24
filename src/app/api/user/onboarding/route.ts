@@ -130,11 +130,11 @@ export async function POST(request: NextRequest) {
           template: 'modern',
           contact: {
             name: profile.fullName || '',
-            email: session.user.email || '',
+            email: profile.email || session.user.email || '',
             phone: profile.phone || '',
             location: profile.location || '',
             linkedin: profile.linkedin || '',
-            portfolio: '',
+            portfolio: profile.portfolio || '',
           },
           summary: profile.bio || '',
           experience: (profile.experiences || []).map((e: any, i: number) => {
@@ -165,8 +165,21 @@ export async function POST(request: NextRequest) {
             gpa: '',
           }] : [],
           skills: profile.skills || [],
-          certifications: [],
-          projects: [],
+          skillDescriptions: {},
+          certifications: (profile.certifications || []).map((c: any, i: number) => ({
+            id: String(i + 1),
+            name: c.name || '',
+            issuer: c.issuer || '',
+            date: c.date || '',
+            verified: false,
+          })),
+          projects: (profile.projects || []).map((p: any, i: number) => ({
+            id: String(i + 1),
+            name: p.name || '',
+            description: p.description || '',
+            url: p.url || '',
+            technologies: Array.isArray(p.technologies) ? p.technologies : [],
+          })),
           // Store raw resume text so the resume builder can re-parse if needed
           ...(resumeText ? { rawResumeText: resumeText } : {}),
         };
