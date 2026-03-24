@@ -256,23 +256,9 @@ function getSkillDescription(skill: string, descriptions?: Record<string, string
 
 /* ─── Shared helpers ─────────────────────────────────────────── */
 
-/** Split oversized bullets (>200 chars) that are actually multiple sentences merged together */
+/** Pass through bullets as-is — splitting handled at parse/upload time */
 function normalizeBullets(bullets: string[]): string[] {
-  const result: string[] = [];
-  for (const b of bullets) {
-    if (b.length > 200) {
-      // Split on sentence boundaries followed by uppercase letter (likely separate bullets)
-      const parts = b.split(/\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 10);
-      if (parts.length > 1) {
-        result.push(...parts.map(p => p.endsWith('.') ? p : p + '.'));
-      } else {
-        result.push(b);
-      }
-    } else {
-      result.push(b);
-    }
-  }
-  return result;
+  return bullets.filter(b => b && b.trim().length > 0);
 }
 
 export function esc(str: string): string {

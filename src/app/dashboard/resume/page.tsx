@@ -660,7 +660,7 @@ function AutopilotResume() {
               bullets: Array.isArray(exp.bullets) && exp.bullets.length > 0
                 ? exp.bullets.map((b: string) => b.replace(/^[\s\-–—*•·▪●○◦]+/, '').trim()).filter((b: string) => b.length > 5)
                 : exp.description
-                  ? exp.description.split(/[\n•·▪▫●○◦‣⁃]|(?:\.\s+(?=[A-Z]))/).map((b: string) => b.replace(/^[\s\-–—*]+/, '').trim()).filter((b: string) => b.length > 10)
+                  ? [exp.description]
                   : [],
             };
           }),
