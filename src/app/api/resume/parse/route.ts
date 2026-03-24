@@ -110,27 +110,34 @@ export async function POST(request: NextRequest) {
 
 {
   "fullName": "string - full name of the candidate",
+  "email": "string - email address (or empty string)",
   "phone": "string - phone number (or empty string)",
   "location": "string - city, state/country (or empty string)",
   "linkedin": "string - LinkedIn URL (or empty string)",
+  "portfolio": "string - portfolio/website URL (or empty string)",
   "targetRole": "string - infer the most likely target role from their experience/title",
   "experienceLevel": "string - one of: fresher, 0-1, 1-3, 3-5, 5-10, 10+",
   "currentStatus": "string - one of: student, employed, job-searching, career-change, freelancer",
-  "experiences": [{"title": "string", "company": "string", "duration": "string", "description": "string"}],
+  "experiences": [{"title": "string", "company": "string", "duration": "string - e.g. Jan 2020 - Dec 2022", "description": "string - key achievements and responsibilities as a single paragraph"}],
   "educationLevel": "string - one of: High School, Associate's Degree, Bachelor's Degree, Master's Degree, PhD / Doctorate, Self-Taught, Bootcamp",
   "fieldOfStudy": "string - e.g. Computer Science (or empty string)",
   "institution": "string - university/school name (or empty string)",
   "graduationYear": "string - e.g. 2024 (or empty string)",
   "skills": ["string array of skills found in the resume"],
+  "certifications": [{"name": "string - certification name", "issuer": "string - issuing organization", "date": "string - date obtained or empty string"}],
+  "projects": [{"name": "string - project name", "description": "string - brief description", "url": "string - project URL or empty string", "technologies": ["string array of tech used"]}],
   "bio": "string - a 1-2 sentence professional summary"
 }
 
 Rules:
 - Extract ALL experiences found, not just the most recent
+- For each experience, extract ALL bullet points and achievements into the description field
 - For experienceLevel, calculate from total years of work experience across all positions
 - For currentStatus, infer from the resume context (if they list a current job, say "employed"; if fresh graduate with no experience, say "student" or "job-searching")
 - For targetRole, use their most recent job title or the role they seem most qualified for
 - Skills should include both technical and soft skills mentioned
+- Extract ALL certifications, licenses, and professional credentials found
+- Extract ALL projects mentioned (personal, academic, or professional)
 - Bio should be a concise professional summary derived from the resume
 - Return ONLY valid JSON. No markdown, no extra text.`,
         },
@@ -149,9 +156,11 @@ Rules:
     // Validate & normalize the parsed result
     const result = {
       fullName: parsed.fullName || '',
+      email: parsed.email || '',
       phone: parsed.phone || '',
       location: parsed.location || '',
       linkedin: parsed.linkedin || '',
+      portfolio: parsed.portfolio || '',
       targetRole: parsed.targetRole || '',
       experienceLevel: parsed.experienceLevel || '',
       currentStatus: parsed.currentStatus || 'job-searching',
@@ -161,6 +170,8 @@ Rules:
       institution: parsed.institution || '',
       graduationYear: parsed.graduationYear || '',
       skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+      certifications: Array.isArray(parsed.certifications) ? parsed.certifications : [],
+      projects: Array.isArray(parsed.projects) ? parsed.projects : [],
       bio: parsed.bio || '',
     };
 

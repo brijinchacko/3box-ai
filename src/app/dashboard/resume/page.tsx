@@ -613,6 +613,25 @@ function AutopilotResume() {
             gpa: '',
           }] : prev.education,
           skills: p.skills || prev.skills,
+          skillDescriptions: prev.skillDescriptions,
+          certifications: (p.certifications || []).length > 0
+            ? p.certifications.map((c: any, i: number) => ({
+                id: String(i + 1),
+                name: c.name || '',
+                issuer: c.issuer || '',
+                date: c.date || '',
+                verified: false,
+              }))
+            : prev.certifications,
+          projects: (p.projects || []).length > 0
+            ? p.projects.map((proj: any, i: number) => ({
+                id: String(i + 1),
+                name: proj.name || '',
+                description: proj.description || '',
+                url: proj.url || '',
+                technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
+              }))
+            : prev.projects,
         }));
         setIsFirstTime(false);
         showToast('Resume parsed successfully!', 'success');
