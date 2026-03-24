@@ -221,6 +221,12 @@ export default function GetStartedClient() {
         const formData = new FormData();
         formData.append('file', selectedFile);
         res = await fetch('/api/resume/parse', { method: 'POST', body: formData });
+        // Also upload original PDF for "My Resume" feature (non-blocking)
+        if (selectedFile.type === 'application/pdf') {
+          const uploadForm = new FormData();
+          uploadForm.append('file', selectedFile);
+          fetch('/api/user/resume/upload-pdf', { method: 'POST', body: uploadForm }).catch(() => {});
+        }
       } else {
         res = await fetch('/api/resume/parse', {
           method: 'POST',
