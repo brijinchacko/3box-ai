@@ -159,7 +159,7 @@ function AutopilotResume() {
   const [resumeLoaded, setResumeLoaded] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin'>('preview');
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats' | 'cover-letter' | 'linkedin'>('editor');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState('contact');
   const [generating, setGenerating] = useState(false);
