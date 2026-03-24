@@ -81,7 +81,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
     "linkedin": "string",
     "portfolio": "string"
   },
-  "summary": "A compelling 3-4 sentence professional summary packed with technical keywords",
+  "summary": "A punchy 2-3 sentence professional summary (50 words max) with key achievements and technical keywords",
   "experience": [
     {
       "id": "exp_1",

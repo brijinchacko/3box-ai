@@ -10,7 +10,7 @@ import { normalizePlan } from '@/lib/tokens/pricing';
 
 const SECTION_PROMPTS: Record<string, (targetJob?: string) => string> = {
   summary: (targetJob) =>
-    `You are an expert resume writer and ATS specialist. Rewrite the following professional summary to be compelling, concise, and ATS-friendly.${targetJob ? ` Optimize for the target role: ${targetJob}.` : ''} Focus on measurable achievements and relevant keywords. Return JSON: { "enhanced": "<rewritten summary>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
+    `You are an expert resume writer and ATS specialist. Rewrite the following professional summary to be compelling, concise, and ATS-friendly. CRITICAL: Keep it to 2-3 sentences MAX (under 50 words). Be punchy and direct — no filler.${targetJob ? ` Optimize for the target role: ${targetJob}.` : ''} Focus on measurable achievements and relevant keywords. Return JSON: { "enhanced": "<rewritten summary>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
   experience: (targetJob) =>
     `You are an expert resume writer. Enhance the following experience bullet points with strong action verbs, quantifiable metrics, and achievement-oriented language.${targetJob ? ` Tailor for the target role: ${targetJob}.` : ''} Transform passive descriptions into powerful impact statements. Return JSON: { "enhanced": "<enhanced experience section>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
   skills: (targetJob) =>
@@ -20,7 +20,7 @@ const SECTION_PROMPTS: Record<string, (targetJob?: string) => string> = {
 
 Return a JSON object with this EXACT structure:
 {
-  "summary": "enhanced professional summary text",
+  "summary": "2-3 sentence professional summary (50 words max, punchy and direct)",
   "experience": [
     {
       "role": "job title",
