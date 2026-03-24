@@ -1319,7 +1319,6 @@ function AutopilotResume() {
         >
           <FileText className="w-4 h-4 inline mr-1.5" />Resume
         </button>
-        {!isVerified && (
         <button
           onClick={() => setActiveTab('editor')}
           className={cn(
@@ -1329,7 +1328,6 @@ function AutopilotResume() {
         >
           <Edit3 className="w-4 h-4 inline mr-1.5" />Editor
         </button>
-        )}
 
         {/* Separator */}
         <span className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700 inline-block" />
@@ -2284,8 +2282,8 @@ function AutopilotResume() {
 
           {/* ── Right sidebar: Actions ── */}
           <div className="w-64 flex-shrink-0 space-y-4">
-            {/* ── Verified state: Badge → Export → Edit ── */}
-            {isVerified ? (<>
+            {/* ── Verified badge (shown above other controls) ── */}
+            {isVerified && (
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">
                 <div className="flex items-center gap-2 mb-1">
                   <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
@@ -2293,30 +2291,9 @@ function AutopilotResume() {
                 </div>
                 <p className="text-[11px] text-green-600/70 dark:text-green-400/60">Ready for job applications</p>
               </div>
-
-              {/* Export PDF */}
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Export PDF
-              </button>
-
-              {/* Edit Resume */}
-              <button
-                onClick={() => {
-                  setIsVerified(false);
-                  setActiveTab('editor');
-                }}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Edit3 className="w-4 h-4" />
-                Edit Resume
-              </button>
-            </>) : (<>
-              {/* ── Editing state: ATS Score + Export → Upload → Start Over ── */}
+            )}
+            {/* ── Always show: Content Fill, Export, Upload, Templates ── */}
+            {(() => { return (<>
               {/* Always-visible ATS Score indicator */}
               <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-1">
@@ -2420,10 +2397,10 @@ function AutopilotResume() {
                 <Trash2 className="w-4 h-4" />
                 Start Over
               </button>
-            </>)}
+            </>); })()}
 
-            {/* Template Selector — hidden when resume is verified */}
-            {!isVerified && (
+            {/* Template Selector */}
+            {(
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Template</h4>
               <div className="grid grid-cols-2 gap-2">
