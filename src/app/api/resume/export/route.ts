@@ -40,8 +40,12 @@ export async function POST(req: Request) {
 
     const plan = (user.plan ?? 'FREE').toUpperCase();
 
-    // ── 3. Plan gate ─────────────────────────────
-    if (plan === 'FREE') {
+    // ── 4. Parse body ────────────────────────────
+    const body = await req.json();
+    const { resumeData, template, previewOnly } = body;
+
+    // ── 3. Plan gate (skip for preview-only) ─────
+    if (plan === 'FREE' && !previewOnly) {
       return NextResponse.json(
         {
           error: 'upgrade_required',
@@ -50,10 +54,6 @@ export async function POST(req: Request) {
         { status: 403 },
       );
     }
-
-    // ── 4. Parse body ────────────────────────────
-    const body = await req.json();
-    const { resumeData, template } = body;
 
     if (!resumeData) {
       return NextResponse.json(
@@ -66,17 +66,19 @@ export async function POST(req: Request) {
       resumeData;
 
     // ── 5. Determine watermark ───────────────────
-    const showWatermark = plan === 'PRO';
+    const showWatermark = !previewOnly && plan === 'PRO';
 
-    // ── 6. Track export (increment aiCreditsUsed) ─
-    try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { aiCreditsUsed: { increment: 1 } },
-      });
-    } catch {
-      // non-blocking – don't fail the export if tracking fails
-      console.warn('[Resume Export] Could not increment export count for user', user.id);
+    // ── 6. Track export (skip for preview-only) ──
+    if (!previewOnly) {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { aiCreditsUsed: { increment: 1 } },
+        });
+      } catch {
+        // non-blocking – don't fail the export if tracking fails
+        console.warn('[Resume Export] Could not increment export count for user', user.id);
+      }
     }
 
     // ── 7. Build HTML resume ─────────────────────
@@ -92,6 +94,14 @@ export async function POST(req: Request) {
       template: template ?? 'modern',
       showWatermark,
     });
+
+    // For preview-only, return clean HTML without print script
+    if (previewOnly) {
+      return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
 
     // Inject auto-print script right before </body> so the browser
     // print dialog (Save as PDF) opens automatically on load.

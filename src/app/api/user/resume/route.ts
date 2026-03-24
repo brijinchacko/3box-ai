@@ -42,6 +42,7 @@ export async function GET() {
           template: resume.template || content.template || 'modern',
         },
         isFinalized: resume.isFinalized,
+        pdfUrl: resume.pdfUrl || null,
       });
     }
 
@@ -51,6 +52,7 @@ export async function GET() {
       resumeId: resume.id,
       resume: editorResume,
       isFinalized: resume.isFinalized,
+      pdfUrl: resume.pdfUrl || null,
     });
   }
 

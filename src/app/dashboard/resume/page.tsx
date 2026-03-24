@@ -210,6 +210,15 @@ function AutopilotResume() {
   const [fieldAILoading, setFieldAILoading] = useState<string | null>(null); // e.g. 'summary', 'exp-0', 'exp-1'
   const [fieldPreSnapshots, setFieldPreSnapshots] = useState<Record<string, any>>({}); // field-key → old value
 
+  // ── Resume preview HTML (rendered via iframe for native scrolling) ──
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // ── Own resume toggle (uploaded PDF vs 3BOX resume) ──
+  const [ownResumeUrl, setOwnResumeUrl] = useState<string | null>(null);
+  const [resumeSource, setResumeSource] = useState<'3box' | 'uploaded'>('3box');
+
   // ── Auto portfolio creation guard ──
   const portfolioAutoCreated = useRef(false);
   const userHasEdited = useRef(false);
@@ -227,6 +236,37 @@ function AutopilotResume() {
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, []);
+
+  // Generate preview HTML when switching to preview tab or when resume changes
+  useEffect(() => {
+    if (activeTab !== 'preview' || !resumeLoaded || !resume.contact.name) return;
+    const timer = setTimeout(() => {
+      setPreviewLoading(true);
+      fetch('/api/resume/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeData: {
+            contact: resume.contact,
+            summary: resume.summary,
+            experience: resume.experience,
+            education: resume.education,
+            skills: resume.skills,
+            skillDescriptions: resume.skillDescriptions,
+            certifications: resume.certifications,
+            projects: resume.projects,
+          },
+          template: resume.template,
+          previewOnly: true,
+        }),
+      })
+        .then(res => res.ok ? res.text() : null)
+        .then(html => { if (html) setPreviewHtml(html); })
+        .catch(() => {})
+        .finally(() => setPreviewLoading(false));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [activeTab, resume, resumeLoaded]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -286,6 +326,7 @@ function AutopilotResume() {
             skillDescriptions: data.resume.skillDescriptions || {},
           }));
           if (data.resumeId) setResumeId(data.resumeId);
+          if (data.pdfUrl) setOwnResumeUrl(data.pdfUrl);
           setIsVerified(!!data.isFinalized);
           setIsFirstTime(false);
           dbLoadComplete.current = true;
@@ -561,6 +602,11 @@ function AutopilotResume() {
     if (!file) return;
     setUploadingResume(true);
     setUploadedFileName(file.name);
+    // Create a preview URL for the original uploaded file (PDF only)
+    if (file.type === 'application/pdf') {
+      const blobUrl = URL.createObjectURL(file);
+      setOwnResumeUrl(blobUrl);
+    }
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -1791,8 +1837,36 @@ function AutopilotResume() {
           {/* Side-by-side: Resume preview (left) + Actions sidebar (right) */}
           <div className="flex gap-4">
           <div className="flex-1 min-w-0" ref={previewRef}>
-        {/* ── Template-specific resume preview — A4 wrapper ── */}
-        <div className="resume-a4-wrapper">
+        {/* ── Resume preview via iframe for native scrolling ── */}
+        {resumeSource === 'uploaded' && ownResumeUrl ? (
+          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white" style={{ height: '80vh' }}>
+            <iframe
+              src={ownResumeUrl}
+              className="w-full h-full"
+              title="Uploaded Resume Preview"
+              style={{ border: 'none' }}
+            />
+          </div>
+        ) : previewHtml ? (
+          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800" style={{ height: '80vh' }}>
+            <iframe
+              ref={previewIframeRef}
+              srcDoc={previewHtml}
+              className="w-full h-full"
+              title="Resume Preview"
+              style={{ border: 'none', background: '#e5e7eb' }}
+              sandbox="allow-same-origin"
+            />
+          </div>
+        ) : previewLoading ? (
+          <div className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style={{ height: '80vh' }}>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Generating preview...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="resume-a4-wrapper">
           <div className="resume-a4-page" style={{ transform: `scale(${previewScale})` }}>
         {resume.template === 'modern' ? (
           /* ── MODERN: Two-column sidebar layout ── */
@@ -2187,6 +2261,7 @@ function AutopilotResume() {
         )}
           </div>{/* end resume-a4-page */}
         </div>{/* end resume-a4-wrapper */}
+        )}
           </div>{/* end flex-1 resume preview column */}
 
           {/* ── Right sidebar: Actions ── */}
@@ -2267,14 +2342,38 @@ function AutopilotResume() {
                 {uploadingResume ? 'Parsing...' : 'Upload Resume'}
               </label>
 
-              {/* Uploaded file info */}
+              {/* Uploaded file info + resume source toggle */}
               {uploadedFileName && (
-                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-2">
                   <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Uploaded File</p>
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{uploadedFileName}</span>
                   </div>
+                  {ownResumeUrl && (
+                    <div className="flex gap-1 mt-2">
+                      <button
+                        onClick={() => setResumeSource('3box')}
+                        className={`flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
+                          resumeSource === '3box'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        3BOX Resume
+                      </button>
+                      <button
+                        onClick={() => setResumeSource('uploaded')}
+                        className={`flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
+                          resumeSource === 'uploaded'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        My Resume
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
