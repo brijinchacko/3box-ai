@@ -119,9 +119,10 @@ export async function POST(request: NextRequest) {
   "experienceLevel": "string - one of: fresher, 0-1, 1-3, 3-5, 5-10, 10+",
   "currentStatus": "string - one of: student, employed, job-searching, career-change, freelancer",
   "experiences": [{"title": "string", "company": "string", "duration": "string - e.g. Jan 2020 - Dec 2022", "bullets": ["string - each bullet point as a separate array element, one achievement per item"]}],
-  "educationLevel": "string - one of: High School, Associate's Degree, Bachelor's Degree, Master's Degree, PhD / Doctorate, Self-Taught, Bootcamp",
-  "fieldOfStudy": "string - e.g. Computer Science (or empty string)",
-  "institution": "string - university/school name (or empty string)",
+  "education": [{"degree": "string - e.g. Bachelor's Degree, MBA, etc.", "field": "string - field of study", "institution": "string - university/school name", "graduationYear": "string - e.g. 2024", "gpa": "string - GPA if mentioned, or empty string"}],
+  "educationLevel": "string - highest education level: High School, Associate's, Bachelor's, Master's, PhD, Self-Taught, Bootcamp",
+  "fieldOfStudy": "string - primary field of study (or empty string)",
+  "institution": "string - primary university/school name (or empty string)",
   "graduationYear": "string - e.g. 2024 (or empty string)",
   "skills": ["string array of skills found in the resume"],
   "certifications": [{"name": "string - certification name", "issuer": "string - issuing organization", "date": "string - date obtained or empty string"}],
@@ -129,9 +130,11 @@ export async function POST(request: NextRequest) {
   "bio": "string - a 1-2 sentence professional summary"
 }
 
-Rules:
-- Extract ALL experiences found, not just the most recent
-- For each experience, extract EVERY bullet point as a SEPARATE element in the bullets array. Each bullet should be one achievement/responsibility. Do NOT merge them into a paragraph.
+CRITICAL Rules:
+- Extract EVERY experience found in the resume, not just the most recent
+- For each experience, extract EVERY bullet point as a SEPARATE element in the bullets array. Each bullet should be one achievement/responsibility. Do NOT merge them into a paragraph
+- Extract ALL education entries (multiple degrees should each be a separate object in the education array)
+- If there are no bullet points but there is a paragraph description, split it into individual achievement sentences
 - For experienceLevel, calculate from total years of work experience across all positions
 - For currentStatus, infer from the resume context (if they list a current job, say "employed"; if fresh graduate with no experience, say "student" or "job-searching")
 - For targetRole, use their most recent job title or the role they seem most qualified for
@@ -143,11 +146,11 @@ Rules:
         },
         {
           role: 'user',
-          content: `Parse this resume and extract structured data:\n\n${resumeText.slice(0, 8000)}`,
+          content: `Parse this resume and extract ALL structured data. Do not skip any experience, education, certification, or project:\n\n${resumeText.slice(0, 12000)}`,
         },
       ],
       temperature: 0.3,
-      maxTokens: 4096,
+      maxTokens: 6000,
       jsonMode: true,
     });
 
@@ -165,6 +168,7 @@ Rules:
       experienceLevel: parsed.experienceLevel || '',
       currentStatus: parsed.currentStatus || 'job-searching',
       experiences: Array.isArray(parsed.experiences) ? parsed.experiences : [],
+      education: Array.isArray(parsed.education) ? parsed.education : [],
       educationLevel: parsed.educationLevel || '',
       fieldOfStudy: parsed.fieldOfStudy || '',
       institution: parsed.institution || '',

@@ -667,15 +667,25 @@ function AutopilotResume() {
                   : [],
             };
           }),
-          education: p.educationLevel ? [{
-            id: '1',
-            institution: p.institution || '',
-            degree: p.educationLevel || '',
-            field: p.fieldOfStudy || '',
-            startDate: '',
-            endDate: p.graduationYear || '',
-            gpa: '',
-          }] : prev.education,
+          education: Array.isArray(p.education) && p.education.length > 0
+            ? p.education.map((edu: any, i: number) => ({
+                id: String(i + 1),
+                institution: edu.institution || '',
+                degree: edu.degree || '',
+                field: edu.field || '',
+                startDate: '',
+                endDate: edu.graduationYear || '',
+                gpa: edu.gpa || '',
+              }))
+            : p.educationLevel ? [{
+                id: '1',
+                institution: p.institution || '',
+                degree: p.educationLevel || '',
+                field: p.fieldOfStudy || '',
+                startDate: '',
+                endDate: p.graduationYear || '',
+                gpa: '',
+              }] : prev.education,
           skills: p.skills || prev.skills,
           skillDescriptions: prev.skillDescriptions,
           certifications: (p.certifications || []).length > 0
