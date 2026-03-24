@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
   "targetRole": "string - infer the most likely target role from their experience/title",
   "experienceLevel": "string - one of: fresher, 0-1, 1-3, 3-5, 5-10, 10+",
   "currentStatus": "string - one of: student, employed, job-searching, career-change, freelancer",
-  "experiences": [{"title": "string", "company": "string", "duration": "string - e.g. Jan 2020 - Dec 2022", "description": "string - key achievements and responsibilities as a single paragraph"}],
+  "experiences": [{"title": "string", "company": "string", "duration": "string - e.g. Jan 2020 - Dec 2022", "bullets": ["string - each bullet point as a separate array element, one achievement per item"]}],
   "educationLevel": "string - one of: High School, Associate's Degree, Bachelor's Degree, Master's Degree, PhD / Doctorate, Self-Taught, Bootcamp",
   "fieldOfStudy": "string - e.g. Computer Science (or empty string)",
   "institution": "string - university/school name (or empty string)",
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
 Rules:
 - Extract ALL experiences found, not just the most recent
-- For each experience, extract ALL bullet points and achievements into the description field
+- For each experience, extract EVERY bullet point as a SEPARATE element in the bullets array. Each bullet should be one achievement/responsibility. Do NOT merge them into a paragraph.
 - For experienceLevel, calculate from total years of work experience across all positions
 - For currentStatus, infer from the resume context (if they list a current job, say "employed"; if fresh graduate with no experience, say "student" or "job-searching")
 - For targetRole, use their most recent job title or the role they seem most qualified for

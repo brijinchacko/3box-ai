@@ -337,6 +337,7 @@ function AutopilotResume() {
           generateAISuggestions(data.resume);
         } else {
           dbLoadComplete.current = true;
+          setIsFirstTime(false); // Set BEFORE auto-generate to prevent welcome screen flash
           // No resume in DB — try pre-filling from user profile
           fetch('/api/user/profile')
             .then(res => res.ok ? res.json() : null)
@@ -656,7 +657,11 @@ function AutopilotResume() {
               startDate: parts[0]?.trim() || '',
               endDate: parts[1]?.trim() || '',
               current: false,
-              bullets: exp.description ? [exp.description] : [],
+              bullets: Array.isArray(exp.bullets) && exp.bullets.length > 0
+                ? exp.bullets.map((b: string) => b.replace(/^[\s\-–—*•·▪●○◦]+/, '').trim()).filter((b: string) => b.length > 5)
+                : exp.description
+                  ? exp.description.split(/[\n•·▪▫●○◦‣⁃]|(?:\.\s+(?=[A-Z]))/).map((b: string) => b.replace(/^[\s\-–—*]+/, '').trim()).filter((b: string) => b.length > 10)
+                  : [],
             };
           }),
           education: p.educationLevel ? [{

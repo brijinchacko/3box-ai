@@ -256,6 +256,25 @@ function getSkillDescription(skill: string, descriptions?: Record<string, string
 
 /* ─── Shared helpers ─────────────────────────────────────────── */
 
+/** Split oversized bullets (>200 chars) that are actually multiple sentences merged together */
+function normalizeBullets(bullets: string[]): string[] {
+  const result: string[] = [];
+  for (const b of bullets) {
+    if (b.length > 200) {
+      // Split on sentence boundaries followed by uppercase letter (likely separate bullets)
+      const parts = b.split(/\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 10);
+      if (parts.length > 1) {
+        result.push(...parts.map(p => p.endsWith('.') ? p : p + '.'));
+      } else {
+        result.push(b);
+      }
+    } else {
+      result.push(b);
+    }
+  }
+  return result;
+}
+
 export function esc(str: string): string {
   return (str ?? '')
     .replace(/&/g, '&amp;')
@@ -416,7 +435,7 @@ function buildModern(p: BuildHTMLParams): string {
           <span class="entry-date">${esc(exp.startDate)} &ndash; ${exp.current ? 'Present' : esc(exp.endDate)}</span>
         </div>
         <div class="entry-location">${esc(exp.location)}</div>
-        <ul>${exp.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
+        <ul>${normalizeBullets(exp.bullets).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
       </div>`,
     )
     .join('');
@@ -607,7 +626,7 @@ function buildClassic(p: BuildHTMLParams): string {
           <div><span class="entry-role">${esc(exp.role)}</span> <span class="entry-company">&mdash; ${esc(exp.company)}${exp.location ? `, ${esc(exp.location)}` : ''}</span></div>
           <span class="entry-date">${esc(exp.startDate)} &ndash; ${exp.current ? 'Present' : esc(exp.endDate)}</span>
         </div>
-        <ul>${exp.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
+        <ul>${normalizeBullets(exp.bullets).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
       </div>`,
     )
     .join('');
@@ -763,7 +782,7 @@ function buildMinimal(p: BuildHTMLParams): string {
           <span><span class="entry-role">${esc(exp.role)}</span> <span class="entry-company">&mdash; ${esc(exp.company)}</span></span>
           <span class="entry-date">${esc(exp.startDate)} &ndash; ${exp.current ? 'Present' : esc(exp.endDate)}</span>
         </div>
-        <ul>${exp.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
+        <ul>${normalizeBullets(exp.bullets).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
       </div>`,
     )
     .join('');
@@ -921,7 +940,7 @@ function buildCreative(p: BuildHTMLParams): string {
           <span class="entry-date">${esc(exp.startDate)} &ndash; ${exp.current ? 'Present' : esc(exp.endDate)}</span>
         </div>
         <div class="entry-company">${esc(exp.company)} &middot; ${esc(exp.location)}</div>
-        <ul>${exp.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
+        <ul>${normalizeBullets(exp.bullets).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
       </div>`,
     )
     .join('');
