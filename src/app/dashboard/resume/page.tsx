@@ -327,6 +327,7 @@ function AutopilotResume() {
           }));
           if (data.resumeId) setResumeId(data.resumeId);
           if (data.pdfUrl) setOwnResumeUrl(data.pdfUrl);
+          if (data.resume?.uploadedFileName) setUploadedFileName(data.resume.uploadedFileName);
           setIsVerified(!!data.isFinalized);
           setIsFirstTime(false);
           dbLoadComplete.current = true;
@@ -607,6 +608,15 @@ function AutopilotResume() {
       const blobUrl = URL.createObjectURL(file);
       setOwnResumeUrl(blobUrl);
     }
+    // Upload original PDF to cloud storage (non-blocking)
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+    fetch('/api/user/resume/upload-pdf', { method: 'POST', body: uploadFormData })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.pdfUrl) setOwnResumeUrl(data.pdfUrl);
+      })
+      .catch(() => {}); // Non-blocking
     try {
       const formData = new FormData();
       formData.append('file', file);
