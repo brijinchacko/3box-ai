@@ -1866,7 +1866,17 @@ function AutopilotResume() {
             </div>
           </div>
         ) : (
-          <div className="resume-a4-wrapper">
+          <div className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style={{ height: '80vh' }}>
+            <div className="text-center">
+              <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Add your details in the Editor tab to see your resume preview.</p>
+            </div>
+          </div>
+        )}
+          </div>{/* end flex-1 resume preview column */}
+
+          {/* ── LEGACY A4 fallback (hidden, kept for reference) ── */}
+          {false && <div className="resume-a4-wrapper">
           <div className="resume-a4-page" style={{ transform: `scale(${previewScale})` }}>
         {resume.template === 'modern' ? (
           /* ── MODERN: Two-column sidebar layout ── */
@@ -2260,9 +2270,7 @@ function AutopilotResume() {
           </div>
         )}
           </div>{/* end resume-a4-page */}
-        </div>{/* end resume-a4-wrapper */}
-        )}
-          </div>{/* end flex-1 resume preview column */}
+        </div>}{/* end resume-a4-wrapper + legacy block */}
 
           {/* ── Right sidebar: Actions ── */}
           <div className="w-64 flex-shrink-0 space-y-4">
