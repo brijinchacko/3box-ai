@@ -444,7 +444,7 @@ function buildModern(p: BuildHTMLParams): string {
   const css = `
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      color: #1f2937; background: #e5e7eb; line-height: 1.55;
+      color: #1f2937; background: #e5e7eb; line-height: 1.6;
     }
     .page {
       width: 794px; min-height: 1123px; margin: 20px auto;
@@ -454,62 +454,62 @@ function buildModern(p: BuildHTMLParams): string {
 
     /* ── Sidebar ────────────────────────────── */
     .sidebar {
-      width: 30%; background: #f0f4f8; padding: 24px 16px 18px 22px; flex-shrink: 0;
+      width: 30%; background: #f0f4f8; padding: 28px 18px 20px 24px; flex-shrink: 0;
       display: flex; flex-direction: column;
     }
-    .sidebar h1 { font-size: 18px; font-weight: 700; color: ${accent}; margin-bottom: 10px; line-height: 1.2; }
+    .sidebar h1 { font-size: 22px; font-weight: 700; color: ${accent}; margin-bottom: 12px; line-height: 1.2; }
     .sidebar-section-title {
-      font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid #d0d8e4;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: ${accent}; margin: 14px 0 5px; padding-bottom: 3px; border-bottom: 1px solid #d0d8e4;
     }
-    .sidebar-item { font-size: 10px; color: #374151; margin-bottom: 3px; word-break: break-word; line-height: 1.35; }
+    .sidebar-item { font-size: 11px; color: #374151; margin-bottom: 4px; word-break: break-word; line-height: 1.4; }
     .sidebar-item a { color: ${accent}; text-decoration: none; }
-    .sidebar-icon { display: inline-block; width: 14px; color: ${accent}; font-style: normal; text-align: center; margin-right: 3px; }
-    .skill-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+    .sidebar-icon { display: inline-block; width: 15px; color: ${accent}; font-style: normal; text-align: center; margin-right: 4px; }
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 4px; }
     .skill-tag {
-      font-size: 8.5px; padding: 2px 6px; border-radius: 3px;
+      font-size: 10px; padding: 3px 8px; border-radius: 3px;
       background: ${accent}15; border: 1px solid ${accent}30; color: ${accent};
       white-space: nowrap;
     }
-    .sidebar-edu { font-size: 10px; margin-bottom: 5px; }
+    .sidebar-edu { font-size: 11px; margin-bottom: 6px; }
     .sidebar-edu-degree { font-weight: 600; color: #374151; }
     .sidebar-edu-school { color: #6b7280; }
-    .sidebar-edu-date { font-size: 9px; color: #9ca3af; }
-    .sidebar-cert { font-size: 10px; margin-bottom: 4px; }
+    .sidebar-edu-date { font-size: 10px; color: #9ca3af; }
+    .sidebar-cert { font-size: 11px; margin-bottom: 5px; }
     .sidebar-cert-name { font-weight: 600; color: #374151; }
     .sidebar-cert-issuer { color: #6b7280; }
     .sidebar-spacer { flex: 1; }
 
     /* ── Main content ───────────────────────── */
     .main {
-      width: 70%; padding: 24px 22px 18px;
+      width: 70%; padding: 28px 24px 20px;
       display: flex; flex-direction: column;
     }
     .section-title {
-      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 12px 0 5px; padding-bottom: 3px; border-bottom: 2px solid ${accent};
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: ${accent}; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 2px solid ${accent};
     }
     .section-title:first-child { margin-top: 0; }
-    .summary { font-size: 11px; color: #4b5563; line-height: 1.45; }
+    .summary { font-size: 12px; color: #4b5563; line-height: 1.55; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 8px; }
+    .entry { margin-bottom: 12px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 11.5px; color: #111827; }
-    .entry-company { font-size: 11px; color: #6b7280; }
-    .entry-date { font-size: 10px; color: #9ca3af; white-space: nowrap; }
-    .entry-location { font-size: 10px; color: #9ca3af; margin-bottom: 2px; }
-    .edu-detail { font-size: 11px; color: #4b5563; margin-top: 1px; }
-    ul { list-style: disc; padding-left: 14px; margin-top: 2px; }
-    li { font-size: 11px; color: #374151; margin-bottom: 1px; line-height: 1.4; }
+    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
+    .entry-company { font-size: 12px; color: #6b7280; }
+    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+    .entry-location { font-size: 11px; color: #9ca3af; margin-bottom: 3px; }
+    .edu-detail { font-size: 12px; color: #4b5563; margin-top: 2px; }
+    ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
+    li { font-size: 12px; color: #374151; margin-bottom: 2px; line-height: 1.5; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 10px; color: ${accent}; text-decoration: none; }
-    .project-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.4; }
-    .project-tech { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
+    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; }
+    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 11px; color: #374151; margin-bottom: 3px; }
+    .cert { font-size: 12px; color: #374151; margin-bottom: 4px; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
     .verified { color: #16a34a; margin-right: 4px; }
@@ -647,47 +647,47 @@ function buildClassic(p: BuildHTMLParams): string {
     }
 
     /* ── Header ─────────────────────────────── */
-    .header { text-align: center; margin-bottom: 10px; }
-    .header h1 { font-size: 22px; font-weight: 700; color: ${accent}; margin-bottom: 4px; letter-spacing: 0.5px; }
-    .contact-row { font-size: 10px; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .header { text-align: center; margin-bottom: 12px; }
+    .header h1 { font-size: 24px; font-weight: 700; color: ${accent}; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .contact-row { font-size: 11px; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif; }
     .contact-row a { color: ${accent}; text-decoration: none; }
-    .bullet { color: #d1d5db; margin: 0 3px; }
-    .header hr { border: none; border-top: 2px solid ${accent}; margin-top: 10px; }
+    .bullet { color: #d1d5db; margin: 0 4px; }
+    .header hr { border: none; border-top: 2px solid ${accent}; margin-top: 12px; }
 
     /* ── Section titles ─────────────────────── */
     .section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
-      color: ${accent}; margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+      color: ${accent}; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1;
     }
 
     /* ── Skill pills ─────────────────────────── */
-    .skill-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+    .skill-pills { display: flex; flex-wrap: wrap; gap: 5px; }
     .skill-pill {
-      font-size: 10px; padding: 2px 8px; border-radius: 12px;
+      font-size: 11px; padding: 3px 10px; border-radius: 12px;
       border: 1px solid ${accent}40; background: ${accent}08; color: #374151;
       white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif;
     }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 8px; }
+    .entry { margin-bottom: 12px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 700; font-size: 11.5px; color: #111827; }
-    .entry-company { font-size: 11px; color: #6b7280; }
-    .entry-sub { font-size: 11px; color: #6b7280; margin-top: 1px; }
-    .entry-date { font-size: 10px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
-    ul { list-style: disc; padding-left: 14px; margin-top: 2px; }
-    li { font-size: 11px; color: #374151; margin-bottom: 1px; line-height: 1.4; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .entry-role { font-weight: 700; font-size: 13px; color: #111827; }
+    .entry-company { font-size: 12px; color: #6b7280; }
+    .entry-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
+    ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
+    li { font-size: 12px; color: #374151; margin-bottom: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Summary ─────────────────────────────── */
-    .summary { font-size: 11px; color: #4b5563; line-height: 1.45; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .summary { font-size: 12px; color: #4b5563; line-height: 1.55; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 10px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.4; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-tech { font-size: 10px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 11px; color: #374151; margin-bottom: 3px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .cert { font-size: 12px; color: #374151; margin-bottom: 4px; font-family: 'Segoe UI', system-ui, sans-serif; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
     .verified { color: #16a34a; margin-right: 4px; }
@@ -804,44 +804,44 @@ function buildMinimal(p: BuildHTMLParams): string {
     }
 
     /* ── Header ─────────────────────────────── */
-    .header { margin-bottom: 18px; }
-    .header h1 { font-size: 26px; font-weight: 300; color: #111827; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .contact-line { font-size: 10.5px; color: #9ca3af; }
+    .header { margin-bottom: 20px; }
+    .header h1 { font-size: 28px; font-weight: 300; color: #111827; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .contact-line { font-size: 11px; color: #9ca3af; }
     .contact-line a { color: #6b7280; text-decoration: none; }
     .pipe { margin: 0 6px; color: #d1d5db; }
 
     /* ── Section titles ─────────────────────── */
     .section-title {
-      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 2.5px;
-      color: #9ca3af; margin: 16px 0 6px; padding-bottom: 6px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2.5px;
+      color: #9ca3af; margin: 18px 0 8px; padding-bottom: 6px;
       border-bottom: 1px solid #e5e7eb;
     }
 
     /* ── Skills (dot-joined string) ──────────── */
-    .skills-text { font-size: 11px; color: #4b5563; line-height: 1.55; }
+    .skills-text { font-size: 12px; color: #4b5563; line-height: 1.6; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 10px; }
+    .entry { margin-bottom: 14px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 11.5px; color: #111827; }
-    .entry-company { font-size: 11.5px; color: #6b7280; }
-    .entry-degree { font-weight: 500; font-size: 11.5px; color: #111827; }
-    .entry-institution { font-size: 11px; color: #9ca3af; margin-top: 1px; }
-    .entry-date { font-size: 10.5px; color: #d1d5db; white-space: nowrap; }
-    ul { list-style: none; padding-left: 0; margin-top: 3px; }
-    li { font-size: 11px; color: #4b5563; margin-bottom: 2px; line-height: 1.45; padding-left: 12px; position: relative; }
-    li::before { content: '\\2022'; position: absolute; left: 0; color: #d1d5db; font-size: 8px; top: 2px; }
+    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
+    .entry-company { font-size: 13px; color: #6b7280; }
+    .entry-degree { font-weight: 500; font-size: 13px; color: #111827; }
+    .entry-institution { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+    .entry-date { font-size: 11px; color: #d1d5db; white-space: nowrap; }
+    ul { list-style: none; padding-left: 0; margin-top: 4px; }
+    li { font-size: 12px; color: #4b5563; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
+    li::before { content: '\\2022'; position: absolute; left: 0; color: #d1d5db; font-size: 9px; top: 2px; }
 
     /* ── Summary ─────────────────────────────── */
-    .summary { font-size: 11px; color: #6b7280; line-height: 1.55; }
+    .summary { font-size: 12px; color: #6b7280; line-height: 1.6; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 10px; color: #6b7280; text-decoration: none; }
-    .project-desc { font-size: 11px; color: #6b7280; margin-top: 2px; line-height: 1.45; }
-    .project-tech { font-size: 10px; color: #d1d5db; margin-top: 2px; }
+    .project-link { font-size: 11px; color: #6b7280; text-decoration: none; }
+    .project-desc { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.55; }
+    .project-tech { font-size: 11px; color: #d1d5db; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 11px; color: #6b7280; margin-bottom: 3px; }
+    .cert { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
     .cert-name { font-weight: 500; color: #374151; }
     .cert-issuer { color: #9ca3af; }
 
@@ -964,15 +964,15 @@ function buildCreative(p: BuildHTMLParams): string {
     /* ── Gradient header banner ──────────────── */
     .creative-header {
       background: linear-gradient(135deg, #a855f7, #00d4ff, #00ff88);
-      padding: 24px 32px 20px; color: #fff; flex-shrink: 0;
+      padding: 28px 32px 22px; color: #fff; flex-shrink: 0;
     }
-    .creative-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-    .creative-header .contact-row { font-size: 10.5px; color: rgba(255,255,255,0.85); }
+    .creative-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .creative-header .contact-row { font-size: 11px; color: rgba(255,255,255,0.85); }
 
     /* ── Skill pills below header ────────────── */
-    .skill-pills { padding: 10px 32px; display: flex; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }
+    .skill-pills { padding: 12px 32px; display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
     .skill-pill {
-      display: inline-block; font-size: 10px; padding: 2px 10px;
+      display: inline-block; font-size: 11px; padding: 3px 12px;
       border-radius: 20px; white-space: nowrap; font-weight: 500;
     }
 
@@ -983,30 +983,30 @@ function buildCreative(p: BuildHTMLParams): string {
 
     /* ── Section titles with gradient underline ─ */
     .section-title {
-      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 14px 0 6px; padding-bottom: 3px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: ${accent}; margin: 16px 0 8px; padding-bottom: 4px;
       border-bottom: 2px solid transparent;
       border-image: linear-gradient(90deg, #a855f7, #00d4ff, #00ff88) 1;
     }
 
     /* ── About section with accent bar ────────── */
-    .about-wrap { display: flex; gap: 10px; margin: 6px 0 12px; }
+    .about-wrap { display: flex; gap: 12px; margin: 8px 0 14px; }
     .accent-bar {
       width: 3px; flex-shrink: 0; border-radius: 2px;
       background: linear-gradient(to bottom, #a855f7, #00d4ff);
     }
-    .summary { font-size: 11px; color: #4b5563; line-height: 1.55; }
+    .summary { font-size: 12px; color: #4b5563; line-height: 1.6; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 10px; }
+    .entry { margin-bottom: 12px; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 11.5px; color: #111827; }
-    .entry-company { font-size: 11px; color: #9ca3af; margin-top: 1px; }
-    .entry-degree { font-weight: 500; font-size: 11.5px; color: #111827; }
-    .entry-institution { font-size: 11px; color: #9ca3af; margin-top: 1px; }
-    .entry-date { font-size: 10.5px; color: #9ca3af; white-space: nowrap; }
-    ul { list-style: none; padding-left: 0; margin-top: 3px; }
-    li { font-size: 11px; color: #374151; margin-bottom: 2px; line-height: 1.45; padding-left: 14px; position: relative; }
+    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
+    .entry-company { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+    .entry-degree { font-weight: 500; font-size: 13px; color: #111827; }
+    .entry-institution { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+    ul { list-style: none; padding-left: 0; margin-top: 4px; }
+    li { font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
     li::before {
       content: ''; position: absolute; left: 0; top: 5px;
       width: 3px; height: 10px; border-radius: 2px;
@@ -1014,12 +1014,12 @@ function buildCreative(p: BuildHTMLParams): string {
     }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 10px; color: ${accent}; text-decoration: none; }
-    .project-desc { font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.45; }
-    .project-tech { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
+    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.55; }
+    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 11px; color: #374151; margin-bottom: 3px; }
+    .cert { font-size: 12px; color: #374151; margin-bottom: 4px; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
 
