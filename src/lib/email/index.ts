@@ -171,36 +171,36 @@ export async function sendWelcomeEmail(to: string, name: string) {
 
         <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
           <tr>
-            <td style="padding: 14px 16px; background: rgba(0,212,255,0.08); border-radius: 8px; margin-bottom: 8px;">
+            <td style="padding: 14px 16px; background: #EFF6FF; border-radius: 8px; border-left: 4px solid #3B82F6;">
               <table cellpadding="0" cellspacing="0"><tr>
-                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: linear-gradient(135deg, #00d4ff, #7c3aed); border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">1</span></td>
-                <td style="padding-left: 12px;"><strong style="color: #fff;">Upload your resume</strong><br/><span style="color: #94a3b8; font-size: 13px;">AI extracts your details and builds an ATS-optimized version</span></td>
+                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: #3B82F6; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">1</span></td>
+                <td style="padding-left: 12px;"><strong style="color: #1E3A5F; font-size: 15px;">Upload your resume</strong><br/><span style="color: #475569; font-size: 13px;">AI extracts your details and builds an ATS-optimized version</span></td>
               </tr></table>
             </td>
           </tr>
-          <tr><td style="height: 8px;"></td></tr>
+          <tr><td style="height: 10px;"></td></tr>
           <tr>
-            <td style="padding: 14px 16px; background: rgba(124,58,237,0.08); border-radius: 8px;">
+            <td style="padding: 14px 16px; background: #F5F3FF; border-radius: 8px; border-left: 4px solid #7C3AED;">
               <table cellpadding="0" cellspacing="0"><tr>
-                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: linear-gradient(135deg, #7c3aed, #ec4899); border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">2</span></td>
-                <td style="padding-left: 12px;"><strong style="color: #fff;">Let AI agents find jobs for you</strong><br/><span style="color: #94a3b8; font-size: 13px;">Scout searches 6+ platforms and matches jobs to your skills</span></td>
+                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: #7C3AED; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">2</span></td>
+                <td style="padding-left: 12px;"><strong style="color: #1E3A5F; font-size: 15px;">Let AI agents find jobs for you</strong><br/><span style="color: #475569; font-size: 13px;">Scout searches 6+ platforms and matches jobs to your skills</span></td>
               </tr></table>
             </td>
           </tr>
-          <tr><td style="height: 8px;"></td></tr>
+          <tr><td style="height: 10px;"></td></tr>
           <tr>
-            <td style="padding: 14px 16px; background: rgba(236,72,153,0.08); border-radius: 8px;">
+            <td style="padding: 14px 16px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #EC4899;">
               <table cellpadding="0" cellspacing="0"><tr>
-                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: linear-gradient(135deg, #ec4899, #f59e0b); border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">3</span></td>
-                <td style="padding-left: 12px;"><strong style="color: #fff;">Apply with one click</strong><br/><span style="color: #94a3b8; font-size: 13px;">AI generates cover letters, tailors your resume, and submits applications</span></td>
+                <td style="width: 36px; vertical-align: top;"><span style="display: inline-block; width: 28px; height: 28px; background: #EC4899; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; color: #fff; font-weight: bold;">3</span></td>
+                <td style="padding-left: 12px;"><strong style="color: #1E3A5F; font-size: 15px;">Apply with one click</strong><br/><span style="color: #475569; font-size: 13px;">AI generates cover letters, tailors your resume, and submits applications</span></td>
               </tr></table>
             </td>
           </tr>
         </table>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0 0 4px; color: #94a3b8; font-size: 13px;">Your free plan includes</p>
-          <p style="margin: 0; color: #fff; font-size: 15px;"><strong>5 job applications/week</strong> &bull; <strong>Unlimited AI tools</strong> &bull; <strong>All 6 AI agents</strong></p>
+        <div style="background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0 0 4px; color: #64748B; font-size: 13px;">Your free plan includes</p>
+          <p style="margin: 0; color: #1E293B; font-size: 15px;"><strong>5 job applications/week</strong> &bull; <strong>Unlimited AI tools</strong> &bull; <strong>All 6 AI agents</strong></p>
         </div>
 
         <p style="text-align: center; margin-top: 24px;">
