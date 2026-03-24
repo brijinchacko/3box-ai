@@ -326,8 +326,11 @@ function AutopilotResume() {
             skillDescriptions: data.resume.skillDescriptions || {},
           }));
           if (data.resumeId) setResumeId(data.resumeId);
-          if (data.pdfUrl) setOwnResumeUrl(data.pdfUrl);
-          if (data.resume?.uploadedFileName) setUploadedFileName(data.resume.uploadedFileName);
+          if (data.pdfUrl) {
+            setOwnResumeUrl(data.pdfUrl);
+            // Show uploaded file info — use stored name or derive from URL
+            setUploadedFileName(data.resume?.uploadedFileName || 'Uploaded Resume.pdf');
+          }
           setIsVerified(!!data.isFinalized);
           setIsFirstTime(false);
           dbLoadComplete.current = true;
@@ -694,6 +697,8 @@ function AutopilotResume() {
               }))
             : prev.projects,
         }));
+        // Store uploadedFileName in resume state so auto-save persists it
+        setResume(prev => ({ ...prev, uploadedFileName: file.name }));
         setIsFirstTime(false);
         showToast('Resume parsed successfully!', 'success');
       }
