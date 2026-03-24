@@ -7,6 +7,7 @@
 
 export interface UnifiedOnboardingProfile {
   fullName: string;
+  email: string;
   location: string;
   currentStatus: string;
   experienceLevel: string;
@@ -20,6 +21,10 @@ export interface UnifiedOnboardingProfile {
   graduationYear: string;
   phone: string;
   linkedin: string;
+  portfolio: string;
+  experiences: { title: string; company: string; duration: string; description: string }[];
+  certifications: { name: string; issuer: string; date: string }[];
+  projects: { name: string; description: string; url: string; technologies: string[] }[];
 }
 
 const KEYS = {
@@ -33,10 +38,11 @@ const KEYS = {
 } as const;
 
 const empty: UnifiedOnboardingProfile = {
-  fullName: '', location: '', currentStatus: '', experienceLevel: '',
+  fullName: '', email: '', location: '', currentStatus: '', experienceLevel: '',
   targetRole: '', industry: [], skills: [], bio: '',
   educationLevel: '', fieldOfStudy: '', institution: '', graduationYear: '',
-  phone: '', linkedin: '',
+  phone: '', linkedin: '', portfolio: '',
+  experiences: [], certifications: [], projects: [],
 };
 
 function safeParse<T>(raw: string | null): T | null {
