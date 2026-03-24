@@ -47,6 +47,7 @@ export interface BuildHTMLParams {
   }[];
   template: string;
   showWatermark: boolean;
+  isPreview?: boolean;
 }
 
 /* ─── Fallback skill descriptions ────────────────────────────── */
@@ -263,7 +264,8 @@ export function esc(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function printBar(accent: string): string {
+function printBar(accent: string, hide?: boolean): string {
+  if (hide) return '';
   return `<div class="no-print" style="background:#f3f4f6;text-align:center;padding:12px;font-size:14px;color:#374151;">
     Press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) to save as PDF &nbsp;|&nbsp;
     Set Margins to <strong>None</strong> &amp; check <strong>Background graphics</strong> for best results &nbsp;|&nbsp;
@@ -524,7 +526,7 @@ function buildModern(p: BuildHTMLParams): string {
 
   return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
 <body>
-  ${printBar(accent)}
+  ${printBar(accent, p.isPreview)}
   <div class="page">
     <!-- Sidebar -->
     <div class="sidebar">
@@ -703,7 +705,7 @@ function buildClassic(p: BuildHTMLParams): string {
 
   return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
 <body>
-  ${printBar(accent)}
+  ${printBar(accent, p.isPreview)}
   <div class="page">
     <!-- Header -->
     <div class="header">
@@ -855,7 +857,7 @@ function buildMinimal(p: BuildHTMLParams): string {
 
   return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
 <body>
-  ${printBar(accent)}
+  ${printBar(accent, p.isPreview)}
   <div class="page">
     <!-- Header -->
     <div class="header">
@@ -1040,7 +1042,7 @@ function buildCreative(p: BuildHTMLParams): string {
 
   return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
 <body>
-  ${printBar(accent)}
+  ${printBar(accent, p.isPreview)}
   <div class="page">
     <!-- Gradient header banner -->
     <div class="creative-header">

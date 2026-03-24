@@ -44,16 +44,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { resumeData, template, previewOnly } = body;
 
-    // ── 3. Plan gate (skip for preview-only) ─────
-    if (plan === 'FREE' && !previewOnly) {
-      return NextResponse.json(
-        {
-          error: 'upgrade_required',
-          message: 'Upgrade to Pro or above to export PDF',
-        },
-        { status: 403 },
-      );
-    }
+    // ── 3. Plan gate — all plans can export, FREE gets watermark ──
 
     if (!resumeData) {
       return NextResponse.json(
@@ -65,8 +56,8 @@ export async function POST(req: Request) {
     const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects } =
       resumeData;
 
-    // ── 5. Determine watermark ───────────────────
-    const showWatermark = !previewOnly && plan === 'PRO';
+    // ── 5. Determine watermark (FREE/PRO get watermark, MAX clean) ──
+    const showWatermark = !previewOnly && plan !== 'MAX';
 
     // ── 6. Track export (skip for preview-only) ──
     if (!previewOnly) {
@@ -93,6 +84,7 @@ export async function POST(req: Request) {
       projects,
       template: template ?? 'modern',
       showWatermark,
+      isPreview: !!previewOnly,
     });
 
     // For preview-only, return clean HTML without print script

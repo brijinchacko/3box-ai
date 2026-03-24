@@ -889,11 +889,6 @@ function AutopilotResume() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        if (err?.error === 'upgrade_required') {
-          setExporting(false);
-          window.location.href = '/pricing';
-          return;
-        }
         throw new Error(err?.message ?? 'Export failed');
       }
       // API returns HTML with auto-print script — open in new tab
