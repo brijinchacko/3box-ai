@@ -242,7 +242,7 @@ function convertOnboardingToEditor(content: any, template?: string) {
         startDate: parts[0]?.trim() || '',
         endDate: parts[1]?.trim() || '',
         current: false,
-        bullets: exp.description ? [exp.description] : [],
+        bullets: Array.isArray(exp.bullets) && exp.bullets.length > 0 ? exp.bullets : (exp.description ? [exp.description] : []),
       };
     }),
     education: content.education ? [{

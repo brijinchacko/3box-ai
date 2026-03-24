@@ -1849,7 +1849,7 @@ function AutopilotResume() {
         {resumeSource === 'uploaded' && ownResumeUrl ? (
           <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white" style={{ height: '80vh' }}>
             <iframe
-              src={ownResumeUrl}
+              src={ownResumeUrl.startsWith('blob:') ? ownResumeUrl : `https://docs.google.com/gview?url=${encodeURIComponent(ownResumeUrl)}&embedded=true`}
               className="w-full h-full"
               title="Uploaded Resume Preview"
               style={{ border: 'none' }}
