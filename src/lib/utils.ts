@@ -37,7 +37,7 @@ export function generateReferralCode(): string {
 // ─── Plan Configuration ─────────────────────────
 
 export const PLAN_LIMITS = {
-  FREE: { applicationsPerDay: 0, applicationsLifetime: 10, price: 0,  priceYearly: 0 },
+  FREE: { applicationsPerDay: 5, applicationsLifetime: -1, price: 0,  priceYearly: 0 },
   PRO:  { applicationsPerDay: 20, applicationsLifetime: -1, price: 29, priceYearly: 24 },
   MAX:  { applicationsPerDay: 50, applicationsLifetime: -1, price: 59, priceYearly: 49 },
 } as const;

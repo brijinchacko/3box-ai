@@ -1,12 +1,13 @@
 /**
  * Feature Gate — server-side check for whether a FREE user
- * has exhausted their weekly application limit and should
- * be blocked from ALL features (not just applications).
+ * has exhausted their weekly application limit.
  *
+ * IMPORTANT: AI operations (resume gen, cover letters, etc.) are UNLIMITED
+ * on all plans. This gate ONLY checks application submission limits.
  * PRO/MAX users are never feature-locked.
  */
-import { prisma } from '@/lib/db/prisma';
-import { normalizePlan, APP_LIMITS } from './pricing';
+import { normalizePlan } from './pricing';
+import { checkApplicationCap } from './dailyCap';
 
 export interface FeatureGateResult {
   locked: boolean;
@@ -15,30 +16,20 @@ export interface FeatureGateResult {
 
 /**
  * Check if the user's features should be locked.
- * Returns { locked: true } only for FREE users who've hit their limit.
+ * Uses the same weekly/daily cap logic as application submissions
+ * (not lifetime totalAppsUsed which was the old buggy behavior).
  */
 export async function checkFeatureGate(userId: string): Promise<FeatureGateResult> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { plan: true, totalAppsUsed: true },
-  });
+  // Reuse the application cap system which correctly counts weekly for FREE
+  const cap = await checkApplicationCap(userId);
 
-  if (!user) return { locked: true, reason: 'User not found' };
+  // If the cap check itself returns allowed=true, user is not locked
+  if (cap.allowed) return { locked: false };
 
-  const plan = normalizePlan(user.plan);
-
-  // PRO and MAX users are never feature-locked
-  if (plan !== 'FREE') return { locked: false };
-
-  const limit = APP_LIMITS.FREE;
-  const total = limit.type === 'weekly' ? (limit.perWeek ?? 5) : 5;
-
-  if (user.totalAppsUsed >= total) {
-    return {
-      locked: true,
-      reason: `Free plan limit reached (${user.totalAppsUsed}/${total} applications used). Upgrade to Pro to continue.`,
-    };
-  }
-
-  return { locked: false };
+  // Only lock FREE users — PRO/MAX just can't apply more but features stay open
+  // (cap.allowed would be false for PRO/MAX who hit daily limit too, but we don't lock them)
+  return {
+    locked: true,
+    reason: `Free plan limit reached (${cap.used}/${cap.limit} applications this week). Upgrade to Pro to continue.`,
+  };
 }
