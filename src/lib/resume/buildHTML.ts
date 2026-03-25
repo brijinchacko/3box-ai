@@ -271,10 +271,14 @@ export function esc(str: string): string {
 
 function printBar(accent: string, hide?: boolean): string {
   if (hide) return '';
-  return `<div class="no-print" style="background:#f3f4f6;text-align:center;padding:12px;font-size:14px;color:#374151;">
-    Press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) to save as PDF &nbsp;|&nbsp;
-    Set Margins to <strong>None</strong> &amp; check <strong>Background graphics</strong> for best results &nbsp;|&nbsp;
-    <button onclick="window.print()" style="background:${accent};color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Print / Save PDF</button>
+  return `<div class="no-print" style="background:#1a1a2e;text-align:center;padding:10px 16px;font-size:13px;color:#94a3b8;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+    <span>Set Margins to <strong style="color:#fff;">None</strong></span>
+    <span style="color:#374151;">|</span>
+    <span>Uncheck <strong style="color:#fff;">Headers and footers</strong></span>
+    <span style="color:#374151;">|</span>
+    <span>Check <strong style="color:#fff;">Background graphics</strong></span>
+    <span style="color:#374151;">|</span>
+    <button onclick="window.print()" style="background:${accent};color:#fff;border:none;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Save PDF</button>
   </div>`;
 }
 
@@ -294,13 +298,12 @@ function docHead(title: string, css: string): string {
     /* ── Reset ──────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Page sizing — A4 with consistent margins on every page ── */
-    @page { size: A4; margin: 12mm 0mm 10mm 0mm; }
-    @page :first { margin-top: 0mm; }
+    /* ── Page sizing — A4, zero page margins to suppress browser headers/footers ── */
+    @page { size: A4; margin: 0; }
 
     ${css}
 
-    /* ── Print ──────────────────────────────── */
+    /* ── Print — zero @page margin suppresses browser headers/footers ── */
     @media print {
       html, body { margin: 0; padding: 0; }
       body { background: #fff !important; }
@@ -308,6 +311,8 @@ function docHead(title: string, css: string): string {
       .page {
         box-shadow: none !important; margin: 0 !important;
         overflow: visible !important; height: auto !important; min-height: auto !important;
+        /* Internal padding provides consistent spacing on all pages */
+        padding-bottom: 10mm !important;
       }
       .entry { page-break-inside: avoid; }
       .section-block { page-break-inside: avoid; }
