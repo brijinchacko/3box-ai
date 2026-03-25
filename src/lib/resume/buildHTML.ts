@@ -298,8 +298,9 @@ function docHead(title: string, css: string): string {
     /* ── Reset ──────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Page sizing — A4, zero page margins to suppress browser headers/footers ── */
-    @page { size: A4; margin: 0; }
+    /* ── Page sizing — A4, minimal top margin for page 2+ spacing, zero elsewhere ── */
+    @page { size: A4; margin: 8mm 0 0 0; }
+    @page :first { margin-top: 0; }
 
     ${css}
 
