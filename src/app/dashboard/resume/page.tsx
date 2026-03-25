@@ -257,6 +257,7 @@ function AutopilotResume() {
             projects: resume.projects,
           },
           template: resume.template,
+          accentColor: (resume as any).accentColor,
           previewOnly: true,
         }),
       })
@@ -915,6 +916,7 @@ function AutopilotResume() {
             projects: resume.projects,
           },
           template: resume.template,
+          accentColor: (resume as any).accentColor,
         }),
       });
       if (!res.ok) {
@@ -1453,6 +1455,44 @@ function AutopilotResume() {
                       <div className={cn('py-1.5 px-1.5 text-center', isSelected ? a.bg : '')}>
                         <div className={cn('text-[11px] font-semibold', isSelected ? a.text : 'text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200')}>{t.name}</div>
                       </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Accent Color Picker */}
+            <div className="mt-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">Accent Color</h4>
+              <div className="flex flex-wrap gap-2 px-1">
+                {[
+                  { name: 'Blue', hex: '#2563eb' },
+                  { name: 'Teal', hex: '#0891b2' },
+                  { name: 'Red', hex: '#dc2626' },
+                  { name: 'Purple', hex: '#7c3aed' },
+                  { name: 'Gold', hex: '#b45309' },
+                  { name: 'Charcoal', hex: '#374151' },
+                  { name: 'Emerald', hex: '#059669' },
+                  { name: 'Navy', hex: '#1e3a5f' },
+                ].map((c) => {
+                  const isSelected = (resume as any).accentColor === c.hex || (!((resume as any).accentColor) && c.hex === '#2563eb');
+                  return (
+                    <button
+                      key={c.hex}
+                      title={c.name}
+                      onClick={() => setResume(prev => ({ ...prev, accentColor: c.hex } as any))}
+                      className="relative w-7 h-7 rounded-full border-2 transition-all duration-150 hover:scale-110"
+                      style={{
+                        backgroundColor: c.hex,
+                        borderColor: isSelected ? '#fff' : 'transparent',
+                        boxShadow: isSelected ? `0 0 0 2px ${c.hex}` : 'none',
+                      }}
+                    >
+                      {isSelected && (
+                        <svg className="absolute inset-0 m-auto w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
                     </button>
                   );
                 })}
@@ -2927,15 +2967,15 @@ function TemplatePreviewMini({ template }: { template: 'modern' | 'classic' | 'm
   // creative
   return (
     <div className="w-full h-full flex flex-col rounded-sm overflow-hidden">
-      <div className="h-10 w-full bg-gradient-to-r from-purple-600 via-blue-500 to-emerald-400 p-1.5 flex flex-col justify-end">
+      <div className="h-10 w-full bg-purple-600 p-1.5 flex flex-col justify-end">
         <div className="h-1.5 w-14 rounded-full bg-white/50 mb-0.5" />
         <div className="h-0.5 w-10 rounded-full bg-white/30" />
       </div>
       <div className="flex-1 bg-white p-1.5 flex flex-col gap-1">
         <div className="flex gap-1">
           <div className="h-1.5 w-6 rounded-full bg-purple-100 border border-purple-200" />
-          <div className="h-1.5 w-7 rounded-full bg-cyan-100 border border-cyan-200" />
-          <div className="h-1.5 w-5 rounded-full bg-emerald-100 border border-emerald-200" />
+          <div className="h-1.5 w-7 rounded-full bg-purple-100 border border-purple-200" />
+          <div className="h-1.5 w-5 rounded-full bg-purple-100 border border-purple-200" />
         </div>
         <div className="flex gap-1">
           <div className="w-0.5 rounded-full bg-gradient-to-b from-purple-500 to-blue-400 flex-shrink-0" />
@@ -3447,6 +3487,7 @@ function AgenticResumePage() {
             certifications: resume.certifications,
           },
           template: resume.template,
+          accentColor: (resume as any).accentColor,
         }),
       });
 

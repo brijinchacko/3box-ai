@@ -46,6 +46,7 @@ export interface BuildHTMLParams {
     technologies: string[];
   }[];
   template: string;
+  accentColor?: string;
   showWatermark: boolean;
   isPreview?: boolean;
 }
@@ -396,7 +397,7 @@ function buildCertsHTML(
    ================================================================ */
 
 function buildModern(p: BuildHTMLParams): string {
-  const accent = '#2563eb';
+  const accent = p.accentColor || '#2563eb';
   const { contact, summary, experience, education, skills, skillDescriptions, certifications, projects, showWatermark } = p;
 
   /* ── Sidebar contact lines ─────────────── */
@@ -465,13 +466,13 @@ function buildModern(p: BuildHTMLParams): string {
       position: absolute;
       top: 0; left: 0; bottom: 0;
       width: 30%;
-      background: #f0f4f8;
+      background: #f8fafc;
       z-index: 0;
     }
     @media print {
       .page::before {
         position: fixed; top: 0; left: 0; bottom: 0;
-        width: 30%; background: #f0f4f8;
+        width: 30%; background: #f8fafc;
         z-index: 0;
       }
     }
@@ -482,7 +483,7 @@ function buildModern(p: BuildHTMLParams): string {
       display: flex; flex-direction: column;
       position: relative; z-index: 1;
     }
-    .sidebar h1 { font-size: 22px; font-weight: 700; color: ${accent}; margin-bottom: 12px; line-height: 1.2; }
+    .sidebar h1 { font-size: 24px; font-weight: 700; color: ${accent}; margin-bottom: 12px; line-height: 1.2; }
     .sidebar-section-title {
       font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
       color: ${accent}; margin: 14px 0 5px; padding-bottom: 3px; border-bottom: 1px solid #d0d8e4;
@@ -490,10 +491,10 @@ function buildModern(p: BuildHTMLParams): string {
     .sidebar-item { font-size: 11px; color: #374151; margin-bottom: 4px; word-break: break-word; line-height: 1.4; }
     .sidebar-item a { color: ${accent}; text-decoration: none; }
     .sidebar-icon { display: inline-block; width: 15px; color: ${accent}; font-style: normal; text-align: center; margin-right: 4px; }
-    .skill-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .skill-tag {
-      font-size: 10px; padding: 3px 8px; border-radius: 3px;
-      background: ${accent}15; border: 1px solid ${accent}30; color: ${accent};
+      font-size: 10px; padding: 4px 10px; border-radius: 3px;
+      background: ${accent}12; border: 1px solid ${accent}25; color: ${accent};
       white-space: nowrap;
     }
     .sidebar-edu { font-size: 11px; margin-bottom: 6px; }
@@ -607,7 +608,7 @@ function buildModern(p: BuildHTMLParams): string {
    ================================================================ */
 
 function buildClassic(p: BuildHTMLParams): string {
-  const accent = '#1e293b';
+  const accent = p.accentColor || '#1e293b';
   const { contact, summary, experience, education, skills, certifications, projects, showWatermark } = p;
 
   /* ── Contact row (bullet-separated) ──────── */
@@ -765,7 +766,7 @@ function buildClassic(p: BuildHTMLParams): string {
    ================================================================ */
 
 function buildMinimal(p: BuildHTMLParams): string {
-  const accent = '#374151';
+  const accent = p.accentColor || '#374151';
   const { contact, summary, experience, education, skills, certifications, projects, showWatermark } = p;
 
   /* ── Contact pipe-separated ─────────────── */
@@ -916,7 +917,7 @@ function buildMinimal(p: BuildHTMLParams): string {
    ================================================================ */
 
 function buildCreative(p: BuildHTMLParams): string {
-  const accent = '#7c3aed';
+  const accent = p.accentColor || '#7c3aed';
   const { contact, summary, experience, education, skills, certifications, projects, showWatermark } = p;
 
   /* ── Contact info (white text in header) ─── */
@@ -929,11 +930,9 @@ function buildCreative(p: BuildHTMLParams): string {
   const contactLine = contactParts.join(' <span style="margin:0 6px;opacity:0.6;">|</span> ');
 
   /* ── Skill pills (first 10, rotating colors) */
-  const pillColors = ['#a855f7', '#00d4ff', '#00ff88', '#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4'];
-  const skillPills = skills.slice(0, 10)
-    .map((s, i) => {
-      const c = pillColors[i % pillColors.length];
-      return `<span class="skill-pill" style="background:${c}15;color:${c};border:1px solid ${c}30;">${esc(s)}</span>`;
+  const skillPills = skills.slice(0, 12)
+    .map((s) => {
+      return `<span class="skill-pill" style="background:${accent}12;color:${accent};border:1px solid ${accent}25;">${esc(s)}</span>`;
     })
     .join('');
 
@@ -989,9 +988,9 @@ function buildCreative(p: BuildHTMLParams): string {
       display: flex; flex-direction: column;
     }
 
-    /* ── Gradient header banner ──────────────── */
+    /* ── Accent header banner ──────────────── */
     .creative-header {
-      background: linear-gradient(135deg, #a855f7, #00d4ff, #00ff88);
+      background: ${accent};
       padding: 28px 32px 22px; color: #fff; flex-shrink: 0;
     }
     .creative-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
@@ -1009,19 +1008,18 @@ function buildCreative(p: BuildHTMLParams): string {
       flex: 1; padding: 0 32px 20px; display: flex; flex-direction: column;
     }
 
-    /* ── Section titles with gradient underline ─ */
+    /* ── Section titles with accent underline ─ */
     .section-title {
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
       color: ${accent}; margin: 16px 0 8px; padding-bottom: 4px;
-      border-bottom: 2px solid transparent;
-      border-image: linear-gradient(90deg, #a855f7, #00d4ff, #00ff88) 1;
+      border-bottom: 2px solid ${accent};
     }
 
     /* ── About section with accent bar ────────── */
     .about-wrap { display: flex; gap: 12px; margin: 8px 0 14px; }
     .accent-bar {
       width: 3px; flex-shrink: 0; border-radius: 2px;
-      background: linear-gradient(to bottom, #a855f7, #00d4ff);
+      background: ${accent};
     }
     .summary { font-size: 12px; color: #4b5563; line-height: 1.6; }
 
@@ -1038,7 +1036,7 @@ function buildCreative(p: BuildHTMLParams): string {
     li::before {
       content: ''; position: absolute; left: 0; top: 5px;
       width: 3px; height: 10px; border-radius: 2px;
-      background: linear-gradient(to bottom, #a855f7, #00d4ff);
+      background: ${accent};
     }
 
     /* ── Projects ────────────────────────────── */
@@ -1051,10 +1049,10 @@ function buildCreative(p: BuildHTMLParams): string {
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
 
-    /* ── Bottom gradient bar ─────────────────── */
+    /* ── Bottom accent bar ──────────────────── */
     .bottom-bar {
       height: 3px; margin: 0 32px;
-      background: linear-gradient(90deg, #a855f7, #00d4ff, #00ff88); border-radius: 2px;
+      background: ${accent}; border-radius: 2px;
       flex-shrink: 0;
     }
 

@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // ── 4. Parse body ────────────────────────────
     const body = await req.json();
-    const { resumeData, template, previewOnly } = body;
+    const { resumeData, template, previewOnly, accentColor } = body;
 
     // ── 3. Plan gate — all plans can export, FREE gets watermark ──
 
@@ -83,6 +83,7 @@ export async function POST(req: Request) {
       certifications,
       projects,
       template: template ?? 'modern',
+      accentColor: accentColor || undefined,
       showWatermark,
       isPreview: !!previewOnly,
     });
