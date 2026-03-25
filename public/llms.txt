@@ -1,45 +1,103 @@
 # 3BOX AI
 
-> 3BOX AI is an AI-powered career operating system by OFORO AI. It provides free AI resume building, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching with automated applications.
+> 3BOX AI is a free AI-powered career operating system that helps job seekers build ATS-optimized resumes, find matching jobs, and auto-apply — all powered by 6 specialized AI agents. Built by OFORO AI.
 
-## Product Overview
+## What 3BOX AI Does
 
-3BOX AI takes users through a complete career pipeline: Skill Assessment → Personalized Career Plan → Adaptive Learning → Resume & Portfolio Building → AI Job Matching → Automated Applications.
+3BOX AI automates the entire job search pipeline: Upload your resume → AI extracts and optimizes it → 6 AI agents find jobs, tailor your resume per job, write cover letters, and submit applications automatically. Users get 5 free applications per week on the free plan.
 
-## Key Features
+## Core Features
 
-- **AI Resume Builder**: Free ATS-optimized resume builder with AI keyword optimization, job-specific tailoring, and PDF export.
-- **AI Career Coach (Cortex)**: Persistent AI coach that learns user goals, tracks progress, and predicts hire probability.
-- **AI Skill Assessment**: Adaptive testing with MCQ, scenarios, and hands-on tasks. Instant skill scoring and gap analysis.
-- **AI Career Plan Generator**: Personalized career roadmaps with milestones, proof-of-work projects, and timeline estimates.
-- **Adaptive AI Learning Paths**: Personalized learning recommendations that evolve with user progress.
-- **AI Job Matching**: Skills-based job matching with fit scores, improvement suggestions, and explainable matching.
-- **Automated Job Applications**: AI-powered auto-apply with compliance controls, audit trails, and smart targeting.
-- **6 AI Agents**: Scout (job discovery), Forge (resume optimization), Archer (auto-apply), Atlas (career planning), Sage (coaching), Sentinel (quality monitoring) — all available on every plan.
-- **Market Readiness Score**: Real-time AI employability scoring against market demand.
-- **Hire Probability Forecasting**: Know chances before applying with AI probability estimates.
+- **Free AI Resume Builder**: Build ATS-optimized resumes with 4 professional templates. AI enhances bullet points with metrics and action verbs. Export as PDF. No sign-up required for the free tool at https://3box.ai/tools/resume-builder
+- **ATS Resume Checker**: Free tool to score your resume against Applicant Tracking Systems at https://3box.ai/tools/ats-checker
+- **AI Cover Letter Generator**: Generate job-specific cover letters instantly at https://3box.ai/tools/cover-letter-generator
+- **AI Career Coach (Cortex)**: Persistent AI coach that tracks your career goals, provides personalized advice, and predicts hire probability
+- **AI Skill Assessment**: Adaptive testing with 30 questions (MCQ + scenarios), instant skill scoring, and gap analysis
+- **AI Career Plan Generator**: Personalized career roadmaps with milestones, projects, and timeline estimates
+- **Adaptive Learning Paths**: AI-curated courses, certifications, and projects that evolve with your progress
+- **AI Job Matching**: Skills-based job matching with fit scores across 6+ job platforms
+- **Automated Job Applications**: AI auto-apply with resume tailoring, cover letter generation, and multi-channel submission
+- **AI Interview Prep**: Company-specific interview questions (technical, behavioral, role-specific)
+- **AI Salary Estimator**: Market salary data for any role, location, and experience level at https://3box.ai/tools/salary-estimator
+- **LinkedIn Optimization**: AI-generated headlines, posts, hashtags, and recommendation letters
+
+## 6 AI Agents
+
+1. **Scout** — Job discovery agent that searches 6+ platforms (LinkedIn, Indeed, Naukri, Google Jobs, etc.), scores matches, and detects scam postings
+2. **Forge** — Resume optimization agent that tailors your resume per job with ATS keyword injection and scoring (0-100)
+3. **Archer** — Application agent that generates cover letters, submits via ATS APIs (Greenhouse, Lever), email outreach, and browser extension
+4. **Atlas** — Interview coaching agent with company-specific questions, practice scenarios, and JD analysis
+5. **Sage** — Skill training agent with gap analysis, learning recommendations, and growth tracking
+6. **Sentinel** — Quality review agent that scores applications (0-100), detects fabrication, and prevents spam
+
+All 6 agents are available on every plan including free.
+
+## 18 Free AI Tools (No Sign-Up Required)
+
+1. ATS Resume Checker — https://3box.ai/tools/ats-checker
+2. AI Resume Builder — https://3box.ai/tools/resume-builder
+3. AI Resume Score — https://3box.ai/tools/resume-score
+4. Resume Summary Generator — https://3box.ai/tools/resume-summary-generator
+5. AI Cover Letter Generator — https://3box.ai/tools/cover-letter-generator
+6. Cold Email Generator — https://3box.ai/tools/cold-email-generator
+7. LinkedIn Headline Generator — https://3box.ai/tools/linkedin-headline-generator
+8. LinkedIn Post Generator — https://3box.ai/tools/linkedin-post-generator
+9. LinkedIn Hashtag Generator — https://3box.ai/tools/linkedin-hashtag-generator
+10. LinkedIn Recommendation Generator — https://3box.ai/tools/linkedin-recommendation-generator
+11. Interview Question Prep — https://3box.ai/tools/interview-question-prep
+12. Elevator Pitch Generator — https://3box.ai/tools/elevator-pitch-generator
+13. Job Description Analyzer — https://3box.ai/tools/job-description-analyzer
+14. AI Salary Estimator — https://3box.ai/tools/salary-estimator
+15. Skills Gap Finder — https://3box.ai/tools/skills-gap-finder
+16. Thank You Email Generator — https://3box.ai/tools/thank-you-email-generator
+17. AI Resume Generator — https://3box.ai/tools/resume-generator
+18. Resume Enhancement — https://3box.ai/tools/resume-builder
 
 ## Pricing
 
-- **Free ($0)**: 10 lifetime applications, all AI features, all 6 agents, 1 resume, basic career plan
-- **Pro ($29/month)**: 20 applications/day, unlimited resumes, all templates, job matching, interview prep
-- **Max ($59/month)**: 50 applications/day, unlimited everything, priority support, advanced analytics
+- **Free ($0/month)**: 5 job applications per week, all AI features, all 6 agents, unlimited AI tool usage
+- **Pro ($29/month or $290/year)**: 20 applications per day, all templates, job matching, interview prep, priority processing
+- **Max ($59/month or $590/year)**: 50 applications per day, unlimited everything, priority support, advanced analytics
 
-All plans use Claude Sonnet AI. Student discount: 30% off Pro and Max with .edu email.
+All plans use Claude Sonnet 4 AI model. Student discount: 30% off with .edu email.
+
+## Industry-Specific Resume Builders
+
+- Software Engineers: https://3box.ai/resume/software-engineer
+- Data Scientists: https://3box.ai/resume/data-scientist
+- Product Managers: https://3box.ai/resume/product-manager
+- Marketing Professionals: https://3box.ai/resume/marketing
+- Healthcare Professionals: https://3box.ai/resume/healthcare
+
+## Comparisons
+
+- 3BOX AI vs Jobscan: https://3box.ai/compare/jobscan
+- 3BOX AI vs Teal: https://3box.ai/compare/teal
+- 3BOX AI vs Rezi: https://3box.ai/compare/rezi
+- All Comparisons: https://3box.ai/compare/all
 
 ## Technology
 
-Built with Next.js 14, TypeScript, Tailwind CSS, PostgreSQL, Prisma ORM, NextAuth.js, OpenRouter AI (Claude Sonnet), Stripe billing, BullMQ queues, and Redis caching.
+Built with Next.js 14 (App Router), TypeScript, React, Tailwind CSS, PostgreSQL via Prisma ORM, NextAuth.js authentication, OpenRouter API (Claude Sonnet 4), Stripe billing, BullMQ + Redis queues, Cloudinary storage, and deployed on Hostinger VPS with PM2.
 
 ## Company
 
-3BOX AI is a product of OFORO AI (https://oforo.ai).
+3BOX AI is a product of OFORO AI (https://oforo.ai). Founded to make AI-powered career tools accessible to everyone.
 
-## Links
+## Key Links
 
 - Website: https://3box.ai
 - Pricing: https://3box.ai/pricing
+- Free Tools: https://3box.ai/tools
+- Blog: https://3box.ai/blog
 - About: https://3box.ai/about
-- Security: https://3box.ai/security
+- Sign Up (Free): https://3box.ai/signup
 - Login: https://3box.ai/login
-- Sign Up: https://3box.ai/signup
+- Privacy Policy: https://3box.ai/privacy
+- Terms of Service: https://3box.ai/terms
+
+## Contact
+
+- Support: support@oforo.ai
+- Website: https://3box.ai
+- Twitter/X: @3boxai

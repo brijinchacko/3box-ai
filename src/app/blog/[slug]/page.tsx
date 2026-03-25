@@ -27,7 +27,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${post.title} | 3BOX AI Blog`,
-    description: post.excerpt,
+    description: post.excerpt || `Read "${post.title}" on the 3BOX AI blog — AI-powered career insights, resume tips, and job search strategies.`,
+    keywords: ['career advice', 'AI career tools', 'resume tips', 'job search', '3BOX AI', ...(post.category ? [post.category.toLowerCase()] : [])],
+    openGraph: {
+      title: post.title,
+      description: post.excerpt || `Read "${post.title}" on the 3BOX AI blog.`,
+      url: `https://3box.ai/blog/${slug}`,
+      type: 'article',
+      siteName: '3BOX AI',
+      images: post.coverImage ? [{ url: post.coverImage, width: 1200, height: 630, alt: post.title }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt || '',
+      images: post.coverImage ? [post.coverImage] : undefined,
+    },
+    alternates: {
+      canonical: `https://3box.ai/blog/${slug}`,
+    },
   };
 }
 
