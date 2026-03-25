@@ -294,8 +294,9 @@ function docHead(title: string, css: string): string {
     /* ── Reset ──────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Page sizing — A4 ──────────────────── */
-    @page { size: A4; margin: 0; }
+    /* ── Page sizing — A4 with consistent margins on every page ── */
+    @page { size: A4; margin: 12mm 0mm 10mm 0mm; }
+    @page :first { margin-top: 0mm; }
 
     ${css}
 
@@ -310,6 +311,7 @@ function docHead(title: string, css: string): string {
       }
       .entry { page-break-inside: avoid; }
       .section-block { page-break-inside: avoid; }
+      .section-title { page-break-after: avoid; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style>
