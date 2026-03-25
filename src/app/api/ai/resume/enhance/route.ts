@@ -12,7 +12,20 @@ const SECTION_PROMPTS: Record<string, (targetJob?: string) => string> = {
   summary: (targetJob) =>
     `You are an expert resume writer and ATS specialist. Rewrite the following professional summary to be compelling, concise, and ATS-friendly. CRITICAL: Keep it to 2-3 sentences MAX (under 50 words). Be punchy and direct — no filler.${targetJob ? ` Optimize for the target role: ${targetJob}.` : ''} Focus on measurable achievements and relevant keywords. Return JSON: { "enhanced": "<rewritten summary>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
   experience: (targetJob) =>
-    `You are an expert resume writer. Enhance the following experience bullet points with strong action verbs, quantifiable metrics, and achievement-oriented language.${targetJob ? ` Tailor for the target role: ${targetJob}.` : ''} Transform passive descriptions into powerful impact statements. CRITICAL: Return EXACTLY 3-5 bullet points MAX. Each bullet must be 1 sentence (under 25 words). Combine related points, keep only the strongest achievements. Cover ALL key responsibilities but be concise. Return JSON: { "enhanced": "<bullet1>\\n<bullet2>\\n<bullet3>\\n<bullet4>\\n<bullet5>", "suggestions": ["<suggestion 1>", "<suggestion 2>"] }`,
+    `You are an expert resume writer. Rewrite the experience bullets below.${targetJob ? ` Target role: ${targetJob}.` : ''}
+
+STRICT RULES:
+- Return EXACTLY 4-5 bullets, one per line
+- Each bullet MUST be under 15 words. NO exceptions.
+- Start each with a strong past-tense action verb
+- Include ONE metric or number per bullet where possible
+- NO compound sentences. NO "and" joining two achievements. ONE idea per bullet.
+- NO filler words like "while", "ensuring", "maintaining", "across"
+
+GOOD example: "Reduced payment delays 30% by implementing automated follow-up system"
+BAD example: "Spearheaded cross-functional communication with APAC Head and optimized supply chain operations, reducing delays by 25% and resolving issues"
+
+Return JSON: { "enhanced": "bullet1\\nbullet2\\nbullet3\\nbullet4\\nbullet5", "suggestions": [] }`,
   skills: (targetJob) =>
     `You are an ATS optimization specialist. Optimize the following skills list for maximum ATS compatibility.${targetJob ? ` Target role: ${targetJob}. Prioritize skills that match this role and add commonly expected skills that are missing.` : ''} Group skills by category and prioritize the most relevant ones. Return JSON: { "enhanced": "<optimized skills section>", "suggestions": ["<suggestion 1>", "<suggestion 2>", ...] }`,
   full: (targetJob) =>
