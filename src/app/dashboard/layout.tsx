@@ -22,6 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session, status } = useSession();
   const { isAgentic } = useDashboardMode();
   const { isLocked, loading: gateLoading, used, limit } = useFeatureGate();
+  const [lockDismissed, setLockDismissed] = useState(false);
   const onboardingChecked = useRef(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -122,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Cortex AI Coach — removed per user request. Code kept in /components/ai-coach/ */}
 
       {/* Feature lock overlay for FREE users who exhausted their applications */}
-      {isLocked && <FeatureLockedOverlay used={used} limit={limit} />}
+      {isLocked && !lockDismissed && <FeatureLockedOverlay used={used} limit={limit} onDismiss={() => setLockDismissed(true)} />}
     </div>
   );
 }

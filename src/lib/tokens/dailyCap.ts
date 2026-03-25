@@ -89,13 +89,14 @@ export async function checkApplicationCap(userId: string): Promise<ApplicationCa
   });
 
   if (!user) {
+    // User not found — return FREE defaults (don't lock them out)
     return {
-      allowed: false,
+      allowed: true,
       used: 0,
-      limit: 0,
-      remaining: 0,
+      limit: 5,
+      remaining: 5,
       limitType: 'weekly',
-      resetsAt: null,
+      resetsAt: nextMondayUTC(),
     };
   }
 

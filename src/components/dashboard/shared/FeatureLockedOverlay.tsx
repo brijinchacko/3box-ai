@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 interface FeatureLockedOverlayProps {
   used: number;
   limit: number;
+  onDismiss?: () => void;
 }
 
 /**
@@ -14,7 +15,7 @@ interface FeatureLockedOverlayProps {
  * their weekly applications. Blocks all dashboard features with
  * a clear upgrade CTA.
  */
-export default function FeatureLockedOverlay({ used, limit }: FeatureLockedOverlayProps) {
+export default function FeatureLockedOverlay({ used, limit, onDismiss }: FeatureLockedOverlayProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -95,6 +96,14 @@ export default function FeatureLockedOverlay({ used, limit }: FeatureLockedOverl
               <Shield className="w-3 h-3" />
               7-day money-back guarantee
             </p>
+            {onDismiss && (
+              <button
+                onClick={onDismiss}
+                className="w-full text-xs text-gray-500 hover:text-gray-300 transition-colors py-2"
+              >
+                Continue with limited access
+              </button>
+            )}
           </div>
         </motion.div>
       </div>
