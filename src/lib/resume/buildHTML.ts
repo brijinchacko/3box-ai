@@ -306,29 +306,22 @@ function docHead(title: string, css: string): string {
       .no-print { display: none !important; }
       .page {
         box-shadow: none !important; margin: 0 !important;
-        page-break-after: always; page-break-inside: avoid;
-        overflow: hidden;
+        overflow: visible !important; height: auto !important; min-height: auto !important;
       }
-      .page:last-child { page-break-after: auto; }
+      .entry { page-break-inside: avoid; }
+      .section-block { page-break-inside: avoid; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style>
   <script>
-    /* Auto-fit: widen layout + zoom so content fits exactly one A4 page at 794px */
+    /* Multi-page: allow content to flow naturally across pages */
     window.addEventListener('load', function() {
       var pages = document.querySelectorAll('.page');
       pages.forEach(function(page) {
-        var pageHeight = 1123;
-        var contentHeight = page.scrollHeight;
-        if (contentHeight > pageHeight) {
-          var scale = pageHeight / contentHeight;
-          scale = Math.max(scale, 0.55);
-          /* Widen the page so content reflows shorter, then zoom brings width back to 794px */
-          page.style.width = Math.ceil(794 / scale) + 'px';
-          page.style.minHeight = pageHeight + 'px';
-          page.style.zoom = String(scale);
-          page.style.overflow = 'hidden';
-        }
+        /* Remove fixed height constraints so content flows to multiple pages */
+        page.style.minHeight = 'auto';
+        page.style.overflow = 'visible';
+        page.style.height = 'auto';
       });
     });
   </script>
@@ -963,7 +956,7 @@ function buildCreative(p: BuildHTMLParams): string {
     }
     .page {
       width: 794px; min-height: 1123px; margin: 20px auto;
-      overflow: hidden; background: #fff;
+      overflow: visible; background: #fff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.12);
       display: flex; flex-direction: column;
     }
