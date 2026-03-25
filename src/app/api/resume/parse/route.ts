@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
 
     // ── AI Extraction ──────────────────────────────
     const response = await aiChat({
-      model: AI_MODELS.standard.id,
+      model: AI_MODELS.premium.id,
+      timeout: 60000, // 60s for resume parsing (large structured extraction)
       messages: [
         {
           role: 'system',
@@ -151,7 +152,6 @@ CRITICAL Rules:
       ],
       temperature: 0.3,
       maxTokens: 6000,
-      jsonMode: true,
     });
 
     const parsed = JSON.parse(extractJSON(response));

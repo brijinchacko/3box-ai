@@ -164,6 +164,7 @@ export interface ChatCompletionRequest {
   maxTokens?: number;
   stream?: boolean;
   jsonMode?: boolean;
+  timeout?: number; // custom timeout in ms (default: 30000)
 }
 
 export async function aiChat(request: ChatCompletionRequest): Promise<string> {
@@ -189,7 +190,8 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+  const timeoutMs = request.timeout || 30000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
@@ -214,7 +216,7 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
     return data.choices?.[0]?.message?.content || '';
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      console.error(`[AI] OpenRouter timeout after 30s (${modelId})`);
+      console.error(`[AI] OpenRouter timeout after ${timeoutMs / 1000}s (${modelId})`);
       throw new Error('AI request timed out. Please try again.');
     }
     throw err;
