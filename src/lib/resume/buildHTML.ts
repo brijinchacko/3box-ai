@@ -451,11 +451,28 @@ function buildModern(p: BuildHTMLParams): string {
       display: flex; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
       position: relative;
     }
+    /* Sidebar background that extends across all pages when printed */
+    .page::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 30%;
+      background: #f0f4f8;
+      z-index: 0;
+    }
+    @media print {
+      .page::before {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: 30%; background: #f0f4f8;
+        z-index: 0;
+      }
+    }
 
     /* ── Sidebar ────────────────────────────── */
     .sidebar {
-      width: 30%; background: #f0f4f8; padding: 28px 18px 20px 24px; flex-shrink: 0;
+      width: 30%; background: transparent; padding: 28px 18px 20px 24px; flex-shrink: 0;
       display: flex; flex-direction: column;
+      position: relative; z-index: 1;
     }
     .sidebar h1 { font-size: 22px; font-weight: 700; color: ${accent}; margin-bottom: 12px; line-height: 1.2; }
     .sidebar-section-title {
@@ -484,24 +501,27 @@ function buildModern(p: BuildHTMLParams): string {
     .main {
       width: 70%; padding: 28px 24px 20px;
       display: flex; flex-direction: column;
+      position: relative; z-index: 1;
     }
     .section-title {
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: ${accent}; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 2px solid ${accent};
+      color: ${accent}; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid ${accent};
     }
     .section-title:first-child { margin-top: 0; }
-    .summary { font-size: 12px; color: #4b5563; line-height: 1.55; }
+    .summary { font-size: 12px; color: #4b5563; line-height: 1.55; margin-bottom: 6px; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
     .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
     .entry-company { font-size: 12px; color: #6b7280; }
     .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
     .entry-location { font-size: 11px; color: #9ca3af; margin-bottom: 3px; }
     .edu-detail { font-size: 12px; color: #4b5563; margin-top: 2px; }
-    ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
-    li { font-size: 12px; color: #374151; margin-bottom: 2px; line-height: 1.5; }
+    ul { list-style: disc; padding-left: 16px; margin-top: 4px; }
+    li { font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.55; }
+    .entry { page-break-inside: avoid; margin-bottom: 14px; }
+    .section-block { page-break-inside: avoid; }
 
     /* ── Projects ────────────────────────────── */
     .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
@@ -669,7 +689,7 @@ function buildClassic(p: BuildHTMLParams): string {
     }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
     .entry-role { font-weight: 700; font-size: 13px; color: #111827; }
     .entry-company { font-size: 12px; color: #6b7280; }
@@ -821,7 +841,7 @@ function buildMinimal(p: BuildHTMLParams): string {
     .skills-text { font-size: 12px; color: #4b5563; line-height: 1.6; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 14px; }
+    .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
     .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
     .entry-company { font-size: 13px; color: #6b7280; }
@@ -998,7 +1018,7 @@ function buildCreative(p: BuildHTMLParams): string {
     .summary { font-size: 12px; color: #4b5563; line-height: 1.6; }
 
     /* ── Entries ─────────────────────────────── */
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
     .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
     .entry-company { font-size: 12px; color: #9ca3af; margin-top: 2px; }
