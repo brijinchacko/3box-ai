@@ -313,9 +313,11 @@ function docHead(title: string, css: string): string {
       .page {
         box-shadow: none !important; margin: 0 !important;
         overflow: visible !important; height: auto !important; min-height: auto !important;
-        /* Internal padding provides consistent spacing on all pages */
-        padding-bottom: 10mm !important;
+        padding-bottom: 6mm !important;
       }
+      /* Hide fill-space in print to prevent blank second page */
+      .fill-space { display: none !important; }
+      .watermark { margin-top: 12px !important; }
       .entry { page-break-inside: avoid; }
       .section-block { page-break-inside: avoid; }
       .section-title { page-break-after: avoid; }
