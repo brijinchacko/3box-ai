@@ -102,7 +102,9 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   const [excludeCompanies, setExcludeCompanies] = useState(editProfile?.excludeCompanies || '');
   const [matchTolerance, setMatchTolerance] = useState(editProfile?.matchTolerance || 70);
   const [selectedBoards, setSelectedBoards] = useState<string[]>(
-    editProfile?.boards ? editProfile.boards.split(',').filter(Boolean) : ['linkedin', 'indeed'],
+    editProfile?.boards
+      ? (Array.isArray(editProfile.boards) ? editProfile.boards : String(editProfile.boards).split(',').filter(Boolean))
+      : ['linkedin', 'indeed'],
   );
 
   // Step 2: Automation + Email
