@@ -668,7 +668,7 @@ export default function SettingsPage() {
   /* ---------------------------------------------------------------- */
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto bg-gray-950 -mx-4 -my-4 px-4 py-4 sm:-mx-6 sm:-my-6 sm:px-6 sm:py-6 min-h-screen rounded-none">
       {/* Coming Soon Toast */}
       <AnimatePresence>
         {comingSoonMsg && (
