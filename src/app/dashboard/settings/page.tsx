@@ -185,7 +185,7 @@ function SmtpConfigSection() {
               <input
                 value={smtp.host}
                 onChange={e => setSmtp({ ...smtp, host: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-gray-900 dark:text-white placeholder:text-gray-300 dark:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+                className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
                 placeholder="smtp.mail.yahoo.com"
               />
             </div>
@@ -194,7 +194,7 @@ function SmtpConfigSection() {
               <input
                 value={smtp.port}
                 onChange={e => setSmtp({ ...smtp, port: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-gray-900 dark:text-white placeholder:text-gray-300 dark:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+                className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
                 placeholder="587"
               />
             </div>
@@ -204,7 +204,7 @@ function SmtpConfigSection() {
             <input
               value={smtp.email}
               onChange={e => setSmtp({ ...smtp, email: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-gray-900 dark:text-white placeholder:text-gray-300 dark:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
               placeholder="you@yahoo.com"
             />
           </div>
@@ -214,7 +214,7 @@ function SmtpConfigSection() {
               type="password"
               value={smtp.password}
               onChange={e => setSmtp({ ...smtp, password: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-gray-900 dark:text-white placeholder:text-gray-300 dark:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
               placeholder={smtpConnected ? '••••••••' : 'App-specific password'}
             />
           </div>
@@ -223,7 +223,7 @@ function SmtpConfigSection() {
             <input
               value={smtp.fromName}
               onChange={e => setSmtp({ ...smtp, fromName: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-gray-900 dark:text-white placeholder:text-gray-300 dark:text-white/20 focus:border-neon-blue/50 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:border-neon-blue/50 focus:outline-none"
               placeholder="John Doe"
             />
           </div>
@@ -684,7 +684,7 @@ export default function SettingsPage() {
       </AnimatePresence>
 
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-3 text-gray-900 dark:text-white">
           <Settings className="w-7 h-7 text-gray-500 dark:text-white/60" /> Settings
         </h1>
       </motion.div>
@@ -715,7 +715,7 @@ export default function SettingsPage() {
           {activeTab === 'profile' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="card">
-                <h3 className="font-semibold mb-6">Profile Information</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-6">Profile Information</h3>
 
                 {profileLoading ? (
                   <div className="space-y-4 animate-pulse">
@@ -787,7 +787,7 @@ export default function SettingsPage() {
                         </button>
                       </div>
                       <div>
-                        <div className="text-lg font-semibold">{userName}</div>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{userName}</div>
                         <div className="text-sm text-gray-500 dark:text-white/40">{userEmail}</div>
                         <div className="mt-1 badge bg-neon-blue/10 text-neon-blue text-xs">
                           <Zap className="w-3 h-3 mr-1" /> {planLabel[userPlan] || userPlan} Plan
@@ -860,7 +860,7 @@ export default function SettingsPage() {
           {activeTab === 'email' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="card text-left">
-                <h3 className="font-semibold mb-2 text-left">Connected Email Accounts</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-left">Connected Email Accounts</h3>
                 <p className="text-sm text-gray-500 dark:text-white/40 mb-6 text-left">
                   Connect your Gmail so job applications are sent from your personal email, boosting response rates.
                 </p>
@@ -976,12 +976,12 @@ export default function SettingsPage() {
           {activeTab === 'billing' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="card">
-                <h3 className="font-semibold mb-6">Current Plan</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-6">Current Plan</h3>
                 <div className="p-4 rounded-xl bg-neon-blue/5 border border-neon-blue/20 flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <Zap className="w-6 h-6 text-neon-blue" />
                     <div>
-                      <div className="font-semibold">{planLabel[userPlan] || userPlan} Plan</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{planLabel[userPlan] || userPlan} Plan</div>
                       <div className="text-sm text-gray-500 dark:text-white/40">
                         {userPlan === 'FREE'
                           ? 'Free forever'
@@ -1041,7 +1041,7 @@ export default function SettingsPage() {
 
               {/* Coupon Redemption */}
               <div className="card mt-6">
-                <h3 className="font-semibold mb-2">Have a Coupon Code?</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Have a Coupon Code?</h3>
                 <p className="text-sm text-gray-500 dark:text-white/40 mb-4">Enter your coupon code to upgrade your plan.</p>
                 <div className="flex gap-2">
                   <input
@@ -1086,7 +1086,7 @@ export default function SettingsPage() {
                     <Gift className="w-5 h-5 text-neon-green" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Refer & Earn</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Refer & Earn</h3>
                     <p className="text-sm text-gray-500 dark:text-white/40">
                       Both you and your friend get +5 extra applications this week when they sign up!
                     </p>
@@ -1202,7 +1202,7 @@ export default function SettingsPage() {
           {activeTab === 'coach' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="card">
-                <h3 className="font-semibold mb-6">AI Coach Customization</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-6">AI Coach Customization</h3>
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm text-gray-500 dark:text-white/60 mb-3">Personality</label>
@@ -1244,7 +1244,7 @@ export default function SettingsPage() {
           {activeTab === 'notifications' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="card">
-                <h3 className="font-semibold mb-6">Notification Preferences</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-6">Notification Preferences</h3>
                 <div className="space-y-4">
                   {[
                     { label: 'New job matches', desc: 'Get notified when AI finds matching jobs' },
@@ -1276,7 +1276,7 @@ export default function SettingsPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               {/* Change Password */}
               <div className="card">
-                <h3 className="font-semibold mb-4">Change Password</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Change Password</h3>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (newPassword !== confirmPassword) {
@@ -1344,7 +1344,7 @@ export default function SettingsPage() {
 
               {/* Data Export */}
               <div className="card">
-                <h3 className="font-semibold mb-2">Download My Data</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Download My Data</h3>
                 <p className="text-sm text-gray-500 dark:text-white/40 mb-4">
                   Export all your data including profile, assessments, career plans, resumes, and more as a JSON file.
                 </p>
@@ -1375,7 +1375,7 @@ export default function SettingsPage() {
 
               {/* Two-Factor Authentication */}
               <div className="card">
-                <h3 className="font-semibold mb-2">Two-Factor Authentication</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Two-Factor Authentication</h3>
                 <p className="text-sm text-gray-500 dark:text-white/40 mb-3">
                   Add an extra layer of security to your account with two-factor authentication.
                 </p>
@@ -1386,7 +1386,7 @@ export default function SettingsPage() {
 
               {/* Sign Out & Delete */}
               <div className="card">
-                <h3 className="font-semibold mb-4">Account Actions</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Account Actions</h3>
                 <div className="space-y-3">
                   <button
                     onClick={() => signOut({ callbackUrl: '/' })}

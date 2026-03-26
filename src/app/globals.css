@@ -87,8 +87,8 @@
   }
 
   .input-field {
-    @apply w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white
-           placeholder:text-white/30 focus:outline-none focus:border-neon-blue/50
+    @apply w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white
+           placeholder:text-gray-400 dark:placeholder:text-white/30 focus:outline-none focus:border-neon-blue/50
            focus:ring-2 focus:ring-neon-blue/20 transition-all duration-200;
   }
 
