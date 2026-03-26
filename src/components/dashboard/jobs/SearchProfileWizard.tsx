@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -82,6 +82,7 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   const isEditing = !!editProfile;
   // In edit mode, skip resume step (step 0) and go straight to job config
   const [step, setStep] = useState(isEditing ? 1 : 0);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -188,13 +189,18 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   const canSubmit = canProceedStep0 && canProceedStep1;
 
   const handleNext = () => {
-    if (step < STEPS.length - 1) setStep(step + 1);
+    if (step < STEPS.length - 1) {
+      setStep(step + 1);
+      setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }), 0);
+    }
   };
 
   const handleBack = () => {
-    // In edit mode, don't go back to step 0 (resume verification)
     const minStep = isEditing ? 1 : 0;
-    if (step > minStep) setStep(step - 1);
+    if (step > minStep) {
+      setStep(step - 1);
+      setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }), 0);
+    }
   };
 
   const handleSubmit = async () => {
@@ -305,7 +311,7 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5">
           <AnimatePresence mode="wait">
             {/* ═══ STEP 0: PROFILE ═══ */}
             {step === 0 && (
