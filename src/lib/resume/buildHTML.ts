@@ -299,8 +299,8 @@ function docHead(title: string, css: string): string {
     /* ── Reset ──────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Page sizing — A4, minimal top margin for page 2+ spacing, zero elsewhere ── */
-    @page { size: A4; margin: 8mm 0 0 0; }
+    /* ── Page sizing — A4, small margin for breathing room ── */
+    @page { size: A4; margin: 5mm 0 0 0; }
     @page :first { margin-top: 0; }
 
     ${css}
@@ -313,11 +313,10 @@ function docHead(title: string, css: string): string {
       .page {
         box-shadow: none !important; margin: 0 !important;
         overflow: visible !important; height: auto !important; min-height: auto !important;
-        padding-bottom: 6mm !important;
+        padding-bottom: 0 !important;
       }
-      /* Hide fill-space in print to prevent blank second page */
       .fill-space { display: none !important; }
-      .watermark { margin-top: 12px !important; }
+      .watermark { display: none !important; }
       .entry { page-break-inside: avoid; }
       .section-block { page-break-inside: avoid; }
       .section-title { page-break-after: avoid; }
@@ -325,14 +324,18 @@ function docHead(title: string, css: string): string {
     }
   </style>
   <script>
-    /* Multi-page: allow content to flow naturally across pages */
+    /* Smart page sizing: let content determine page count naturally */
     window.addEventListener('load', function() {
       var pages = document.querySelectorAll('.page');
       pages.forEach(function(page) {
-        /* Remove fixed height constraints so content flows to multiple pages */
         page.style.minHeight = 'auto';
         page.style.overflow = 'visible';
         page.style.height = 'auto';
+        /* Remove any flex stretching that could cause blank pages */
+        var fillSpace = page.querySelector('.fill-space');
+        if (fillSpace) fillSpace.style.display = 'none';
+        var wm = page.querySelector('.watermark');
+        if (wm) wm.style.display = 'none';
       });
     });
   </script>
@@ -473,7 +476,7 @@ function buildModern(p: BuildHTMLParams): string {
     }
     @media print {
       .page::before {
-        position: fixed; top: 0; left: 0; bottom: 0;
+        position: fixed; top: 0; left: 0; height: 100%;
         width: 30%; background: #f8fafc;
         z-index: 0;
       }
