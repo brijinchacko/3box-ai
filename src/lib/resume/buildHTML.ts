@@ -522,28 +522,28 @@ function buildModern(p: BuildHTMLParams): string {
       color: ${accent}; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid ${accent};
     }
     .section-title:first-child { margin-top: 0; }
-    .summary { font-size: 12px; color: #4b5563; line-height: 1.55; margin-bottom: 6px; }
+    .summary { font-size: 12pt; color: #4b5563; line-height: 1.55; margin-bottom: 6px; }
 
     /* ── Entries ─────────────────────────────── */
     .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 12px; color: #6b7280; }
-    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
-    .entry-location { font-size: 11px; color: #9ca3af; margin-bottom: 3px; }
-    .edu-detail { font-size: 12px; color: #4b5563; margin-top: 2px; }
+    .entry-role { font-weight: 600; font-size: 13pt; color: #111827; }
+    .entry-company { font-size: 12pt; color: #6b7280; }
+    .entry-date { font-size: 11pt; color: #9ca3af; white-space: nowrap; }
+    .entry-location { font-size: 11pt; color: #9ca3af; margin-bottom: 3px; }
+    .edu-detail { font-size: 12pt; color: #4b5563; margin-top: 2px; }
     ul { list-style: disc; padding-left: 16px; margin-top: 4px; }
-    li { font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.55; }
+    li { font-size: 12pt; color: #374151; margin-bottom: 3px; line-height: 1.55; }
     .entry { page-break-inside: avoid; margin-bottom: 14px; }
     .section-block { page-break-inside: avoid; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
-    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .project-link { font-size: 11pt; color: ${accent}; text-decoration: none; }
+    .project-desc { font-size: 12pt; color: #4b5563; margin-top: 2px; line-height: 1.5; }
+    .project-tech { font-size: 11pt; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12px; color: #374151; margin-bottom: 4px; }
+    .cert { font-size: 12pt; color: #374151; margin-bottom: 4px; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
     .verified { color: #16a34a; margin-right: 4px; }
@@ -705,23 +705,23 @@ function buildClassic(p: BuildHTMLParams): string {
     /* ── Entries ─────────────────────────────── */
     .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 700; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 12px; color: #6b7280; }
-    .entry-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
-    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .entry-role { font-weight: 700; font-size: 13pt; color: #111827; }
+    .entry-company { font-size: 12pt; color: #6b7280; }
+    .entry-sub { font-size: 12pt; color: #6b7280; margin-top: 2px; }
+    .entry-date { font-size: 11pt; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
     ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
-    li { font-size: 12px; color: #374151; margin-bottom: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
+    li { font-size: 12pt; color: #374151; margin-bottom: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Summary ─────────────────────────────── */
-    .summary { font-size: 12px; color: #4b5563; line-height: 1.55; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .summary { font-size: 12pt; color: #4b5563; line-height: 1.55; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-link { font-size: 11pt; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-desc { font-size: 12pt; color: #4b5563; margin-top: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-tech { font-size: 11pt; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12px; color: #374151; margin-bottom: 4px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .cert { font-size: 12pt; color: #374151; margin-bottom: 4px; font-family: 'Segoe UI', system-ui, sans-serif; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
     .verified { color: #16a34a; margin-right: 4px; }
@@ -852,30 +852,30 @@ function buildMinimal(p: BuildHTMLParams): string {
     }
 
     /* ── Skills (dot-joined string) ──────────── */
-    .skills-text { font-size: 12px; color: #4b5563; line-height: 1.6; }
+    .skills-text { font-size: 12pt; color: #4b5563; line-height: 1.6; }
 
     /* ── Entries ─────────────────────────────── */
     .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 13px; color: #6b7280; }
-    .entry-degree { font-weight: 500; font-size: 13px; color: #111827; }
-    .entry-institution { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-    .entry-date { font-size: 11px; color: #d1d5db; white-space: nowrap; }
+    .entry-role { font-weight: 600; font-size: 13pt; color: #111827; }
+    .entry-company { font-size: 13pt; color: #6b7280; }
+    .entry-degree { font-weight: 500; font-size: 13pt; color: #111827; }
+    .entry-institution { font-size: 12pt; color: #9ca3af; margin-top: 2px; }
+    .entry-date { font-size: 11pt; color: #d1d5db; white-space: nowrap; }
     ul { list-style: none; padding-left: 0; margin-top: 4px; }
-    li { font-size: 12px; color: #4b5563; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
+    li { font-size: 12pt; color: #4b5563; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
     li::before { content: '\\2022'; position: absolute; left: 0; color: #d1d5db; font-size: 9px; top: 2px; }
 
     /* ── Summary ─────────────────────────────── */
-    .summary { font-size: 12px; color: #6b7280; line-height: 1.6; }
+    .summary { font-size: 12pt; color: #6b7280; line-height: 1.6; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: #6b7280; text-decoration: none; }
-    .project-desc { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.55; }
-    .project-tech { font-size: 11px; color: #d1d5db; margin-top: 2px; }
+    .project-link { font-size: 11pt; color: #6b7280; text-decoration: none; }
+    .project-desc { font-size: 12pt; color: #6b7280; margin-top: 2px; line-height: 1.55; }
+    .project-tech { font-size: 11pt; color: #d1d5db; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .cert { font-size: 12pt; color: #6b7280; margin-bottom: 4px; }
     .cert-name { font-weight: 500; color: #374151; }
     .cert-issuer { color: #9ca3af; }
 
@@ -1026,18 +1026,18 @@ function buildCreative(p: BuildHTMLParams): string {
       width: 3px; flex-shrink: 0; border-radius: 2px;
       background: ${accent};
     }
-    .summary { font-size: 12px; color: #4b5563; line-height: 1.6; }
+    .summary { font-size: 12pt; color: #4b5563; line-height: 1.6; }
 
     /* ── Entries ─────────────────────────────── */
     .entry { margin-bottom: 14px; page-break-inside: avoid; }
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
-    .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
-    .entry-company { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-    .entry-degree { font-weight: 500; font-size: 13px; color: #111827; }
-    .entry-institution { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+    .entry-role { font-weight: 600; font-size: 13pt; color: #111827; }
+    .entry-company { font-size: 12pt; color: #9ca3af; margin-top: 2px; }
+    .entry-degree { font-weight: 500; font-size: 13pt; color: #111827; }
+    .entry-institution { font-size: 12pt; color: #9ca3af; margin-top: 2px; }
+    .entry-date { font-size: 11pt; color: #9ca3af; white-space: nowrap; }
     ul { list-style: none; padding-left: 0; margin-top: 4px; }
-    li { font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
+    li { font-size: 12pt; color: #374151; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
     li::before {
       content: ''; position: absolute; left: 0; top: 5px;
       width: 3px; height: 10px; border-radius: 2px;
@@ -1045,12 +1045,12 @@ function buildCreative(p: BuildHTMLParams): string {
     }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
-    .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.55; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .project-link { font-size: 11pt; color: ${accent}; text-decoration: none; }
+    .project-desc { font-size: 12pt; color: #4b5563; margin-top: 2px; line-height: 1.55; }
+    .project-tech { font-size: 11pt; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
-    .cert { font-size: 12px; color: #374151; margin-bottom: 4px; }
+    .cert { font-size: 12pt; color: #374151; margin-bottom: 4px; }
     .cert-name { font-weight: 600; }
     .cert-issuer { color: #6b7280; }
 
