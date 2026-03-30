@@ -40,8 +40,8 @@ export async function searchArbeitnow(
 
   try {
     const url = new URL('https://www.arbeitnow.com/api/job-board-api');
-    // Arbeitnow supports page-based pagination
     url.searchParams.set('page', '1');
+    // Note: Arbeitnow returns all jobs paginated; we filter client-side by keywords
 
     const response = await fetch(url.toString(), {
       headers: {

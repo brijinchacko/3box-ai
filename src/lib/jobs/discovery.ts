@@ -114,6 +114,7 @@ export const ALL_PLATFORMS = Object.keys(PLATFORM_SEARCH_MAP);
 async function searchRemoteOKWrapper(role: string, location: string): Promise<DiscoveredJob[]> {
   try {
     const results = await searchRemoteOK(role, location);
+    console.log(`[RemoteOK] Found ${results.length} jobs for "${role}"`);
     return results.map((j) => ({
       id: j.id,
       title: j.title,
@@ -134,6 +135,7 @@ async function searchRemoteOKWrapper(role: string, location: string): Promise<Di
 async function searchArbeitnowWrapper(role: string, location: string): Promise<DiscoveredJob[]> {
   try {
     const results = await searchArbeitnow(role, location);
+    console.log(`[Arbeitnow] Found ${results.length} jobs for "${role}"`);
     return results.map((j) => ({
       id: j.id,
       title: j.title,
@@ -477,15 +479,16 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
   const targetWords = userProfile.targetRole
     .toLowerCase()
     .split(/[\s,&\-/]+/)
-    .filter((w) => w.length > 2 && !['the', 'and', 'for', 'with', 'jobs'].includes(w));
+    .filter((w) => w.length > 1 && !['the', 'and', 'for', 'with', 'jobs', 'in', 'of', 'at', 'to', 'a'].includes(w));
 
   const relevantJobs = scoredJobs.filter((job) => {
     const titleLower = job.title.toLowerCase();
+    const descLower = (job.description || '').toLowerCase();
     const hasRelevantKeyword = targetWords.some(
-      (keyword) => titleLower.includes(keyword),
+      (keyword) => titleLower.includes(keyword) || descLower.includes(keyword),
     );
-    // Keep if title has at least one keyword match, OR score is above 50
-    if (!hasRelevantKeyword && (job.matchScore || 0) < 50) {
+    // Keep if title/description has at least one keyword match, OR score is above 25
+    if (!hasRelevantKeyword && (job.matchScore || 0) < 25) {
       return false;
     }
     return true;
