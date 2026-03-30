@@ -152,6 +152,7 @@ function AutopilotApplications() {
           <option value="OFFER">Offer</option>
           <option value="QUEUED">Queued</option>
           <option value="REJECTED">Rejected</option>
+          <option value="WITHDRAWN">Withdrawn</option>
         </select>
       </div>
 
@@ -254,11 +255,34 @@ function AutopilotApplications() {
                       {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {app.jobUrl && (
-                        <a href={app.jobUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400" />
-                        </a>
-                      )}
+                      <div className="flex items-center justify-center gap-1.5">
+                        {app.jobUrl && (
+                          <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" title="View job posting">
+                            <ExternalLink className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400" />
+                          </a>
+                        )}
+                        {(app.status === 'QUEUED' || app.status === 'APPLIED' || app.status === 'EMAILED') && (
+                          <button
+                            title="Withdraw application"
+                            onClick={async () => {
+                              if (!confirm(`Withdraw application for "${app.jobTitle}" at ${app.company}?`)) return;
+                              try {
+                                const res = await fetch('/api/applications', {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: app.id, status: 'WITHDRAWN' }),
+                                });
+                                if (res.ok) {
+                                  fetchApps(statusFilter, page);
+                                }
+                              } catch {}
+                            }}
+                            className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
