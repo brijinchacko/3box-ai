@@ -95,6 +95,9 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   // Step 1: Job Search config — pre-fill from editProfile if editing
   const [jobTitle, setJobTitle] = useState(editProfile?.jobTitle || '');
   const [location, setLocation] = useState(editProfile?.location || '');
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const locationRef = useRef<HTMLDivElement>(null);
   const [remote, setRemote] = useState(editProfile?.remote || false);
   const [experienceLevel, setExperienceLevel] = useState(editProfile?.experienceLevel || '');
   const [includeKeywords, setIncludeKeywords] = useState(editProfile?.includeKeywords || '');
@@ -106,6 +109,66 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
       ? (Array.isArray(editProfile.boards) ? editProfile.boards : String(editProfile.boards).split(',').filter(Boolean))
       : ['linkedin', 'indeed'],
   );
+
+  // ── Location autocomplete ──
+  const POPULAR_CITIES = [
+    // India
+    'Bangalore, India', 'Mumbai, India', 'Delhi, India', 'Hyderabad, India', 'Chennai, India',
+    'Pune, India', 'Kolkata, India', 'Ahmedabad, India', 'Bengaluru, India', 'Noida, India',
+    'Gurgaon, India', 'Gurugram, India', 'Kochi, India', 'Jaipur, India', 'Chandigarh, India',
+    'Indore, India', 'Coimbatore, India', 'Thiruvananthapuram, India', 'Lucknow, India', 'Nagpur, India',
+    // USA
+    'San Francisco, CA', 'New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Austin, TX',
+    'Seattle, WA', 'Boston, MA', 'Denver, CO', 'Atlanta, GA', 'Dallas, TX',
+    'San Jose, CA', 'Washington, DC', 'Portland, OR', 'Miami, FL', 'Phoenix, AZ',
+    'Minneapolis, MN', 'San Diego, CA', 'Philadelphia, PA', 'Houston, TX', 'Raleigh, NC',
+    // UK
+    'London, UK', 'Manchester, UK', 'Birmingham, UK', 'Edinburgh, UK', 'Bristol, UK', 'Leeds, UK',
+    // Canada
+    'Toronto, Canada', 'Vancouver, Canada', 'Montreal, Canada', 'Calgary, Canada', 'Ottawa, Canada',
+    // Australia
+    'Sydney, Australia', 'Melbourne, Australia', 'Brisbane, Australia', 'Perth, Australia',
+    // Europe
+    'Berlin, Germany', 'Amsterdam, Netherlands', 'Dublin, Ireland', 'Paris, France', 'Barcelona, Spain',
+    'Stockholm, Sweden', 'Zurich, Switzerland', 'Munich, Germany', 'Vienna, Austria', 'Copenhagen, Denmark',
+    // Middle East
+    'Dubai, UAE', 'Abu Dhabi, UAE', 'Riyadh, Saudi Arabia', 'Doha, Qatar', 'Sharjah, UAE',
+    // Singapore
+    'Singapore',
+    // Remote
+    'Remote', 'Remote - Worldwide', 'Remote - US', 'Remote - India', 'Remote - Europe',
+  ];
+
+  const handleLocationChange = (val: string) => {
+    setLocation(val);
+    if (val.trim().length > 0) {
+      const filtered = POPULAR_CITIES.filter((city) =>
+        city.toLowerCase().includes(val.toLowerCase()),
+      ).slice(0, 6);
+      setLocationSuggestions(filtered);
+      setShowLocationDropdown(filtered.length > 0);
+    } else {
+      setLocationSuggestions([]);
+      setShowLocationDropdown(false);
+    }
+  };
+
+  const selectLocation = (city: string) => {
+    setLocation(city);
+    setShowLocationDropdown(false);
+    setLocationSuggestions([]);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Step 2: Automation + Email
   const [autoSearch, setAutoSearch] = useState(editProfile?.autoSearch ?? true);
@@ -527,17 +590,42 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
 
                 {/* Location + Remote */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div ref={locationRef}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
                       <input
                         type="text"
                         value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. San Francisco, CA"
+                        onChange={(e) => handleLocationChange(e.target.value)}
+                        onFocus={() => {
+                          if (location.trim().length > 0 && locationSuggestions.length > 0) {
+                            setShowLocationDropdown(true);
+                          } else if (location.trim().length === 0) {
+                            // Show popular cities on focus
+                            setLocationSuggestions(['Remote', 'Bangalore, India', 'Mumbai, India', 'San Francisco, CA', 'New York, NY', 'London, UK']);
+                            setShowLocationDropdown(true);
+                          }
+                        }}
+                        placeholder="e.g. Bangalore, San Francisco"
+                        autoComplete="off"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
+                      {showLocationDropdown && locationSuggestions.length > 0 && (
+                        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+                          {locationSuggestions.map((city) => (
+                            <button
+                              key={city}
+                              type="button"
+                              onClick={() => selectLocation(city)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
+                            >
+                              <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                              {city}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
