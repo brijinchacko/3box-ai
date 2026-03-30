@@ -475,24 +475,38 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
     ),
   }));
 
-  // 6. Filter out clearly irrelevant results (no title keyword overlap + low score)
-  const targetWords = userProfile.targetRole
-    .toLowerCase()
+  // 6. Filter and rank by title relevance — prioritize exact role matches
+  const roleLower = userProfile.targetRole.toLowerCase();
+  const targetWords = roleLower
     .split(/[\s,&\-/]+/)
     .filter((w) => w.length > 1 && !['the', 'and', 'for', 'with', 'jobs', 'in', 'of', 'at', 'to', 'a'].includes(w));
 
-  const relevantJobs = scoredJobs.filter((job) => {
-    const titleLower = job.title.toLowerCase();
-    const descLower = (job.description || '').toLowerCase();
-    const hasRelevantKeyword = targetWords.some(
-      (keyword) => titleLower.includes(keyword) || descLower.includes(keyword),
-    );
-    // Keep if title/description has at least one keyword match, OR score is above 25
-    if (!hasRelevantKeyword && (job.matchScore || 0) < 25) {
-      return false;
-    }
-    return true;
-  });
+  const relevantJobs = scoredJobs
+    .map((job) => {
+      const titleLower = job.title.toLowerCase();
+      // Exact role phrase in title = best match, big score boost
+      if (titleLower.includes(roleLower)) {
+        return { ...job, matchScore: Math.min(100, (job.matchScore || 0) + 30) };
+      }
+      // All keywords present in title = strong match
+      const allInTitle = targetWords.every((w) => titleLower.includes(w));
+      if (allInTitle) {
+        return { ...job, matchScore: Math.min(100, (job.matchScore || 0) + 20) };
+      }
+      // Count how many keywords match in title
+      const titleMatchCount = targetWords.filter((w) => titleLower.includes(w)).length;
+      const titleMatchRatio = targetWords.length > 0 ? titleMatchCount / targetWords.length : 0;
+      // Keep if at least 50% of keywords in title, OR score is above 40
+      if (titleMatchRatio >= 0.5) {
+        return { ...job, matchScore: Math.min(100, (job.matchScore || 0) + Math.round(titleMatchRatio * 15)) };
+      }
+      if ((job.matchScore || 0) >= 40) {
+        return job;
+      }
+      // Not relevant enough — filter out
+      return null;
+    })
+    .filter((job): job is DiscoveredJob => job !== null);
 
   console.log(`[Discovery] After relevance filter: ${relevantJobs.length} (removed ${scoredJobs.length - relevantJobs.length} irrelevant)`);
 

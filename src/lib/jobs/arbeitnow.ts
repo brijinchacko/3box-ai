@@ -59,26 +59,40 @@ export async function searchArbeitnow(
     const data = await response.json();
     const rawJobs = data?.data || [];
 
-    // Filter by keywords and location
-    const searchTerms = keywords.toLowerCase().split(/\s+/).filter(Boolean);
+    // Filter and rank by keyword relevance
+    const searchLower = keywords.toLowerCase();
+    const searchTerms = searchLower.split(/\s+/).filter(Boolean);
     const locationTerms = location.toLowerCase().split(/[\s,]+/).filter(Boolean);
 
-    const jobs: ArbeitnowJob[] = rawJobs
-      .filter((j: any) => {
-        if (!j.title || !j.company_name) return false;
-        const searchText = `${j.title} ${j.company_name} ${j.description || ''} ${j.tags?.join(' ') || ''}`.toLowerCase();
-        const matchesKeyword = searchTerms.some((term) => searchText.includes(term));
-        if (!matchesKeyword) return false;
-
-        // If location specified, filter by it (loose match)
+    const scored = rawJobs
+      .filter((j: any) => j.title && j.company_name)
+      .map((j: any) => {
+        const titleLower = (j.title || '').toLowerCase();
+        // Exact phrase match in title = highest priority
+        if (titleLower.includes(searchLower)) return { j, score: 100 };
+        // All keywords in title
+        const allInTitle = searchTerms.every((term) => titleLower.includes(term));
+        if (allInTitle) return { j, score: 80 };
+        // Most keywords in title (at least 60%)
+        const titleMatches = searchTerms.filter((term) => titleLower.includes(term)).length;
+        const titleRatio = titleMatches / searchTerms.length;
+        if (titleRatio >= 0.6) return { j, score: 50 + titleRatio * 20 };
+        return { j, score: 0 };
+      })
+      .filter((item) => {
+        if (item.score === 0) return false;
+        // If location specified, filter by it
         if (locationTerms.length > 0) {
-          const jobLocation = `${j.location || ''} ${j.remote ? 'remote' : ''}`.toLowerCase();
-          const matchesLocation = locationTerms.some((term) => jobLocation.includes(term)) || j.remote;
-          return matchesLocation;
+          const jobLocation = `${item.j.location || ''} ${item.j.remote ? 'remote' : ''}`.toLowerCase();
+          return locationTerms.some((term) => jobLocation.includes(term)) || item.j.remote;
         }
         return true;
       })
+      .sort((a, b) => b.score - a.score);
+
+    const jobs: ArbeitnowJob[] = scored
       .slice(0, 20)
+      .map(({ j }) => j)
       .map((j: any) => ({
         id: `arbeitnow_${j.slug || j.id || Math.random().toString(36).slice(2)}`,
         title: j.title || '',

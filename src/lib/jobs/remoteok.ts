@@ -35,15 +35,30 @@ export async function searchRemoteOK(
     const jobs = await fetchRemoteOKJobs();
     if (!jobs.length) return [];
 
-    // Filter by keywords
-    const searchTerms = keywords.toLowerCase().split(/\s+/).filter(Boolean);
-    const filtered = jobs.filter((job) => {
-      const searchText = `${job.title} ${job.company} ${job.description}`.toLowerCase();
-      return searchTerms.some((term) => searchText.includes(term));
-    });
+    // Filter and rank by keyword relevance
+    const searchLower = keywords.toLowerCase();
+    const searchTerms = searchLower.split(/\s+/).filter(Boolean);
 
-    // Return top 20 matches
-    return filtered.slice(0, 20);
+    const scored = jobs
+      .map((job) => {
+        const titleLower = job.title.toLowerCase();
+        // Exact phrase match in title = highest priority
+        if (titleLower.includes(searchLower)) return { job, score: 100 };
+        // All keywords present in title
+        const allInTitle = searchTerms.every((term) => titleLower.includes(term));
+        if (allInTitle) return { job, score: 80 };
+        // Most keywords in title (at least 60% of terms)
+        const titleMatches = searchTerms.filter((term) => titleLower.includes(term)).length;
+        const titleRatio = titleMatches / searchTerms.length;
+        if (titleRatio >= 0.6) return { job, score: 50 + titleRatio * 20 };
+        // Skip jobs that only match one generic word in title
+        return { job, score: 0 };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    // Return top 20 most relevant matches
+    return scored.slice(0, 20).map((item) => item.job);
   } catch (err) {
     console.warn('[RemoteOK] Search failed:', (err as Error).message);
     return [];

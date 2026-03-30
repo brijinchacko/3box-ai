@@ -80,7 +80,7 @@ export async function searchJooble(
         title: job.title || '',
         company: job.company || 'Unknown Company',
         location: isRemote ? 'Remote' : job.location || 'Not specified',
-        description: (job.snippet || '').slice(0, 500),
+        description: (job.snippet || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim().slice(0, 500),
         salary: job.salary || null,
         url: job.link || '',
         source: `Jooble (${job.source || 'aggregated'})`,
