@@ -1,0 +1,26 @@
+name: Deploy Staging to VPS
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/3box-ai
+            git fetch 3box staging
+            git checkout staging
+            git pull 3box staging
+            export NODE_OPTIONS="--max-old-space-size=4096"
+            npm run build
+            pm2 restart all
+            echo "✅ Staging deployed successfully"
