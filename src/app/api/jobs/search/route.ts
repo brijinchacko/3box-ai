@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
     if (!effectivePlatforms && isPremiumSearch) {
       // Premium: exclude adzuna and jsearch for better quality results
       effectivePlatforms = [
+        'remoteok', 'arbeitnow',
         'google_free', 'linkedin_free', 'naukri_free', 'indeed_free',
         'google_jobs', 'linkedin', 'naukri', 'indeed',
         'jooble',

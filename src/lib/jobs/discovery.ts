@@ -25,6 +25,8 @@ import {
   searchIndeedFree,
   type ScrapedJob,
 } from './google-scraper';
+import { searchRemoteOK } from './remoteok';
+import { searchArbeitnow } from './arbeitnow';
 import { calculateMatchScore } from './matcher';
 
 export interface DiscoveredJob {
@@ -84,6 +86,9 @@ function wrapFreeScraperFn(
 }
 
 const PLATFORM_SEARCH_MAP: Record<string, SearchFn> = {
+  // ── Free, no API key needed ──────────────────────
+  remoteok: searchRemoteOKWrapper,
+  arbeitnow: searchArbeitnowWrapper,
   // Free Google scraping — no API key needed (rate-limited, cached)
   google_free: wrapFreeScraperFn(searchGoogleJobsFree),
   linkedin_free: wrapFreeScraperFn(searchLinkedInFree),
@@ -105,6 +110,46 @@ const PLATFORM_SEARCH_MAP: Record<string, SearchFn> = {
 export const ALL_PLATFORMS = Object.keys(PLATFORM_SEARCH_MAP);
 
 // ── Source Wrappers ──
+
+async function searchRemoteOKWrapper(role: string, location: string): Promise<DiscoveredJob[]> {
+  try {
+    const results = await searchRemoteOK(role, location);
+    return results.map((j) => ({
+      id: j.id,
+      title: j.title,
+      company: j.company,
+      location: j.location,
+      description: j.description,
+      salary: j.salary,
+      url: j.url,
+      source: j.source,
+      postedAt: j.postedAt,
+      remote: j.remote,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function searchArbeitnowWrapper(role: string, location: string): Promise<DiscoveredJob[]> {
+  try {
+    const results = await searchArbeitnow(role, location);
+    return results.map((j) => ({
+      id: j.id,
+      title: j.title,
+      company: j.company,
+      location: j.location,
+      description: j.description,
+      salary: j.salary,
+      url: j.url,
+      source: j.source,
+      postedAt: j.postedAt,
+      remote: j.remote,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 async function searchJoobleWrapper(role: string, location: string): Promise<DiscoveredJob[]> {
   const result = await searchJooble(role, location);
