@@ -1461,43 +1461,6 @@ function AutopilotResume() {
               </div>
             </div>
 
-            {/* Accent Color Picker */}
-            <div className="mt-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">Accent Color</h4>
-              <div className="flex flex-wrap gap-2 px-1">
-                {[
-                  { name: 'Blue', hex: '#2563eb' },
-                  { name: 'Teal', hex: '#0891b2' },
-                  { name: 'Red', hex: '#dc2626' },
-                  { name: 'Purple', hex: '#7c3aed' },
-                  { name: 'Gold', hex: '#b45309' },
-                  { name: 'Charcoal', hex: '#374151' },
-                  { name: 'Emerald', hex: '#059669' },
-                  { name: 'Navy', hex: '#1e3a5f' },
-                ].map((c) => {
-                  const isSelected = (resume as any).accentColor === c.hex || (!((resume as any).accentColor) && c.hex === '#2563eb');
-                  return (
-                    <button
-                      key={c.hex}
-                      title={c.name}
-                      onClick={() => setResume(prev => ({ ...prev, accentColor: c.hex } as any))}
-                      className="relative w-7 h-7 rounded-full border-2 transition-all duration-150 hover:scale-110"
-                      style={{
-                        backgroundColor: c.hex,
-                        borderColor: isSelected ? '#fff' : 'transparent',
-                        boxShadow: isSelected ? `0 0 0 2px ${c.hex}` : 'none',
-                      }}
-                    >
-                      {isSelected && (
-                        <svg className="absolute inset-0 m-auto w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* Resume File Management moved to Resume tab */}
           </div>
@@ -2524,6 +2487,43 @@ function AutopilotResume() {
                     </button>
                   );
                 })}
+              </div>
+              {/* Accent Color Picker */}
+              <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Accent Color</h4>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { name: 'Blue', hex: '#2563eb' },
+                    { name: 'Teal', hex: '#0891b2' },
+                    { name: 'Red', hex: '#dc2626' },
+                    { name: 'Purple', hex: '#7c3aed' },
+                    { name: 'Gold', hex: '#b45309' },
+                    { name: 'Charcoal', hex: '#374151' },
+                    { name: 'Emerald', hex: '#059669' },
+                    { name: 'Navy', hex: '#1e3a5f' },
+                  ].map((c) => {
+                    const isSelected = (resume as any).accentColor === c.hex || (!((resume as any).accentColor) && c.hex === '#2563eb');
+                    return (
+                      <button
+                        key={c.hex}
+                        title={c.name}
+                        onClick={() => setResume(prev => ({ ...prev, accentColor: c.hex } as any))}
+                        className="relative w-7 h-7 rounded-full border-2 transition-all duration-150 hover:scale-110"
+                        style={{
+                          backgroundColor: c.hex,
+                          borderColor: isSelected ? '#fff' : 'transparent',
+                          boxShadow: isSelected ? `0 0 0 2px ${c.hex}` : 'none',
+                        }}
+                      >
+                        {isSelected && (
+                          <svg className="absolute inset-0 m-auto w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             )}
