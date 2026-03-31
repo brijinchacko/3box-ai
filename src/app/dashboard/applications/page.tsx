@@ -57,6 +57,7 @@ function AutopilotApplications() {
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<{ total: number; queued: number; emailed: number; applied: number; interview: number; offer: number; rejected: number } | null>(null);
   const [scoutJobCount, setScoutJobCount] = useState(0);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   // Fetch scout job count for empty state CTA
   useEffect(() => {
@@ -92,6 +93,23 @@ function AutopilotApplications() {
   }, [statusFilter, page, fetchApps]);
 
   const handleFilterChange = (f: string) => { setStatusFilter(f); setPage(1); };
+
+  const handleWithdraw = async (id: string) => {
+    if (!confirm('Withdraw this application? This will stop it from being processed.')) return;
+    setWithdrawingId(id);
+    try {
+      const res = await fetch('/api/applications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'WITHDRAWN' }),
+      });
+      if (res.ok) {
+        fetchApps(statusFilter, page);
+      }
+    } catch { /* ignore */ } finally {
+      setWithdrawingId(null);
+    }
+  };
 
   const filtered = searchQuery
     ? apps.filter(a => a.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -152,6 +170,7 @@ function AutopilotApplications() {
           <option value="OFFER">Offer</option>
           <option value="QUEUED">Queued</option>
           <option value="REJECTED">Rejected</option>
+          <option value="WITHDRAWN">Withdrawn</option>
         </select>
       </div>
 
@@ -198,7 +217,7 @@ function AutopilotApplications() {
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden lg:table-cell">Channel</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 hidden sm:table-cell">Date</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-10"></th>
+                <th className="text-center px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-20"></th>
               </tr>
             </thead>
             <tbody>
@@ -254,11 +273,27 @@ function AutopilotApplications() {
                       {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {app.jobUrl && (
-                        <a href={app.jobUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400" />
-                        </a>
-                      )}
+                      <div className="flex items-center justify-center gap-2">
+                        {['QUEUED', 'APPLIED', 'EMAILED'].includes(app.status) && (
+                          <button
+                            onClick={() => handleWithdraw(app.id)}
+                            disabled={withdrawingId === app.id}
+                            title="Withdraw application"
+                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                          >
+                            {withdrawingId === app.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <XCircle className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                        {app.jobUrl && (
+                          <a href={app.jobUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400" />
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

@@ -47,8 +47,8 @@ export async function generateResumePdf(data: ResumeData): Promise<Buffer> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const fontSize = { name: 18, sectionTitle: 12, body: 10, small: 9 };
-  const lineHeight = 14;
+  const fontSize = { name: 18, sectionTitle: 12, body: 12, small: 10 };
+  const lineHeight = 16;
   const sectionGap = 16;
 
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
