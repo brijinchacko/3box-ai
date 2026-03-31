@@ -10,14 +10,15 @@ import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
  * Uses free-tier model with fallback chain.
  */
 
-// ── Free model fallback chain (ordered by reliability + quality) ──
+// ── Model fallback chain: paid first (reliable), then free fallbacks ──
 const FREE_MODEL_CHAIN = [
+  'openai/gpt-4o-mini',
+  'deepseek/deepseek-chat',
   'nvidia/nemotron-3-super-120b-a12b:free',
   'openai/gpt-oss-120b:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free',
-  'google/gemma-3-27b-it:free',
   'meta-llama/llama-3.3-70b-instruct:free',
-  'qwen/qwen3.6-plus-preview:free',
+  'google/gemma-3-12b-it:free',
+  'stepfun/step-3.5-flash:free',
 ];
 
 export async function POST(req: Request) {
