@@ -490,23 +490,23 @@ function buildModern(p: BuildHTMLParams): string {
     }
     .sidebar h1 { font-size: 24px; font-weight: 700; color: ${accent}; margin-bottom: 12px; line-height: 1.2; }
     .sidebar-section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
       color: ${accent}; margin: 14px 0 5px; padding-bottom: 3px; border-bottom: 1px solid #d0d8e4;
     }
-    .sidebar-item { font-size: 11px; color: #374151; margin-bottom: 4px; word-break: break-word; line-height: 1.4; }
+    .sidebar-item { font-size: 12px; color: #374151; margin-bottom: 4px; word-break: break-word; line-height: 1.4; }
     .sidebar-item a { color: ${accent}; text-decoration: none; }
     .sidebar-icon { display: inline-block; width: 15px; color: ${accent}; font-style: normal; text-align: center; margin-right: 4px; }
     .skill-tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .skill-tag {
-      font-size: 10px; padding: 4px 10px; border-radius: 3px;
+      font-size: 11px; padding: 4px 10px; border-radius: 3px;
       background: ${accent}12; border: 1px solid ${accent}25; color: ${accent};
       white-space: nowrap;
     }
-    .sidebar-edu { font-size: 11px; margin-bottom: 6px; }
+    .sidebar-edu { font-size: 12px; margin-bottom: 6px; }
     .sidebar-edu-degree { font-weight: 600; color: #374151; }
     .sidebar-edu-school { color: #6b7280; }
-    .sidebar-edu-date { font-size: 10px; color: #9ca3af; }
-    .sidebar-cert { font-size: 11px; margin-bottom: 5px; }
+    .sidebar-edu-date { font-size: 11px; color: #9ca3af; }
+    .sidebar-cert { font-size: 12px; margin-bottom: 5px; }
     .sidebar-cert-name { font-weight: 600; color: #374151; }
     .sidebar-cert-issuer { color: #6b7280; }
     .sidebar-spacer { flex: 1; }
@@ -529,8 +529,8 @@ function buildModern(p: BuildHTMLParams): string {
     .entry-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
     .entry-role { font-weight: 600; font-size: 13px; color: #111827; }
     .entry-company { font-size: 12px; color: #6b7280; }
-    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
-    .entry-location { font-size: 11px; color: #9ca3af; margin-bottom: 3px; }
+    .entry-date { font-size: 12px; color: #9ca3af; white-space: nowrap; }
+    .entry-location { font-size: 12px; color: #9ca3af; margin-bottom: 3px; }
     .edu-detail { font-size: 12px; color: #4b5563; margin-top: 2px; }
     ul { list-style: disc; padding-left: 16px; margin-top: 4px; }
     li { font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.55; }
@@ -538,9 +538,9 @@ function buildModern(p: BuildHTMLParams): string {
     .section-block { page-break-inside: avoid; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
+    .project-link { font-size: 12px; color: ${accent}; text-decoration: none; }
     .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .project-tech { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
     .cert { font-size: 12px; color: #374151; margin-bottom: 4px; }
@@ -683,7 +683,7 @@ function buildClassic(p: BuildHTMLParams): string {
     /* ── Header ─────────────────────────────── */
     .header { text-align: center; margin-bottom: 12px; }
     .header h1 { font-size: 24px; font-weight: 700; color: ${accent}; margin-bottom: 6px; letter-spacing: 0.5px; }
-    .contact-row { font-size: 11px; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .contact-row { font-size: 12px; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif; }
     .contact-row a { color: ${accent}; text-decoration: none; }
     .bullet { color: #d1d5db; margin: 0 4px; }
     .header hr { border: none; border-top: 2px solid ${accent}; margin-top: 12px; }
@@ -697,7 +697,7 @@ function buildClassic(p: BuildHTMLParams): string {
     /* ── Skill pills ─────────────────────────── */
     .skill-pills { display: flex; flex-wrap: wrap; gap: 5px; }
     .skill-pill {
-      font-size: 11px; padding: 3px 10px; border-radius: 12px;
+      font-size: 12px; padding: 3px 10px; border-radius: 12px;
       border: 1px solid ${accent}40; background: ${accent}08; color: #374151;
       white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif;
     }
@@ -708,7 +708,7 @@ function buildClassic(p: BuildHTMLParams): string {
     .entry-role { font-weight: 700; font-size: 13px; color: #111827; }
     .entry-company { font-size: 12px; color: #6b7280; }
     .entry-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
-    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .entry-date { font-size: 12px; color: #9ca3af; white-space: nowrap; font-family: 'Segoe UI', system-ui, sans-serif; }
     ul { list-style: disc; padding-left: 16px; margin-top: 3px; }
     li { font-size: 12px; color: #374151; margin-bottom: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
 
@@ -716,9 +716,9 @@ function buildClassic(p: BuildHTMLParams): string {
     .summary { font-size: 12px; color: #4b5563; line-height: 1.55; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-link { font-size: 12px; color: ${accent}; text-decoration: none; font-family: 'Segoe UI', system-ui, sans-serif; }
     .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.5; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .project-tech { font-size: 12px; color: #9ca3af; margin-top: 2px; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     /* ── Certifications ─────────────────────── */
     .cert { font-size: 12px; color: #374151; margin-bottom: 4px; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -840,13 +840,13 @@ function buildMinimal(p: BuildHTMLParams): string {
     /* ── Header ─────────────────────────────── */
     .header { margin-bottom: 20px; }
     .header h1 { font-size: 28px; font-weight: 300; color: #111827; margin-bottom: 6px; letter-spacing: -0.5px; }
-    .contact-line { font-size: 11px; color: #9ca3af; }
+    .contact-line { font-size: 12px; color: #9ca3af; }
     .contact-line a { color: #6b7280; text-decoration: none; }
     .pipe { margin: 0 6px; color: #d1d5db; }
 
     /* ── Section titles ─────────────────────── */
     .section-title {
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2.5px;
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 2.5px;
       color: #9ca3af; margin: 18px 0 8px; padding-bottom: 6px;
       border-bottom: 1px solid #e5e7eb;
     }
@@ -861,18 +861,18 @@ function buildMinimal(p: BuildHTMLParams): string {
     .entry-company { font-size: 13px; color: #6b7280; }
     .entry-degree { font-weight: 500; font-size: 13px; color: #111827; }
     .entry-institution { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-    .entry-date { font-size: 11px; color: #d1d5db; white-space: nowrap; }
+    .entry-date { font-size: 12px; color: #d1d5db; white-space: nowrap; }
     ul { list-style: none; padding-left: 0; margin-top: 4px; }
     li { font-size: 12px; color: #4b5563; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
-    li::before { content: '\\2022'; position: absolute; left: 0; color: #d1d5db; font-size: 9px; top: 2px; }
+    li::before { content: '\\2022'; position: absolute; left: 0; color: #d1d5db; font-size: 10px; top: 2px; }
 
     /* ── Summary ─────────────────────────────── */
     .summary { font-size: 12px; color: #6b7280; line-height: 1.6; }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: #6b7280; text-decoration: none; }
+    .project-link { font-size: 12px; color: #6b7280; text-decoration: none; }
     .project-desc { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.55; }
-    .project-tech { font-size: 11px; color: #d1d5db; margin-top: 2px; }
+    .project-tech { font-size: 12px; color: #d1d5db; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
     .cert { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
@@ -999,12 +999,12 @@ function buildCreative(p: BuildHTMLParams): string {
       padding: 28px 32px 22px; color: #fff; flex-shrink: 0;
     }
     .creative-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
-    .creative-header .contact-row { font-size: 11px; color: rgba(255,255,255,0.85); }
+    .creative-header .contact-row { font-size: 12px; color: rgba(255,255,255,0.85); }
 
     /* ── Skill pills below header ────────────── */
     .skill-pills { padding: 12px 32px; display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
     .skill-pill {
-      display: inline-block; font-size: 11px; padding: 3px 12px;
+      display: inline-block; font-size: 12px; padding: 3px 12px;
       border-radius: 20px; white-space: nowrap; font-weight: 500;
     }
 
@@ -1035,7 +1035,7 @@ function buildCreative(p: BuildHTMLParams): string {
     .entry-company { font-size: 12px; color: #9ca3af; margin-top: 2px; }
     .entry-degree { font-weight: 500; font-size: 13px; color: #111827; }
     .entry-institution { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-    .entry-date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+    .entry-date { font-size: 12px; color: #9ca3af; white-space: nowrap; }
     ul { list-style: none; padding-left: 0; margin-top: 4px; }
     li { font-size: 12px; color: #374151; margin-bottom: 3px; line-height: 1.55; padding-left: 14px; position: relative; }
     li::before {
@@ -1045,9 +1045,9 @@ function buildCreative(p: BuildHTMLParams): string {
     }
 
     /* ── Projects ────────────────────────────── */
-    .project-link { font-size: 11px; color: ${accent}; text-decoration: none; }
+    .project-link { font-size: 12px; color: ${accent}; text-decoration: none; }
     .project-desc { font-size: 12px; color: #4b5563; margin-top: 2px; line-height: 1.55; }
-    .project-tech { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .project-tech { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
     /* ── Certifications ─────────────────────── */
     .cert { font-size: 12px; color: #374151; margin-bottom: 4px; }
