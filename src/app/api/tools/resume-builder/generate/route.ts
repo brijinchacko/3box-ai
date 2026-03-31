@@ -12,13 +12,12 @@ import { checkRateLimit, getClientIP } from '@/lib/rateLimit';
 
 // ── Free model fallback chain (ordered by reliability + quality) ──
 const FREE_MODEL_CHAIN = [
-  'qwen/qwen3.6-plus-preview:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
   'openai/gpt-oss-120b:free',
   'nousresearch/hermes-3-llama-3.1-405b:free',
   'google/gemma-3-27b-it:free',
   'meta-llama/llama-3.3-70b-instruct:free',
-  AI_MODELS.free.id,
+  'qwen/qwen3.6-plus-preview:free',
 ];
 
 export async function POST(req: Request) {
@@ -98,7 +97,7 @@ Rules:
           model: modelId,
           temperature: 0.7,
           maxTokens: 4096,
-          timeout: 45000,
+          timeout: 25000,
         });
 
         // Check if we got a non-empty response
