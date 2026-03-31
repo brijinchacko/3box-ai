@@ -40,7 +40,14 @@ function getPromptForSection(
       const bullets = Array.isArray(content) ? content.join('\n- ') : String(content);
       return {
         system:
-          'Enhance these resume bullet points with quantified achievements, strong action verbs (Led, Built, Improved, Delivered), and ATS keywords. Return ONLY JSON: { "bullets": ["bullet1", "bullet2", ...] }',
+          `You are an expert resume writer. Enhance the bullet points for a specific role. Rules:
+- Return 3 to 5 bullet points MAXIMUM (pick the most impactful ones, drop weak/redundant points)
+- Each bullet must be DIRECTLY relevant to the given role and company context
+- Use strong action verbs (Led, Built, Improved, Delivered, Streamlined, Reduced, etc.)
+- Include quantified achievements where possible (percentages, dollar amounts, team sizes)
+- Make bullets ATS-friendly with industry keywords
+- Do NOT add generic/filler bullets — quality over quantity
+Return ONLY JSON: { "bullets": ["bullet1", "bullet2", ...] }`,
         user: `Current bullets:\n- ${bullets}\n\nRole: ${context.role || 'Not specified'}`,
       };
     }
@@ -147,6 +154,11 @@ export async function POST(req: Request) {
         { error: 'enhance_failed', message: 'AI returned invalid data. Please try again.' },
         { status: 500 },
       );
+    }
+
+    // Cap experience bullets at 5
+    if (parsedResult?.bullets && Array.isArray(parsedResult.bullets)) {
+      parsedResult.bullets = parsedResult.bullets.filter((b: string) => b && b.trim().length > 0).slice(0, 5);
     }
 
     return NextResponse.json({

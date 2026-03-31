@@ -547,7 +547,8 @@ export default function FreeResumeBuilderPage() {
       if (section === 'summary' && typeof enhanced === 'string') {
         setResume((prev) => ({ ...prev, summary: enhanced }));
       } else if (section === 'experience' && expId) {
-        const bullets = Array.isArray(enhanced) ? enhanced : typeof enhanced === 'string' ? enhanced.split('\n').filter(Boolean) : [];
+        const rawBullets = Array.isArray(enhanced) ? enhanced : Array.isArray(enhanced?.bullets) ? enhanced.bullets : typeof enhanced === 'string' ? enhanced.split('\n').filter(Boolean) : [];
+        const bullets = rawBullets.filter((b: string) => b && b.trim().length > 0).slice(0, 5);
         if (bullets.length > 0) {
           setResume((prev) => ({
             ...prev,

@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     // ── 3. Call AI with fallback ─────────────────
-    const systemPrompt = `You are a professional resume writer. Given a job description, create a complete resume tailored to match it. Return ONLY valid JSON (no markdown code blocks, no extra text) with this exact structure:
+    const systemPrompt = `You are a professional resume writer. Given a job description and candidate info, create a tailored resume that reflects the candidate's ACTUAL experience and target role. Return ONLY valid JSON (no markdown code blocks, no extra text) with this exact structure:
 {
   "contact": { "name": "", "email": "", "phone": "", "location": "", "linkedin": "", "portfolio": "" },
   "summary": "2-3 sentence professional summary",
@@ -76,9 +76,11 @@ export async function POST(req: Request) {
 
 Rules:
 - Use the provided candidate name and email in the contact section
-- Create 2-3 realistic experience entries matching the job description
+- Create 2-3 realistic experience entries that are DIRECTLY relevant to the target role and job description
+- Each experience entry must have 3 to 5 bullet points (no more than 5). Choose the most impactful and relevant achievements only
+- Bullet points must be quantified, action-verb-led (Led, Built, Improved, Delivered, etc.), and directly related to the role and responsibilities in the job description
 - Generate 8-12 relevant skills from the job description
-- Make experience bullets quantified and action-verb-led (Led, Built, Improved, etc.)
+- Match the candidate's years of experience when creating timeline/dates
 - Generate unique IDs like "exp-1", "exp-2", "edu-1"
 - Return ONLY the JSON object, nothing else`;
 
@@ -152,7 +154,7 @@ Rules:
     if (!Array.isArray(resume.skills)) resume.skills = [];
     if (typeof resume.summary !== 'string') resume.summary = '';
 
-    // Ensure IDs exist on experience entries
+    // Ensure IDs exist on experience entries, cap bullets at 5
     resume.experience = resume.experience.map((exp: any, i: number) => ({
       id: exp.id || `exp-${i + 1}`,
       company: exp.company || '',
@@ -161,7 +163,7 @@ Rules:
       startDate: exp.startDate || '',
       endDate: exp.endDate || '',
       current: exp.current || false,
-      bullets: Array.isArray(exp.bullets) ? exp.bullets : [],
+      bullets: Array.isArray(exp.bullets) ? exp.bullets.filter((b: string) => b && b.trim().length > 0).slice(0, 5) : [],
     }));
 
     // Ensure IDs exist on education entries
