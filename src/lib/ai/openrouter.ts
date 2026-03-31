@@ -127,14 +127,22 @@ export function redactPII(text: string): string {
  * Extract valid JSON from AI responses that may include markdown code blocks or extra text.
  */
 export function extractJSON(text: string): string {
+  // Strip <think>...</think> tags from reasoning models (Qwen, DeepSeek, etc.)
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // Strip any leading HTML if model returned an HTML page
+  if (cleaned.startsWith('<')) {
+    const jsonStart = cleaned.search(/[\[{]/);
+    if (jsonStart > 0) cleaned = cleaned.substring(jsonStart);
+  }
+
   // Try raw parse first
   try {
-    JSON.parse(text);
-    return text;
+    JSON.parse(cleaned);
+    return cleaned;
   } catch {}
 
   // Strip markdown code blocks: ```json ... ``` or ``` ... ```
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
   if (codeBlockMatch) {
     try {
       JSON.parse(codeBlockMatch[1].trim());
@@ -143,7 +151,7 @@ export function extractJSON(text: string): string {
   }
 
   // Try to find JSON object or array in the text
-  const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  const jsonMatch = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
   if (jsonMatch) {
     try {
       JSON.parse(jsonMatch[1]);
@@ -152,7 +160,7 @@ export function extractJSON(text: string): string {
   }
 
   // Return original text — caller will handle parse failure
-  return text;
+  return cleaned;
 }
 
 // ─── Core AI Chat Function ────────────────────
@@ -187,6 +195,12 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
   // Add JSON mode for models that support it
   if (request.jsonMode && modelConfig?.supportsJsonMode) {
     body.response_format = { type: 'json_object' };
+  }
+
+  // Disable thinking/reasoning output for models that support it (Qwen, DeepSeek, etc.)
+  if (modelId.includes('qwen') || modelId.includes('deepseek')) {
+    body.provider = { ...body.provider, require_parameters: false };
+    body.chat_template_kwargs = { enable_thinking: false };
   }
 
   const controller = new AbortController();

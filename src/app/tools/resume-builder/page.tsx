@@ -402,8 +402,12 @@ export default function FreeResumeBuilderPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Generation failed');
+        let msg = 'Generation failed. Please try again.';
+        try {
+          const err = await res.json();
+          msg = err.message || msg;
+        } catch { /* response wasn't JSON */ }
+        throw new Error(msg);
       }
 
       const data = await res.json();
