@@ -33,8 +33,8 @@ export interface AIModelConfig {
 
 export const AI_MODELS: Record<ModelTier, AIModelConfig> = {
   free: {
-    id: 'arcee-ai/trinity-large-preview:free',
-    name: 'Arcee Trinity Large (Free)',
+    id: 'qwen/qwen3.6-plus-preview:free',
+    name: 'Qwen 3.6 Plus (Free)',
     tier: 'free',
     maxTokens: 8192,
     supportsJsonMode: false,
