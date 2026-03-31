@@ -428,7 +428,7 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
     ),
   }));
 
-  // 6. Filter out clearly irrelevant results (no title keyword overlap + low score)
+  // 6. Filter out clearly irrelevant results (require ALL role keywords in title, or high score)
   const targetWords = userProfile.targetRole
     .toLowerCase()
     .split(/[\s,&\-/]+/)
@@ -436,11 +436,10 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
 
   const relevantJobs = scoredJobs.filter((job) => {
     const titleLower = job.title.toLowerCase();
-    const hasRelevantKeyword = targetWords.some(
-      (keyword) => titleLower.includes(keyword),
-    );
-    // Keep if title has at least one keyword match, OR score is above 50
-    if (!hasRelevantKeyword && (job.matchScore || 0) < 50) {
+    const matchedCount = targetWords.filter((keyword) => titleLower.includes(keyword)).length;
+    const allKeywordsMatch = matchedCount === targetWords.length;
+    // Keep if ALL keywords match in title, OR score is above 60
+    if (!allKeywordsMatch && (job.matchScore || 0) < 60) {
       return false;
     }
     return true;

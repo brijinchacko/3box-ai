@@ -39,10 +39,15 @@ export function calculateMatchScore(job: JobToScore, profile: UserProfile): numb
   if (jobTitle.includes(targetRole)) {
     score += 40; // Exact match
   } else {
-    // Partial word match
+    // Partial word match — require ALL role words for full score
     const matchedWords = roleWords.filter(word => jobTitle.includes(word));
-    const wordScore = (matchedWords.length / Math.max(roleWords.length, 1)) * 35;
-    score += Math.min(35, wordScore);
+    if (matchedWords.length === roleWords.length) {
+      score += 35; // All words present but not exact phrase
+    } else {
+      // Penalise heavily when only some words match
+      const wordScore = (matchedWords.length / Math.max(roleWords.length, 1)) * 15;
+      score += Math.min(15, wordScore);
+    }
 
     // Check for common role synonyms
     const synonymGroups: string[][] = [

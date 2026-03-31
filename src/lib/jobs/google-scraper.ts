@@ -383,7 +383,7 @@ export async function searchGoogleJobsFree(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  const query = encodeURIComponent(`${role} jobs${location ? ` in ${location}` : ' in India'}`);
+  const query = encodeURIComponent(`"${role}" jobs${location ? ` in ${location}` : ' in India'}`);
   const url = `https://www.google.com/search?q=${query}&ibp=htl;jobs&hl=en&gl=in`;
 
   const html = await fetchGoogle(url);
@@ -407,7 +407,7 @@ export async function searchLinkedInFree(
   if (cached) return cached;
 
   const query = encodeURIComponent(
-    `site:linkedin.com/jobs ${role}${location ? ` ${location}` : ' India'}`,
+    `site:linkedin.com/jobs "${role}"${location ? ` ${location}` : ' India'}`,
   );
   const url = `https://www.google.com/search?q=${query}&num=10&hl=en&gl=in`;
 
@@ -434,7 +434,7 @@ export async function searchNaukriFree(
   if (cached) return cached;
 
   const query = encodeURIComponent(
-    `site:naukri.com ${role}${location ? ` ${location}` : ''} jobs`,
+    `site:naukri.com "${role}"${location ? ` ${location}` : ''} jobs`,
   );
   const url = `https://www.google.com/search?q=${query}&num=10&hl=en&gl=in`;
 
@@ -465,7 +465,7 @@ export async function searchIndeedFree(
   if (cached) return cached;
 
   const query = encodeURIComponent(
-    `site:indeed.com ${role}${location ? ` ${location}` : ' India'} jobs`,
+    `site:indeed.com "${role}"${location ? ` ${location}` : ' India'} jobs`,
   );
   const url = `https://www.google.com/search?q=${query}&num=10&hl=en&gl=in`;
 
@@ -492,7 +492,7 @@ export async function searchAllFree(
   if (cached) return cached;
 
   const query = encodeURIComponent(
-    `(site:linkedin.com/jobs OR site:naukri.com OR site:indeed.com) ${role}${location ? ` ${location}` : ' India'}`,
+    `(site:linkedin.com/jobs OR site:naukri.com OR site:indeed.com) "${role}"${location ? ` ${location}` : ' India'}`,
   );
   const url = `https://www.google.com/search?q=${query}&num=15&hl=en&gl=in`;
 

@@ -185,7 +185,7 @@ export async function searchGoogleJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `${role}${location ? ` in ${location}` : ' in India'}`;
+  const query = `"${role}"${location ? ` in ${location}` : ' in India'}`;
   const data = await serperSearch(query, 'job', 10);
 
   if (!data.jobs) return [];
@@ -204,7 +204,7 @@ export async function searchLinkedInJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `site:linkedin.com/jobs ${role}${location ? ` ${location}` : ' India'}`;
+  const query = `site:linkedin.com/jobs "${role}"${location ? ` ${location}` : ' India'}`;
   const data = await serperSearch(query, 'search', 10);
 
   if (!data.organic) return [];
@@ -223,7 +223,7 @@ export async function searchNaukriJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `site:naukri.com ${role}${location ? ` ${location}` : ''} jobs`;
+  const query = `site:naukri.com "${role}"${location ? ` ${location}` : ''} jobs`;
   const data = await serperSearch(query, 'search', 10);
 
   if (!data.organic) return [];
@@ -242,7 +242,7 @@ export async function searchIndeedJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `site:indeed.co.in ${role}${location ? ` ${location}` : ''}`;
+  const query = `site:indeed.co.in "${role}"${location ? ` ${location}` : ''}`;
   const data = await serperSearch(query, 'search', 10);
 
   if (!data.organic) return [];

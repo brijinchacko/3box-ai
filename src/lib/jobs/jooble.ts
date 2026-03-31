@@ -57,7 +57,7 @@ export async function searchJooble(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        keywords,
+        keywords: `"${keywords}"`,
         location: location || 'India',
         page: String(page),
       }),
