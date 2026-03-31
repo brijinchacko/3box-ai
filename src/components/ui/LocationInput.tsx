@@ -11,6 +11,7 @@ interface LocationInputProps {
   label?: string;
   icon?: React.ElementType;
   className?: string;
+  inputClassName?: string;
   id?: string;
 }
 
@@ -21,6 +22,7 @@ export default function LocationInput({
   label,
   icon: Icon,
   className = '',
+  inputClassName,
   id,
 }: LocationInputProps) {
   const [suggestions, setSuggestions] = useState<CityEntry[]>([]);
@@ -131,12 +133,16 @@ export default function LocationInput({
     };
   }, []);
 
+  const defaultInputClass = `w-full bg-white/[0.05] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#00d4ff]/50 focus:ring-1 focus:ring-[#00d4ff]/25 transition-all ${
+    Icon ? 'pl-10' : ''
+  }`;
+
   return (
     <div className={`relative ${className}`}>
       {label && (
         <label
           htmlFor={id}
-          className="text-sm text-white/50 mb-1.5 block"
+          className="text-sm text-gray-500 dark:text-white/50 mb-1.5 block"
         >
           {label}
         </label>
@@ -144,7 +150,7 @@ export default function LocationInput({
 
       <div className="relative">
         {Icon && (
-          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none" />
+          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-white/30 pointer-events-none" />
         )}
 
         <input
@@ -157,16 +163,14 @@ export default function LocationInput({
           onBlur={handleBlur}
           placeholder={placeholder}
           autoComplete="off"
-          className={`w-full bg-white/[0.05] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#00d4ff]/50 focus:ring-1 focus:ring-[#00d4ff]/25 transition-all ${
-            Icon ? 'pl-10' : ''
-          }`}
+          className={inputClassName || defaultInputClass}
         />
       </div>
 
       {isOpen && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-[#1a1a2e] border border-white/10 rounded-lg shadow-xl overflow-hidden max-h-[240px] overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-white/10 rounded-lg shadow-xl overflow-hidden max-h-[240px] overflow-y-auto"
         >
           {suggestions.map((city, index) => (
             <div
@@ -179,13 +183,13 @@ export default function LocationInput({
               onMouseEnter={() => setHighlightedIndex(index)}
               className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer text-sm transition-colors ${
                 highlightedIndex === index
-                  ? 'bg-white/[0.08] text-white'
+                  ? 'bg-gray-100 dark:bg-white/[0.08] text-gray-900 dark:text-white'
                   : value === city.displayLabel
-                  ? 'text-[#00d4ff]'
-                  : 'text-white/70 hover:bg-white/[0.08]'
+                  ? 'text-blue-600 dark:text-[#00d4ff]'
+                  : 'text-gray-600 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.08]'
               }`}
             >
-              <MapPin className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+              <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-white/30 flex-shrink-0" />
               <span>{city.displayLabel}</span>
             </div>
           ))}
