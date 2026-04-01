@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight, Clock, X, Zap, AlertTriangle, CheckCircle2, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import LocationInput from '@/components/ui/LocationInput';
 import KanbanBoard from '@/components/dashboard/board/KanbanBoard';
 
 interface BoardJob {
@@ -551,15 +552,13 @@ export default function BoardPage() {
                 className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400"
               />
             </div>
-            <div className="relative w-full sm:w-48">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+            <div className="w-full sm:w-48">
+              <LocationInput
                 value={liveLocation}
-                onChange={(e) => setLiveLocation(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && runLiveSearch()}
+                onChange={setLiveLocation}
                 placeholder="Location"
-                className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400"
+                icon={MapPin}
+                inputClassName="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400"
               />
             </div>
             <button
