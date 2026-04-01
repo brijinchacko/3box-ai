@@ -447,12 +447,31 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
 
   console.log(`[Discovery] After relevance filter: ${relevantJobs.length} (removed ${scoredJobs.length - relevantJobs.length} irrelevant)`);
 
+  // 7. Filter by location if user specified one — keep remote jobs + location matches
+  const searchLocation = (params.locations[0] || '').toLowerCase().trim();
+  let locationFiltered = relevantJobs;
+  if (searchLocation && searchLocation.length > 2) {
+    const locParts = searchLocation.split(/[,\s]+/).filter(p => p.length > 2);
+    locationFiltered = relevantJobs.filter((job) => {
+      if (job.remote) return true; // Always keep remote jobs
+      const jobLoc = (job.location || '').toLowerCase();
+      if (!jobLoc) return false;
+      // Keep if any part of the searched location appears in the job location
+      return locParts.some(part => jobLoc.includes(part));
+    });
+    // Fallback: if too aggressive, keep at least some results
+    if (locationFiltered.length < 3 && relevantJobs.length > 0) {
+      locationFiltered = relevantJobs;
+    }
+    console.log(`[Discovery] After location filter (${searchLocation}): ${locationFiltered.length}`);
+  }
+
   // Sort by match score descending
-  relevantJobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+  locationFiltered.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
   console.log(
-    `[Discovery] Returning top ${Math.min(limit, relevantJobs.length)} of ${relevantJobs.length} scored jobs`,
+    `[Discovery] Returning top ${Math.min(limit, locationFiltered.length)} of ${locationFiltered.length} scored jobs`,
   );
 
-  return relevantJobs.slice(0, limit);
+  return locationFiltered.slice(0, limit);
 }

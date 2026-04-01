@@ -35,29 +35,22 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
 
     // Get user profile for match scoring
+    // IMPORTANT: Always use the actual search query as targetRole (not DB profile)
+    // so relevance filtering matches what the user searched for
     let userProfile = { targetRole: query, skills: [] as string[], location };
     try {
       const careerTwin = await prisma.careerTwin.findUnique({
         where: { userId: session.user.id },
-        select: { targetRoles: true, skillSnapshot: true },
+        select: { skillSnapshot: true },
       });
       if (careerTwin) {
-        const targets = careerTwin.targetRoles as any;
-        const targetRole =
-          Array.isArray(targets) && targets.length > 0
-            ? typeof targets[0] === 'string'
-              ? targets[0]
-              : targets[0]?.title || query
-            : typeof targets === 'string'
-              ? targets
-              : query;
         const skills = careerTwin.skillSnapshot as any;
         const skillList = Array.isArray(skills)
           ? skills.map((s: any) => (typeof s === 'string' ? s : s.skill || s.name || ''))
           : typeof skills === 'object' && skills !== null
             ? Object.keys(skills)
             : [];
-        userProfile = { targetRole: targetRole || query, skills: skillList, location };
+        userProfile = { targetRole: query, skills: skillList, location };
       }
     } catch (_e) { /* ignore */ }
 
