@@ -151,6 +151,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   OFFER: { label: 'Offer', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
   SKIPPED: { label: 'Apply Manually', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10' },
   EXPIRED: { label: 'Expired', color: 'text-gray-500 dark:text-gray-500', bg: 'bg-gray-50 dark:bg-gray-800' },
+  WITHDRAWN: { label: 'Withdrawn', color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800' },
 };
 
 const PERIODS = [
@@ -206,6 +207,10 @@ export default function BoardPage() {
   const [previewJob, setPreviewJob] = useState<LiveSearchJob | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // Board-level apply/withdraw state
+  const [boardApplyingId, setBoardApplyingId] = useState<string | null>(null);
+  const [boardWithdrawingId, setBoardWithdrawingId] = useState<string | null>(null);
+
   const openApplyPreview = (job: LiveSearchJob) => {
     setAutoApplyError(null);
     // Check resume first
@@ -234,6 +239,51 @@ export default function BoardPage() {
   const cancelPreview = () => {
     setShowApplyPreview(false);
     setPreviewJob(null);
+  };
+
+  // Apply to a board job via quick-apply
+  const handleBoardApply = async (job: BoardJob) => {
+    if (!confirm(`Apply to "${job.title}" at ${job.company}?`)) return;
+    setBoardApplyingId(job.id);
+    try {
+      const res = await fetch('/api/jobs/quick-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          url: job.jobUrl,
+          source: job.source,
+          matchScore: job.matchScore,
+          sendConfirmation: true,
+        }),
+      });
+      if (res.ok) {
+        fetchJobs();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Failed to apply. Please try again.');
+      }
+    } catch { alert('Network error. Please try again.'); } finally {
+      setBoardApplyingId(null);
+    }
+  };
+
+  // Withdraw a board job application
+  const handleBoardWithdraw = async (job: BoardJob) => {
+    if (!confirm('Withdraw this application? This will stop it from being processed.')) return;
+    setBoardWithdrawingId(job.id);
+    try {
+      const res = await fetch('/api/user/board-jobs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: job.id, status: 'WITHDRAWN' }),
+      });
+      if (res.ok) fetchJobs();
+    } catch { /* ignore */ } finally {
+      setBoardWithdrawingId(null);
+    }
   };
 
   const fetchJobs = useCallback(async () => {
@@ -900,6 +950,7 @@ export default function BoardPage() {
           <option value="SKIPPED">Apply Manually</option>
           <option value="INTERVIEW">Interview</option>
           <option value="OFFER">Offer</option>
+          <option value="WITHDRAWN">Withdrawn</option>
         </select>
 
         {uniqueSources.length > 1 && (
@@ -934,11 +985,12 @@ export default function BoardPage() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
           {/* Table header */}
           <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
-            <div className="col-span-4">Position</div>
+            <div className="col-span-3">Position</div>
             <div className="col-span-2">Company</div>
             <div className="col-span-1">Match</div>
             <div className="col-span-2">Status</div>
-            <div className="col-span-2">When</div>
+            <div className="col-span-1">When</div>
+            <div className="col-span-2">Actions</div>
             <div className="col-span-1">Link</div>
           </div>
 
@@ -951,7 +1003,7 @@ export default function BoardPage() {
 
               return (
                 <div key={job.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors items-center">
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{job.title}</p>
                     <p className="text-xs text-gray-400 sm:hidden">{job.company} - {job.location}</p>
                   </div>
@@ -993,10 +1045,44 @@ export default function BoardPage() {
                       </a>
                     )}
                   </div>
-                  <div className="col-span-2 hidden sm:block">
+                  <div className="col-span-1 hidden sm:block">
                     <p className="text-xs text-gray-500">{relativeTime(job.discoveredAt)}</p>
-                    {job.appliedAt && (
-                      <p className="text-[10px] text-green-500">Applied {relativeTime(job.appliedAt)}</p>
+                  </div>
+                  <div className="col-span-2 hidden sm:flex items-center gap-1.5">
+                    {/* Apply button — for NEW/SAVED/SCORED jobs */}
+                    {['NEW', 'SAVED', 'SCORED', 'READY'].includes(job.status) && (
+                      <button
+                        onClick={() => handleBoardApply(job)}
+                        disabled={boardApplyingId === job.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        title="Apply to this job"
+                      >
+                        {boardApplyingId === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                        Apply
+                      </button>
+                    )}
+                    {/* Withdraw button — for APPLIED/EMAILED/QUEUED jobs */}
+                    {['APPLIED', 'EMAILED', 'QUEUED', 'APPLYING'].includes(job.status) && (
+                      <button
+                        onClick={() => handleBoardWithdraw(job)}
+                        disabled={boardWithdrawingId === job.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-200 dark:border-red-500/20 transition-colors disabled:opacity-50"
+                        title="Withdraw application"
+                      >
+                        {boardWithdrawingId === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                        Withdraw
+                      </button>
+                    )}
+                    {/* Manual apply link for SKIPPED */}
+                    {job.status === 'SKIPPED' && job.jobUrl && (
+                      <a
+                        href={job.jobUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Apply Manual
+                      </a>
                     )}
                   </div>
                   <div className="col-span-1 hidden sm:block">

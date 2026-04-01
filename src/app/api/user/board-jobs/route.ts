@@ -176,3 +176,36 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Failed to bulk save' }, { status: 500 });
   }
 }
+
+/* PATCH /api/user/board-jobs — Update board job status (e.g. Withdraw) */
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+    if (!id || !status) {
+      return NextResponse.json({ error: 'id and status are required' }, { status: 400 });
+    }
+
+    const existing = await prisma.scoutJob.findFirst({
+      where: { id, userId: session.user.id },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    await prisma.scoutJob.update({
+      where: { id },
+      data: { status },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('[board-jobs/PATCH]', err);
+    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+  }
+}
