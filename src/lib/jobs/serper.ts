@@ -185,13 +185,13 @@ export async function searchGoogleJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `"${role}"${location ? ` in ${location}` : ' in India'}`;
-  const data = await serperSearch(query, 'job', 10);
+  const query = `"${role}" jobs${location ? ` in ${location}` : ' in India'}`;
+  const data = await serperSearch(query, 'search', 10);
 
-  if (!data.jobs) return [];
+  if (!data.organic) return [];
 
-  return data.jobs
-    .map(parseGoogleJob)
+  return data.organic
+    .map((r) => parseJobFromOrganic(r, 'Google'))
     .filter((j): j is DiscoveredJob => j !== null);
 }
 
