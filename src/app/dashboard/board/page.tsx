@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight, Clock, X, Zap, AlertTriangle, CheckCircle2, Send, Sparkles } from 'lucide-react';
+import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight, Clock, X, XCircle, Zap, AlertTriangle, CheckCircle2, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/ui/LocationInput';
 import KanbanBoard from '@/components/dashboard/board/KanbanBoard';
