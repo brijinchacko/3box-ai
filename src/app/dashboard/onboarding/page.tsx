@@ -480,7 +480,7 @@ export default function OnboardingPage() {
   const filledCount = [data.fullName, data.location, data.targetRole, data.experienceLevel, data.educationLevel, data.skills.length >= 2 ? 'yes' : ''].filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-surface bg-grid flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-surface bg-grid flex items-center justify-center p-4 relative overflow-x-hidden">
       <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-gradient-radial from-neon-blue/5 via-transparent to-transparent rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[500px] bg-gradient-radial from-neon-purple/5 via-transparent to-transparent rounded-full blur-3xl" />
 
