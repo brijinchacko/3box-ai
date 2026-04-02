@@ -223,12 +223,18 @@ function cleanLocationForSearch(location: string): string {
  */
 function deduplicateJobs(jobs: DiscoveredJob[]): DiscoveredJob[] {
   const seen = new Map<string, DiscoveredJob>();
+  const seenUrls = new Set<string>();
 
   for (const job of jobs) {
+    // Dedupe by URL first (strongest signal)
+    const urlKey = (job.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+    if (urlKey && seenUrls.has(urlKey)) continue;
+
     // Normalize: strip spaces, lowercase, first 30 chars of title
     const companyKey = job.company
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '')
+      .replace(/^unknown(company)?$/, '') // Treat "Unknown Company" as empty for dedup
       .slice(0, 20);
     const titleKey = job.title
       .toLowerCase()
@@ -238,14 +244,18 @@ function deduplicateJobs(jobs: DiscoveredJob[]): DiscoveredJob[] {
 
     if (!seen.has(key)) {
       seen.set(key, job);
+      if (urlKey) seenUrls.add(urlKey);
     } else {
-      // Keep the one with more data (longer description, has salary, etc.)
+      // Keep the one with more data (longer description, has salary, real company name)
       const existing = seen.get(key)!;
       const existingScore =
-        (existing.description?.length || 0) + (existing.salary ? 50 : 0) + (existing.url ? 20 : 0);
+        (existing.description?.length || 0) + (existing.salary ? 50 : 0) + (existing.url ? 20 : 0)
+        + (existing.company !== 'Unknown Company' ? 100 : 0);
       const newScore =
-        (job.description?.length || 0) + (job.salary ? 50 : 0) + (job.url ? 20 : 0);
+        (job.description?.length || 0) + (job.salary ? 50 : 0) + (job.url ? 20 : 0)
+        + (job.company !== 'Unknown Company' ? 100 : 0);
       if (newScore > existingScore) {
+        if (urlKey) seenUrls.add(urlKey);
         seen.set(key, job);
       }
     }
@@ -293,8 +303,7 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
 
     // Must have a real company name
     if (!job.company || job.company === 'Unknown' || job.company === 'Unknown Company') {
-      // Allow if it has a good URL and description
-      if (!job.description || job.description.length < 50) return false;
+      return false;
     }
 
     // Must have some description
@@ -303,12 +312,19 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     // Filter out search/listing pages that slipped through (not actual job postings)
     const titleLower = job.title.toLowerCase();
     if (/^\d+\s+.*job\s*(vacancies|openings|listings|results)/i.test(titleLower)) return false;
-    if (/^\d+\+?\s+.*jobs?\s+(in|near|for)/i.test(titleLower)) return false;
+    if (/^\d+[,+]?\d*\+?\s+.*jobs?\s/i.test(titleLower)) return false;
     if (/job\s*vacancies\s*in\s/i.test(titleLower)) return false;
+    // Catch aggregator titles: "X jobs in Y", "openings in Z for"
+    if (/\bjobs?\s+in\s+/i.test(titleLower) && /\d/.test(titleLower)) return false;
+    if (/\bopenings?\s+in\s+.*for\s/i.test(titleLower)) return false;
+    // Catch titles that are just search queries, not job postings
+    if (titleLower.includes(' - wellfound') || titleLower.includes(' - glassdoor') || titleLower.includes(' - indeed')) return false;
+    if (/^\d+\s+(best|top|latest|new)\s/i.test(titleLower)) return false;
 
-    // Filter Naukri listing page URLs
+    // Filter listing page URLs (not actual job postings)
     const urlLower = (job.url || '').toLowerCase();
     if (urlLower.includes('naukri.com') && /-jobs-in-|-jobs$/.test(urlLower)) return false;
+    if (urlLower.includes('/search?') || urlLower.includes('/jobs?q=')) return false;
 
     return true;
   });
