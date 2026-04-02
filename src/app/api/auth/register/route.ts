@@ -78,14 +78,20 @@ export async function POST(req: Request) {
       }
     }
 
-    // Subscribe to newsletter automatically
-    await prisma.newsletterSubscriber.create({
-      data: {
+    // Subscribe to newsletter automatically (upsert in case email exists from deleted account)
+    await prisma.newsletterSubscriber.upsert({
+      where: { email },
+      create: {
         email,
         userId: user.id,
         source: 'signup',
       },
-    }).catch(() => {}); // Ignore if already subscribed
+      update: {
+        userId: user.id,
+        active: true,
+        source: 'signup',
+      },
+    }).catch(() => {}); // Ignore errors
 
     // Send welcome email (non-blocking) and log it
     sendWelcomeEmail(email, name).then(() => {

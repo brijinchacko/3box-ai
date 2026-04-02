@@ -1430,9 +1430,16 @@ export default function SettingsPage() {
                                   body: JSON.stringify({ confirmation: 'DELETE' }),
                                 });
                                 if (res.ok) {
+                                  // Clear all localStorage before signing out
+                                  try { localStorage.clear(); } catch {}
                                   signOut({ callbackUrl: '/' });
+                                } else {
+                                  const err = await res.json().catch(() => ({}));
+                                  alert(err.error || 'Failed to delete account. Please try again or contact support.');
                                 }
-                              } catch {} finally {
+                              } catch {
+                                alert('Network error. Please check your connection and try again.');
+                              } finally {
                                 setDeleteLoading(false);
                               }
                             }}

@@ -21,11 +21,19 @@ export async function DELETE(request: Request) {
     }
 
     const userId = session.user.id;
+    const userEmail = session.user.email;
 
     // Log the deletion before it happens
-    console.log(`[Account Deletion] User ${userId} (${session.user.email}) requested account deletion`);
+    console.log(`[Account Deletion] User ${userId} (${userEmail}) requested account deletion`);
 
-    // Prisma cascade delete handles all related records
+    // Delete newsletter subscriber first (uses onDelete: SetNull, not Cascade)
+    if (userEmail) {
+      await prisma.newsletterSubscriber.deleteMany({
+        where: { OR: [{ userId }, { email: userEmail }] },
+      }).catch(() => {});
+    }
+
+    // Prisma cascade delete handles all other related records
     // (All models have onDelete: Cascade on their userId foreign key)
     await prisma.user.delete({
       where: { id: userId },
