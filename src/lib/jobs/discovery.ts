@@ -301,9 +301,9 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     // Must have a real title (not just "Job" or single word)
     if (!job.title || job.title.trim().split(/\s+/).length < 2) return false;
 
-    // Must have a real company name
+    // Must have a real company name (allow if it has a good description and URL)
     if (!job.company || job.company === 'Unknown' || job.company === 'Unknown Company') {
-      return false;
+      if (!job.description || job.description.length < 100 || !job.url) return false;
     }
 
     // Must have some description

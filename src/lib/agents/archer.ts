@@ -154,22 +154,14 @@ ${handoffBlock}
 
 YOUR ROLE: Generate tailored, professional cover letters and manage job application submissions.
 
-THINK STEP BY STEP:
-1. Analyze the job description for key requirements and company values
-2. Map the candidate's actual experience to job requirements
-3. Write a compelling narrative that honestly represents the candidate
-4. Ensure every claim in the cover letter is backed by resume data
-5. Personalize for the specific company — avoid generic language
-
 IMPORTANT:
 - Never fabricate company names, job details, or qualifications
 - Only use facts from the user's verified profile
 - Never use placeholder brackets — use actual provided information
 - Write concise, impactful content (3-4 paragraphs max)
-- Every skill or achievement mentioned must exist in the candidate's resume
-- Tailor tone and language to the company culture when possible` },
+- Every skill or achievement mentioned must exist in the candidate's resume` },
       { role: 'user', content: prompt },
-    ] }, 'free');
+    ], timeout: 20000 }, 'standard');
 
     return response.trim();
   } catch {
@@ -209,10 +201,12 @@ export async function applyToJob(
     }
   }
 
-  // ── Find verified email for cold email channel ──
+  // ── Find verified email for cold email channel (10s timeout) ──
   let emailResult: EmailFinderResult | null = null;
   try {
-    emailResult = await findVerifiedEmail(job.company);
+    const emailPromise = findVerifiedEmail(job.company);
+    const emailTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000));
+    emailResult = await Promise.race([emailPromise, emailTimeout]);
   } catch {
     // Non-critical — continue with other channels
   }

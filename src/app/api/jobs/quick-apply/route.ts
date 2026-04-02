@@ -86,10 +86,14 @@ export async function POST(request: NextRequest) {
       matchScore: matchScore || undefined,
     };
 
-    // Fire-and-forget: apply in background
+    // Fire-and-forget: apply in background with 60s timeout
     (async () => {
       try {
-        const result = await applyToJob(userId, jobForApp, resumeContent);
+        const applyPromise = applyToJob(userId, jobForApp, resumeContent);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Apply timeout after 60s')), 60000)
+        );
+        const result = await Promise.race([applyPromise, timeoutPromise]);
 
         // Update ScoutJob status based on result
         const newStatus = result.success
