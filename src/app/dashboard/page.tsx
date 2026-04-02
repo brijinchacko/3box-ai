@@ -25,8 +25,11 @@ import {
   Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import OvernightActivity from '@/components/dashboard/OvernightActivity';
+import LocationInput from '@/components/ui/LocationInput';
+import { MapPin } from 'lucide-react';
 
 /* ── Agent icons for activity feed ── */
 import { Shield, BookOpen, Compass, Brain, FileEdit } from 'lucide-react';
@@ -264,8 +267,32 @@ function PipelineDashboard({ firstName }: { firstName: string }) {
       {/* ═══ SECTION 1: Pipeline Visualization ═══ */}
       <PipelineVisualization statuses={statuses} />
 
-      {/* ═══ SECTION 2: Action Card ═══ */}
-      <ActionCard pipeline={pipeline} currentStepIndex={currentStepIndex} />
+      {/* ═══ SECTION 2: Inline Setup / Action Card ═══ */}
+      <InlineSetupCard pipeline={pipeline} onStepComplete={() => {
+        // Refresh pipeline data after completing a step
+        setLoading(true);
+        Promise.allSettled([
+          fetch('/api/user/profile').then(r => r.ok ? r.json() : null),
+          fetch('/api/user/resume').then(r => r.ok ? r.json() : null),
+          fetch('/api/user/board-jobs').then(r => r.ok ? r.json() : null),
+          fetch('/api/applications?limit=1').then(r => r.ok ? r.json() : null),
+        ]).then(([profileRes, resumeRes, jobsRes, appsRes]) => {
+          const profile = profileRes.status === 'fulfilled' ? profileRes.value : null;
+          const resume = resumeRes.status === 'fulfilled' ? resumeRes.value : null;
+          const jobs = jobsRes.status === 'fulfilled' ? jobsRes.value : null;
+          const apps = appsRes.status === 'fulfilled' ? appsRes.value : null;
+          const jobsCount = jobs?.jobs?.length ?? jobs?.count ?? 0;
+          const appsCount = apps?.applications?.length ?? apps?.count ?? apps?.total ?? 0;
+          setPipeline({
+            profileDone: !!(profile?.name && profile?.email && profile?.targetRole),
+            resumeDone: !!(resume?.isFinalized || resume?.approvalStatus === 'ready' || resume?.approvalStatus === 'approved' || resume?.hasResume || resume?.resumeId || resume?.resume?.contact?.name),
+            jobsFound: jobsCount > 0,
+            hasApplications: appsCount > 0,
+            jobsCount,
+            appsCount,
+          });
+        }).finally(() => setLoading(false));
+      }} />
 
       {/* ═══ SECTION 2.5: How do you want to apply? (Plain English mode selector) ═══ */}
       <div className="apply-mode-selector bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
@@ -549,94 +576,295 @@ function PipelineVisualization({ statuses }: { statuses: StepStatus[] }) {
 /* ═══════════════════════════════════════════════════════
    ACTION CARD — one primary CTA
    ═══════════════════════════════════════════════════════ */
-function ActionCard({
+function InlineSetupCard({
   pipeline,
-  currentStepIndex,
+  onStepComplete,
 }: {
   pipeline: PipelineData | null;
-  currentStepIndex: number;
+  onStepComplete: () => void;
 }) {
+  const router = useRouter();
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState('');
+
+  // Step 1: Resume upload state
+  const [resumeText, setResumeText] = useState('');
+
+  // Step 3: Job search config state
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobLocation, setJobLocation] = useState('');
+  const [experienceLevel, setExperienceLevel] = useState('entry');
+
   if (!pipeline) return null;
 
-  const { resumeDone, jobsFound, hasApplications, jobsCount, appsCount } = pipeline;
+  const { profileDone, resumeDone, jobsFound, hasApplications, jobsCount, appsCount } = pipeline;
 
-  let icon: React.ElementType = Upload;
-  let title = 'Upload your resume to get started';
-  let description = 'Your resume is the foundation. Upload it and our AI will parse, enhance, and optimize it for your target roles.';
-  let buttonLabel = 'Upload Resume';
-  let href = '/dashboard/resume';
-  let gradient = 'from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5';
-  let borderColor = 'border-blue-200 dark:border-blue-500/20';
-  let btnColor = 'bg-blue-600 hover:bg-blue-700';
-  let iconColor = 'text-blue-600 dark:text-blue-400';
+  // ── Step 1 & 2: Resume not done — show upload/paste area ──
+  if (!resumeDone) {
+    const handleResumeSubmit = async () => {
+      if (!resumeText.trim() || resumeText.trim().length < 50) {
+        setSetupError('Please paste your resume content (at least 50 characters).');
+        return;
+      }
+      setSetupLoading(true);
+      setSetupError('');
+      try {
+        // Parse resume text via AI
+        const parseRes = await fetch('/api/resume/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: resumeText.trim(), source: 'paste' }),
+        });
+        if (!parseRes.ok) throw new Error('Failed to parse resume');
 
-  if (resumeDone && !jobsFound) {
-    icon = Search;
-    title = 'Run Scout to find matching jobs';
-    description = 'Your resume is ready. Let our AI Scout agent search across job boards to find roles that match your profile.';
-    buttonLabel = 'Find Jobs';
-    href = '/dashboard/jobs';
-    gradient = 'from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5';
-    borderColor = 'border-green-200 dark:border-green-500/20';
-    btnColor = 'bg-green-600 hover:bg-green-700';
-    iconColor = 'text-green-600 dark:text-green-400';
-  } else if (resumeDone && jobsFound && !hasApplications) {
-    icon = Briefcase;
-    title = `${jobsCount} matching job${jobsCount !== 1 ? 's' : ''} ready to apply`;
-    description = 'We found great matches for you. Review them on your board and start applying with one click.';
-    buttonLabel = 'View Job Board';
-    href = '/dashboard/board';
-    gradient = 'from-purple-500/10 to-pink-500/10 dark:from-purple-500/5 dark:to-pink-500/5';
-    borderColor = 'border-purple-200 dark:border-purple-500/20';
-    btnColor = 'bg-purple-600 hover:bg-purple-700';
-    iconColor = 'text-purple-600 dark:text-purple-400';
-  } else if (hasApplications) {
-    icon = BarChart3;
-    title = `Track your ${appsCount} application${appsCount !== 1 ? 's' : ''}`;
-    description = 'Stay on top of your applications. See responses, follow up, and prepare for interviews all in one place.';
-    buttonLabel = 'View Applications';
-    href = '/dashboard/board';
-    gradient = 'from-amber-500/10 to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5';
-    borderColor = 'border-amber-200 dark:border-amber-500/20';
-    btnColor = 'bg-amber-600 hover:bg-amber-700';
-    iconColor = 'text-amber-600 dark:text-amber-400';
+        // Mark as ready
+        await fetch('/api/user/resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approvalStatus: 'ready' }),
+        });
+
+        onStepComplete();
+      } catch {
+        setSetupError('Failed to process resume. Please try again.');
+      } finally {
+        setSetupLoading(false);
+      }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setSetupLoading(true);
+      setSetupError('');
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/user/resume/upload-pdf', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Upload failed');
+        onStepComplete();
+      } catch {
+        setSetupError('Failed to upload resume. Try pasting the text instead.');
+      } finally {
+        setSetupLoading(false);
+      }
+    };
+
+    return (
+      <div className="action-card rounded-xl border border-blue-200 dark:border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5 p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+            <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Step 1: Upload Your Resume</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Paste your resume or upload a PDF to get started</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <textarea
+            value={resumeText}
+            onChange={(e) => setResumeText(e.target.value)}
+            placeholder="Paste your resume text here... (work experience, education, skills, etc.)"
+            rows={6}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+          />
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button
+              onClick={handleResumeSubmit}
+              disabled={setupLoading || resumeText.trim().length < 50}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {setupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              Continue with Resume
+            </button>
+            <div className="relative">
+              <label className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <Upload className="w-4 h-4" /> Upload PDF
+                <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileUpload} className="hidden" />
+              </label>
+            </div>
+          </div>
+
+          {setupError && <p className="text-sm text-red-500">{setupError}</p>}
+        </div>
+      </div>
+    );
   }
 
-  const Icon = icon;
+  // ── Step 3: Resume done, no jobs — show search config ──
+  if (!jobsFound) {
+    const handleSearchSubmit = async () => {
+      if (!jobTitle.trim()) {
+        setSetupError('Please enter a job title.');
+        return;
+      }
+      setSetupLoading(true);
+      setSetupError('');
+      try {
+        // Create search profile
+        await fetch('/api/user/loops', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetRole: jobTitle.trim(),
+            location: jobLocation.trim(),
+            experienceLevel,
+            platforms: ['linkedin', 'indeed', 'google_jobs', 'naukri', 'jooble'],
+            autoSearch: true,
+          }),
+        });
 
-  return (
-    <div
-      className={cn(
-        'action-card relative rounded-xl border p-6 sm:p-8 bg-gradient-to-br overflow-hidden',
-        gradient,
-        borderColor,
-      )}
-    >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <div className={cn('w-14 h-14 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm shrink-0')}>
-          <Icon className={cn('w-7 h-7', iconColor)} />
+        // Trigger Scout immediately
+        await fetch('/api/agents/scout/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetRoles: [jobTitle.trim()],
+            targetLocations: jobLocation.trim() ? [jobLocation.trim()] : [],
+          }),
+        });
+
+        // Wait a moment for Scout to populate results
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        onStepComplete();
+      } catch {
+        setSetupError('Failed to start job search. Please try again.');
+      } finally {
+        setSetupLoading(false);
+      }
+    };
+
+    return (
+      <div className="action-card rounded-xl border border-green-200 dark:border-green-500/20 bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5 p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+            <Search className="w-6 h-6 text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Step 2: Find Your Perfect Jobs</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Tell us what you&apos;re looking for and Scout will search for you</p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-            {title}
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Job Title *</label>
+              <input
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="e.g. Operations Manager"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Location</label>
+              <LocationInput
+                value={jobLocation}
+                onChange={setJobLocation}
+                placeholder="e.g. Bangalore"
+                icon={MapPin}
+                inputClassName="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Experience Level</label>
+            <select
+              value={experienceLevel}
+              onChange={(e) => setExperienceLevel(e.target.value)}
+              className="w-full sm:w-64 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500/20"
+            >
+              <option value="entry">Entry Level (0-1 yrs)</option>
+              <option value="junior">Junior (1-3 yrs)</option>
+              <option value="mid">Mid Level (3-5 yrs)</option>
+              <option value="senior">Senior (5-10 yrs)</option>
+              <option value="lead">Lead / Principal (10+ yrs)</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleSearchSubmit}
+            disabled={setupLoading || !jobTitle.trim()}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all disabled:opacity-50"
+          >
+            {setupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            {setupLoading ? 'Searching...' : 'Search Jobs'}
+          </button>
+
+          {setupError && <p className="text-sm text-red-500">{setupError}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 4: Jobs found, no applications — CTA to apply ──
+  if (!hasApplications) {
+    return (
+      <div className="action-card rounded-xl border border-purple-200 dark:border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-500/5 dark:to-pink-500/5 p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm shrink-0">
+            <Briefcase className="w-7 h-7 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              {jobsCount} matching job{jobsCount !== 1 ? 's' : ''} found!
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Review your matches and start applying with one click. Archer will handle cover letters and submissions.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/board"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-all shadow-sm shrink-0"
+          >
+            Start Applying <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 5: Has applications — show tracker ──
+  return (
+    <div className="action-card rounded-xl border border-amber-200 dark:border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5 p-6 sm:p-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm shrink-0">
+          <BarChart3 className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Track your {appsCount} application{appsCount !== 1 ? 's' : ''}
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-lg">
-            {description}
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Stay on top of your applications. See responses, follow up, and prepare for interviews.
           </p>
         </div>
         <Link
-          href={href}
-          className={cn(
-            'inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-semibold transition-all shadow-sm hover:shadow-md shrink-0',
-            btnColor,
-          )}
+          href="/dashboard/board"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-all shadow-sm shrink-0"
         >
-          {buttonLabel}
-          <ArrowRight className="w-4 h-4" />
+          View Applications <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
     </div>
   );
+}
+
+/* ── Legacy ActionCard (kept for backward compatibility) ── */
+function ActionCard({
+  pipeline,
+}: {
+  pipeline: PipelineData | null;
+  currentStepIndex?: number;
+}) {
+  if (!pipeline) return null;
+  return <InlineSetupCard pipeline={pipeline} onStepComplete={() => {}} />;
 }
 
 /* ═══════════════════════════════════════════════════════
