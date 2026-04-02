@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       }
       // Create a placeholder so search can proceed
       await prisma.resume.create({
-        data: { userId, content: {}, isFinalized: false, approvalStatus: 'ready' },
+        data: { userId, title: 'My Resume', content: {}, isFinalized: false, approvalStatus: 'ready' },
       }).catch(() => {}); // Ignore if already exists
     }
 
