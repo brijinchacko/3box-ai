@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-
-const { prisma } = require('@/lib/db/prisma');
+import { prisma } from '@/lib/db/prisma';
 
 export async function DELETE(request: Request) {
   try {
@@ -23,30 +22,81 @@ export async function DELETE(request: Request) {
     const userId = session.user.id;
     const userEmail = session.user.email;
 
-    // Log the deletion before it happens
-    console.log(`[Account Deletion] User ${userId} (${userEmail}) requested account deletion`);
-
-    // Delete newsletter subscriber first (uses onDelete: SetNull, not Cascade)
-    if (userEmail) {
-      await prisma.newsletterSubscriber.deleteMany({
-        where: { OR: [{ userId }, { email: userEmail }] },
-      }).catch(() => {});
+    // Verify user exists first
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      // User already deleted (double-click or retry) — treat as success
+      console.log(`[Account Deletion] User ${userId} already deleted, returning success`);
+      return NextResponse.json({
+        success: true,
+        message: 'Account has been deleted',
+      });
     }
 
-    // Prisma cascade delete handles all other related records
-    // (All models have onDelete: Cascade on their userId foreign key)
+    console.log(`[Account Deletion] User ${userId} (${userEmail}) requested account deletion`);
+
+    // Step 1: Delete records that don't cascade properly
+    // NewsletterSubscriber uses onDelete: SetNull, not Cascade
+    await prisma.newsletterSubscriber.deleteMany({
+      where: { OR: [{ userId }, ...(userEmail ? [{ email: userEmail }] : [])] },
+    }).catch(() => {});
+
+    // Step 2: Delete related records that might cause FK issues
+    // Delete in order: child records first, then parent
+    const deleteOps = [
+      prisma.ticketMessage.deleteMany({ where: { ticket: { userId } } }),
+      prisma.supportTicket.deleteMany({ where: { userId } }),
+      prisma.couponRedemption.deleteMany({ where: { userId } }),
+      prisma.agentChatMessage.deleteMany({ where: { userId } }),
+      prisma.agentActivity.deleteMany({ where: { userId } }),
+      prisma.followUp.deleteMany({ where: { userId } }),
+      prisma.applicationOutcome.deleteMany({ where: { userId } }),
+      prisma.resumeVariant.deleteMany({ where: { userId } }),
+      prisma.jobApplication.deleteMany({ where: { userId } }),
+      prisma.scoutJob.deleteMany({ where: { userId } }),
+      prisma.searchProfile.deleteMany({ where: { userId } }),
+      prisma.autoApplyConfig.deleteMany({ where: { userId } }),
+      prisma.autoApplyRun.deleteMany({ where: { userId } }),
+      prisma.autoApplyDigest.deleteMany({ where: { userId } }),
+      prisma.resume.deleteMany({ where: { userId } }),
+      prisma.portfolio.deleteMany({ where: { userId } }),
+      prisma.assessment.deleteMany({ where: { userId } }),
+      prisma.careerPlan.deleteMany({ where: { userId } }),
+      prisma.learningPath.deleteMany({ where: { userId } }),
+      prisma.careerTwin.deleteMany({ where: { userId } }),
+      prisma.coachSettings.deleteMany({ where: { userId } }),
+      prisma.emailLog.deleteMany({ where: { userId } }),
+      prisma.userEmailConnection.deleteMany({ where: { userId } }),
+      prisma.referral.deleteMany({ where: { OR: [{ referrerId: userId }, { referredId: userId }] } }),
+    ];
+
+    // Execute all deletes (ignore individual failures)
+    await Promise.allSettled(deleteOps);
+
+    // Step 3: Delete the user account itself
     await prisma.user.delete({
       where: { id: userId },
     });
+
+    console.log(`[Account Deletion] Successfully deleted user ${userId} (${userEmail})`);
 
     return NextResponse.json({
       success: true,
       message: 'Account and all associated data have been permanently deleted',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Delete Account]', error);
+
+    // If P2025 (record not found), user was already deleted
+    if (error?.code === 'P2025') {
+      return NextResponse.json({
+        success: true,
+        message: 'Account has been deleted',
+      });
+    }
+
     return NextResponse.json(
-      { error: 'Failed to delete account' },
+      { error: 'Failed to delete account. Please try again or contact support.' },
       { status: 500 }
     );
   }
