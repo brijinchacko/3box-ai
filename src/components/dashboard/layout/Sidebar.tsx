@@ -17,6 +17,7 @@ import {
   Briefcase,
   Settings,
   Columns3,
+  Home,
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import UserMenu from '../UserMenu';
@@ -76,6 +77,7 @@ const COPILOT_NAV_GROUPS = [
     iconBorder: 'border-gray-200 dark:border-gray-700',
     items: [
       { label: 'Settings', href: '/dashboard/settings', icon: Settings, dataSidebar: 'settings' },
+      { label: 'Back to Home', href: '/', icon: Home, dataSidebar: 'back-to-home' },
     ],
   },
 ];
