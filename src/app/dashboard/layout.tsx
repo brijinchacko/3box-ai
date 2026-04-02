@@ -29,20 +29,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   /* ── Clear stale localStorage if user account changed ── */
   useEffect(() => {
-    if (status !== 'authenticated' || !session?.user?.email) return;
-    const storedUser = localStorage.getItem('3box_current_user');
-    if (storedUser && storedUser !== session.user.email) {
-      // Different user logged in — clear stale data from previous account
+    if (status !== 'authenticated' || !session?.user) return;
+    const userId = (session.user as any).id;
+    if (!userId) return;
+    const storedUserId = localStorage.getItem('3box_current_user_id');
+    if (storedUserId && storedUserId !== userId) {
+      // Different account logged in (even if same email) — clear stale data
       const keysToClean = [
         '3box-resume-builder-data-v2', '3box-resume-builder-data',
         '3box-free-downloads', '3box_resume_data', '3box_onboarding_profile',
         '3box_target_role', '3box-search-history', '3box-search-results',
-        '3box_tour_completed', '3box_nextstep_dismissed',
+        '3box_tour_completed', '3box_nextstep_dismissed', '3box_current_user',
+        '3box_portfolio_projects', '3box-fdl',
       ];
       keysToClean.forEach(key => localStorage.removeItem(key));
     }
-    localStorage.setItem('3box_current_user', session.user.email);
-  }, [status, session?.user?.email]);
+    localStorage.setItem('3box_current_user_id', userId);
+    localStorage.setItem('3box_current_user', session.user.email || '');
+  }, [status, session?.user]);
 
   /* ── Onboarding check: use session.onboardingDone first, fallback to API ── */
   useEffect(() => {
