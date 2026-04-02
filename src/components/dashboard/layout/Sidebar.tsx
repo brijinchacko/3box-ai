@@ -62,6 +62,19 @@ const COPILOT_NAV_GROUPS = [
     items: [
       { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic, dataSidebar: 'interview-prep', agentId: 'atlas' as AgentId, agentRole: 'Interview Coach' },
       { label: 'Skill Growth', href: '/dashboard/learning', icon: GraduationCap, dataSidebar: 'skill-growth', agentId: 'sage' as AgentId, agentRole: 'Skill Trainer' },
+    ],
+  },
+  {
+    category: 'SHOWCASE',
+    color: 'purple',
+    activeBg: 'bg-purple-50 dark:bg-purple-500/10',
+    activeText: 'text-purple-700 dark:text-purple-400',
+    activeIcon: 'text-purple-600 dark:text-purple-400',
+    headerText: 'text-purple-500 dark:text-purple-400/70',
+    iconColor: 'text-purple-500 dark:text-purple-400',
+    iconBg: 'bg-purple-50 dark:bg-purple-500/10',
+    iconBorder: 'border-purple-200 dark:border-purple-500/20',
+    items: [
       { label: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase, dataSidebar: 'portfolio' },
     ],
   },
