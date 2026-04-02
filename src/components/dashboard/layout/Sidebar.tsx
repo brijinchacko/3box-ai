@@ -44,9 +44,9 @@ const COPILOT_NAV_GROUPS = [
     iconBg: 'bg-green-50 dark:bg-green-500/10',
     iconBorder: 'border-green-200 dark:border-green-500/20',
     items: [
-      { label: 'Find Jobs', href: '/dashboard/jobs', icon: Search, dataSidebar: 'find-jobs' },
-      { label: 'Applications', href: '/dashboard/board', icon: Columns3, dataSidebar: 'applications' },
-      { label: 'My Resume', href: '/dashboard/resume', icon: FileEdit, dataSidebar: 'my-resume' },
+      { label: 'Find Jobs', href: '/dashboard/jobs', icon: Search, dataSidebar: 'find-jobs', agentId: 'scout' as AgentId, agentRole: 'Job Hunter' },
+      { label: 'Applications', href: '/dashboard/board', icon: Columns3, dataSidebar: 'applications', agentId: 'archer' as AgentId, agentRole: 'Application Agent' },
+      { label: 'My Resume', href: '/dashboard/resume', icon: FileEdit, dataSidebar: 'my-resume', agentId: 'forge' as AgentId, agentRole: 'Resume Optimizer' },
     ],
   },
   {
@@ -60,8 +60,8 @@ const COPILOT_NAV_GROUPS = [
     iconBg: 'bg-blue-50 dark:bg-blue-500/10',
     iconBorder: 'border-blue-200 dark:border-blue-500/20',
     items: [
-      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic, dataSidebar: 'interview-prep' },
-      { label: 'Skill Growth', href: '/dashboard/learning', icon: GraduationCap, dataSidebar: 'skill-growth' },
+      { label: 'Interview Prep', href: '/dashboard/interview', icon: Mic, dataSidebar: 'interview-prep', agentId: 'atlas' as AgentId, agentRole: 'Interview Coach' },
+      { label: 'Skill Growth', href: '/dashboard/learning', icon: GraduationCap, dataSidebar: 'skill-growth', agentId: 'sage' as AgentId, agentRole: 'Skill Trainer' },
       { label: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase, dataSidebar: 'portfolio' },
     ],
   },
@@ -296,6 +296,7 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const active = isActive(item.href);
+                    const hasAgent = 'agentId' in item && item.agentId;
                     return (
                       <Link
                         key={item.href}
@@ -309,15 +310,30 @@ export default function Sidebar({ collapsed = false, onCollapse, mobileOpen, onM
                             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200',
                           collapsed && 'justify-center px-2',
                         )}
-                        title={collapsed ? item.label : undefined}
+                        title={collapsed ? `${item.label}${hasAgent ? ` • ${(item as any).agentRole}` : ''}` : undefined}
                       >
-                        <div className={cn(
-                          'w-7 h-7 rounded-md border flex items-center justify-center shrink-0',
-                          active ? `${group.iconBg} ${group.iconBorder}` : `${group.iconBg} ${group.iconBorder} opacity-60`,
-                        )}>
-                          <item.icon className={cn('w-3.5 h-3.5', active ? group.activeIcon : group.iconColor)} />
-                        </div>
-                        {!collapsed && <span>{item.label}</span>}
+                        {hasAgent ? (
+                          <div className="w-7 h-7 shrink-0 relative">
+                            <AgentAvatar agentId={(item as any).agentId} size={28} />
+                          </div>
+                        ) : (
+                          <div className={cn(
+                            'w-7 h-7 rounded-md border flex items-center justify-center shrink-0',
+                            active ? `${group.iconBg} ${group.iconBorder}` : `${group.iconBg} ${group.iconBorder} opacity-60`,
+                          )}>
+                            <item.icon className={cn('w-3.5 h-3.5', active ? group.activeIcon : group.iconColor)} />
+                          </div>
+                        )}
+                        {!collapsed && (
+                          <div className="min-w-0">
+                            <span className="block leading-tight">{item.label}</span>
+                            {hasAgent && (
+                              <span className="block text-[10px] font-normal opacity-50 leading-tight">
+                                {(item as any).agentId.charAt(0).toUpperCase() + (item as any).agentId.slice(1)} • {(item as any).agentRole}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </Link>
                     );
                   })}
