@@ -247,7 +247,10 @@ export default function PortfolioPage() {
               setSelectedTheme(p.theme as PortfolioTheme);
             }
             if (Array.isArray(p.projects) && p.projects.length > 0) {
-              setProjects(p.projects);
+              setProjects(p.projects.map((proj: any) => ({
+                ...proj,
+                skills: Array.isArray(proj.skills) ? proj.skills : [],
+              })));
             }
             if (p.user?.name) {
               setUserName(p.user.name);
@@ -405,7 +408,7 @@ export default function PortfolioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Generate a compelling, concise portfolio project description for a project titled "${project.title}" that uses these technologies: ${project.skills.join(', ')}. The current description is: "${project.description}". Make it more impactful with quantifiable results, action verbs, and technical depth. Keep it to 2-3 sentences. Return only the description text, no formatting or quotes.`,
+          message: `Generate a compelling, concise portfolio project description for a project titled "${project.title}" that uses these technologies: ${(project.skills || []).join(', ')}. The current description is: "${project.description}". Make it more impactful with quantifiable results, action verbs, and technical depth. Keep it to 2-3 sentences. Return only the description text, no formatting or quotes.`,
           context: { targetRole: 'Software Engineer' },
         }),
       });
@@ -677,7 +680,7 @@ export default function PortfolioPage() {
                         <h3 className={`font-semibold text-sm mb-1.5 ${theme.textPrimary}`}>{project.title}</h3>
                         <p className={`text-xs ${theme.textMuted} mb-3 line-clamp-2`}>{project.description}</p>
                         <div className="flex flex-wrap gap-1 mb-3">
-                          {project.skills.map(s => (
+                          {(project.skills || []).map(s => (
                             <span key={s} className={`text-[10px] px-2 py-0.5 rounded-full ${theme.tagBg} ${theme.tagText} border ${theme.tagBorder}`}>{s}</span>
                           ))}
                         </div>
@@ -1054,7 +1057,7 @@ export default function PortfolioPage() {
 
                 {/* Skills */}
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {project.skills.map((s) => (
+                  {(project.skills || []).map((s) => (
                     <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40">{s}</span>
                   ))}
                 </div>
