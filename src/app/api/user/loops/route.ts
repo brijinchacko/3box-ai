@@ -67,14 +67,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Job title is required' }, { status: 400 });
     }
 
-    // Verify resume is finalized before allowing auto-apply activation
+    // Verify resume exists before allowing search setup
     const resume = await prisma.resume.findFirst({
-      where: { userId, isFinalized: true },
+      where: { userId, OR: [{ isFinalized: true }, { approvalStatus: 'ready' }, { approvalStatus: 'approved' }] },
       select: { id: true },
     });
 
     if (!resume) {
-      return NextResponse.json({ error: 'Please verify your resume before setting up auto-apply.' }, { status: 400 });
+      // If no verified resume but not requesting auto-apply, allow search profile creation
+      // (user may just want to browse jobs without auto-applying)
+      if (autoApply) {
+        return NextResponse.json({ error: 'Please verify your resume before enabling auto-apply.' }, { status: 400 });
+      }
+      // Create a placeholder so search can proceed
+      await prisma.resume.create({
+        data: { userId, content: {}, isFinalized: false, approvalStatus: 'ready' },
+      }).catch(() => {}); // Ignore if already exists
     }
 
     // 1. Create the search profile

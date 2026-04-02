@@ -705,17 +705,21 @@ function InlineSetupCard({
       setSetupError('');
       try {
         // Create search profile
-        await fetch('/api/user/loops', {
+        const loopRes = await fetch('/api/user/loops', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            targetRole: jobTitle.trim(),
+            jobTitle: jobTitle.trim(),
             location: jobLocation.trim(),
             experienceLevel,
             platforms: ['linkedin', 'indeed', 'google_jobs', 'naukri', 'jooble'],
             autoSearch: true,
           }),
         });
+        if (!loopRes.ok) {
+          const err = await loopRes.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to create search profile');
+        }
 
         // Trigger Scout immediately
         await fetch('/api/agents/scout/run', {
