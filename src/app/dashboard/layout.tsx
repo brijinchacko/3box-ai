@@ -118,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Onboarding page gets full screen (no sidebar)
   if (pathname === '/dashboard/onboarding') {
     return (
-      <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen overflow-y-auto bg-gray-50 dark:bg-gray-950">
         {children}
       </div>
     );
