@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
                       <p style="margin:0 0 4px;color:#94a3b8;">${company}${location ? ` · ${location}` : ''}</p>
                       <p style="margin:0;color:#64748b;font-size:13px;">Applied via ${result.method === 'email' || result.method === 'user_email' ? 'Email' : result.method === 'ats_api' ? 'ATS Portal' : 'Job Portal'}</p>
                     </div>
-                    <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;">Track all your applications on your <a href="https://3box.ai/dashboard/applications" style="color:#38bdf8;text-decoration:none;">Applications Dashboard</a>.</p>
+                    <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;">Track all your applications on your <a href="https://3box.ai/dashboard/board" style="color:#38bdf8;text-decoration:none;">Applications Dashboard</a>.</p>
                     <p style="margin:16px 0 0;color:#475569;font-size:12px;">— 3BOX AI</p>
                   </div>
                 `,

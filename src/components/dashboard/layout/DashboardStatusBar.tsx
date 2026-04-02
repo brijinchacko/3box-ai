@@ -178,7 +178,7 @@ function NotificationDropdown({
           isAgentic ? 'border-white/[0.06]' : 'border-gray-100 dark:border-gray-800',
         )}>
           <Link
-            href="/dashboard/applications"
+            href="/dashboard/board"
             onClick={onClose}
             className={cn('text-xs font-medium', isAgentic ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700')}
           >

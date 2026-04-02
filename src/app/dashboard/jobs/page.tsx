@@ -1687,7 +1687,7 @@ export default function JobsPage() {
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Link
-                      href="/dashboard/applications"
+                      href="/dashboard/board"
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90 transition-all shadow-lg shadow-green-500/20"
                     >
                       <AgentAvatar agentId="archer" size={18} />

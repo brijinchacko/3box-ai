@@ -40,7 +40,7 @@ export default function StatsCards() {
       icon: FileText,
       color: 'text-green-600 dark:text-green-400',
       bg: 'bg-green-50 dark:bg-green-500/10',
-      href: '/dashboard/applications',
+      href: '/dashboard/board',
     },
     {
       label: 'Interviews',
@@ -56,7 +56,7 @@ export default function StatsCards() {
       icon: TrendingUp,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-50 dark:bg-amber-500/10',
-      href: '/dashboard/applications',
+      href: '/dashboard/board',
     },
   ];
 

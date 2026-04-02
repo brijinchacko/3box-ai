@@ -307,7 +307,7 @@ export default function ForgeAutoGenerate({ onEnterEditor, onStatusChange }: For
 
       if (action === 'approve') {
         showToast('Resume approved! Archer can now use it for applications.', 'success');
-        notifyAgentCompleted('forge', 'Resume approved! Deploy Archer to start applying.', '/dashboard/applications');
+        notifyAgentCompleted('forge', 'Resume approved! Deploy Archer to start applying.', '/dashboard/board');
         // Refresh pipeline/GuidedWorkflow
         window.dispatchEvent(new Event('journey:refresh'));
       } else {

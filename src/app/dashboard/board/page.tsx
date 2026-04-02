@@ -534,7 +534,7 @@ export default function BoardPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Job Board</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Applications</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             Discover, track, and apply to jobs across LinkedIn, Naukri, Indeed &amp; more.
           </p>

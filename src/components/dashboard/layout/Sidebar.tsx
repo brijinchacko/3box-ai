@@ -44,9 +44,8 @@ const COPILOT_NAV_GROUPS = [
     iconBorder: 'border-green-200 dark:border-green-500/20',
     items: [
       { label: 'Find Jobs', href: '/dashboard/jobs', icon: Search, dataSidebar: 'find-jobs' },
-      { label: 'Job Board', href: '/dashboard/board', icon: Columns3, dataSidebar: 'job-board' },
+      { label: 'Applications', href: '/dashboard/board', icon: Columns3, dataSidebar: 'applications' },
       { label: 'My Resume', href: '/dashboard/resume', icon: FileEdit, dataSidebar: 'my-resume' },
-      { label: 'Applications', href: '/dashboard/applications', icon: FileText, dataSidebar: 'applications' },
     ],
   },
   {

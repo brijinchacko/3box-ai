@@ -34,7 +34,7 @@ const AUTOPILOT_ACTIONS: QuickAction[] = [
   {
     label: 'Applications (Box 3)',
     description: 'View all your applications',
-    href: '/dashboard/applications',
+    href: '/dashboard/board',
     icon: FileText,
     color: 'text-indigo-600 dark:text-indigo-400',
     bg: 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20',

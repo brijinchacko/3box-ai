@@ -79,7 +79,7 @@ function resolveStep(state: PipelineState): StepInfo {
   if (state.hasApplications && !state.interviewCompany) {
     return {
       text: 'Track your applications',
-      href: '/dashboard/applications',
+      href: '/dashboard/board',
       cta: 'View Applications',
       icon: <ClipboardList className="w-4 h-4" />,
     };

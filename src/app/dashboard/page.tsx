@@ -56,7 +56,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
   { key: 'findJobs', label: 'Find Jobs', href: '/dashboard/jobs' },
   { key: 'apply', label: 'Apply', href: '/dashboard/board' },
   { key: 'interview', label: 'Interview', href: '/dashboard/interview' },
-  { key: 'offer', label: 'Offer!', href: '/dashboard/applications' },
+  { key: 'offer', label: 'Offer!', href: '/dashboard/board' },
 ];
 
 /* ═══════════════════════════════════════════════════════
@@ -595,7 +595,7 @@ function ActionCard({
     title = `Track your ${appsCount} application${appsCount !== 1 ? 's' : ''}`;
     description = 'Stay on top of your applications. See responses, follow up, and prepare for interviews all in one place.';
     buttonLabel = 'View Applications';
-    href = '/dashboard/applications';
+    href = '/dashboard/board';
     gradient = 'from-amber-500/10 to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5';
     borderColor = 'border-amber-200 dark:border-amber-500/20';
     btnColor = 'bg-amber-600 hover:bg-amber-700';
