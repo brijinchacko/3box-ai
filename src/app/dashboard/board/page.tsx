@@ -487,11 +487,19 @@ export default function BoardPage() {
   const uniqueSources = [...new Set(jobs.map(j => j.source).filter(Boolean))];
 
   // Filtered jobs
+  // Status groups for stat card filters
+  const STATUS_GROUPS: Record<string, string[]> = {
+    APPLIED: ['APPLIED', 'EMAILED', 'QUEUED', 'APPLYING'],
+    INTERVIEW: ['INTERVIEW', 'SCREENED'],
+  };
+
   const filtered = jobs.filter(j => {
     const matchesSearch = !searchQuery ||
       j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       j.company.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || j.status === statusFilter;
+    const groupStatuses = STATUS_GROUPS[statusFilter];
+    const matchesStatus = statusFilter === 'all'
+      || (groupStatuses ? groupStatuses.includes(j.status) : j.status === statusFilter);
     const matchesSource = sourceFilter === 'all' || (j.source || '').includes(sourceFilter);
     return matchesSearch && matchesStatus && matchesSource;
   });
@@ -853,28 +861,28 @@ export default function BoardPage() {
 
       {/* ═══ BOARD TAB ═══ */}
       {activeTab === 'board' && (<>
-      {/* Stats Summary */}
+      {/* Stats Summary — clickable to filter */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-        <div className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{jobs.length}</p>
-          <p className="text-xs text-gray-500">Total Jobs</p>
-        </div>
-        <div className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{appliedCount}</p>
-          <p className="text-xs text-gray-500">Applied</p>
-        </div>
-        <div className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{interviewCount}</p>
-          <p className="text-xs text-gray-500">Interviews</p>
-        </div>
-        <div className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{offerCount}</p>
-          <p className="text-xs text-gray-500">Offers</p>
-        </div>
-        <div className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{manualCount}</p>
-          <p className="text-xs text-gray-500">Apply Manually</p>
-        </div>
+        {[
+          { label: 'Total Jobs', value: jobs.length, filter: 'all', color: 'text-gray-900 dark:text-white', ring: 'ring-gray-400' },
+          { label: 'Applied', value: appliedCount, filter: 'APPLIED', color: 'text-green-600 dark:text-green-400', ring: 'ring-green-500' },
+          { label: 'Interviews', value: interviewCount, filter: 'INTERVIEW', color: 'text-purple-600 dark:text-purple-400', ring: 'ring-purple-500' },
+          { label: 'Offers', value: offerCount, filter: 'OFFER', color: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-500' },
+          { label: 'Apply Manually', value: manualCount, filter: 'SKIPPED', color: 'text-orange-600 dark:text-orange-400', ring: 'ring-orange-500' },
+        ].map((stat) => (
+          <button
+            key={stat.filter}
+            onClick={() => setStatusFilter(statusFilter === stat.filter ? 'all' : stat.filter)}
+            className={cn(
+              'p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-left transition-all cursor-pointer hover:border-gray-300 dark:hover:border-gray-600',
+              statusFilter === stat.filter && stat.filter !== 'all' && `ring-2 ${stat.ring} ring-opacity-50`,
+              statusFilter === 'all' && stat.filter === 'all' && 'ring-2 ring-gray-400 ring-opacity-30',
+            )}
+          >
+            <p className={cn('text-2xl font-bold', stat.color)}>{stat.value}</p>
+            <p className="text-xs text-gray-500">{stat.label}</p>
+          </button>
+        ))}
       </div>
 
       {/* Application Status Graph */}
