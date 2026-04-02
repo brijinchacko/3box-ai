@@ -27,6 +27,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  /* ── Clear stale localStorage if user account changed ── */
+  useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.email) return;
+    const storedUser = localStorage.getItem('3box_current_user');
+    if (storedUser && storedUser !== session.user.email) {
+      // Different user logged in — clear stale data from previous account
+      const keysToClean = [
+        '3box-resume-builder-data-v2', '3box-resume-builder-data',
+        '3box-free-downloads', '3box_resume_data', '3box_onboarding_profile',
+        '3box_target_role', '3box-search-history', '3box-search-results',
+        '3box_tour_completed', '3box_nextstep_dismissed',
+      ];
+      keysToClean.forEach(key => localStorage.removeItem(key));
+    }
+    localStorage.setItem('3box_current_user', session.user.email);
+  }, [status, session?.user?.email]);
+
   /* ── Onboarding check: use session.onboardingDone first, fallback to API ── */
   useEffect(() => {
     if (status !== 'authenticated' || onboardingChecked.current) return;
