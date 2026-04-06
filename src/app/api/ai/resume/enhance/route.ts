@@ -104,7 +104,11 @@ export async function POST(req: Request) {
       if (userContext) {
         systemPrompt += `\n\n${userContext}\n\nIMPORTANT: Use the user's real name, skills, experience, and career goals from the context above to personalize the enhanced content. Write in first person using their actual details.`;
       }
+      // Use reliable paid model with fallback, not free tier that keeps timing out
+      const preferredModels = ['openai/gpt-4o-mini', 'deepseek/deepseek-chat'];
       const model = getModelForFeature('resume', normalizePlan(user.plan));
+      const modelId = model.tier === 'free' ? preferredModels[0] : model.id;
+
       const aiResponse = await aiChat({
         messages: [
           { role: 'system', content: systemPrompt },
@@ -113,9 +117,10 @@ export async function POST(req: Request) {
             content: `Here is the ${section} content to enhance:\n\n${content}`,
           },
         ],
-        model: model.id,
+        model: modelId,
         temperature: 0.5,
         jsonMode: model.supportsJsonMode,
+        timeout: 25000,
       });
 
       try {
@@ -164,12 +169,15 @@ export async function POST(req: Request) {
           ],
         }),
         full: (text) => ({
-          enhanced: text,
+          enhanced: JSON.stringify({
+            summary: text.split('\n').find((l: string) => l.startsWith('Summary:'))?.replace('Summary:', '').trim() || 'Experienced professional with a proven track record of delivering results.',
+            experience: [],
+            skills: [],
+            suggestions: ['AI is temporarily unavailable. Your resume content was preserved. Please try again.'],
+          }),
           suggestions: [
-            'Tailor your resume for each application',
-            'Use consistent formatting throughout',
-            'Ensure contact information is current and professional',
-            'Add a compelling professional summary at the top',
+            'AI enhancement is temporarily unavailable. Please try again in a moment.',
+            'Your original resume has been preserved — no changes were made.',
           ],
         }),
       };

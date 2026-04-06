@@ -820,11 +820,12 @@ function AutopilotResume() {
             setResume(prev => ({ ...prev, summary: clean }));
             showToast('AI enhancement partially applied (summary only).', 'success');
           } else {
-            showToast('AI enhancement returned no usable data.', 'error');
+            setPreEnhanceSnapshot(null);
+            showToast('AI enhancement returned no usable data. Please try again.', 'error');
           }
+        } else {
+          showToast('Resume enhanced! Click "Revert" if you want to undo.', 'success');
         }
-
-        showToast('Resume enhanced! Click "Revert" if you want to undo.', 'success');
       } else {
         setPreEnhanceSnapshot(null);
         showToast('Failed to enhance. Please try again.', 'error');
