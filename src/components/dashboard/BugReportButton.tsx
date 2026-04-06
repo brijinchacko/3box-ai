@@ -84,17 +84,18 @@ export default function BugReportButton() {
 
   return (
     <>
-      {/* Floating Bug Button */}
+      {/* Floating Bug Report Button with label */}
       <button
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110',
-          'bg-gradient-to-br from-red-500 to-orange-500 text-white',
+          'fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg transition-all hover:scale-105 hover:shadow-xl',
+          'bg-gradient-to-r from-red-500 to-orange-500 text-white',
           open && 'hidden',
         )}
-        title="Report a Bug"
+        title="Report a Bug or Share Feedback"
       >
-        <Bug className="w-5 h-5" />
+        <Bug className="w-4 h-4" />
+        <span className="text-xs font-semibold">Feedback</span>
       </button>
 
       {/* Slide-out Panel */}
