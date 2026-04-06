@@ -4,6 +4,8 @@ import { PAGE_SEO, SCHEMA_ORG } from '@/lib/seo/keywords';
 import { prisma } from '@/lib/db/prisma';
 import BlogListClient from './BlogListClient';
 
+export const revalidate = 3600; // Re-generate every hour
+
 export const metadata: Metadata = generatePageMetadata(PAGE_SEO.blog);
 
 async function getPublishedPosts() {
