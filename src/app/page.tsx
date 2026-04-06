@@ -1,11 +1,34 @@
 import type { Metadata } from 'next';
 import { generatePageMetadata, jsonLd } from '@/lib/seo/metadata';
 import { PAGE_SEO, SCHEMA_ORG } from '@/lib/seo/keywords';
+import { prisma } from '@/lib/db/prisma';
 import LandingPageClient from './LandingPageClient';
 
 export const metadata: Metadata = generatePageMetadata(PAGE_SEO.home);
 
-export default function LandingPage() {
+async function getFeaturedPosts() {
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { status: 'PUBLISHED' },
+      orderBy: { publishedAt: 'desc' },
+      select: {
+        slug: true,
+        title: true,
+        excerpt: true,
+        category: true,
+        readTime: true,
+      },
+      take: 6,
+    });
+    return posts;
+  } catch {
+    return [];
+  }
+}
+
+export default async function LandingPage() {
+  const featuredPosts = await getFeaturedPosts();
+
   const faqData = [
     { question: 'Is there a money-back guarantee?', answer: 'Yes. All paid plans include a 7-day money-back guarantee. If you\'re not satisfied, request a full refund within 7 days of purchase, subject to our usage conditions.' },
     { question: 'Will AI send wrong or spammy applications?', answer: 'No. Each application is individually crafted by Agent Forge with a unique cover letter, tailored resume, and quality-checked by Sentinel before sending.' },
@@ -29,7 +52,7 @@ export default function LandingPage() {
           ])),
         }}
       />
-      <LandingPageClient />
+      <LandingPageClient featuredPosts={featuredPosts} />
     </>
   );
 }

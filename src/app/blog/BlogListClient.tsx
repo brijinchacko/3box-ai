@@ -71,14 +71,23 @@ function SkeletonCard() {
   );
 }
 
-export default function BlogListClient() {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
+interface BlogListClientProps {
+  initialPosts?: BlogPost[];
+}
+
+export default function BlogListClient({ initialPosts = [] }: BlogListClientProps) {
+  const [posts, setPosts] = useState<BlogPost[]>(initialPosts);
+  const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   useEffect(() => {
+    // Skip fetch on initial mount when showing all posts (already server-rendered)
+    if (activeCategory === 'all' && initialPosts.length > 0) {
+      setPosts(initialPosts);
+      return;
+    }
     async function fetchPosts() {
       setLoading(true);
       try {
@@ -97,7 +106,7 @@ export default function BlogListClient() {
       }
     }
     fetchPosts();
-  }, [activeCategory]);
+  }, [activeCategory, initialPosts]);
 
   async function handleNewsletterSubmit(e: React.FormEvent) {
     e.preventDefault();

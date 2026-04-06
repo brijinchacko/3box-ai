@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Upload, Search, Sparkles, Rocket, ChevronDown, ChevronUp, Chrome, Mail, Globe, Zap, Shield, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, Upload, Search, Sparkles, Rocket, ChevronDown, ChevronUp, Chrome, Mail, Globe, Zap, Shield, LayoutDashboard, Clock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -26,7 +26,19 @@ const faqItems = [
   { q: 'Is my data safe?', a: 'All data is encrypted in transit and at rest. We never sell your information. You can delete your account and all data anytime.' },
 ];
 
-export default function LandingPageClient() {
+interface FeaturedPost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  readTime: number;
+}
+
+interface LandingPageClientProps {
+  featuredPosts?: FeaturedPost[];
+}
+
+export default function LandingPageClient({ featuredPosts = [] }: LandingPageClientProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { data: session } = useSession();
 
@@ -333,6 +345,56 @@ export default function LandingPageClient() {
           </div>
         </div>
       </section>
+
+      {/* ─── Featured Blog Posts ─── */}
+      {featuredPosts.length > 0 && (
+        <section className="relative py-16 sm:py-20">
+          <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-10"
+            >
+              <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+                Latest from the <span className="gradient-text">blog</span>
+              </h2>
+              <p className="text-white/40 text-sm">Career tips, AI insights, and industry trends</p>
+            </motion.div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {featuredPosts.map((post, i) => (
+                <motion.div
+                  key={post.slug}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
+                >
+                  <Link href={`/blog/${post.slug}`} className="block group">
+                    <div className="p-5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/15 transition-all h-full flex flex-col">
+                      <span className="text-[10px] uppercase tracking-wider text-neon-blue/70 font-medium mb-2">
+                        {post.category.replace(/-/g, ' ')}
+                      </span>
+                      <h3 className="text-sm font-semibold mb-2 group-hover:text-neon-blue transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      <p className="text-xs text-white/30 line-clamp-2 flex-1 mb-3">{post.excerpt}</p>
+                      <span className="flex items-center gap-1 text-[10px] text-white/20">
+                        <Clock className="w-3 h-3" /> {post.readTime} min read
+                      </span>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <Link href="/blog" className="text-sm text-neon-blue hover:text-neon-blue/80 transition-colors inline-flex items-center gap-1">
+                View all articles <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ─── Bottom CTA ─── */}
       <section className="relative py-20 overflow-hidden">

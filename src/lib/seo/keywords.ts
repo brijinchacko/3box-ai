@@ -198,6 +198,12 @@ export const PAGE_SEO = {
     keywords: '3BOX AI GDPR, data rights, GDPR compliance, data protection officer, right to erasure',
     canonical: '/gdpr',
   },
+  blog: {
+    title: 'Career Tips & AI Insights | 3BOX AI Blog',
+    description: 'Explore career tips, resume writing advice, interview preparation strategies, and AI technology insights. Expert guidance for job seekers in the age of AI.',
+    keywords: 'career tips, resume writing, interview prep, AI career advice, job search tips, AI skills development, career guidance blog, job seeker advice 2026',
+    canonical: '/blog',
+  },
   refundPolicy: {
     title: 'Refund Policy — 3BOX AI | 7-Day Money-Back Guarantee',
     description: '3BOX AI refund policy. 7-day money-back guarantee on all paid plans. Learn about eligibility conditions, usage limits, and how to request a refund.',
