@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Users, TrendingUp, Brain, FileText, Mail,
   CreditCard, Gift, Zap, Eye, BookOpen,
-  UserPlus, Activity,
+  UserPlus, Activity, Bug, MessageSquare, Send,
+  Target, Clock, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 
 interface StatsData {
@@ -23,6 +25,10 @@ interface StatsData {
   referrals: number;
   recentUsers: any[];
   dailySignups: { date: string; count: number }[];
+  tickets: { open: number; in_progress: number; resolved: number; closed: number; total: number };
+  recentTickets: any[];
+  recentActivity: any[];
+  applications: { total: number; byStatus: Record<string, number>; byMethod: Record<string, number> };
 }
 
 function StatCard({ icon: Icon, label, value, sub, color = 'text-neon-blue' }: {
@@ -237,6 +243,100 @@ export default function AdminDashboard() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Bug Reports & Application Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bug Reports Summary */}
+        <div className="glass p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2"><Bug className="w-5 h-5 text-red-400" /> Bug Reports</h2>
+            <Link href="/admin/support" className="text-xs text-neon-blue hover:underline">View All →</Link>
+          </div>
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            {[
+              { label: 'Open', count: stats.tickets?.open || 0, color: 'text-red-400' },
+              { label: 'In Progress', count: stats.tickets?.in_progress || 0, color: 'text-amber-400' },
+              { label: 'Resolved', count: stats.tickets?.resolved || 0, color: 'text-neon-green' },
+              { label: 'Total', count: stats.tickets?.total || 0, color: 'text-white/60' },
+            ].map(s => (
+              <div key={s.label} className="text-center p-2 rounded-lg bg-white/5">
+                <div className={`text-xl font-bold ${s.color}`}>{s.count}</div>
+                <div className="text-[10px] text-white/30">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {(stats.recentTickets || []).length > 0 ? (
+            <div className="space-y-2">
+              {stats.recentTickets.slice(0, 5).map((t: any) => {
+                const statusColors: Record<string, string> = { open: 'bg-red-500/15 text-red-400', in_progress: 'bg-amber-500/15 text-amber-400', resolved: 'bg-green-500/15 text-green-400', closed: 'bg-white/10 text-white/40' };
+                const priorityIcons: Record<string, string> = { high: '🔴', medium: '🟡', low: '🟢' };
+                return (
+                  <Link key={t.id} href={`/admin/support/${t.id}`} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors">
+                    <span className="text-sm">{priorityIcons[t.priority] || '⚪'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white/80 truncate">{t.subject}</p>
+                      <p className="text-[11px] text-white/30">{t.user?.name || t.user?.email || 'Unknown'} · {new Date(t.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${statusColors[t.status] || ''}`}>{t.status}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-white/30 text-center py-4">No tickets yet</p>
+          )}
+        </div>
+
+        {/* Application Stats */}
+        <div className="glass p-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Send className="w-5 h-5 text-green-400" /> Applications</h2>
+          <div className="text-3xl font-bold text-neon-green mb-4">{stats.applications?.total || 0} <span className="text-sm font-normal text-white/30">total applications</span></div>
+          {stats.applications?.byStatus && Object.keys(stats.applications.byStatus).length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs text-white/40 mb-2 uppercase tracking-wider">By Status</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.applications.byStatus).map(([status, count]) => (
+                  <span key={status} className="text-xs px-2.5 py-1 rounded-full bg-white/5 text-white/60">{status}: <strong className="text-white/80">{count as number}</strong></span>
+                ))}
+              </div>
+            </div>
+          )}
+          {stats.applications?.byMethod && Object.keys(stats.applications.byMethod).length > 0 && (
+            <div>
+              <p className="text-xs text-white/40 mb-2 uppercase tracking-wider">By Channel</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.applications.byMethod).map(([method, count]) => (
+                  <span key={method} className="text-xs px-2.5 py-1 rounded-full bg-white/5 text-white/60">{method}: <strong className="text-white/80">{count as number}</strong></span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Activity Log (All Users) */}
+      <div className="glass p-6">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Activity className="w-5 h-5 text-neon-blue" /> User Activity Log</h2>
+        {(stats.recentActivity || []).length > 0 ? (
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {stats.recentActivity.map((a: any) => {
+              const agentColors: Record<string, string> = { scout: 'text-blue-400', forge: 'text-orange-400', archer: 'text-green-400', atlas: 'text-purple-400', sage: 'text-teal-400', sentinel: 'text-rose-400', cortex: 'text-cyan-400', live_search: 'text-blue-300' };
+              return (
+                <div key={a.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-white/[0.02] transition-colors">
+                  <div className={`text-xs font-semibold uppercase mt-0.5 w-16 shrink-0 ${agentColors[a.agent] || 'text-white/40'}`}>{a.agent}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/70 truncate">{a.summary}</p>
+                    <p className="text-[11px] text-white/30">{a.user?.name || a.user?.email || 'System'} · {new Date(a.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className="text-[10px] text-white/20 shrink-0">{a.action}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-white/30 text-center py-4">No activity yet</p>
+        )}
       </div>
     </div>
   );

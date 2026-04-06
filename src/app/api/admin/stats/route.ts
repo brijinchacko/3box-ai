@@ -81,6 +81,40 @@ export async function GET() {
       ORDER BY date ASC
     `;
 
+    // Bug reports / support tickets
+    const [ticketStats, recentTickets] = await Promise.all([
+      prisma.supportTicket.groupBy({ by: ['status'], _count: true }),
+      prisma.supportTicket.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true, subject: true, category: true, priority: true, status: true,
+          createdAt: true, updatedAt: true,
+          user: { select: { name: true, email: true } },
+          _count: { select: { messages: true } },
+        },
+      }),
+    ]);
+    const tickets: Record<string, number> = { open: 0, in_progress: 0, resolved: 0, closed: 0, total: 0 };
+    ticketStats.forEach((t: any) => { tickets[t.status] = t._count; tickets.total += t._count; });
+
+    // Recent activity log (all users)
+    const recentActivity = await prisma.agentActivity.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true, agent: true, action: true, summary: true, createdAt: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
+
+    // Application stats
+    const [totalApps, appsByStatus, appsByMethod] = await Promise.all([
+      prisma.jobApplication.count(),
+      prisma.jobApplication.groupBy({ by: ['status'], _count: true }),
+      prisma.jobApplication.groupBy({ by: ['applicationMethod'], _count: true }),
+    ]);
+
     return NextResponse.json({
       overview: {
         totalUsers,
@@ -104,6 +138,14 @@ export async function GET() {
       referrals: totalReferrals,
       recentUsers,
       dailySignups,
+      tickets,
+      recentTickets,
+      recentActivity,
+      applications: {
+        total: totalApps,
+        byStatus: Object.fromEntries(appsByStatus.map((s: any) => [s.status, s._count])),
+        byMethod: Object.fromEntries(appsByMethod.map((m: any) => [m.applicationMethod || 'unknown', m._count])),
+      },
     });
   } catch (error) {
     console.error('[Admin Stats]', error);
