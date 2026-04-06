@@ -983,3 +983,27 @@ model ViralCounter {
   todayApplied  Int      @default(0)
   lastResetDate DateTime @default(now())
 }
+
+// ─── Cached Jobs (India Job Scraping) ──────────
+
+model CachedJob {
+  id          String    @id @default(cuid())
+  externalId  String    @unique
+  title       String
+  company     String
+  location    String
+  salary      String?
+  description String?   @db.Text
+  applyUrl    String
+  source      String
+  skills      String[]
+  postedAt    DateTime?
+  fetchedAt   DateTime  @default(now())
+  expiresAt   DateTime
+  isActive    Boolean   @default(true)
+
+  @@index([location])
+  @@index([source])
+  @@index([expiresAt])
+  @@index([title])
+}

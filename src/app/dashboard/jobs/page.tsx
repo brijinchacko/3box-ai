@@ -1194,6 +1194,13 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // India cached jobs state
+  const [indiaJobs, setIndiaJobs] = useState<Job[]>([]);
+  const [relatedJobs, setRelatedJobs] = useState<Job[]>([]);
+  const [remainingSearches, setRemainingSearches] = useState<number | null>(null);
+  const [showLimitBanner, setShowLimitBanner] = useState(false);
+  const [limitMessage, setLimitMessage] = useState('');
+
   // Saved jobs
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
   // DB-backed saved job IDs (ScoutJob IDs with SAVED status)
@@ -1407,6 +1414,7 @@ export default function JobsPage() {
   const fetchJobs = useCallback(async (q: string, loc: string, remote: boolean, pg: number) => {
     setLoading(true);
     setError(null);
+    setShowLimitBanner(false);
 
     try {
       const params = new URLSearchParams();
@@ -1415,8 +1423,18 @@ export default function JobsPage() {
       if (remote) params.set('remote_only', 'true');
       params.set('page', String(pg));
 
-      const res = await fetch(`/api/jobs/search?${params.toString()}`);
+      // Fetch from both live search and India cache in parallel
+      const indiaParams = new URLSearchParams();
+      if (q.trim()) indiaParams.set('q', q.trim());
+      if (loc.trim()) indiaParams.set('location', loc.trim());
+      indiaParams.set('page', String(pg));
 
+      const [res, indiaRes] = await Promise.all([
+        fetch(`/api/jobs/search?${params.toString()}`),
+        fetch(`/api/jobs/india?${indiaParams.toString()}`).catch(() => null),
+      ]);
+
+      // Process live search results
       if (!res.ok) {
         if (res.status === 401) {
           setError('Please sign in to search for jobs.');
@@ -1437,6 +1455,52 @@ export default function JobsPage() {
       setJobs(foundJobs);
       setTotal(data.total || 0);
       setIsDemo(data.isDemo || false);
+
+      // Process India cached jobs
+      if (indiaRes && indiaRes.ok) {
+        const indiaData = await indiaRes.json();
+        const mappedIndiaJobs: Job[] = (indiaData.jobs || []).map((j: any) => ({
+          id: j.id,
+          title: j.title,
+          company: j.company,
+          companyLogo: null,
+          location: j.location,
+          description: j.description || '',
+          salary: j.salary,
+          url: j.applyUrl,
+          postedAt: j.postedAt || j.fetchedAt || '',
+          type: 'Full-time',
+          remote: false,
+          source: j.source,
+        }));
+        setIndiaJobs(mappedIndiaJobs);
+
+        const mappedRelated: Job[] = (indiaData.related || []).map((j: any) => ({
+          id: j.id,
+          title: j.title,
+          company: j.company,
+          companyLogo: null,
+          location: j.location,
+          description: j.description || '',
+          salary: j.salary,
+          url: j.applyUrl,
+          postedAt: j.postedAt || j.fetchedAt || '',
+          type: 'Full-time',
+          remote: false,
+          source: j.source,
+        }));
+        setRelatedJobs(mappedRelated);
+
+        if (typeof indiaData.remaining === 'number') {
+          setRemainingSearches(indiaData.remaining);
+        }
+      } else if (indiaRes && indiaRes.status === 429) {
+        const errData = await indiaRes.json().catch(() => ({}));
+        if (errData.error === 'limit_reached') {
+          setShowLimitBanner(true);
+          setLimitMessage(errData.message || 'Daily search limit reached. Upgrade for more.');
+        }
+      }
 
       // Auto-save search results to board in background
       if (foundJobs.length > 0) {
@@ -1823,6 +1887,36 @@ export default function JobsPage() {
       {/* ── Discover Jobs Tab ─────────────────────────── */}
       {tab === 'discover' && (
         <>
+          {/* Search Limit Banner */}
+          <AnimatePresence>
+            {showLimitBanner && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-sm text-amber-400/80 flex items-center justify-between gap-2"
+              >
+                <span className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 flex-shrink-0" />
+                  {limitMessage}
+                </span>
+                <Link
+                  href="/dashboard/settings?tab=billing"
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all whitespace-nowrap"
+                >
+                  Upgrade Plan
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Remaining Searches Counter */}
+          {remainingSearches !== null && !showLimitBanner && remainingSearches < 10 && (
+            <div className="mb-4 text-xs text-white/30 text-right">
+              {remainingSearches} job searches remaining today
+            </div>
+          )}
+
           {/* Demo Data Banner */}
           <AnimatePresence>
             {isDemo && !loading && (
@@ -2083,6 +2177,114 @@ export default function JobsPage() {
             <p className="text-center text-xs text-white/20 mt-3">
               Showing {jobs.length} of {total} results {isDemo && '(demo data)'}
             </p>
+          )}
+
+          {/* India Cached Jobs */}
+          {!loading && indiaJobs.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Radar className="w-4 h-4 text-cyan-400/60" />
+                <h3 className="text-sm font-semibold text-white/70">India Job Market</h3>
+                <span className="text-xs text-white/30">({indiaJobs.length} cached results)</span>
+              </div>
+              <div className="space-y-4">
+                {indiaJobs.map((job, i) => (
+                  <motion.div
+                    key={`india-${job.id}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="card hover:border-white/10 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                          <h3 className="font-semibold text-white truncate">{job.title}</h3>
+                          {job.source && (
+                            <span className="badge text-xs bg-white/5 text-white/40 flex-shrink-0 capitalize">{job.source}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-white/40 flex-wrap mb-2">
+                          <span className="font-medium text-white/60">{job.company}</span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {job.location}
+                          </span>
+                          {job.salary && (
+                            <span className="text-cyan-400/80 font-medium">{job.salary}</span>
+                          )}
+                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${jobAgeBadgeColor(job.postedAt)}`}>
+                            <Clock className="w-3 h-3" /> {jobAgeBadgeLabel(job.postedAt)}
+                          </span>
+                        </div>
+                        {job.description && (
+                          <p className="text-sm text-white/30 line-clamp-2 leading-relaxed">{job.description}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleViewJob(job)}
+                          className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          View Job <ExternalLink className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => toggleSaveJob(job)}
+                          className={`text-xs px-4 py-2 flex items-center gap-1.5 whitespace-nowrap ${
+                            isJobSaved(job.id, job.url) ? 'btn-primary' : 'btn-secondary'
+                          }`}
+                        >
+                          <Bookmark className={`w-3 h-3 ${isJobSaved(job.id, job.url) ? 'fill-current' : ''}`} />
+                          {isJobSaved(job.id, job.url) ? 'Saved' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* You Might Also Like — Related Jobs */}
+          {!loading && relatedJobs.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-4 h-4 text-amber-400/60" />
+                <h3 className="text-sm font-semibold text-white/70">You might also like</h3>
+              </div>
+              <div className="space-y-3">
+                {relatedJobs.map((job, i) => (
+                  <motion.div
+                    key={`related-${job.id}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="card hover:border-white/10 transition-all bg-white/[0.02]"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h4 className="font-medium text-white/80 text-sm truncate">{job.title}</h4>
+                          {job.source && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/30 capitalize">{job.source}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-white/40">
+                          <span>{job.company}</span>
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {job.location}</span>
+                          {job.salary && <span className="text-cyan-400/60">{job.salary}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleViewJob(job)}
+                        className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1 whitespace-nowrap"
+                      >
+                        View <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           )}
         </>
       )}
