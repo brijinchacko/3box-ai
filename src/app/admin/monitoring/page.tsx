@@ -808,11 +808,11 @@ function SupportPanel() {
   useEffect(() => {
     Promise.all([
       fetch('/api/admin/tickets').then(r => r.ok ? r.json() : { tickets: [] }),
-      fetch('/api/admin/stats').then(r => r.ok ? r.json() : {}),
-    ]).then(([ticketData, statsData]) => {
-      setTickets(ticketData.tickets || []);
-      if (statsData.tickets) setStats(statsData.tickets);
-      if (statsData.recentActivity) setRecentActivity(statsData.recentActivity);
+      fetch('/api/admin/stats').then(r => r.ok ? r.json() : null),
+    ]).then(([ticketData, statsData]: any[]) => {
+      setTickets(ticketData?.tickets || []);
+      if (statsData?.tickets) setStats(statsData.tickets);
+      if (statsData?.recentActivity) setRecentActivity(statsData.recentActivity);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
