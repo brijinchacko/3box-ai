@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Activity, Eye, Users, Globe, CreditCard, Brain, FileText,
   TrendingUp, RefreshCw, Clock, CheckCircle2, AlertTriangle,
   XCircle, Monitor, Smartphone, Tablet, MapPin, Search,
   DollarSign, BarChart3, Shield, Mail, Wifi, ArrowUp,
-  ArrowDown, Server, BookOpen, Zap, Gift,
+  ArrowDown, Server, BookOpen, Zap, Gift, MessageSquare,
+  Bug, Send, Target,
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────
@@ -81,6 +83,7 @@ const tabs = [
   { key: 'payments', label: 'Payments', icon: CreditCard },
   { key: 'seo', label: 'SEO & Content', icon: Search },
   { key: 'health', label: 'Site Health', icon: Activity },
+  { key: 'support', label: 'Bug Reports', icon: MessageSquare },
 ];
 
 // ─── Helpers ───────────────────────────────────
@@ -783,6 +786,129 @@ export default function MonitoringDashboard() {
           </div>
         </div>
       )}
+
+      {/* ═══ BUG REPORTS TAB ═══ */}
+      {tab === 'support' && (
+        <div className="space-y-6">
+          {/* Ticket Stats */}
+          <SupportPanel />
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ─── Support Panel Component ─── */
+function SupportPanel() {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [stats, setStats] = useState({ open: 0, in_progress: 0, resolved: 0, closed: 0 });
+  const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/admin/tickets').then(r => r.ok ? r.json() : { tickets: [] }),
+      fetch('/api/admin/stats').then(r => r.ok ? r.json() : {}),
+    ]).then(([ticketData, statsData]) => {
+      setTickets(ticketData.tickets || []);
+      if (statsData.tickets) setStats(statsData.tickets);
+      if (statsData.recentActivity) setRecentActivity(statsData.recentActivity);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-center py-12 text-white/30">Loading...</div>;
+
+  const statusColors: Record<string, string> = { open: 'bg-red-500/15 text-red-400', in_progress: 'bg-amber-500/15 text-amber-400', resolved: 'bg-green-500/15 text-green-400', closed: 'bg-white/10 text-white/40' };
+  const priorityIcons: Record<string, string> = { high: '🔴', medium: '🟡', low: '🟢', urgent: '🔴' };
+
+  return (
+    <>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Open', count: stats.open, color: 'text-red-400', icon: Bug },
+          { label: 'In Progress', count: stats.in_progress, color: 'text-amber-400', icon: Clock },
+          { label: 'Resolved', count: stats.resolved, color: 'text-green-400', icon: CheckCircle2 },
+          { label: 'Total', count: (stats.open || 0) + (stats.in_progress || 0) + (stats.resolved || 0) + (stats.closed || 0), color: 'text-white/60', icon: MessageSquare },
+        ].map(s => (
+          <div key={s.label} className="glass p-5">
+            <div className={`p-2 rounded-lg bg-white/5 ${s.color} w-fit mb-3`}><s.icon className="w-5 h-5" /></div>
+            <div className={`text-2xl font-bold ${s.color}`}>{s.count}</div>
+            <div className="text-sm text-white/40 mt-1">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* All Tickets */}
+      <div className="glass p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Bug className="w-5 h-5 text-red-400" /> All Bug Reports & Tickets</h3>
+          <Link href="/admin/support" className="text-xs text-neon-blue hover:underline">Manage in Support →</Link>
+        </div>
+        {tickets.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-white/40">
+                  <th className="text-left py-3 px-2">Priority</th>
+                  <th className="text-left py-3 px-2">Subject</th>
+                  <th className="text-left py-3 px-2">User</th>
+                  <th className="text-left py-3 px-2">Status</th>
+                  <th className="text-left py-3 px-2">Messages</th>
+                  <th className="text-left py-3 px-2">Date</th>
+                  <th className="text-center py-3 px-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tickets.map((t: any) => (
+                  <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                    <td className="py-3 px-2">{priorityIcons[t.priority] || '⚪'}</td>
+                    <td className="py-3 px-2 max-w-[250px] truncate text-white/80">{t.subject}</td>
+                    <td className="py-3 px-2">
+                      <div className="text-white/60 text-xs">{t.user?.name || 'Unknown'}</div>
+                      <div className="text-white/30 text-[11px]">{t.user?.email || ''}</div>
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColors[t.status] || 'bg-white/10 text-white/40'}`}>{t.status}</span>
+                    </td>
+                    <td className="py-3 px-2 text-white/40">{t.messageCount ?? t._count?.messages ?? 0}</td>
+                    <td className="py-3 px-2 text-white/30 text-xs">{new Date(t.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-2 text-center">
+                      <Link href={`/admin/support/${t.id}`} className="text-xs text-neon-blue hover:underline">View</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-center text-white/30 py-8">No tickets yet. Bug reports from users will appear here.</p>
+        )}
+      </div>
+
+      {/* Recent User Activity */}
+      <div className="glass p-6">
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><Activity className="w-5 h-5 text-neon-blue" /> Recent User Activity</h3>
+        {recentActivity.length > 0 ? (
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {recentActivity.map((a: any) => {
+              const agentColors: Record<string, string> = { scout: 'text-blue-400', forge: 'text-orange-400', archer: 'text-green-400', atlas: 'text-purple-400', sage: 'text-teal-400', sentinel: 'text-rose-400', cortex: 'text-cyan-400', live_search: 'text-blue-300' };
+              return (
+                <div key={a.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-white/[0.02]">
+                  <div className={`text-xs font-semibold uppercase mt-0.5 w-16 shrink-0 ${agentColors[a.agent] || 'text-white/40'}`}>{a.agent}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/70 truncate">{a.summary}</p>
+                    <p className="text-[11px] text-white/30">{a.user?.name || a.user?.email || 'System'} · {new Date(a.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className="text-[10px] text-white/20 shrink-0">{a.action}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-center text-white/30 py-4">No activity yet</p>
+        )}
+      </div>
+    </>
   );
 }
