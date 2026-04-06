@@ -15,6 +15,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import dynamic from 'next/dynamic';
 
 const FloatingCoach = dynamic(() => import('@/components/ai-coach/FloatingCoach'), { ssr: false });
+const BugReportButton = dynamic(() => import('@/components/dashboard/BugReportButton'), { ssr: false });
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -141,7 +142,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ErrorBoundary>
       </main>
 
-      {/* Cortex AI Coach — removed per user request. Code kept in /components/ai-coach/ */}
+      {/* Bug Report floating button */}
+      <BugReportButton />
 
       {/* Feature lock overlay for FREE users who exhausted their applications */}
       {isLocked && !lockDismissed && <FeatureLockedOverlay used={used} limit={limit} onDismiss={() => setLockDismissed(true)} />}
