@@ -94,7 +94,7 @@ export default function LandingPageClient({ featuredPosts = [] }: LandingPageCli
                   Get Started <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
-                  href="/get-started"
+                  href="/tools"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/60 text-sm font-medium hover:text-white hover:border-white/20 transition-colors"
                 >
                   <Rocket className="w-4 h-4" /> Try it free, no signup needed
