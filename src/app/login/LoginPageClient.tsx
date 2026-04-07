@@ -15,7 +15,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   OAuthCallback: 'Google sign-in failed. Please try again or use email login.',
   OAuthSignin: 'Could not start Google sign-in. Please try email login instead.',
   OAuthAccountNotLinked: 'Sign-in failed. Please try again or use a different method.',
-  CredentialsSignin: 'Invalid email or password.',
+  CredentialsSignin: 'Invalid email or password. If you don\'t have an account, please sign up first.',
   default: 'Something went wrong. Please try again.',
 };
 
@@ -102,12 +102,12 @@ export default function LoginPageClient() {
       const hasError = data.url && new URL(data.url, window.location.origin).searchParams.get('error');
 
       if (!res.ok || hasError) {
-        setError('Invalid email or password');
+        setError('Invalid email or password. Don\'t have an account? Sign up below.');
       } else {
         window.location.href = '/dashboard';
       }
     } catch {
-      setError('Invalid email or password');
+      setError('Invalid email or password. Don\'t have an account? Sign up below.');
     } finally {
       setLoading(false);
     }

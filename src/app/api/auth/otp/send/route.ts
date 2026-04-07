@@ -34,8 +34,10 @@ export async function POST(req: Request) {
     if (type === 'login') {
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
-        // Don't reveal whether user exists — still return success
-        return NextResponse.json({ sent: true });
+        return NextResponse.json(
+          { error: 'No account found with this email. Please sign up to create an account.' },
+          { status: 404 }
+        );
       }
     }
 
