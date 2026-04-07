@@ -41,7 +41,18 @@ export async function DELETE(request: Request) {
       where: { OR: [{ userId }, ...(userEmail ? [{ email: userEmail }] : [])] },
     }).catch(() => {});
 
-    // Step 2: Delete related records that might cause FK issues
+    // Step 2: Decrement coupon usedCount for any redeemed coupons
+    try {
+      const redemptions = await prisma.couponRedemption.findMany({ where: { userId }, select: { couponId: true } });
+      for (const r of redemptions) {
+        await prisma.coupon.update({
+          where: { id: r.couponId },
+          data: { usedCount: { decrement: 1 } },
+        }).catch(() => {});
+      }
+    } catch {}
+
+    // Step 3: Delete related records that might cause FK issues
     // Delete in order: child records first, then parent
     const deleteOps = [
       prisma.ticketMessage.deleteMany({ where: { ticket: { userId } } }),
