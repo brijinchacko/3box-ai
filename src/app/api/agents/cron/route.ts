@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         ],
       },
       include: {
-        user: { select: { id: true, email: true, name: true, plan: true } },
+        user: { select: { id: true, email: true, name: true, plan: true, createdAt: true } },
       },
     });
 
@@ -279,6 +279,14 @@ export async function GET(request: NextRequest) {
           // Skip sending email if nothing meaningful happened (0 jobs, 0 applications)
           if (jobsFound === 0 && jobsApplied === 0) {
             console.log(`[Cron] Skipping email for ${config.user.email} — no jobs found or applied`);
+            continue;
+          }
+
+          // Skip email for brand new users (onboarded within last 2 hours) — avoid confusing first email
+          const userCreatedAt = new Date(config.user.createdAt || 0);
+          const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+          if (userCreatedAt > twoHoursAgo) {
+            console.log(`[Cron] Skipping email for ${config.user.email} — new user (created ${userCreatedAt.toISOString()})`);
             continue;
           }
 
