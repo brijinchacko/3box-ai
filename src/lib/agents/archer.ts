@@ -211,15 +211,40 @@ export async function applyToJob(
     // Non-critical — continue with other channels
   }
 
+  // ── Fallback: guess common HR email from job URL domain ──
+  if (!emailResult || emailResult.confidence < 50) {
+    try {
+      const jobUrl = new URL(job.url);
+      // Extract company domain from the job URL (skip job board domains)
+      const jobBoardDomains = ['linkedin.com', 'indeed.com', 'naukri.com', 'jooble.org', 'glassdoor.com', 'google.com', 'shine.com', 'monster.com', 'wellfound.com'];
+      let domain = jobUrl.hostname.replace('www.', '');
+      // If it's a job board URL, try to derive domain from company name
+      if (jobBoardDomains.some(jb => domain.includes(jb))) {
+        const companySlug = job.company.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/pvtltd|private|limited|ltd|inc|llc|corp/g, '').trim();
+        if (companySlug.length >= 3) {
+          domain = `${companySlug}.com`;
+        }
+      }
+      if (domain && !jobBoardDomains.some(jb => domain.includes(jb))) {
+        // Try common HR email patterns
+        const hrPrefixes = ['hr', 'careers', 'jobs', 'hiring', 'recruitment'];
+        const guessedEmail = `${hrPrefixes[0]}@${domain}`;
+        emailResult = { email: guessedEmail, confidence: 30, source: 'domain_guess' };
+        console.log(`[Archer] Guessed HR email: ${guessedEmail} for ${job.company}`);
+      }
+    } catch { /* ignore URL parse errors */ }
+  }
+
   // ── Check user capabilities ──
   const userHasEmail = await hasConnectedEmail(userId).catch(() => false);
   // TODO: Extension detection — check if user has extension installed
   const userHasExtension = false; // Will be set when extension reports back
 
   // ── Smart Route to best channel (data-driven) ──
+  const hasUsableEmail = !!emailResult && emailResult.confidence >= 25;
   const route = await smartRouteApplication(
     job.url,
-    !!emailResult && emailResult.confidence >= 50,
+    hasUsableEmail,
     emailResult?.confidence || 0,
     userHasEmail,
     userHasExtension,
@@ -247,7 +272,7 @@ export async function applyToJob(
       result = await executeUserEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
       break;
     case 'cold_email':
-      if (emailResult && emailResult.confidence >= 50) {
+      if (emailResult && emailResult.confidence >= 25) {
         result = await executeColdEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
       } else {
         result = await executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
@@ -255,7 +280,12 @@ export async function applyToJob(
       break;
     case 'portal_queue':
     default:
-      result = await executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+      // Last resort: try sending cold email with guessed address before portal queue
+      if (emailResult && emailResult.confidence >= 25) {
+        result = await executeColdEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
+      } else {
+        result = await executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+      }
       break;
   }
 
