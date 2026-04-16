@@ -23,7 +23,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session, status } = useSession();
   const { isAgentic } = useDashboardMode();
   const { isLocked, loading: gateLoading, used, limit } = useFeatureGate();
-  const [lockDismissed, setLockDismissed] = useState(false);
+  const [lockDismissed, setLockDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('3box_lock_dismissed') === 'true';
+    }
+    return false;
+  });
   const onboardingChecked = useRef(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -146,7 +151,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <BugReportButton />
 
       {/* Feature lock overlay for FREE users who exhausted their applications */}
-      {isLocked && !lockDismissed && <FeatureLockedOverlay used={used} limit={limit} onDismiss={() => setLockDismissed(true)} />}
+      {isLocked && !lockDismissed && <FeatureLockedOverlay used={used} limit={limit} onDismiss={() => {
+        setLockDismissed(true);
+        try { localStorage.setItem('3box_lock_dismissed', 'true'); } catch {}
+        // Auto-reset dismissal after 24 hours
+        setTimeout(() => {
+          try { localStorage.removeItem('3box_lock_dismissed'); } catch {}
+        }, 24 * 60 * 60 * 1000);
+      }} />}
     </div>
   );
 }
