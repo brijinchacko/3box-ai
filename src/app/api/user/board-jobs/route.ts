@@ -43,13 +43,37 @@ export async function GET(req: Request) {
     take: 500,
   });
 
+  // Deduplicate: keep the most advanced status for each company+title combo
+  const jobMap = new Map<string, typeof jobs[0]>();
+  const statusPriority: Record<string, number> = {
+    'WITHDRAWN': 0, 'NEW': 1, 'SCORED': 2, 'SAVED': 3, 'READY': 4,
+    'FORGE_PENDING': 5, 'FORGE_READY': 6, 'QUEUED': 7, 'APPLYING': 8,
+    'APPLIED': 9, 'EMAILED': 10, 'SCREENED': 11, 'INTERVIEW': 12, 'OFFER': 13,
+    'SKIPPED': 1, 'EXPIRED': 0,
+  };
+  for (const job of jobs) {
+    const key = `${job.company.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${job.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
+    const existing = jobMap.get(key);
+    if (!existing || (statusPriority[job.status] || 0) > (statusPriority[existing.status] || 0)) {
+      jobMap.set(key, job);
+    }
+  }
+  const dedupedJobs = Array.from(jobMap.values());
+
+  // Filter out job portal names showing as companies
+  const portalNames = ['shine.com', 'whatjobs', 'whatjobs direct', 'jooble', 'indeed', 'linkedin', 'naukri', 'glassdoor', 'remoteok', 'adzuna', 'dice', 'monster'];
+  const cleanedJobs = dedupedJobs.filter(job => {
+    const companyLower = job.company.toLowerCase();
+    return !portalNames.some(p => companyLower === p || companyLower === `${p}.com`);
+  });
+
   // Compute status summary for the graph
   const statusCounts: Record<string, number> = {};
-  for (const job of jobs) {
+  for (const job of cleanedJobs) {
     statusCounts[job.status] = (statusCounts[job.status] || 0) + 1;
   }
 
-  return NextResponse.json({ jobs, statusCounts, total: jobs.length });
+  return NextResponse.json({ jobs: cleanedJobs, statusCounts, total: cleanedJobs.length });
 }
 
 /* POST /api/user/board-jobs — Save a job to the board from search results */
