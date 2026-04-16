@@ -144,8 +144,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   FORGE_READY: { label: 'Resume Ready', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
   QUEUED: { label: 'Queued', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-500/10' },
   APPLYING: { label: 'Applying...', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10' },
-  APPLIED: { label: 'Applied (Auto)', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
-  EMAILED: { label: 'Applied (Email)', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+  APPLIED: { label: 'Applied', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
+  EMAILED: { label: 'Applied', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
   SCREENED: { label: 'Screening', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10' },
   INTERVIEW: { label: 'Interview', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/10' },
   OFFER: { label: 'Offer', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
@@ -953,7 +953,7 @@ export default function BoardPage() {
           <option value="all">All Status</option>
           <option value="NEW">New</option>
           <option value="SAVED">Saved</option>
-          <option value="APPLIED">Applied (Auto)</option>
+          <option value="APPLIED">Applied</option>
           <option value="EMAILED">Applied (Email)</option>
           <option value="SKIPPED">Apply Manually</option>
           <option value="INTERVIEW">Interview</option>
@@ -1039,7 +1039,7 @@ export default function BoardPage() {
                     <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium', sc.color, sc.bg)}>
                       {sc.label}
                     </span>
-                    {isApplied && job.appliedAt && (
+                    {job.status === 'EMAILED' && job.appliedAt && (
                       <p className="text-[10px] text-green-500 mt-0.5">Sent via email</p>
                     )}
                     {needsManual && (
