@@ -211,28 +211,41 @@ export async function applyToJob(
     // Non-critical — continue with other channels
   }
 
-  // ── Fallback: guess common HR email from job URL domain ──
+  // ── Fallback: guess common HR email from company name/domain ──
   if (!emailResult || emailResult.confidence < 50) {
     try {
-      const jobUrl = new URL(job.url);
-      // Extract company domain from the job URL (skip job board domains)
-      const jobBoardDomains = ['linkedin.com', 'indeed.com', 'naukri.com', 'jooble.org', 'glassdoor.com', 'google.com', 'shine.com', 'monster.com', 'wellfound.com'];
-      let domain = jobUrl.hostname.replace('www.', '');
-      // If it's a job board URL, try to derive domain from company name
-      if (jobBoardDomains.some(jb => domain.includes(jb))) {
-        const companySlug = job.company.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/pvtltd|private|limited|ltd|inc|llc|corp/g, '').trim();
-        if (companySlug.length >= 3) {
-          domain = `${companySlug}.com`;
+      const companyName = (job.company || '').trim();
+      // Skip unknown/generic companies
+      if (companyName && companyName !== 'Unknown Company' && companyName !== 'Unknown' && companyName.length >= 3) {
+        // Try to extract domain from job URL first (if it's a company website)
+        const jobBoardDomains = ['linkedin.com', 'indeed.com', 'naukri.com', 'jooble.org', 'glassdoor.com', 'google.com', 'shine.com', 'monster.com', 'wellfound.com', 'trabajo.org', 'adzuna.com', 'dice.com', 'ziprecruiter.com', 'remoteok.com', 'ev.careers'];
+        let domain = '';
+        try {
+          const jobUrl = new URL(job.url);
+          const host = jobUrl.hostname.replace('www.', '').replace('in.', '');
+          if (!jobBoardDomains.some(jb => host.includes(jb))) {
+            domain = host; // Direct company URL
+          }
+        } catch {}
+
+        // If no company domain from URL, derive from company name
+        if (!domain) {
+          const slug = companyName.toLowerCase()
+            .replace(/\s*(pvt|private|limited|ltd|inc|llc|corp|co|group|solutions|technologies|services|india|global)\s*/gi, '')
+            .replace(/[^a-z0-9]/g, '')
+            .trim();
+          if (slug.length >= 3) {
+            domain = `${slug}.com`;
+          }
+        }
+
+        if (domain) {
+          const guessedEmail = `hr@${domain}`;
+          emailResult = { email: guessedEmail, confidence: 30, source: 'pattern_guess', verified: false };
+          console.log(`[Archer] Guessed HR email: ${guessedEmail} for ${companyName}`);
         }
       }
-      if (domain && !jobBoardDomains.some(jb => domain.includes(jb))) {
-        // Try common HR email patterns
-        const hrPrefixes = ['hr', 'careers', 'jobs', 'hiring', 'recruitment'];
-        const guessedEmail = `${hrPrefixes[0]}@${domain}`;
-        emailResult = { email: guessedEmail, confidence: 30, source: 'pattern_guess', verified: false };
-        console.log(`[Archer] Guessed HR email: ${guessedEmail} for ${job.company}`);
-      }
-    } catch { /* ignore URL parse errors */ }
+    } catch { /* ignore errors */ }
   }
 
   // ── Check user capabilities ──
