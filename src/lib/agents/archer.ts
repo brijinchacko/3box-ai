@@ -229,7 +229,7 @@ export async function applyToJob(
         // Try common HR email patterns
         const hrPrefixes = ['hr', 'careers', 'jobs', 'hiring', 'recruitment'];
         const guessedEmail = `${hrPrefixes[0]}@${domain}`;
-        emailResult = { email: guessedEmail, confidence: 30, source: 'pattern_guess' };
+        emailResult = { email: guessedEmail, confidence: 30, source: 'pattern_guess', verified: false };
         console.log(`[Archer] Guessed HR email: ${guessedEmail} for ${job.company}`);
       }
     } catch { /* ignore URL parse errors */ }
