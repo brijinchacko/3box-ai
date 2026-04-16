@@ -110,6 +110,14 @@ export async function POST(request: NextRequest) {
 
         console.log(`[QuickApply] ${result.success ? 'Applied' : 'Failed'} to "${title}" at ${company} via ${result.method}: ${result.details}`);
 
+        // Increment appliedCount on matching active search profiles
+        if (result.success) {
+          await prisma.searchProfile.updateMany({
+            where: { userId, active: true },
+            data: { appliedCount: { increment: 1 } },
+          }).catch(() => {});
+        }
+
         // Send confirmation email to user if application succeeded
         if (result.success) {
           try {

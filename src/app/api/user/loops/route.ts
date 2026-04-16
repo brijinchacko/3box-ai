@@ -34,7 +34,23 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ profiles });
+  // Compute real applied count from ScoutJobs for accuracy
+  const appliedCount = await prisma.scoutJob.count({
+    where: { userId: session.user.id, status: { in: ['APPLIED', 'EMAILED'] } },
+  });
+  const jobsFound = await prisma.scoutJob.count({
+    where: { userId: session.user.id },
+  });
+
+  // Enrich profiles with real counts (distribute across active profiles)
+  const activeProfiles = profiles.filter(p => p.active);
+  const enrichedProfiles = profiles.map(p => ({
+    ...p,
+    appliedCount: p.active ? Math.round(appliedCount / Math.max(activeProfiles.length, 1)) : p.appliedCount,
+    jobsFound: p.active && p.jobsFound === 0 ? Math.round(jobsFound / Math.max(activeProfiles.length, 1)) : p.jobsFound,
+  }));
+
+  return NextResponse.json({ profiles: enrichedProfiles });
 }
 
 /* POST /api/user/loops — Create a new search profile and sync automation config */
