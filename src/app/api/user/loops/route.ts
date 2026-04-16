@@ -268,7 +268,6 @@ async function triggerScoutRun(userId: string, targetRole: string, location: str
       minMatchScore: 50,
       excludeCompanies: [],
       excludeKeywords: [],
-      platforms: ['jsearch', 'adzuna'],
       limit: 20,
     });
 
