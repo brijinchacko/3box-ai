@@ -33,11 +33,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '3BOX AI — Free AI Resume Builder, Career Coach & Job Matching Platform',
+    default: '3BOX AI — AI That Applies to Jobs For You | Free to Start',
     template: '%s | 3BOX AI',
   },
   description:
-    '3BOX AI is the #1 AI career platform. Free AI resume builder, personalized career coaching, skill assessment, adaptive learning paths, and AI-powered job matching. From skill assessment to dream job — powered by AI.',
+    'Let AI agents apply to jobs for you. Free AI resume builder, ATS checker, auto-apply, and interview prep. 5 free applications every week. Works with LinkedIn, Naukri, Indeed.',
   keywords: [
     'AI resume builder', 'AI career coach', 'AI job matching', 'free AI career platform',
     'ATS resume builder', 'skill assessment AI', 'career development tool', 'job search automation',
@@ -71,15 +71,15 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: SITE_URL,
-    title: '3BOX AI — Free AI Resume Builder, Career Coach & Job Matching Platform',
-    description: 'The #1 AI career platform. Free AI resume builder, career coaching, skill assessment, and job matching.',
+    title: '3BOX AI — AI That Applies to Jobs For You',
+    description: 'AI agents find matching jobs and apply automatically. 5 free applications every week. Free AI resume builder, ATS checker, interview prep.',
     siteName: '3BOX AI',
-    images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: '3BOX AI — AI Career Operating System' }],
+    images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: '3BOX AI — AI that applies to jobs for you automatically' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '3BOX AI — AI Career Operating System',
-    description: 'Free AI resume builder, career coaching, skill assessment & job matching.',
+    title: '3BOX AI — AI That Applies to Jobs For You',
+    description: 'AI agents find jobs and apply for you. 5 free applications/week. Resume builder, ATS checker, interview prep.',
     creator: '@3boxai',
     site: '@3boxai',
     images: [`${SITE_URL}/og-image.png`],

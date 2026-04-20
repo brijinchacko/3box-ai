@@ -8,6 +8,41 @@ import Footer from '@/components/layout/Footer';
 
 const competitors = [
   {
+    name: 'Simplify.jobs',
+    slug: 'simplify',
+    tagline: 'Chrome extension that autofills job applications',
+    boxAiEdge: 'True end-to-end automation, not just form autofill',
+    badge: 'Hot',
+  },
+  {
+    name: 'LoopCV',
+    slug: 'loopcv',
+    tagline: 'High-volume mass-apply tool',
+    boxAiEdge: 'Quality over quantity — tailored apps with 5-10x reply rate',
+    badge: null,
+  },
+  {
+    name: 'LazyApply',
+    slug: 'lazyapply',
+    tagline: 'LinkedIn/Indeed one-click Easy Apply',
+    boxAiEdge: 'Works across 11+ sources, including Naukri and Workday',
+    badge: null,
+  },
+  {
+    name: 'Sonara',
+    slug: 'sonara',
+    tagline: 'AI auto-apply service at $49/mo',
+    boxAiEdge: '40% cheaper plus full career toolkit (resume, ATS, prep)',
+    badge: null,
+  },
+  {
+    name: 'Final Round AI',
+    slug: 'finalroundai',
+    tagline: 'Real-time interview copilot',
+    boxAiEdge: 'Interview prep + auto-apply + everything else in one plan',
+    badge: null,
+  },
+  {
     name: 'Jobscan',
     slug: 'jobscan',
     tagline: 'ATS checker & keyword optimization',

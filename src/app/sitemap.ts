@@ -61,12 +61,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/resume/teacher`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/resume/career-changer`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
 
-    // Comparison pages (SEO-targeted)
+    // Comparison pages (SEO-targeted — high transactional intent)
     { url: `${SITE_URL}/compare`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/compare/all`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/compare/jobscan`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/compare/teal`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/compare/rezi`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/compare/simplify`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${SITE_URL}/compare/loopcv`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${SITE_URL}/compare/lazyapply`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/compare/sonara`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/compare/finalroundai`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+
+    // India city pages (SEO-targeted — India market)
+    { url: `${SITE_URL}/in`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/in/bangalore`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/in/hyderabad`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/in/mumbai`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/in/delhi`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/in/pune`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
 
     // Help & support
     { url: `${SITE_URL}/help`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
