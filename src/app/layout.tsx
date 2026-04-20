@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import Script from 'next/script';
 import { SCHEMA_ORG } from '@/lib/seo/keywords';
 import Providers from '@/components/providers/Providers';
 import PageTracker from '@/components/analytics/PageTracker';
 
 import './globals.css';
+
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const inter = Inter({
   subsets: ['latin'],
@@ -108,6 +111,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SCHEMA_ORG.softwareApplication) }} />
       </head>
       <body className="min-h-screen bg-surface text-white antialiased overflow-x-hidden">
+        {GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_MEASUREMENT_ID}', {
+                  page_path: window.location.pathname,
+                  send_page_view: true,
+                });
+              `}
+            </Script>
+          </>
+        )}
         <Providers>
           <PageTracker />
           {children}
