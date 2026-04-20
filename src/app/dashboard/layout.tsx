@@ -14,7 +14,8 @@ import NextStepBanner from '@/components/dashboard/shared/NextStepBanner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import dynamic from 'next/dynamic';
 
-const FloatingCoach = dynamic(() => import('@/components/ai-coach/FloatingCoach'), { ssr: false });
+// BugReportButton is lazy-loaded — the chunk is only fetched when the user
+// has been on the dashboard long enough for Next.js idle callback to fire.
 const BugReportButton = dynamic(() => import('@/components/dashboard/BugReportButton'), { ssr: false });
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

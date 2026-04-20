@@ -475,7 +475,7 @@ function AutopilotResume() {
     setAiSuggestions(suggestions);
   };
 
-  // Auto-save to DB with debounce
+  // Auto-save to DB with debounce + AbortController + save-on-close beacon
   useEffect(() => {
     if (!resumeLoaded || !resume.contact.name) return;
     // Skip the first auto-save triggered by initial data load (only when a resume was loaded from DB)
@@ -483,12 +483,18 @@ function AutopilotResume() {
       userHasEdited.current = true;
       if (resumeId) return; // Only skip if we loaded an existing resume — otherwise this IS a real edit
     }
+
+    // AbortController cancels stale saves if the user keeps typing —
+    // prevents racing fetches when editing rapidly.
+    const controller = new AbortController();
+
     const timer = setTimeout(() => {
       setSaving(true);
       fetch('/api/user/resume', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeId, resume, template: resume.template }),
+        signal: controller.signal,
       })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -505,12 +511,34 @@ function AutopilotResume() {
             autoCreatePortfolio();
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          // Ignore intentional aborts (user kept typing) — only show errors for real failures
+          if (err?.name === 'AbortError') return;
           showToast('Auto-save failed. Your changes may not be saved.', 'error');
         })
         .finally(() => setSaving(false));
     }, 2000);
-    return () => clearTimeout(timer);
+
+    // Save-on-close: if the user closes the tab within the 2s debounce window,
+    // flush the pending save via fetch(keepalive: true) — survives page unload
+    // unlike a regular fetch, and preserves the PUT method (unlike sendBeacon).
+    const handleBeforeUnload = () => {
+      try {
+        fetch('/api/user/resume', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resumeId, resume, template: resume.template }),
+          keepalive: true,
+        });
+      } catch { /* best effort — do not block unload */ }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [resume, resumeLoaded, resumeId]);
 
   // Re-evaluate AI suggestions with 1s debounce to avoid firing on every keystroke
