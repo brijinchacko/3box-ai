@@ -81,8 +81,44 @@ export default async function BlogPostPage({ params }: PageProps) {
     'industry-trends': 'bg-neon-orange/10 text-neon-orange border border-neon-orange/20',
   };
 
+  // JSON-LD structured data for rich results
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.excerpt,
+    image: post.coverImage ? [post.coverImage] : undefined,
+    datePublished: post.publishedAt?.toISOString() || post.createdAt.toISOString(),
+    dateModified: post.updatedAt.toISOString(),
+    author: {
+      '@type': 'Organization',
+      name: post.author || '3BOX AI Team',
+      url: 'https://3box.ai',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: '3BOX AI',
+      url: 'https://3box.ai',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://3box.ai/logo.png',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://3box.ai/blog/${slug}`,
+    },
+    keywords: Array.isArray(post.tags) ? post.tags.join(', ') : '',
+    articleSection: post.category,
+    wordCount: post.content ? post.content.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length : undefined,
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
 
       <article className="pt-32 pb-24 relative">

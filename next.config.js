@@ -34,6 +34,38 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Legacy auth URLs
+      { source: '/signin', destination: '/login', permanent: true },
+      { source: '/sign-in', destination: '/login', permanent: true },
+      { source: '/register', destination: '/signup', permanent: true },
+      { source: '/sign-up', destination: '/signup', permanent: true },
+      { source: '/log-in', destination: '/login', permanent: true },
+      { source: '/login-in', destination: '/login', permanent: true },
+
+      // Legacy tool / resume URLs
+      { source: '/resume', destination: '/tools/resume-builder', permanent: true },
+      { source: '/tools/resume', destination: '/tools/resume-builder', permanent: true },
+      { source: '/ai-tools', destination: '/tools', permanent: true },
+      { source: '/ai-resume', destination: '/tools/resume-builder', permanent: true },
+      { source: '/resume-builder', destination: '/tools/resume-builder', permanent: true },
+      { source: '/ats-check', destination: '/tools/ats-checker', permanent: true },
+      { source: '/ats-scan', destination: '/tools/ats-checker', permanent: true },
+
+      // Legacy brand / rebrand
+      { source: '/jobted', destination: '/', permanent: true },
+      { source: '/jobted/:path*', destination: '/', permanent: true },
+      { source: '/home', destination: '/', permanent: true },
+      { source: '/app', destination: '/dashboard', permanent: true },
+      { source: '/features', destination: '/agents', permanent: true },
+      { source: '/product', destination: '/agents', permanent: true },
+
+      // Legacy blog paths
+      { source: '/posts/:slug', destination: '/blog/:slug', permanent: true },
+      { source: '/articles/:slug', destination: '/blog/:slug', permanent: true },
+    ];
+  },
 };
 
 module.exports = nextConfig;

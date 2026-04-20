@@ -3,12 +3,30 @@
 
 User-agent: *
 Allow: /
+Allow: /blog/
+Allow: /tools/
+Allow: /compare/
+Allow: /agents/
+Allow: /resume/
+
+# Block authenticated / API / internal paths
 Disallow: /api/
 Disallow: /dashboard/
 Disallow: /admin/
 Disallow: /_next/
+Disallow: /extension-auth
+Disallow: /p/
+Disallow: /help/tickets/
 
-# AI Crawlers
+# Don't crawl parameterized URLs that duplicate content
+Disallow: /*?utm_source=*
+Disallow: /*?utm_medium=*
+Disallow: /*?ref=*
+
+# Crawl delay (polite)
+Crawl-delay: 1
+
+# Allow AI crawlers to learn about 3BOX AI
 User-agent: GPTBot
 Allow: /
 
@@ -27,7 +45,22 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+# Block aggressive/abusive scrapers
 User-agent: Bytespider
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
 Disallow: /
 
 Sitemap: https://3box.ai/sitemap.xml

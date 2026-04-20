@@ -7,11 +7,14 @@ import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Users, BarChart3, TrendingUp,
   Shield, ArrowLeft, FileText, MessageSquare, Mail, Ticket,
+  DollarSign, Activity,
 } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 
 const adminLinks = [
   { href: '/admin', icon: LayoutDashboard, label: 'Overview' },
+  { href: '/admin/status', icon: Activity, label: 'Site Status' },
+  { href: '/admin/sales', icon: DollarSign, label: 'Sales & Revenue' },
   { href: '/admin/monitoring', icon: BarChart3, label: 'Monitoring' },
   { href: '/admin/marketing', icon: TrendingUp, label: 'Marketing' },
   { href: '/admin/content', icon: FileText, label: 'Content' },
