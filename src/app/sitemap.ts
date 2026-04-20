@@ -1,6 +1,9 @@
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/db/prisma';
 
+export const revalidate = 3600; // Regenerate every hour (instead of build-time only)
+export const dynamic = 'force-dynamic';
+
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3box.ai';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
