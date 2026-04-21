@@ -51,7 +51,7 @@ export async function POST() {
         ? `${config.fromName} <${connection.email}>`
         : connection.email,
       to: connection.email,
-      subject: '3BOX AI — SMTP Test Successful ✅',
+      subject: '3BOX AI - SMTP Test Successful',
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #00d4ff;">SMTP Connection Verified!</h2>

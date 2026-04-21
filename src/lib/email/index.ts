@@ -216,7 +216,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
 export async function sendEmailVerifiedEmail(to: string, name: string) {
   return sendEmail({
     to,
-    subject: 'Email verified — Your 3BOX AI account is ready',
+    subject: 'Email verified - Your 3BOX AI account is ready',
     html: baseTemplate(`
       <div class="card" style="text-align: center;">
         <div style="font-size: 48px; margin-bottom: 16px;">&#9989;</div>
@@ -272,7 +272,7 @@ export async function sendOnboardingDay5(to: string, name: string) {
 export async function sendOnboardingDay7(to: string, name: string) {
   return sendEmail({
     to,
-    subject: `Unlock your full potential — 40% off Pro, ${name}`,
+    subject: `Unlock your full potential - 40% off Pro, ${name}`,
     html: baseTemplate(`
       <div class="card">
         <h2>Special Offer: 40% Off Pro Plan</h2>
@@ -315,7 +315,7 @@ export async function sendCreditLowEmail(to: string, name: string, creditsLeft: 
 export async function sendSubscriptionConfirmEmail(to: string, name: string, plan: string) {
   return sendEmail({
     to,
-    subject: `Welcome to 3BOX AI ${plan} — You're all set!`,
+    subject: `Welcome to 3BOX AI ${plan} - You're all set!`,
     html: baseTemplate(`
       <div class="card">
         <h2>Subscription Confirmed! &#127881;</h2>
@@ -371,7 +371,7 @@ export async function sendPaymentFailedEmail(to: string, name: string) {
 export async function sendReferralInviteEmail(to: string, referrerName: string, referralCode: string) {
   return sendEmail({
     to,
-    subject: `${referrerName} invited you to 3BOX AI — Get +5 extra applications`,
+    subject: `${referrerName} invited you to 3BOX AI - Get +5 extra applications`,
     html: baseTemplate(`
       <div class="card">
         <h2>${referrerName} thinks you'd love 3BOX AI</h2>
@@ -541,7 +541,7 @@ export async function sendJobApplicationEmail({
   resumeUrl?: string;
   resumePdf?: Buffer;
 }): Promise<{ id?: string; error?: string }> {
-  const subject = `Application for ${jobTitle} — ${candidateName}`;
+  const subject = `Application for ${jobTitle} - ${candidateName}`;
 
   // Use a clean professional template (NOT the branded 3BOX template)
   const html = `

@@ -386,7 +386,7 @@ async function executeColdEmailApplication(
   burstMode?: boolean,
   ctx?: AgentContext,
 ): Promise<ApplicationResult> {
-  const emailSubject = `Application for ${job.title} — ${resume.contact.name}`;
+  const emailSubject = `Application for ${job.title} - ${resume.contact.name}`;
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
 
   try {
@@ -510,7 +510,7 @@ async function executeUserEmailApplication(
     return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
   }
 
-  const emailSubject = `Application for ${job.title} — ${resume.contact.name}`;
+  const emailSubject = `Application for ${job.title} - ${resume.contact.name}`;
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
 
   try {
