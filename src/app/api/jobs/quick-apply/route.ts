@@ -27,6 +27,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: title, company, url' }, { status: 400 });
     }
 
+    // Reject applies for unknown/confidential/placeholder companies
+    const invalidCompanyNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-'];
+    if (invalidCompanyNames.includes(company.trim().toLowerCase()) || company.trim().length < 3) {
+      return NextResponse.json({
+        error: 'invalid_company',
+        message: 'This job has no valid company information. Please apply manually via the job link.',
+      }, { status: 400 });
+    }
+
     // 1. Check resume is finalized
     const resume = await prisma.resume.findFirst({
       where: { userId, isFinalized: true },

@@ -126,6 +126,14 @@ export async function generateCoverLetter(
   job: JobForApplication,
   ctx?: AgentContext,
 ): Promise<string> {
+  // Use "the hiring team" if company is unknown/confidential to avoid awkward wording
+  const invalidNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-'];
+  const cleanCompany = (job.company || '').trim();
+  const displayCompany = invalidNames.includes(cleanCompany.toLowerCase()) || cleanCompany.length < 3
+    ? 'your organization'
+    : cleanCompany;
+  const jobForPrompt = { ...job, company: displayCompany };
+  job = jobForPrompt;
   const prompt = `Write a professional, concise cover letter for this job application. Keep it to 3-4 short paragraphs. Be specific about how the candidate's experience matches the role. Do NOT include any placeholder brackets — use the actual info provided.
 
 CANDIDATE:
@@ -211,39 +219,25 @@ export async function applyToJob(
     // Non-critical — continue with other channels
   }
 
-  // ── Fallback: guess common HR email from company name/domain ──
+  // ── Fallback: ONLY use guessed email if job URL has a real company domain ──
+  // Do NOT guess from company name — most guessed domains don't exist and emails bounce
   if (!emailResult || emailResult.confidence < 50) {
     try {
       const companyName = (job.company || '').trim();
-      // Skip unknown/generic companies
-      if (companyName && companyName !== 'Unknown Company' && companyName !== 'Unknown' && companyName.length >= 3) {
-        // Try to extract domain from job URL first (if it's a company website)
-        const jobBoardDomains = ['linkedin.com', 'indeed.com', 'naukri.com', 'jooble.org', 'glassdoor.com', 'google.com', 'shine.com', 'monster.com', 'wellfound.com', 'trabajo.org', 'adzuna.com', 'dice.com', 'ziprecruiter.com', 'remoteok.com', 'ev.careers'];
-        let domain = '';
+      const invalidNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-', ''];
+      if (companyName && !invalidNames.includes(companyName.toLowerCase()) && companyName.length >= 3) {
+        // Only extract domain if job URL is a DIRECT company website (not a job board)
+        const jobBoardDomains = ['linkedin.com', 'indeed.com', 'naukri.com', 'jooble.org', 'glassdoor.com', 'google.com', 'shine.com', 'monster.com', 'wellfound.com', 'trabajo.org', 'adzuna.com', 'dice.com', 'ziprecruiter.com', 'remoteok.com', 'ev.careers', 'whatjobs.com', 'talenthivenetwork.com'];
         try {
           const jobUrl = new URL(job.url);
           const host = jobUrl.hostname.replace('www.', '').replace('in.', '');
           if (!jobBoardDomains.some(jb => host.includes(jb))) {
-            domain = host; // Direct company URL
+            // Only use domain from the actual job URL — NEVER guess from company name
+            const guessedEmail = `hr@${host}`;
+            emailResult = { email: guessedEmail, confidence: 35, source: 'pattern_guess', verified: false };
+            console.log(`[Archer] Using URL-derived email: ${guessedEmail} for ${companyName}`);
           }
         } catch {}
-
-        // If no company domain from URL, derive from company name
-        if (!domain) {
-          const slug = companyName.toLowerCase()
-            .replace(/\s*(pvt|private|limited|ltd|inc|llc|corp|co|group|solutions|technologies|services|india|global)\s*/gi, '')
-            .replace(/[^a-z0-9]/g, '')
-            .trim();
-          if (slug.length >= 3) {
-            domain = `${slug}.com`;
-          }
-        }
-
-        if (domain) {
-          const guessedEmail = `hr@${domain}`;
-          emailResult = { email: guessedEmail, confidence: 30, source: 'pattern_guess', verified: false };
-          console.log(`[Archer] Guessed HR email: ${guessedEmail} for ${companyName}`);
-        }
       }
     } catch { /* ignore errors */ }
   }
