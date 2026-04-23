@@ -100,11 +100,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── AI Extraction ──────────────────────────────
-    const response = await aiChat({
-      model: AI_MODELS.premium.id,
-      timeout: 60000, // 60s for resume parsing (large structured extraction)
-      messages: [
+    // ── AI Extraction with fallback chain ──────────
+    const modelChain = [
+      'openai/gpt-4o-mini',        // Fast, reliable, structured output
+      'deepseek/deepseek-chat',    // Backup paid model
+      AI_MODELS.premium.id,        // Premium fallback
+    ];
+    let response = '';
+    let lastError: Error | null = null;
+    for (const modelId of modelChain) {
+      try {
+        response = await aiChat({
+          model: modelId,
+          timeout: 45000,
+          messages: [
         {
           role: 'system',
           content: `You are a resume parser AI. Extract structured data from the resume text below and return a JSON object with these EXACT fields:
@@ -149,12 +158,38 @@ CRITICAL Rules:
           role: 'user',
           content: `Parse this resume and extract ALL structured data. Do not skip any experience, education, certification, or project:\n\n${resumeText.slice(0, 12000)}`,
         },
-      ],
-      temperature: 0.3,
-      maxTokens: 6000,
-    });
+          ],
+          temperature: 0.3,
+          maxTokens: 6000,
+        });
+        if (response && response.trim().length > 20) {
+          console.log(`[Resume Parse] Success with model: ${modelId}`);
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`[Resume Parse] Model ${modelId} failed:`, err.message);
+        lastError = err;
+      }
+    }
 
-    const parsed = JSON.parse(extractJSON(response));
+    if (!response || response.trim().length < 20) {
+      console.error('[Resume Parse] All models failed. Last error:', lastError?.message);
+      return NextResponse.json(
+        { error: 'AI service is temporarily busy. Please try again in a moment or enter your details manually.' },
+        { status: 503 }
+      );
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(extractJSON(response));
+    } catch (parseErr) {
+      console.error('[Resume Parse] JSON parse failed. Raw:', response.substring(0, 300));
+      return NextResponse.json(
+        { error: 'Failed to parse resume content. Please try again or enter your details manually.' },
+        { status: 500 }
+      );
+    }
 
     // Validate & normalize the parsed result
     const result = {
