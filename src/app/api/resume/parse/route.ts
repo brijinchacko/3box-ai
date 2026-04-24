@@ -101,13 +101,19 @@ export async function POST(request: NextRequest) {
     }
 
     // ── AI Extraction with fallback chain ──────────
+    // Paid models first (best quality), then verified free models as last resort
+    // so parse keeps working even if the OpenRouter account runs out of credits.
     const modelChain = [
-      'openai/gpt-4o-mini',        // Fast, reliable, structured output
+      'openai/gpt-4o-mini',        // Fast, reliable, structured output (paid)
       'deepseek/deepseek-chat',    // Backup paid model
-      AI_MODELS.premium.id,        // Premium fallback
+      AI_MODELS.premium.id,        // Premium fallback (paid)
+      'openai/gpt-oss-120b:free',  // Free fallback #1 (OpenAI-tuned, 120B)
+      'z-ai/glm-4.5-air:free',     // Free fallback #2
+      'openai/gpt-oss-20b:free',   // Free fallback #3 (smaller/faster)
     ];
     let response = '';
     let lastError: Error | null = null;
+    let sawInsufficientCredits = false;
     for (const modelId of modelChain) {
       try {
         response = await aiChat({
@@ -167,12 +173,19 @@ CRITICAL Rules:
           break;
         }
       } catch (err: any) {
-        console.warn(`[Resume Parse] Model ${modelId} failed:`, err.message);
+        const upstream = String(err?.upstream || err?.message || '');
+        if (err?.status === 402 || upstream.includes('Insufficient credits')) {
+          sawInsufficientCredits = true;
+        }
+        console.warn(`[Resume Parse] Model ${modelId} failed:`, err?.message || upstream);
         lastError = err;
       }
     }
 
     if (!response || response.trim().length < 20) {
+      if (sawInsufficientCredits) {
+        console.error('[Resume Parse] ADMIN ACTION NEEDED: OpenRouter account has insufficient credits. Top up at https://openrouter.ai/settings/credits. Free fallbacks also exhausted/rate-limited.');
+      }
       console.error('[Resume Parse] All models failed. Last error:', lastError?.message);
       return NextResponse.json(
         { error: 'AI service is temporarily busy. Please try again in a moment or enter your details manually.' },

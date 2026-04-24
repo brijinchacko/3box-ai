@@ -33,8 +33,8 @@ export interface AIModelConfig {
 
 export const AI_MODELS: Record<ModelTier, AIModelConfig> = {
   free: {
-    id: 'qwen/qwen3.6-plus-preview:free',
-    name: 'Qwen 3.6 Plus (Free)',
+    id: 'openai/gpt-oss-120b:free',
+    name: 'GPT-OSS 120B (Free)',
     tier: 'free',
     maxTokens: 8192,
     supportsJsonMode: false,
@@ -223,7 +223,13 @@ export async function aiChat(request: ChatCompletionRequest): Promise<string> {
     if (!response.ok) {
       const error = await response.text().catch(() => 'Unknown error');
       console.error(`[AI] OpenRouter error (${modelId}):`, redactPII(error));
-      throw new Error('AI service temporarily unavailable');
+      // Preserve the upstream error string (including 402/429/etc.) on a custom
+      // field so callers can diagnose credit/rate-limit issues without exposing
+      // the raw message to end users. The thrown message stays generic.
+      const err: Error & { upstream?: string; status?: number } = new Error('AI service temporarily unavailable');
+      err.upstream = error;
+      err.status = response.status;
+      throw err;
     }
 
     const data = await response.json();
