@@ -252,27 +252,15 @@ export async function applyToJob(
     // Non-critical — continue with other channels
   }
 
-  // ── Fallback: ONLY use guessed email if job URL has a real company domain ──
-  // Do NOT guess from company name — most guessed domains don't exist and emails bounce
-  if (!emailResult || emailResult.confidence < 50) {
-    try {
-      const companyName = (job.company || '').trim();
-      const invalidNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-', ''];
-      if (companyName && !invalidNames.includes(companyName.toLowerCase()) && companyName.length >= 3) {
-        // Only extract domain if job URL is a DIRECT company website (not a job board)
-        const jobBoardDomains = ['linkedin.com', 'indeed.com', 'naukri.com', 'jooble.org', 'glassdoor.com', 'google.com', 'shine.com', 'monster.com', 'wellfound.com', 'trabajo.org', 'adzuna.com', 'dice.com', 'ziprecruiter.com', 'remoteok.com', 'ev.careers', 'whatjobs.com', 'talenthivenetwork.com'];
-        try {
-          const jobUrl = new URL(job.url);
-          const host = jobUrl.hostname.replace('www.', '').replace('in.', '');
-          if (!jobBoardDomains.some(jb => host.includes(jb))) {
-            // Only use domain from the actual job URL — NEVER guess from company name
-            const guessedEmail = `hr@${host}`;
-            emailResult = { email: guessedEmail, confidence: 35, source: 'pattern_guess', verified: false };
-            console.log(`[Archer] Using URL-derived email: ${guessedEmail} for ${companyName}`);
-          }
-        } catch {}
-      }
-    } catch { /* ignore errors */ }
+  // ── No email guessing — ONLY use verified emails from Hunter.io ──
+  // Domain guessing was causing 80%+ bounce rate. Better to queue for
+  // manual apply than send to addresses that don't exist.
+  if (!emailResult || emailResult.confidence < 70 || !emailResult.verified) {
+    // No verified email available — will fall through to portal_queue below
+    if (emailResult) {
+      console.log(`[Archer] Skipping cold email for ${job.company} — confidence too low (${emailResult.confidence}%) or unverified`);
+    }
+    emailResult = null;
   }
 
   // ── Check user capabilities ──
@@ -281,7 +269,8 @@ export async function applyToJob(
   const userHasExtension = false; // Will be set when extension reports back
 
   // ── Smart Route to best channel (data-driven) ──
-  const hasUsableEmail = !!emailResult && emailResult.confidence >= 25;
+  // Only consider email channel if we have a VERIFIED email (no guessing)
+  const hasUsableEmail = !!emailResult && emailResult.verified && emailResult.confidence >= 70;
   const route = await smartRouteApplication(
     job.url,
     hasUsableEmail,
@@ -312,7 +301,8 @@ export async function applyToJob(
       result = await executeUserEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
       break;
     case 'cold_email':
-      if (emailResult && emailResult.confidence >= 25) {
+      // Only send if we have a verified email with high confidence (no guessing)
+      if (emailResult && emailResult.verified && emailResult.confidence >= 70) {
         result = await executeColdEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
       } else {
         result = await executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
@@ -320,8 +310,8 @@ export async function applyToJob(
       break;
     case 'portal_queue':
     default:
-      // Last resort: try sending cold email with guessed address before portal queue
-      if (emailResult && emailResult.confidence >= 25) {
+      // Only send cold email if verified — no guessing fallback
+      if (emailResult && emailResult.verified && emailResult.confidence >= 70) {
         result = await executeColdEmailApplication(userId, job, resume, coverLetter, emailResult, runId, burstMode, ctx);
       } else {
         result = await executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
