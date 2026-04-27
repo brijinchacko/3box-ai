@@ -115,6 +115,34 @@ export function determineApplicationStrategy(
   return { strategy, quality };
 }
 
+// ─── Helper: Clean job title and company for display ───
+function cleanJobForDisplay(job: { title?: string; company?: string }) {
+  const invalidNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-'];
+  const cleanCompany = (job.company || '').trim();
+  const displayCompany = invalidNames.includes(cleanCompany.toLowerCase()) || cleanCompany.length < 3
+    ? 'your organization'
+    : cleanCompany;
+
+  const rawTitle = (job.title || '').trim();
+  let displayTitle = rawTitle
+    // Remove "Jobs in <Location>" / "Jobs Near Me" suffix
+    .replace(/\s+jobs?\s+(in|near|for|at)\s+[^,]+(\s*,?\s*[^,]+)*\s*(\.\.\.|…)?$/i, '')
+    .replace(/\s+(are\s+near|near\s+me|open\s+positions?|hiring\s+now)[\s.…]*/i, '')
+    // Remove leading aggregator words: "What", "All", "Top", numbers like "15,000+"
+    .replace(/^\s*(what|all|top|best|new|latest|find)\s+/i, '')
+    .replace(/^\s*\d+[,.]?\d*\+?\s+/i, '')
+    // Remove trailing ellipsis and brackets
+    .replace(/\s*[…\.]{2,}\s*$/, '')
+    .replace(/\s*[\[\(].*?[\]\)]\s*$/, '')
+    .replace(/[-\s,]+$/, '')
+    .trim();
+
+  // Fallback if cleaning made it too short or empty
+  if (displayTitle.length < 3) displayTitle = rawTitle.replace(/\s*[…\.]{2,}\s*$/, '').trim() || 'this role';
+
+  return { displayTitle, displayCompany };
+}
+
 // ─── Single Job Application (backward-compatible) ───
 
 /**
@@ -126,15 +154,18 @@ export async function generateCoverLetter(
   job: JobForApplication,
   ctx?: AgentContext,
 ): Promise<string> {
-  // Use "the hiring team" if company is unknown/confidential to avoid awkward wording
-  const invalidNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-'];
-  const cleanCompany = (job.company || '').trim();
-  const displayCompany = invalidNames.includes(cleanCompany.toLowerCase()) || cleanCompany.length < 3
-    ? 'your organization'
-    : cleanCompany;
-  const jobForPrompt = { ...job, company: displayCompany };
+  const { displayTitle, displayCompany } = cleanJobForDisplay(job);
+  const jobForPrompt = { ...job, company: displayCompany, title: displayTitle };
   job = jobForPrompt;
-  const prompt = `Write a professional, concise cover letter for this job application. Keep it to 3-4 short paragraphs. Be specific about how the candidate's experience matches the role. Do NOT include any placeholder brackets — use the actual info provided.
+  const prompt = `Write a professional, concise cover letter for this job application. Use exactly 3 short paragraphs. Be specific about how the candidate's experience matches the role.
+
+STRICT RULES:
+- DO NOT include placeholder brackets, ellipses (...), or job board phrases
+- DO NOT mention "Unknown Company", "Confidential", or any placeholder name
+- If company is "your organization", use that phrase naturally in the letter
+- Use ONLY the cleaned job title provided below — do NOT include "jobs in", "near me", or location suffixes
+- Use proper English grammar — no awkward phrasing
+- Each paragraph: 2-3 sentences max
 
 CANDIDATE:
 Name: ${resume.contact.name}
@@ -147,9 +178,9 @@ JOB:
 Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
-Description: ${job.description.slice(0, 1000)}
+Description: ${job.description.slice(0, 800)}
 
-Write ONLY the cover letter body text (no subject line, no "Dear Hiring Manager" header, no signature block). Start directly with the opening paragraph.`;
+Write ONLY the cover letter body text — no greeting, no signature, no subject line. Start directly with "I am writing..." or similar opening. End with a closing paragraph expressing interest in next steps.`;
 
   try {
     const contextBlock = ctx ? `\n\nTEAM CONTEXT:\n${getContextSummary(ctx)}` : '';
@@ -173,7 +204,9 @@ IMPORTANT:
 
     return response.trim();
   } catch {
-    return `I am writing to express my strong interest in the ${job.title} position at ${job.company}. With my background in ${resume.skills.slice(0, 3).join(', ')}, I am confident I can make a meaningful contribution to your team.\n\nMy experience as ${resume.experience[0]?.title || 'a professional'} has equipped me with the skills necessary to excel in this role. I am eager to bring my expertise to ${job.company} and contribute to your continued success.\n\nI would welcome the opportunity to discuss how my skills and experience align with your needs. Thank you for considering my application.`;
+    const skillsList = resume.skills.slice(0, 3).join(', ') || 'various professional disciplines';
+    const lastRole = resume.experience[0]?.title || 'a professional';
+    return `I am writing to express my strong interest in the ${job.title} position at ${job.company}. With my background in ${skillsList}, I am confident I can make a meaningful contribution to your team.\n\nMy experience as ${lastRole} has equipped me with the skills necessary to excel in this role. I am eager to bring my expertise to ${job.company} and contribute to your continued success.\n\nI would welcome the opportunity to discuss how my skills and experience align with your needs. Thank you for considering my application.`;
   }
 }
 
@@ -386,7 +419,8 @@ async function executeColdEmailApplication(
   burstMode?: boolean,
   ctx?: AgentContext,
 ): Promise<ApplicationResult> {
-  const emailSubject = `Application for ${job.title} - ${resume.contact.name}`;
+  const { displayTitle: cleanTitle } = cleanJobForDisplay(job);
+  const emailSubject = `Application for ${cleanTitle} - ${resume.contact.name}`;
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
 
   try {
@@ -510,7 +544,8 @@ async function executeUserEmailApplication(
     return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
   }
 
-  const emailSubject = `Application for ${job.title} - ${resume.contact.name}`;
+  const { displayTitle: cleanTitle } = cleanJobForDisplay(job);
+  const emailSubject = `Application for ${cleanTitle} - ${resume.contact.name}`;
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
 
   try {
