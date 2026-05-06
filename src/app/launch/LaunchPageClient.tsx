@@ -29,133 +29,72 @@ import {
   LayoutDashboard,
   Target,
   Briefcase,
+  Send,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import Logo from '@/components/brand/Logo';
 import AgentAvatar from '@/components/brand/AgentAvatar';
 import CortexAvatar from '@/components/brand/CortexAvatar';
 import LiveApplicationCounter from '@/components/landing/LiveApplicationCounter';
 import { AGENT_LIST, COORDINATOR } from '@/lib/agents/registry';
 import { useRegion } from '@/lib/geo';
 
-// CTA URL — every conversion is attributed to the launch ad campaign.
+// ──────────────────────────────────────────────────────────────────────
+// CTA URLs — every conversion is attributed to the launch ad campaign.
+// ──────────────────────────────────────────────────────────────────────
 const CTA_HREF =
   '/get-started?utm_source=ads&utm_medium=landing&utm_campaign=launch';
 const PRICING_HREF =
   '/pricing?utm_source=ads&utm_medium=landing&utm_campaign=launch';
 
-// ────────────────────────────────────────────────────────────
-// Section 2 — full-bleed hero video player (with sound toggle)
-// ────────────────────────────────────────────────────────────
-function VideoShowcase() {
+// ──────────────────────────────────────────────────────────────────────
+// AutoPlayVideo — robust autoplay-loop-muted video. Some browsers ignore
+// the `autoPlay` JSX prop until React actually mounts and applies it; we
+// also call .play() defensively from a useEffect with a .catch() so that
+// transient errors (low memory, slow network) recover automatically.
+// ──────────────────────────────────────────────────────────────────────
+function AutoPlayVideo({
+  src,
+  className = '',
+  poster,
+}: {
+  src: string;
+  className?: string;
+  poster?: string;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-  const [playing, setPlaying] = useState(false);
 
-  const togglePlay = () => {
+  useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (v.paused) {
-      v.play().catch(() => {});
-      setPlaying(true);
-    } else {
-      v.pause();
-      setPlaying(false);
-    }
-  };
+    v.muted = true; // re-assert in case attribute was lost
+    const tryPlay = () => v.play().catch(() => {});
+    tryPlay();
+    v.addEventListener('canplay', tryPlay);
+    return () => v.removeEventListener('canplay', tryPlay);
+  }, []);
 
   return (
-    <section className="relative py-16 sm:py-24 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-radial from-neon-purple/10 via-transparent to-transparent" aria-hidden="true" />
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-10"
-        >
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-purple/10 border border-neon-purple/20 text-neon-purple text-xs font-semibold mb-4">
-            <Play className="w-3 h-3" /> 90 SECOND DEMO
-          </span>
-          <h2 className="text-3xl sm:text-5xl font-bold mb-3">
-            Watch your AI team{' '}
-            <span className="gradient-text">close interviews</span>
-          </h2>
-          <p className="text-white/50 max-w-xl mx-auto">
-            See exactly how 6 specialist agents work together — from job
-            discovery to interview-ready applications.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-neon-purple/10"
-        >
-          {/* Video element */}
-          <video
-            ref={ref}
-            className="w-full aspect-video object-cover bg-black"
-            src="/videos/hero.mp4"
-            playsInline
-            muted={muted}
-            onEnded={() => setPlaying(false)}
-            preload="metadata"
-            poster="/og-image.png"
-          />
-
-          {/* Play overlay (only when paused) */}
-          {!playing && (
-            <button
-              type="button"
-              onClick={togglePlay}
-              aria-label="Play demo video"
-              className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition-colors group"
-            >
-              <span className="w-20 h-20 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-2xl shadow-neon-blue/40 group-hover:scale-110 transition-transform">
-                <Play className="w-9 h-9 text-white ml-1" fill="white" />
-              </span>
-            </button>
-          )}
-
-          {/* Sound toggle (only when playing) */}
-          {playing && (
-            <button
-              type="button"
-              onClick={() => setMuted((m) => !m)}
-              aria-label={muted ? 'Unmute' : 'Mute'}
-              className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/80 transition-colors"
-            >
-              {muted ? (
-                <VolumeX className="w-4 h-4 text-white" />
-              ) : (
-                <Volume2 className="w-4 h-4 text-white" />
-              )}
-            </button>
-          )}
-        </motion.div>
-
-        <div className="mt-8 text-center">
-          <Link
-            href={CTA_HREF}
-            className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20"
-          >
-            Start Free — Watch It Work <ArrowRight className="w-5 h-5" />
-          </Link>
-          <p className="text-xs text-white/30 mt-3">
-            No credit card · 5 free applications/week · Cancel anytime
-          </p>
-        </div>
-      </div>
-    </section>
+    <video
+      ref={ref}
+      className={className}
+      src={src}
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="auto"
+      poster={poster}
+      // iOS Safari workaround attributes
+      {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as Record<string, string>)}
+    />
   );
 }
 
-// ────────────────────────────────────────────────────────────
-// Animated counter — counts up when scrolled into view
-// ────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────
+// CountUp — animates a number when scrolled into view
+// ──────────────────────────────────────────────────────────────────────
 function CountUp({
   value,
   suffix = '',
@@ -173,12 +112,11 @@ function CountUp({
 
   useEffect(() => {
     if (!inView) return;
-    let start = 0;
+    const start = 0;
     const startTs = Date.now();
     const tick = () => {
       const elapsed = Date.now() - startTs;
       const t = Math.min(elapsed / duration, 1);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - t, 3);
       setDisplay(Math.round(start + (value - start) * eased));
       if (t < 1) requestAnimationFrame(tick);
@@ -195,9 +133,173 @@ function CountUp({
   );
 }
 
-// ────────────────────────────────────────────────────────────
-// Pricing card — uses live region pricing
-// ────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────
+// ContactForm — inline lead-capture form. Posts to /api/contact, shows
+// success/error states. Includes a hidden "company" honeypot.
+// ──────────────────────────────────────────────────────────────────────
+function ContactForm() {
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [error, setError] = useState<string>('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [message, setMessage] = useState('');
+  const [company, setCompany] = useState(''); // honeypot
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          message,
+          company, // honeypot — must stay empty
+          source: 'launch',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || 'Could not send message.');
+      }
+      setStatus('success');
+    } catch (err: any) {
+      setStatus('error');
+      setError(err?.message || 'Something went wrong.');
+    }
+  }
+
+  if (status === 'success') {
+    return (
+      <div className="rounded-2xl border border-neon-green/30 bg-neon-green/[0.04] p-8 text-center">
+        <div className="w-14 h-14 rounded-full bg-neon-green/15 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-7 h-7 text-neon-green" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Message received!</h3>
+        <p className="text-sm text-white/60 mb-6 max-w-sm mx-auto">
+          Thanks {name.split(' ')[0] || 'there'} — we&apos;ll get back to you within
+          24 hours. Meanwhile, why not try the platform free?
+        </p>
+        <Link
+          href={CTA_HREF}
+          className="btn-primary text-sm px-6 py-3 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/30"
+        >
+          Test It Free <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label htmlFor="lp-name" className="block text-xs font-medium text-white/50 mb-1.5">Your name *</label>
+          <input
+            id="lp-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            minLength={2}
+            maxLength={120}
+            placeholder="Jane Doe"
+            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-white/25 focus:outline-none focus:border-neon-blue/50 focus:ring-2 focus:ring-neon-blue/15 transition-all"
+          />
+        </div>
+        <div>
+          <label htmlFor="lp-email" className="block text-xs font-medium text-white/50 mb-1.5">Email *</label>
+          <input
+            id="lp-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            maxLength={200}
+            placeholder="jane@example.com"
+            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-white/25 focus:outline-none focus:border-neon-blue/50 focus:ring-2 focus:ring-neon-blue/15 transition-all"
+          />
+        </div>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="lp-phone" className="block text-xs font-medium text-white/50 mb-1.5">Phone (optional)</label>
+        <input
+          id="lp-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          maxLength={40}
+          placeholder="+1 555 0100"
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-white/25 focus:outline-none focus:border-neon-blue/50 focus:ring-2 focus:ring-neon-blue/15 transition-all"
+        />
+      </div>
+      <div className="mb-5">
+        <label htmlFor="lp-msg" className="block text-xs font-medium text-white/50 mb-1.5">How can we help? *</label>
+        <textarea
+          id="lp-msg"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+          minLength={5}
+          maxLength={4000}
+          rows={4}
+          placeholder="Tell us about your job search, partnership idea, or any questions you have..."
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-white/25 focus:outline-none focus:border-neon-blue/50 focus:ring-2 focus:ring-neon-blue/15 transition-all resize-none"
+        />
+      </div>
+
+      {/* Honeypot — invisible to humans, bots fill it */}
+      <div className="hidden" aria-hidden="true">
+        <label htmlFor="lp-company">Company (leave empty)</label>
+        <input
+          id="lp-company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+        />
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-400 mb-3" role="alert">{error}</p>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
+        <button
+          type="submit"
+          disabled={status === 'sending'}
+          className="btn-primary text-sm px-6 py-3 inline-flex items-center justify-center gap-2 shadow-lg shadow-neon-blue/30 disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
+        >
+          {status === 'sending' ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" /> Sending…
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" /> Send Message
+            </>
+          )}
+        </button>
+        <p className="text-[11px] text-white/30 text-center sm:text-left">
+          We respond within 24 hours · Or just{' '}
+          <Link href={CTA_HREF} className="text-neon-blue hover:underline">
+            test it free now
+          </Link>
+        </p>
+      </div>
+    </form>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Pricing plan definitions
+// ──────────────────────────────────────────────────────────────────────
 const PRICING_PLANS = [
   {
     key: 'free' as const,
@@ -248,9 +350,9 @@ const PRICING_PLANS = [
   },
 ];
 
-// ────────────────────────────────────────────────────────────
-// FAQ items — focused on ad-click intent
-// ────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────
+// FAQ items
+// ──────────────────────────────────────────────────────────────────────
 const FAQS = [
   {
     q: 'How fast can I start getting interviews?',
@@ -278,9 +380,9 @@ const FAQS = [
   },
 ];
 
-// ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
 // Main page
-// ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
 export default function LaunchPageClient() {
   const { data: session } = useSession();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -299,16 +401,47 @@ export default function LaunchPageClient() {
   };
 
   return (
-    <div className="min-h-screen text-white">
-      <Navbar />
+    <div className="min-h-screen text-white bg-[#0a0a0f]">
+      {/* ════════════════════════════════════════════════════════
+          STICKY MINIMAL TOP BAR — logo + 1 CTA only
+          (Replaces full Navbar — landing pages should be focused.)
+          ════════════════════════════════════════════════════════ */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0a0a0f]/80 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <Link href="/" aria-label="3BOX AI home" className="flex items-center">
+            <Logo size="sm" />
+          </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="#contact"
+              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white/65 hover:text-white transition-colors"
+            >
+              <Mail className="w-4 h-4" /> Contact
+            </Link>
+            {session ? (
+              <Link
+                href="/dashboard"
+                className="btn-primary text-sm px-4 py-2 sm:px-5 sm:py-2.5 inline-flex items-center gap-1.5"
+              >
+                Dashboard <LayoutDashboard className="w-4 h-4" />
+              </Link>
+            ) : (
+              <Link
+                href={CTA_HREF}
+                className="btn-primary text-sm px-4 py-2 sm:px-5 sm:py-2.5 inline-flex items-center gap-1.5 shadow-lg shadow-neon-blue/20"
+              >
+                Test It Free <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
 
       {/* ════════════════════════════════════════════════════════
-          1 · HERO — split layout (different from home's centered)
-          Left: aggressive ad-style headline + dual CTA + trust row
-          Right: looping accent video in a glowing device frame
+          1 · HERO — split layout, big autoplay video on right
           ════════════════════════════════════════════════════════ */}
-      <section className="relative pt-28 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
-        {/* Background — different from home (gradient mesh + grid) */}
+      <section className="relative pt-12 sm:pt-20 pb-16 sm:pb-24 overflow-hidden">
+        {/* Background — gradient mesh + grid */}
         <div className="absolute inset-0 bg-grid opacity-[0.15]" aria-hidden="true" />
         <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-gradient-radial from-neon-purple/15 via-neon-blue/8 to-transparent rounded-full blur-3xl" aria-hidden="true" />
         <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-gradient-radial from-neon-blue/10 via-transparent to-transparent rounded-full blur-3xl" aria-hidden="true" />
@@ -369,19 +502,19 @@ export default function LaunchPageClient() {
                     href={CTA_HREF}
                     className="btn-primary text-base px-8 py-3.5 inline-flex items-center justify-center gap-2 shadow-lg shadow-neon-blue/30"
                   >
-                    Hire My AI Team <ArrowRight className="w-5 h-5" />
+                    Test It Free <ArrowRight className="w-5 h-5" />
                   </Link>
                   <Link
-                    href="#video"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white/70 text-sm font-medium hover:text-white hover:border-white/30 transition-colors"
+                    href="#contact"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:text-white hover:border-white/30 hover:bg-white/[0.03] transition-colors"
                   >
-                    <Play className="w-4 h-4" /> Watch 90s demo
+                    <Mail className="w-4 h-4" /> Contact Me
                   </Link>
                 </>
               )}
             </motion.div>
 
-            {/* Trust row — 4 micro-signals */}
+            {/* Trust row */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -412,14 +545,16 @@ export default function LaunchPageClient() {
             </motion.div>
           </div>
 
-          {/* Right — looping accent video in a stylized "laptop" frame */}
+          {/* Right — big AUTOPLAY video in a stylized "browser" frame.
+              Uses hero.mp4 (proven working) instead of hero1.mp4 which
+              wasn't playing reliably. AutoPlayVideo wraps a defensive
+              .play().catch() retry. */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.2 }}
             className="relative"
           >
-            {/* Glow behind device */}
             <div className="absolute inset-0 bg-gradient-radial from-neon-blue/25 via-neon-purple/15 to-transparent blur-2xl" aria-hidden="true" />
 
             <div className="relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-2 shadow-2xl shadow-neon-blue/20 backdrop-blur-sm">
@@ -431,25 +566,17 @@ export default function LaunchPageClient() {
                 <span className="ml-3 text-[10px] text-white/30 font-mono">3box.ai/dashboard</span>
               </div>
 
-              {/* Video — short loop, autoplay-muted-loop is browser-allowed */}
-              <video
+              <AutoPlayVideo
                 className="w-full aspect-video object-cover rounded-lg bg-black"
-                src="/videos/hero1.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="auto"
+                src="/videos/hero.mp4"
               />
 
-              {/* Floating agent badges */}
-              <div className="absolute -top-3 -right-3 hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-50 border border-white/10 shadow-lg">
+              <div className="absolute -top-3 -right-3 hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#0a0a0f] border border-white/10 shadow-lg">
                 <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
                 <span className="text-[10px] font-semibold text-white">6 agents online</span>
               </div>
             </div>
 
-            {/* Floating mini agent row underneath */}
             <div className="hidden sm:flex items-center justify-center gap-3 mt-5">
               {AGENT_LIST.slice(0, 6).map((agent) => (
                 <div
@@ -467,16 +594,9 @@ export default function LaunchPageClient() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          2 · VIDEO SHOWCASE — full-bleed hero.mp4 with play overlay
+          2 · STATS BAR
           ════════════════════════════════════════════════════════ */}
-      <div id="video">
-        <VideoShowcase />
-      </div>
-
-      {/* ════════════════════════════════════════════════════════
-          3 · STATS BAR — bold animated counters for social proof
-          ════════════════════════════════════════════════════════ */}
-      <section className="relative py-12 border-y border-white/5">
+      <section className="relative py-12 border-y border-white/5 bg-white/[0.01]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
             {[
@@ -505,8 +625,7 @@ export default function LaunchPageClient() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          4 · COMPARISON — Old way vs With 3BOX AI
-          Creates urgency / pain → solution
+          3 · OLD WAY VS WITH 3BOX
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-20 overflow-hidden">
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
@@ -592,7 +711,7 @@ export default function LaunchPageClient() {
                 href={CTA_HREF}
                 className="btn-primary text-sm px-6 py-3 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20 mt-6"
               >
-                Start Free <ArrowRight className="w-4 h-4" />
+                Test It Free <ArrowRight className="w-4 h-4" />
               </Link>
             </motion.div>
           </div>
@@ -600,8 +719,7 @@ export default function LaunchPageClient() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          5 · MEET THE AGENTS — different from home (larger cards
-          with story lines visible, plus animated reveal)
+          4 · MEET THE AGENTS
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-radial from-neon-blue/5 via-transparent to-transparent" aria-hidden="true" />
@@ -624,12 +742,12 @@ export default function LaunchPageClient() {
             </p>
           </motion.div>
 
-          {/* Cortex coordinator card — featured */}
+          {/* Cortex coordinator card */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass p-6 sm:p-7 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 border-neon-purple/20"
+            className="rounded-2xl border border-neon-purple/20 bg-white/[0.02] p-6 sm:p-7 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-5"
           >
             <CortexAvatar size={64} pulse />
             <div className="flex-1 min-w-0">
@@ -646,7 +764,7 @@ export default function LaunchPageClient() {
             </div>
           </motion.div>
 
-          {/* 6 agents in 2 rows of 3, each card with story line */}
+          {/* 6 agents */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {AGENT_LIST.map((agent, i) => (
               <motion.div
@@ -655,7 +773,7 @@ export default function LaunchPageClient() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.06, duration: 0.4 }}
-                className="glass p-5 hover:border-white/15 transition-all group flex flex-col"
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:border-white/20 hover:bg-white/[0.03] transition-all flex flex-col"
               >
                 <div className="flex items-start gap-3 mb-3">
                   <AgentAvatar agentId={agent.id} size={44} />
@@ -674,20 +792,25 @@ export default function LaunchPageClient() {
             ))}
           </div>
 
-          <div className="text-center mt-10">
+          <div className="text-center mt-10 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href={CTA_HREF}
-              className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/30"
+              className="btn-primary text-base px-8 py-3.5 inline-flex items-center justify-center gap-2 shadow-lg shadow-neon-blue/30"
             >
               Activate My Team <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="#contact"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:text-white hover:border-white/30 hover:bg-white/[0.03] transition-colors"
+            >
+              <Mail className="w-4 h-4" /> Have questions? Contact us
             </Link>
           </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          6 · HOW IT WORKS — vertical timeline (different from
-          home's horizontal cards). Tells a story.
+          5 · HOW IT WORKS — vertical timeline
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-20">
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
@@ -705,7 +828,6 @@ export default function LaunchPageClient() {
           </motion.div>
 
           <div className="relative">
-            {/* Vertical timeline line */}
             <div className="absolute left-[27px] sm:left-[35px] top-2 bottom-2 w-px bg-gradient-to-b from-neon-blue via-neon-purple to-neon-green" aria-hidden="true" />
 
             {[
@@ -722,17 +844,15 @@ export default function LaunchPageClient() {
                 transition={{ delay: i * 0.12 }}
                 className="relative flex gap-4 sm:gap-6 mb-8 last:mb-0"
               >
-                {/* Timeline node */}
                 <div className="relative flex-shrink-0">
                   <div className="relative w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-2xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 border border-white/10 flex items-center justify-center backdrop-blur-sm">
                     <step.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-surface-50 border border-white/15 text-[9px] font-bold text-white/60">
+                  <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-[#0a0a0f] border border-white/15 text-[9px] font-bold text-white/60">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 pt-2">
                   <div className="flex items-center gap-2 mb-1.5">
                     <h3 className="text-lg font-bold text-white">{step.title}</h3>
@@ -743,11 +863,20 @@ export default function LaunchPageClient() {
               </motion.div>
             ))}
           </div>
+
+          <div className="text-center mt-10">
+            <Link
+              href={CTA_HREF}
+              className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/30"
+            >
+              Start in 2 Minutes <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          7 · 5 CHANNELS OF APPLYING
+          6 · 5 CHANNELS
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-20 overflow-hidden">
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
@@ -780,7 +909,7 @@ export default function LaunchPageClient() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.06 }}
-                className="glass p-4 text-center"
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center"
               >
                 <div className={`w-10 h-10 rounded-xl ${ch.bg} flex items-center justify-center mx-auto mb-3`}>
                   <ch.icon className={`w-5 h-5 ${ch.color}`} />
@@ -794,7 +923,7 @@ export default function LaunchPageClient() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          8 · PRICING — region-aware, yearly toggle
+          7 · PRICING
           ════════════════════════════════════════════════════════ */}
       <section id="pricing" className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-radial from-neon-purple/5 via-transparent to-transparent" aria-hidden="true" />
@@ -816,7 +945,6 @@ export default function LaunchPageClient() {
               the role.
             </p>
 
-            {/* Yearly toggle */}
             <div className="inline-flex items-center gap-3 mt-8 p-1 rounded-full bg-white/[0.03] border border-white/10">
               <button
                 type="button"
@@ -920,16 +1048,12 @@ export default function LaunchPageClient() {
 
           <p className="text-center text-xs text-white/30 mt-8">
             All paid plans include a 7-day money-back guarantee · Cancel anytime
-            ·{' '}
-            <Link href="/pricing" className="text-neon-blue hover:underline">
-              See full feature comparison
-            </Link>
           </p>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          9 · TESTIMONIAL / SOCIAL PROOF — placeholder card row
+          8 · TESTIMONIALS
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-16">
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
@@ -954,7 +1078,7 @@ export default function LaunchPageClient() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
-                className="glass p-6"
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-6"
               >
                 <div className="flex gap-1 mb-3">
                   {[...Array(5)].map((_, j) => (
@@ -969,6 +1093,40 @@ export default function LaunchPageClient() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          9 · CONTACT FORM (NEW)
+          ════════════════════════════════════════════════════════ */}
+      <section id="contact" className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-radial from-neon-blue/8 via-transparent to-transparent" aria-hidden="true" />
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-xs font-semibold mb-4">
+              <Mail className="w-3 h-3" /> WE&apos;RE LISTENING
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-bold mb-3">
+              Have questions? <span className="gradient-text">Drop us a note.</span>
+            </h2>
+            <p className="text-white/50 max-w-lg mx-auto text-sm">
+              For partnerships, support, custom plans, or just to say hi —
+              we typically reply within 24 hours.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <ContactForm />
+          </motion.div>
         </div>
       </section>
 
@@ -1013,11 +1171,17 @@ export default function LaunchPageClient() {
               </motion.div>
             ))}
           </div>
+          <p className="text-center text-xs text-white/35 mt-8">
+            Still curious?{' '}
+            <Link href="#contact" className="text-neon-blue hover:underline">
+              Send us a message →
+            </Link>
+          </p>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          11 · FINAL CTA — strong close
+          11 · FINAL CTA
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-radial from-neon-blue/10 via-neon-purple/5 to-transparent" aria-hidden="true" />
@@ -1051,13 +1215,13 @@ export default function LaunchPageClient() {
                     href={CTA_HREF}
                     className="btn-primary text-base px-8 py-4 inline-flex items-center justify-center gap-2 shadow-lg shadow-neon-blue/30"
                   >
-                    Hire My AI Team — Free <ArrowRight className="w-5 h-5" />
+                    Test It Free <ArrowRight className="w-5 h-5" />
                   </Link>
                   <Link
-                    href="#pricing"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl border border-white/15 text-white/70 text-sm font-medium hover:text-white hover:border-white/30 transition-colors"
+                    href="#contact"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:text-white hover:border-white/30 hover:bg-white/[0.03] transition-colors"
                   >
-                    See pricing
+                    <Mail className="w-4 h-4" /> Contact Me
                   </Link>
                 </>
               )}
@@ -1080,7 +1244,27 @@ export default function LaunchPageClient() {
         </div>
       </section>
 
-      <Footer />
+      {/* ════════════════════════════════════════════════════════
+          MINIMAL FOOTER — legal + contact email only.
+          No nav menu — landing pages stay focused.
+          ════════════════════════════════════════════════════════ */}
+      <footer className="border-t border-white/5 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Logo size="sm" />
+            <span className="text-[11px] text-white/30">
+              © {new Date().getFullYear()} 3BOX AI. All rights reserved.
+            </span>
+          </div>
+          <div className="flex items-center gap-5 text-[11px] text-white/40">
+            <a href="mailto:nishinth.m@wartens.com" className="hover:text-white transition-colors">
+              nishinth.m@wartens.com
+            </a>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
