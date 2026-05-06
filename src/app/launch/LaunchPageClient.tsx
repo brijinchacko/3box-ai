@@ -93,6 +93,127 @@ function AutoPlayVideo({
 }
 
 // ──────────────────────────────────────────────────────────────────────
+// VideoShowcase — full-bleed demo video player with click-to-play and
+// sound toggle. Distinct from the hero's looping autoplay video: this
+// one stays paused until the user clicks, then plays with audio.
+// ──────────────────────────────────────────────────────────────────────
+function VideoShowcase() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  const [playing, setPlaying] = useState(false);
+
+  const togglePlay = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (v.paused) {
+      v.muted = false; // user-initiated → safe to unmute
+      setMuted(false);
+      v.play().catch(() => {
+        // If unmuted play is blocked, fall back to muted play.
+        v.muted = true;
+        setMuted(true);
+        v.play().catch(() => {});
+      });
+      setPlaying(true);
+    } else {
+      v.pause();
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <section className="relative py-16 sm:py-24 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-radial from-neon-purple/10 via-transparent to-transparent" aria-hidden="true" />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-10"
+        >
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-purple/10 border border-neon-purple/20 text-neon-purple text-xs font-semibold mb-4">
+            <Play className="w-3 h-3" /> 90 SECOND DEMO
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-bold mb-3">
+            Watch your AI team{' '}
+            <span className="gradient-text">close interviews</span>
+          </h2>
+          <p className="text-white/50 max-w-xl mx-auto">
+            See exactly how 6 specialist agents work together — from job
+            discovery to interview-ready applications.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-neon-purple/10"
+        >
+          <video
+            ref={ref}
+            className="w-full aspect-video object-cover bg-black"
+            src="/videos/hero.mp4"
+            playsInline
+            muted={muted}
+            onEnded={() => setPlaying(false)}
+            onPause={() => setPlaying(false)}
+            preload="metadata"
+          />
+
+          {!playing && (
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label="Play demo video"
+              className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition-colors group"
+            >
+              <span className="w-20 h-20 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-2xl shadow-neon-blue/40 group-hover:scale-110 transition-transform">
+                <Play className="w-9 h-9 text-white ml-1" fill="white" />
+              </span>
+            </button>
+          )}
+
+          {playing && (
+            <button
+              type="button"
+              onClick={() => {
+                const v = ref.current;
+                if (!v) return;
+                const next = !muted;
+                v.muted = next;
+                setMuted(next);
+              }}
+              aria-label={muted ? 'Unmute' : 'Mute'}
+              className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/80 transition-colors"
+            >
+              {muted ? (
+                <VolumeX className="w-4 h-4 text-white" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-white" />
+              )}
+            </button>
+          )}
+        </motion.div>
+
+        <div className="mt-8 text-center">
+          <Link
+            href={CTA_HREF}
+            className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-neon-blue/20"
+          >
+            Start Free — Watch It Work <ArrowRight className="w-5 h-5" />
+          </Link>
+          <p className="text-xs text-white/30 mt-3">
+            No credit card · 5 free applications/week · Cancel anytime
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // CountUp — animates a number when scrolled into view
 // ──────────────────────────────────────────────────────────────────────
 function CountUp({
@@ -594,7 +715,12 @@ export default function LaunchPageClient() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          2 · STATS BAR
+          2 · VIDEO SHOWCASE — full-bleed demo with click-to-play
+          ════════════════════════════════════════════════════════ */}
+      <VideoShowcase />
+
+      {/* ════════════════════════════════════════════════════════
+          3 · STATS BAR
           ════════════════════════════════════════════════════════ */}
       <section className="relative py-12 border-y border-white/5 bg-white/[0.01]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
