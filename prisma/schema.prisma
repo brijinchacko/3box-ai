@@ -715,6 +715,14 @@ model SearchProfile {
   jobTitle        String
   location        String?
   remote          Boolean  @default(false)
+  // workArrangement: 'onsite' | 'hybrid' | 'remote' | null (null = any).
+  // `remote` is kept for backward compatibility and is derived from this
+  // (true when arrangement === 'remote', else false).
+  workArrangement String?
+  // Optional salary range. Currency follows the user's region (USD/INR/etc.).
+  salaryMin       Int?
+  salaryMax       Int?
+  salaryCurrency  String?
   experienceLevel String?
   boards          Json?    // string[] of board IDs
   includeKeywords String?

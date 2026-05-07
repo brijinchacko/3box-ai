@@ -31,6 +31,10 @@ interface EditProfileData {
   jobTitle: string;
   location?: string;
   remote?: boolean;
+  workArrangement?: string | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  salaryCurrency?: string | null;
   experienceLevel?: string;
   boards?: string;
   includeKeywords?: string;
@@ -40,6 +44,14 @@ interface EditProfileData {
   autoSearch?: boolean;
   autoApply?: boolean;
 }
+
+// Work-arrangement choices. Empty string == "any" (no preference).
+const WORK_ARRANGEMENTS: { value: string; label: string }[] = [
+  { value: '', label: 'Any work type' },
+  { value: 'onsite', label: 'On-site only' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'remote', label: 'Remote only' },
+];
 
 interface SearchProfileWizardProps {
   onClose: () => void;
@@ -96,7 +108,23 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   // Step 1: Job Search config — pre-fill from editProfile if editing
   const [jobTitle, setJobTitle] = useState(editProfile?.jobTitle || '');
   const [location, setLocation] = useState(editProfile?.location || '');
-  const [remote, setRemote] = useState(editProfile?.remote || false);
+  // Derive workArrangement from edit data: prefer the new field, else
+  // fall back to the legacy boolean (true → 'remote', false → '').
+  const [workArrangement, setWorkArrangement] = useState<string>(
+    editProfile?.workArrangement ??
+      (editProfile?.remote ? 'remote' : ''),
+  );
+  // Keep the old `remote` flag in sync with workArrangement so existing
+  // backend logic (analytics, board hints) keeps working.
+  const remote = workArrangement === 'remote';
+  // Salary range — both optional. Stored as plain numbers in the user's
+  // currency; rendered with the region's currencySymbol when available.
+  const [salaryMin, setSalaryMin] = useState<string>(
+    editProfile?.salaryMin != null ? String(editProfile.salaryMin) : '',
+  );
+  const [salaryMax, setSalaryMax] = useState<string>(
+    editProfile?.salaryMax != null ? String(editProfile.salaryMax) : '',
+  );
   const [experienceLevel, setExperienceLevel] = useState(editProfile?.experienceLevel || '');
   const [includeKeywords, setIncludeKeywords] = useState(editProfile?.includeKeywords || '');
   const [excludeKeywords, setExcludeKeywords] = useState(editProfile?.excludeKeywords || '');
@@ -211,10 +239,25 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
     setSubmitting(true);
     setError(null);
 
+    // Normalize salary range: parse, drop empties, swap if min > max.
+    const minN = salaryMin ? parseInt(salaryMin, 10) : NaN;
+    const maxN = salaryMax ? parseInt(salaryMax, 10) : NaN;
+    const hasMin = !Number.isNaN(minN) && minN >= 0;
+    const hasMax = !Number.isNaN(maxN) && maxN >= 0;
+    let outMin = hasMin ? minN : undefined;
+    let outMax = hasMax ? maxN : undefined;
+    if (hasMin && hasMax && minN > maxN) {
+      outMin = maxN;
+      outMax = minN;
+    }
+
     const payload = {
       jobTitle: jobTitle.trim(),
       location: location.trim() || undefined,
       remote,
+      workArrangement: workArrangement || undefined,
+      salaryMin: outMin,
+      salaryMax: outMax,
       experienceLevel: experienceLevel || undefined,
       includeKeywords: includeKeywords.trim() || undefined,
       excludeKeywords: excludeKeywords.trim() || undefined,
@@ -526,7 +569,7 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
                   </div>
                 </div>
 
-                {/* Location + Remote */}
+                {/* Location + Work arrangement */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
@@ -539,20 +582,57 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remote</label>
-                    <button
-                      onClick={() => setRemote(!remote)}
-                      className={cn(
-                        'w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all',
-                        remote
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                          : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300',
-                      )}
-                    >
-                      <Globe className="w-4 h-4" />
-                      {remote ? 'Remote preferred' : 'Any work type'}
-                    </button>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Work arrangement</label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <select
+                        value={workArrangement}
+                        onChange={(e) => setWorkArrangement(e.target.value)}
+                        className={cn(
+                          'w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium transition-all appearance-none bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                          workArrangement
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400',
+                        )}
+                      >
+                        {WORK_ARRANGEMENTS.map((w) => (
+                          <option key={w.value || 'any'} value={w.value}>{w.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+                </div>
+
+                {/* Salary range (optional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Salary range <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(optional, annual)</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={salaryMin}
+                      onChange={(e) => setSalaryMin(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="Min e.g. 50000"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={salaryMax}
+                      onChange={(e) => setSalaryMax(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="Max e.g. 120000"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  {salaryMin && salaryMax && Number(salaryMin) > Number(salaryMax) && (
+                    <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                      Min should be less than max — we&apos;ll swap them on save.
+                    </p>
+                  )}
                 </div>
 
                 {/* Experience Level */}
@@ -679,7 +759,21 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
                   <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                     <p><span className="font-medium text-gray-800 dark:text-gray-200">Role:</span> {jobTitle}</p>
                     {location && <p><span className="font-medium text-gray-800 dark:text-gray-200">Location:</span> {location}</p>}
-                    {remote && <p><span className="font-medium text-gray-800 dark:text-gray-200">Remote:</span> Preferred</p>}
+                    {workArrangement && (
+                      <p>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">Work type:</span>{' '}
+                        {WORK_ARRANGEMENTS.find((w) => w.value === workArrangement)?.label || workArrangement}
+                      </p>
+                    )}
+                    {(salaryMin || salaryMax) && (
+                      <p>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">Salary:</span>{' '}
+                        {salaryMin ? Number(salaryMin).toLocaleString() : '—'}
+                        {' to '}
+                        {salaryMax ? Number(salaryMax).toLocaleString() : '—'}
+                        <span className="text-gray-400"> /year</span>
+                      </p>
+                    )}
                     <p><span className="font-medium text-gray-800 dark:text-gray-200">Min match:</span> {matchTolerance}%</p>
                     {selectedBoards.length > 0 && (
                       <p><span className="font-medium text-gray-800 dark:text-gray-200">Sources:</span> {selectedBoards.map(b => JOB_BOARDS.find(jb => jb.id === b)?.label || b).join(', ')}</p>

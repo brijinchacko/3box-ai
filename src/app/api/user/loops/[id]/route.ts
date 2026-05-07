@@ -35,6 +35,27 @@ export async function PATCH(
     if (typeof body.jobTitle === 'string') updateData.jobTitle = body.jobTitle.trim();
     if (typeof body.location === 'string') updateData.location = body.location.trim() || null;
     if (typeof body.remote === 'boolean') updateData.remote = body.remote;
+    // workArrangement: 'onsite' | 'hybrid' | 'remote' | '' (clear).
+    // When provided, also keep the legacy `remote` boolean in sync.
+    if (typeof body.workArrangement === 'string') {
+      const valid = ['onsite', 'hybrid', 'remote'];
+      const wa = valid.includes(body.workArrangement) ? body.workArrangement : null;
+      updateData.workArrangement = wa;
+      updateData.remote = wa === 'remote';
+    }
+    if (body.salaryMin === null) updateData.salaryMin = null;
+    else if (typeof body.salaryMin === 'number' && body.salaryMin >= 0 && Number.isFinite(body.salaryMin)) {
+      updateData.salaryMin = Math.floor(body.salaryMin);
+    }
+    if (body.salaryMax === null) updateData.salaryMax = null;
+    else if (typeof body.salaryMax === 'number' && body.salaryMax >= 0 && Number.isFinite(body.salaryMax)) {
+      updateData.salaryMax = Math.floor(body.salaryMax);
+    }
+    if (typeof body.salaryCurrency === 'string') {
+      updateData.salaryCurrency = body.salaryCurrency.trim().slice(0, 8).toUpperCase() || null;
+    } else if (body.salaryCurrency === null) {
+      updateData.salaryCurrency = null;
+    }
     if (typeof body.autoApply === 'boolean') updateData.autoApply = body.autoApply;
     if (typeof body.autoSearch === 'boolean') updateData.autoSearch = body.autoSearch;
     if (typeof body.matchTolerance === 'number') updateData.matchTolerance = body.matchTolerance;
