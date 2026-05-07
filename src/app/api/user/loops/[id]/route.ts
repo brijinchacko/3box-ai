@@ -2,6 +2,29 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
+import { filterJobsByActiveProfiles } from '@/lib/agents/archer';
+
+/**
+ * After a profile is deleted or deactivated, mark any pending ScoutJobs
+ * that no longer match an active profile as SKIPPED. Otherwise the
+ * auto-apply cron would still pick them up and email for roles the user
+ * has since removed.
+ */
+async function reconcilePendingScoutJobs(userId: string) {
+  try {
+    const pending = await prisma.scoutJob.findMany({
+      where: {
+        userId,
+        status: { in: ['NEW', 'READY', 'FORGE_READY'] as any },
+      },
+      select: { id: true, title: true },
+    });
+    if (pending.length === 0) return;
+    await filterJobsByActiveProfiles(userId, pending);
+  } catch (err) {
+    console.error('[loops] reconcilePendingScoutJobs error:', err);
+  }
+}
 
 /* PATCH /api/user/loops/[id] — Update a search profile */
 export async function PATCH(
@@ -73,6 +96,13 @@ export async function PATCH(
     // Re-sync AutoApplyConfig so automation reflects the change
     await syncAutoApplyConfig(userId);
 
+    // If the profile was deactivated, immediately mark any of its
+    // matching pending ScoutJobs as SKIPPED so the cron doesn't email
+    // for them. (Activation needs no cleanup — only adds eligibility.)
+    if (updateData.active === false) {
+      await reconcilePendingScoutJobs(userId);
+    }
+
     return NextResponse.json({ profile: updated });
   } catch (err) {
     console.error('[loops/PATCH]', err);
@@ -106,6 +136,11 @@ export async function DELETE(
 
   // Re-sync AutoApplyConfig (removing this profile's targets)
   await syncAutoApplyConfig(userId);
+
+  // Critical cleanup: mark any pending ScoutJobs that no longer match
+  // an active profile as SKIPPED. Without this, the auto-apply cron
+  // would keep emailing for the deleted role's already-discovered jobs.
+  await reconcilePendingScoutJobs(userId);
 
   return NextResponse.json({ success: true });
 }

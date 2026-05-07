@@ -221,6 +221,78 @@ function findForbiddenTokens(...texts: string[]): string[] {
   return found;
 }
 
+// ─── Active-profile filter ───
+//
+// Auto-apply must NEVER send applications for jobs whose role no longer
+// has a matching active SearchProfile. Otherwise jobs discovered for a
+// search the user has since deleted (or deactivated) keep getting
+// applied to indefinitely.
+//
+// Strategy: fetch the user's currently-active SearchProfile job titles,
+// normalize, and accept any ScoutJob whose title contains at least one
+// active role as a substring. Non-matching jobs are marked SKIPPED in
+// the DB so they won't be picked up by future cron runs.
+//
+// Exported so the loops API can also call this on profile delete /
+// deactivate to clean up stale queued jobs immediately.
+export async function filterJobsByActiveProfiles<T extends { id: string; title: string }>(
+  userId: string,
+  jobs: T[],
+): Promise<{ matched: T[]; skippedCount: number }> {
+  if (jobs.length === 0) return { matched: [], skippedCount: 0 };
+  const activeProfiles = await prisma.searchProfile.findMany({
+    where: { userId, active: true },
+    select: { jobTitle: true },
+  });
+
+  const norm = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const roles = activeProfiles
+    .map((p) => norm(p.jobTitle))
+    .filter((r) => r.length >= 2);
+
+  // No active profiles → nothing should be auto-applied.
+  if (roles.length === 0) {
+    const ids = jobs.map((j) => j.id);
+    try {
+      await prisma.scoutJob.updateMany({
+        where: { id: { in: ids } },
+        data: { status: 'SKIPPED' },
+      });
+    } catch {
+      /* non-blocking */
+    }
+    console.log(`[Archer] No active profiles for user ${userId} — skipping ${jobs.length} queued jobs`);
+    return { matched: [], skippedCount: jobs.length };
+  }
+
+  const matched: T[] = [];
+  const skippedIds: string[] = [];
+  for (const job of jobs) {
+    const t = norm(job.title);
+    if (!t) {
+      skippedIds.push(job.id);
+      continue;
+    }
+    const isMatch = roles.some((r) => t.includes(r));
+    if (isMatch) matched.push(job);
+    else skippedIds.push(job.id);
+  }
+
+  if (skippedIds.length > 0) {
+    try {
+      await prisma.scoutJob.updateMany({
+        where: { id: { in: skippedIds } },
+        data: { status: 'SKIPPED' },
+      });
+    } catch {
+      /* non-blocking */
+    }
+    console.log(`[Archer] Filtered ${skippedIds.length} jobs that don't match any active profile for user ${userId} (kept ${matched.length}; active roles: ${roles.join(' | ')})`);
+  }
+
+  return { matched, skippedCount: skippedIds.length };
+}
+
 // ─── Single Job Application (backward-compatible) ───
 
 /**
@@ -796,6 +868,31 @@ export async function applyToJobsBatch(
   const routingStats = { ats_api: 0, extension_queue: 0, user_email: 0, cold_email: 0, portal_queue: 0 };
   const coverLetterStats = { priority: 0, standard: 0, quick: 0, cached: 0 };
 
+  // ── Defensive filter: drop jobs whose role doesn't match an active
+  //    SearchProfile. Same safety net as runIndependentArcher — protects
+  //    callers (orchestrator, etc.) that don't filter upstream.
+  const { matched: filteredJobs, skippedCount: profileFilterSkipped } =
+    await filterJobsByActiveProfiles(userId, jobs);
+  if (profileFilterSkipped > 0 && ctx) {
+    logActivity(ctx, 'archer', 'profile_filter',
+      `Skipped ${profileFilterSkipped} jobs not matching any active search profile`);
+  }
+  jobs = filteredJobs;
+  if (jobs.length === 0) {
+    return {
+      total: 0,
+      applied: 0,
+      emailed: 0,
+      queued: 0,
+      skipped: profileFilterSkipped,
+      failed: 0,
+      results: [],
+      coverLetterStats,
+      routingStats,
+      durationMs: Date.now() - startTime,
+    };
+  }
+
   // ── Application cap check (skip in burst mode) ──
   if (!burstMode) {
     const cap = await checkApplicationCap(userId);
@@ -1206,7 +1303,7 @@ export async function runIndependentArcher(
       : ['NEW', 'READY', 'FORGE_READY'];
 
     // Query jobs ready for application
-    const readyJobs = await prisma.scoutJob.findMany({
+    const allReadyJobs = await prisma.scoutJob.findMany({
       where: {
         userId,
         status: { in: validStatuses as any },
@@ -1218,12 +1315,21 @@ export async function runIndependentArcher(
       take: config.maxPerRun,
     });
 
+    // Critical safety filter: drop jobs whose role no longer matches any
+    // currently-active SearchProfile. Otherwise jobs discovered for a
+    // since-deleted or deactivated profile would still get applied to.
+    const { matched: readyJobs, skippedCount: profileFilterSkipped } =
+      await filterJobsByActiveProfiles(userId, allReadyJobs);
+
     if (readyJobs.length === 0) {
+      const summary = profileFilterSkipped > 0
+        ? `No jobs match active profiles (skipped ${profileFilterSkipped} stale queued jobs)`
+        : 'No jobs ready for application';
       await prisma.autoApplyRun.update({
         where: { id: run.id },
-        data: { status: 'completed', completedAt: new Date(), summary: 'No jobs ready for application' },
+        data: { status: 'completed', completedAt: new Date(), summary },
       });
-      return { runId: run.id, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0 };
+      return { runId: run.id, jobsApplied: 0, jobsSkipped: profileFilterSkipped, creditsUsed: 0 };
     }
 
     // ── Smart Auto-Apply Filtering ──
