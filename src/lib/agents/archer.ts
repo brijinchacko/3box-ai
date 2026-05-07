@@ -131,16 +131,94 @@ function cleanJobForDisplay(job: { title?: string; company?: string }) {
     // Remove leading aggregator words: "What", "All", "Top", numbers like "15,000+"
     .replace(/^\s*(what|all|top|best|new|latest|find)\s+/i, '')
     .replace(/^\s*\d+[,.]?\d*\+?\s+/i, '')
+    // Strip "Salary" tokens: "(salary: 25k)", "Salary: 25k", standalone "salary"
+    .replace(/\s*[\(\[]\s*salary[^)\]]*[\)\]]/gi, '')
+    .replace(/\s*\bsalary\s*[:\-]\s*[^\s,]+/gi, '')
+    .replace(/\s+\bsalary\b\s+(?=in\s)/gi, ' ') // "Team Leader salary in West Bengal" → "Team Leader in West Bengal"
+    .replace(/\s+\bsalary\b\s*$/gi, '')
+    // Strip "<n>k - <n>k", "<n> LPA", currency tokens
+    .replace(/\s*\d+(\.\d+)?\s*[kK]\s*[-–]?\s*\d*(\.\d+)?\s*[kK]?\s*\b/g, ' ')
+    .replace(/\s*\d+(\.\d+)?\s*lpa\b/gi, '')
+    .replace(/\s*\d+\+?\s*openings?/gi, '')
+    // Strip trailing "in <Location>" — matches up to 4 capitalized words.
+    // Conservative: only triggers when the location starts with a capital
+    // (preserves things like "experience in software"). The frequent
+    // pattern we see in scraped titles is "<Role> in <City/State>".
+    .replace(/\s+in\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,4}\s*$/g, '')
     // Remove trailing ellipsis and brackets
     .replace(/\s*[…\.]{2,}\s*$/, '')
     .replace(/\s*[\[\(].*?[\]\)]\s*$/, '')
     .replace(/[-\s,]+$/, '')
+    // Collapse whitespace runs introduced by the strips above.
+    .replace(/\s{2,}/g, ' ')
     .trim();
 
   // Fallback if cleaning made it too short or empty
   if (displayTitle.length < 3) displayTitle = rawTitle.replace(/\s*[…\.]{2,}\s*$/, '').trim() || 'this role';
 
   return { displayTitle, displayCompany };
+}
+
+// ─── Pre-flight validation: should we attempt an email send? ───
+//
+// Returns `{ ok: false, reason }` for any condition that would result in
+// a low-credibility email — placeholder titles, missing company, missing
+// resume identity, or experience entries that would interpolate to
+// "undefined at <company>" in cover-letter templates. Callers route the
+// job to portal_queue (manual apply) rather than send a broken email.
+function validateJobForEmail(
+  job: { title?: string; company?: string },
+  resume: ResumeData,
+): { ok: boolean; reason?: string } {
+  const rawTitle = (job.title || '').trim();
+  if (rawTitle.length < 3) return { ok: false, reason: 'title_too_short' };
+  if (/^(unknown|untitled|n\/a|na|-)$/i.test(rawTitle)) {
+    return { ok: false, reason: 'title_placeholder' };
+  }
+  // After cleaning, there must still be enough title left to address.
+  const { displayTitle, displayCompany } = cleanJobForDisplay(job);
+  if (!displayTitle || displayTitle.length < 3 || displayTitle === 'this role') {
+    return { ok: false, reason: 'title_unrenderable' };
+  }
+  if (displayCompany === 'your organization') {
+    // The cover letter still works grammatically with "your organization"
+    // but we don't want to send a *cold email* to a verified address
+    // saying "I want to work at your organization" — feels generic and
+    // suggests the upstream company name was junk. Block to be safe.
+    return { ok: false, reason: 'company_placeholder' };
+  }
+  if (!resume?.contact?.name?.trim()) return { ok: false, reason: 'missing_name' };
+  if (!resume?.contact?.email?.trim()) return { ok: false, reason: 'missing_email' };
+  return { ok: true };
+}
+
+// ─── Final pre-send guard ───
+//
+// Last line of defense: scans the rendered subject + body + cover-letter
+// text for tokens that would never appear in a credible application.
+// If any are found we refuse to send and route to portal_queue. This
+// catches the cases our template/AI cleaning misses.
+const _FORBIDDEN_PRE_SEND_PATTERNS: { re: RegExp; label: string }[] = [
+  { re: /\bundefined\b/, label: 'undefined' },
+  { re: /\bnull\b/, label: 'null' },
+  { re: /\bunknown company\b/i, label: 'unknown company' },
+  { re: /\bconfidential company\b/i, label: 'confidential company' },
+  { re: /\[name\]/i, label: '[name]' },
+  { re: /\[company\]/i, label: '[company]' },
+  { re: /\[title\]/i, label: '[title]' },
+  { re: /\[role\]/i, label: '[role]' },
+  { re: /\[skill[s]?\]/i, label: '[skill]' },
+  { re: /\[insert .*?\]/i, label: '[insert ...]' },
+  { re: /\bplaceholder\b/i, label: 'placeholder' },
+];
+
+function findForbiddenTokens(...texts: string[]): string[] {
+  const blob = texts.join('\n');
+  const found: string[] = [];
+  for (const { re, label } of _FORBIDDEN_PRE_SEND_PATTERNS) {
+    if (re.test(blob)) found.push(label);
+  }
+  return found;
 }
 
 // ─── Single Job Application (backward-compatible) ───
@@ -242,14 +320,26 @@ export async function applyToJob(
     }
   }
 
+  // ── Pre-flight validation: never email garbage data ──
+  const validation = validateJobForEmail(job, resume);
+  const canEmail = validation.ok;
+  if (!canEmail) {
+    console.warn(`[Archer] applyToJob: validation failed (${validation.reason}) for "${job.title}" at ${job.company} — email channels disabled, will route to portal queue.`);
+    if (ctx) logActivity(ctx, 'archer', 'apply_validation_failed', `Validation: ${validation.reason}`);
+  }
+
   // ── Find verified email for cold email channel (10s timeout) ──
   let emailResult: EmailFinderResult | null = null;
-  try {
-    const emailPromise = findVerifiedEmail(job.company);
-    const emailTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000));
-    emailResult = await Promise.race([emailPromise, emailTimeout]);
-  } catch {
-    // Non-critical — continue with other channels
+  // Skip Hunter lookup entirely for invalid jobs — saves API quota and
+  // prevents "found a match for hr@unknowncompany.com" from happening.
+  if (canEmail) {
+    try {
+      const emailPromise = findVerifiedEmail(job.company);
+      const emailTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000));
+      emailResult = await Promise.race([emailPromise, emailTimeout]);
+    } catch {
+      // Non-critical — continue with other channels
+    }
   }
 
   // ── No email guessing — ONLY use verified emails from Hunter.io ──
@@ -409,9 +499,26 @@ async function executeColdEmailApplication(
   burstMode?: boolean,
   ctx?: AgentContext,
 ): Promise<ApplicationResult> {
+  // Pre-flight: never send an email for a job/resume that would produce
+  // a low-credibility message.
+  const validation = validateJobForEmail(job, resume);
+  if (!validation.ok) {
+    console.warn(`[Archer] Cold email blocked (${validation.reason}) for "${job.title}" at ${job.company} — falling back to portal queue.`);
+    if (ctx) logActivity(ctx, 'archer', 'email_blocked', `Cold email blocked: ${validation.reason}`);
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
+
   const { displayTitle: cleanTitle } = cleanJobForDisplay(job);
   const emailSubject = `Application for ${cleanTitle} - ${resume.contact.name}`;
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
+
+  // Final guard: scan the rendered text for forbidden tokens before send.
+  const forbidden = findForbiddenTokens(emailSubject, emailBody, coverLetter);
+  if (forbidden.length > 0) {
+    console.error(`[Archer] Cold email refused — forbidden tokens [${forbidden.join(', ')}] in rendered text for "${job.title}" at ${job.company}.`);
+    if (ctx) logActivity(ctx, 'archer', 'email_refused', `Forbidden tokens: ${forbidden.join(', ')}`);
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
 
   try {
     // Generate PDF resume to attach
@@ -534,9 +641,33 @@ async function executeUserEmailApplication(
     return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
   }
 
+  // Pre-flight validation — same gate as cold email path.
+  const validation = validateJobForEmail(job, resume);
+  if (!validation.ok) {
+    console.warn(`[Archer] User email blocked (${validation.reason}) for "${job.title}" at ${job.company} — falling back to portal queue.`);
+    if (ctx) logActivity(ctx, 'archer', 'email_blocked', `User email blocked: ${validation.reason}`);
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
+  // Also re-check email confidence here — batch path was previously
+  // gating at 50% which let unverified guesses through. Require ≥70%
+  // and `verified === true` to send anything from the user's mailbox.
+  if (emailInfo && (emailInfo.confidence < 70 || !emailInfo.verified)) {
+    console.warn(`[Archer] User email blocked — recipient confidence ${emailInfo.confidence}% / verified=${emailInfo.verified} below threshold for ${job.company}.`);
+    if (ctx) logActivity(ctx, 'archer', 'email_blocked', `Recipient unverified: ${emailInfo.email} (${emailInfo.confidence}%)`);
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
+
   const { displayTitle: cleanTitle } = cleanJobForDisplay(job);
   const emailSubject = `Application for ${cleanTitle} - ${resume.contact.name}`;
   const emailBody = buildApplicationEmail(resume, job, coverLetter);
+
+  // Final guard: scan rendered text for forbidden tokens.
+  const forbidden = findForbiddenTokens(emailSubject, emailBody, coverLetter);
+  if (forbidden.length > 0) {
+    console.error(`[Archer] User email refused — forbidden tokens [${forbidden.join(', ')}] in rendered text for "${job.title}" at ${job.company}.`);
+    if (ctx) logActivity(ctx, 'archer', 'email_refused', `Forbidden tokens: ${forbidden.join(', ')}`);
+    return executePortalQueueApplication(userId, job, resume, coverLetter, runId, burstMode, ctx);
+  }
 
   try {
     const result = await sendViaUserEmail(userId, {
@@ -714,17 +845,22 @@ export async function applyToJobsBatch(
 
   const routedJobs: { job: JobForApplication; route: RouteDecision; email: EmailFinderResult | null }[] = [];
   for (const job of jobs) {
-    const email = emailMap.get(job.company) || null;
+    const rawEmail = emailMap.get(job.company) || null;
+    // Match the single-apply gate: only consider an email channel if the
+    // address is BOTH verified AND ≥70% confidence. Any lower and we'd
+    // be sending to guessed addresses (the previous 50%/unverified path
+    // produced bouncing emails to fake domains like hr@unknowncompany.com).
+    const usableEmail = rawEmail && rawEmail.verified && rawEmail.confidence >= 70 ? rawEmail : null;
     const route = await smartRouteApplication(
       job.url,
-      !!email && email.confidence >= 50,
-      email?.confidence || 0,
+      !!usableEmail,
+      usableEmail?.confidence || 0,
       userHasEmail,
       userHasExtension,
       job.company,
     );
     routingStats[route.channel]++;
-    routedJobs.push({ job, route, email });
+    routedJobs.push({ job, route, email: usableEmail });
   }
 
   if (ctx) {
@@ -981,12 +1117,19 @@ function buildApplicationEmail(resume: ResumeData, job: JobForApplication, cover
  * @deprecated Use findVerifiedEmail from '@/lib/email/emailFinder' instead.
  */
 export function findCompanyEmail(company: string): string | null {
-  const cleaned = company
-    .toLowerCase()
+  const raw = (company || '').trim().toLowerCase();
+  // Refuse to synthesize email for placeholder/junk names — these were
+  // historically the source of bouncing hr@unknowncompany.com addresses.
+  const invalidNames = new Set(['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-', '']);
+  if (!raw || invalidNames.has(raw) || raw.length < 3) return null;
+  const cleaned = raw
     .replace(/\s*(pvt|private|ltd|limited|inc|corp|corporation|llc|technologies|tech|solutions|services|group|india)\s*/g, '')
     .replace(/[^a-z0-9]/g, '')
     .trim();
-  if (!cleaned || cleaned.length < 2) return null;
+  if (!cleaned || cleaned.length < 3) return null;
+  // After stripping legal suffixes, double-check the residue isn't a
+  // placeholder word that would compose into a junk domain.
+  if (invalidNames.has(cleaned)) return null;
   return `hr@${cleaned}.com`;
 }
 

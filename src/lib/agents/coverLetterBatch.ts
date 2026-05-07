@@ -107,20 +107,69 @@ async function setCache(key: string, letter: string, tier: CoverLetterTier): Pro
 
 // ─── Cover Letter Generation ────────────────────────
 
+// ─── Sanitization helpers ───────────────────────────
+//
+// All 3 cover-letter generators (priority/standard/quick) MUST run their
+// resume + job inputs through these helpers before any prompt or template
+// string-interpolation. Otherwise empty/undefined fields leak into the
+// final email and we end up sending things like "My experience as
+// undefined at Wartens" or "position at Unknown Company".
+
+const _PLACEHOLDER_COMPANY = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-'];
+
+function _sanitizeJob(job: JobInfo): JobInfo {
+  const rawTitle = (job.title || '').trim();
+  const placeholderTitle = !rawTitle || /^(unknown|untitled|n\/a|na|-)$/i.test(rawTitle);
+  const rawCompany = (job.company || '').trim();
+  const placeholderCompany = !rawCompany || rawCompany.length < 3 || _PLACEHOLDER_COMPANY.includes(rawCompany.toLowerCase());
+  return {
+    ...job,
+    title: placeholderTitle ? 'this position' : rawTitle,
+    company: placeholderCompany ? 'your organization' : rawCompany,
+    location: (job.location || '').trim(),
+    description: (job.description || '').trim(),
+  };
+}
+
+function _sanitizeResume(resume: ResumeInfo): ResumeInfo {
+  return {
+    ...resume,
+    name: (resume.name || '').trim(),
+    email: (resume.email || '').trim(),
+    summary: (resume.summary || '').trim(),
+    skills: (resume.skills || []).filter((s) => typeof s === 'string' && s.trim().length > 0),
+    // Keep ONLY experience entries with both a non-empty title and company.
+    // This is what stops "${e.title} at ${e.company}" from rendering as
+    // "undefined at <company>" or "<title> at undefined".
+    experience: (resume.experience || []).filter((e) => {
+      if (!e) return false;
+      const t = (e.title || '').trim();
+      const c = (e.company || '').trim();
+      return t.length >= 2 && c.length >= 2
+        && t.toLowerCase() !== 'undefined' && c.toLowerCase() !== 'undefined';
+    }),
+  };
+}
+
 /**
  * Generate a full AI-powered cover letter (Priority tier).
  * Uses OpenRouter for personalized, job-specific content.
  */
 async function generatePriorityCoverLetter(
-  resume: ResumeInfo,
-  job: JobInfo,
+  rawResume: ResumeInfo,
+  rawJob: JobInfo,
 ): Promise<string> {
+  const resume = _sanitizeResume(rawResume);
+  const job = _sanitizeJob(rawJob);
+  const expLine = resume.experience.length > 0
+    ? resume.experience.slice(0, 2).map((e) => `${e.title} at ${e.company}`).join(', ')
+    : 'a professional with relevant industry experience';
   const prompt = `Write a professional, concise cover letter for this job application. Keep it to 3-4 short paragraphs. Be specific about how the candidate's experience matches the role. Do NOT include any placeholder brackets — use the actual info provided.
 
 CANDIDATE:
 Name: ${resume.name}
 Summary: ${resume.summary}
-Key Experience: ${resume.experience.slice(0, 2).map(e => `${e.title} at ${e.company}`).join(', ')}
+Key Experience: ${expLine}
 Skills: ${resume.skills.slice(0, 10).join(', ')}
 
 JOB:
@@ -144,9 +193,14 @@ Write ONLY the cover letter body text (no subject line, no header, no signature 
  * Faster than priority — uses a template skeleton with AI fill-in.
  */
 async function generateStandardCoverLetter(
-  resume: ResumeInfo,
-  job: JobInfo,
+  rawResume: ResumeInfo,
+  rawJob: JobInfo,
 ): Promise<string> {
+  const resume = _sanitizeResume(rawResume);
+  const job = _sanitizeJob(rawJob);
+  const expLine = resume.experience.length > 0
+    ? resume.experience.slice(0, 2).map((e) => `${e.title} at ${e.company}: ${(e.bullets || []).slice(0, 2).filter(Boolean).join('; ')}`).join(' | ')
+    : 'No structured experience provided — base on summary and skills.';
   const prompt = `Complete this cover letter template by filling in the [brackets] with specific, relevant content based on the candidate and job info. Return ONLY the completed text with no brackets remaining.
 
 Template:
@@ -160,7 +214,7 @@ I look forward to discussing how my experience aligns with your needs.
 
 CANDIDATE:
 Summary: ${resume.summary}
-Experience: ${resume.experience.slice(0, 2).map(e => `${e.title} at ${e.company}: ${e.bullets.slice(0, 2).join('; ')}`).join(' | ')}
+Experience: ${expLine}
 Skills: ${resume.skills.slice(0, 8).join(', ')}
 
 JOB DESCRIPTION (excerpt): ${job.description.slice(0, 500)}`;
@@ -172,23 +226,48 @@ JOB DESCRIPTION (excerpt): ${job.description.slice(0, 500)}`;
     ] }, 'free');
     return response.trim();
   } catch {
-    // Fallback to quick template
-    return generateQuickCoverLetter(resume, job);
+    // Fallback to quick template (already sanitizes internally).
+    return generateQuickCoverLetter(rawResume, rawJob);
   }
 }
 
 /**
  * Generate a quick template-based cover letter (no AI call).
  * Instant — used for low-priority jobs or when AI is unavailable.
+ *
+ * Defensive: every template hole has a safe fallback so the rendered text
+ * can never contain "undefined", "Unknown Company", or partially-filled
+ * sentences when the upstream data has gaps.
  */
 function generateQuickCoverLetter(resume: ResumeInfo, job: JobInfo): string {
-  const topSkills = resume.skills.slice(0, 3).join(', ');
-  const latestRole = resume.experience[0];
+  const topSkills = (resume.skills || []).slice(0, 3).filter(Boolean).join(', ') || 'relevant disciplines';
+
+  // Title: strip placeholder values + common job-board suffixes.
+  const rawTitle = (job.title || '').trim();
+  const placeholderTitle = /^(unknown|untitled|n\/a|na|-)$/i.test(rawTitle);
+  const cleanTitle = !rawTitle || placeholderTitle ? 'this position' : rawTitle;
+
+  // Company: collapse placeholder names to "your organization".
+  const rawCompany = (job.company || '').trim();
+  const invalidCompanyNames = ['unknown company', 'unknown', 'confidential', 'confidental', 'n/a', 'na', '-'];
+  const cleanCompany = !rawCompany || rawCompany.length < 3 || invalidCompanyNames.includes(rawCompany.toLowerCase())
+    ? 'your organization'
+    : rawCompany;
+
+  // Latest role: only use it if BOTH title AND company are populated and
+  // are not literal "undefined"/empty strings. Otherwise fall back to a
+  // neutral phrase so we never write "undefined at Wartens".
+  const latestRole = (resume.experience || []).find((e) => {
+    if (!e) return false;
+    const t = (e.title || '').trim();
+    const c = (e.company || '').trim();
+    return t.length >= 2 && c.length >= 2 && t.toLowerCase() !== 'undefined' && c.toLowerCase() !== 'undefined';
+  });
   const roleStr = latestRole ? `${latestRole.title} at ${latestRole.company}` : 'a professional';
 
-  return `I am writing to express my strong interest in the ${job.title} position at ${job.company}. With my background in ${topSkills}, I am confident I can make a meaningful contribution to your team.
+  return `I am writing to express my strong interest in the ${cleanTitle} position at ${cleanCompany}. With my background in ${topSkills}, I am confident I can make a meaningful contribution to your team.
 
-My experience as ${roleStr} has equipped me with the skills necessary to excel in this role. I have consistently delivered results and am eager to bring my expertise to ${job.company}.
+My experience as ${roleStr} has equipped me with the skills necessary to excel in this role. I have consistently delivered results and am eager to bring my expertise to ${cleanCompany}.
 
 I would welcome the opportunity to discuss how my skills and experience align with your needs. Thank you for considering my application.`;
 }
