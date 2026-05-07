@@ -1889,8 +1889,9 @@ function AutopilotResume() {
             </p>
           </div>
 
-          {/* Side-by-side: Resume preview (left) + Actions sidebar (right) */}
-          <div className="flex gap-4">
+          {/* Side-by-side on desktop, stacked on tablet/mobile so the preview
+              is never squeezed below ~340px (was unreadable). */}
+          <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1 min-w-0" ref={previewRef}>
         {/* ── Resume preview via iframe for native scrolling ── */}
         {resumeSource === 'uploaded' && ownResumeUrl ? (
@@ -1922,9 +1923,25 @@ function AutopilotResume() {
           </div>
         ) : (
           <div className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style={{ height: '80vh' }}>
-            <div className="text-center">
+            <div className="text-center px-4">
               <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Add your details in the Editor tab to see your resume preview.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Add your details in the Editor tab to see your resume preview.</p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  onClick={() => setActiveTab('editor')}
+                  className="px-4 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Open Editor
+                </button>
+                {ownResumeUrl && (
+                  <button
+                    onClick={() => setResumeSource('uploaded')}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Show My Uploaded Resume Instead
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -2327,8 +2344,8 @@ function AutopilotResume() {
           </div>{/* end resume-a4-page */}
         </div>}{/* end resume-a4-wrapper + legacy block */}
 
-          {/* ── Right sidebar: Actions ── */}
-          <div className="w-64 flex-shrink-0 space-y-4">
+          {/* ── Right sidebar: Actions ── (full-width on tablet/mobile, fixed 256px on lg+) */}
+          <div className="w-full lg:w-64 lg:flex-shrink-0 space-y-4">
             {/* ── Verified badge (shown above other controls) ── */}
             {isVerified && (
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">

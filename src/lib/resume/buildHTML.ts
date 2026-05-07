@@ -288,7 +288,7 @@ function watermark(show: boolean): string {
   return `<div class="watermark">Created with 3BOX AI &mdash; 3box.ai</div>`;
 }
 
-function docHead(title: string, css: string): string {
+function docHead(title: string, css: string, isPreview = false): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -322,6 +322,11 @@ function docHead(title: string, css: string): string {
       .section-title { page-break-after: avoid; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
+${isPreview ? `
+    /* ── Preview-only: prevent horizontal scroll inside the iframe ── */
+    html, body { overflow-x: hidden; }
+    .page-wrap { width: 100%; display: flex; justify-content: center; }
+` : ''}
   </style>
   <script>
     /* Smart page sizing: let content determine page count naturally */
@@ -339,6 +344,44 @@ function docHead(title: string, css: string): string {
       });
     });
   </script>
+${isPreview ? `<script>
+    /* Preview-only: scale the fixed-width A4 page (794px) to fit any
+       iframe width — laptop/tablet/mobile. transform-origin: top center
+       keeps the page horizontally centered. We then patch the .page
+       margins so that the visual scaled height collapses correctly and
+       the iframe shows no large empty space below. */
+    (function() {
+      var PAGE_W = 794; // A4 width at 96dpi
+      var rafId = null;
+      function applyScale() {
+        var pages = document.querySelectorAll('.page');
+        if (!pages.length) return;
+        var vw = document.documentElement.clientWidth || window.innerWidth;
+        var scale = Math.min(1, Math.max(0.35, (vw - 16) / PAGE_W));
+        pages.forEach(function(page) {
+          var visualHeight = page.getBoundingClientRect().height;
+          // Estimate the unscaled height from current transform if any.
+          var prev = page.dataset._scale ? parseFloat(page.dataset._scale) : 1;
+          var unscaledH = prev > 0 ? visualHeight / prev : visualHeight;
+          page.style.transformOrigin = 'top center';
+          page.style.transform = 'scale(' + scale + ')';
+          page.dataset._scale = String(scale);
+          // Collapse the empty space the unscaled box leaves behind.
+          var collapse = unscaledH * (1 - scale);
+          page.style.marginBottom = (-collapse + 16) + 'px';
+        });
+      }
+      function schedule() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(applyScale);
+      }
+      window.addEventListener('load', schedule);
+      window.addEventListener('resize', schedule);
+      // Re-run after fonts/images settle.
+      setTimeout(schedule, 100);
+      setTimeout(schedule, 500);
+    })();
+  </script>` : ''}
 </head>`;
 }
 
@@ -556,7 +599,7 @@ function buildModern(p: BuildHTMLParams): string {
     }
   `;
 
-  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
+  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css, p.isPreview)}
 <body>
   ${printBar(accent, p.isPreview)}
   <div class="page">
@@ -735,7 +778,7 @@ function buildClassic(p: BuildHTMLParams): string {
     }
   `;
 
-  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
+  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css, p.isPreview)}
 <body>
   ${printBar(accent, p.isPreview)}
   <div class="page">
@@ -887,7 +930,7 @@ function buildMinimal(p: BuildHTMLParams): string {
     }
   `;
 
-  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
+  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css, p.isPreview)}
 <body>
   ${printBar(accent, p.isPreview)}
   <div class="page">
@@ -1069,7 +1112,7 @@ function buildCreative(p: BuildHTMLParams): string {
     }
   `;
 
-  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css)}
+  return `${docHead(`${esc(contact.name)} &ndash; Resume`, css, p.isPreview)}
 <body>
   ${printBar(accent, p.isPreview)}
   <div class="page">
