@@ -84,7 +84,9 @@ export async function searchJooble(
         salary: job.salary || null,
         url: job.link || '',
         source: `Jooble (${job.source || 'aggregated'})`,
-        postedAt: job.updated || new Date().toISOString(),
+        // '' when Jooble doesn't supply a date — freshness filter
+        // handles unknown dates conservatively.
+        postedAt: (job.updated || '').trim(),
         remote: isRemote,
       };
     });

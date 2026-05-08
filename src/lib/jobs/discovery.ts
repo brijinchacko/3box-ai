@@ -243,7 +243,10 @@ async function searchJSearch(role: string, location: string): Promise<Discovered
           : null,
       url: job.job_apply_link || '',
       source: 'JSearch',
-      postedAt: job.job_posted_at_datetime_utc || new Date().toISOString(),
+      // Empty string (not now()) when JSearch doesn't supply a date —
+      // freshness filter in filterLowQuality treats unknown-date jobs
+      // conservatively rather than letting them claim to be "today".
+      postedAt: (job.job_posted_at_datetime_utc || '').trim(),
       remote: job.job_is_remote || false,
     }));
   } catch {
@@ -345,10 +348,11 @@ function applyExclusions(
 
 /**
  * Maximum age (in days) of a job posting before we consider it stale.
- * Anything older is filtered out — saves users from applying to roles
- * that have already been filled or pulled.
+ * Most LinkedIn / Indeed postings stop accepting applications after
+ * ~21 days, so we use that as the cutoff. Older postings often show
+ * "No longer accepting applications" by the time the user clicks.
  */
-const MAX_JOB_AGE_DAYS = 30;
+const MAX_JOB_AGE_DAYS = 21;
 
 /**
  * Best-effort parse of a postedAt string into a Date. Returns null on
@@ -397,10 +401,16 @@ function isNonJobPageUrl(url: string): boolean {
     if (/\/q-[^/]+-jobs/.test(u)) return true;          // "/q-team-leader-jobs.html"
     if (/\/jobs\?q=|\/jobs\?l=/.test(u)) return true;   // search results
   }
-  // LinkedIn: company directory / search pages
+  // LinkedIn: ONLY /jobs/view/<id> URLs are real postings. Anything else
+  // on linkedin.com (search pages, category pages like
+  // /jobs/full-stack-developer-jobs-gurugram, profile pages, company
+  // pages) is rejected. Whitelist beats blacklist for this site.
   if (/linkedin\.com/.test(u)) {
-    if (/\/jobs\/search/.test(u)) return true;
-    if (/\/company\/[^/]+\/?(\?.*)?$/.test(u)) return true; // bare company page
+    if (/\/jobs\/view\//.test(u)) {
+      // real posting — keep
+    } else {
+      return true;
+    }
   }
   // Glassdoor: reviews/salary pages (not job-listings)
   if (/glassdoor\.(com|co\.in)/.test(u)) {
@@ -450,6 +460,15 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     // Must have a real title (not just "Job" or single word)
     if (!job.title || job.title.trim().split(/\s+/).length < 2) return false;
 
+    // ── Bad-parse signal: title still contains "<X> hiring <Y>" ──
+    // LinkedIn search-result page titles look like
+    //   "Acme Corp hiring Senior Engineer in Bangalore - LinkedIn"
+    // If we see "<word(s)> hiring <word(s)>" in the stored title, the
+    // parser didn't manage to split it into title + company. The job's
+    // company is almost certainly "Unknown Company" in this state and
+    // the email path would render placeholders. Drop it.
+    if (/\s+hiring\s+/i.test(job.title)) return false;
+
     // Must have a real company name (allow if it has a good description and URL)
     if (!job.company || job.company === 'Unknown' || job.company === 'Unknown Company') {
       if (!job.description || job.description.length < 100 || !job.url) return false;
@@ -459,10 +478,22 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     if (!job.description || job.description.length < 20) return false;
 
     // ── Freshness: drop postings older than MAX_JOB_AGE_DAYS ──
-    // Jobs without a parseable date are kept (many sources don't return
-    // one) — we don't punish missing data, only confirmed-stale data.
+    // Confirmed-stale jobs (parseable old date) are dropped immediately.
     const postedDate = parsePostedAt(job.postedAt);
     if (postedDate && now - postedDate.getTime() > maxAgeMs) return false;
+
+    // ── Conservative: when the date is UNKNOWN AND the company is a
+    //    placeholder, drop. These are the records that produced the
+    //    "Posted today" lie for jobs that were actually closed months
+    //    ago — both the date and the company couldn't be extracted, so
+    //    we have low confidence the listing is real and current.
+    const dateUnknown = !postedDate;
+    const companyPlaceholder =
+      !job.company
+      || job.company === 'Unknown'
+      || job.company === 'Unknown Company'
+      || /^confidential$/i.test(job.company);
+    if (dateUnknown && companyPlaceholder) return false;
 
     // ── Reject non-posting pages (reviews / salaries / search results) ──
     if (isNonJobPageUrl(job.url || '')) return false;

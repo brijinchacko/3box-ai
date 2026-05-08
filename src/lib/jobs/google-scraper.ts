@@ -265,7 +265,8 @@ function parseOrganicResults(html: string, source: string): ScrapedJob[] {
       salary,
       url,
       source: `Google (${source})`,
-      postedAt: new Date().toISOString(),
+      // '' when scraper can't extract a date — never lie with now().
+      postedAt: '',
       remote: isRemote,
     });
   });
@@ -325,7 +326,7 @@ function parseGoogleJobsTab(html: string): ScrapedJob[] {
           salary,
           url: applyUrl || '',
           source: 'Google Jobs',
-          postedAt: item.datePosted || new Date().toISOString(),
+          postedAt: (item.datePosted || '').toString().trim(),
           remote: isRemote,
         });
       }
@@ -361,7 +362,8 @@ function parseGoogleJobsTab(html: string): ScrapedJob[] {
         salary: null,
         url: url.startsWith('http') ? url : '',
         source: 'Google Jobs',
-        postedAt: new Date().toISOString(),
+        // '' when DOM scrape can't extract a date — never lie with now().
+        postedAt: '',
         remote: isRemote,
       });
     },

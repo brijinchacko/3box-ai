@@ -102,25 +102,67 @@ async function serperSearch(
  * detects and extracts the three fields.
  */
 function parseLinkedInTitle(rawTitle: string): { company: string; role: string; location: string } | null {
-  // Strip trailing "- LinkedIn" / "| LinkedIn" / "… - linkedin.com" first.
+  // Strip trailing "- LinkedIn" / "| LinkedIn" / "… - linkedin.com" /
+  // ellipsis / trailing punctuation.
   const stripped = rawTitle
     .replace(/\s*[-–|]\s*linkedin(\.com)?\s*$/i, '')
     .replace(/\s*[-–|]\s*$/, '')
+    .replace(/[…]+\s*$/, '')
+    .replace(/\.{2,}\s*$/, '')
     .trim();
 
-  // Pattern: "<Company> hiring <Role> in <Location>"
-  // Use .+? (non-greedy) and require " in " before the last segment so the
-  // role can contain hyphens and the location can contain commas.
+  // Full pattern: "<Company> hiring <Role> in <Location>"
+  // Non-greedy + required " in " keeps role/location segments correct.
   const m = stripped.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
-  if (!m) return null;
+  if (m) {
+    const company = m[1].trim();
+    const role = m[2].trim();
+    const location = m[3].replace(/[,\s]+$/, '').trim();
+    if (company && role && role.length >= 3) {
+      return { company, role, location };
+    }
+  }
 
-  const company = m[1].trim();
-  const role = m[2].trim();
-  // Strip dangling ellipsis / trailing punctuation.
-  const location = m[3].replace(/[…\.]{2,}\s*$/, '').replace(/[,\s]+$/, '').trim();
+  // Truncated form (Google cut off the location with "..."): just
+  // "<Company> hiring <Role>". Still extract company + role. Better
+  // than letting "Kochi Blue Tigers hiring Business Development Mana"
+  // become a job title with company "Unknown Company".
+  const m2 = stripped.match(/^(.+?)\s+hiring\s+(.+)$/i);
+  if (m2) {
+    const company = m2[1].trim();
+    const role = m2[2].trim();
+    if (company && role && role.length >= 3) {
+      return { company, role, location: '' };
+    }
+  }
 
-  if (!company || !role || role.length < 3) return null;
-  return { company, role, location };
+  return null;
+}
+
+/**
+ * Best-effort posted-date extraction from a Serper organic-result
+ * snippet. Common phrases: "5 days ago", "2 months ago", "yesterday".
+ * Returns ISO string when found, '' otherwise. Empty string deliberately
+ * — never lie with new Date() because the freshness filter relies on
+ * this value to catch stale postings.
+ */
+function extractDateFromSnippet(snippet: string): string {
+  if (!snippet) return '';
+  const lower = snippet.toLowerCase();
+  if (/\byesterday\b/.test(lower)) {
+    return new Date(Date.now() - 86_400_000).toISOString();
+  }
+  const m = lower.match(/(\d+)\s*(minute|hour|day|week|month|year)s?\s+ago/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    const unit = m[2];
+    const ms: Record<string, number> = {
+      minute: 60_000, hour: 3_600_000, day: 86_400_000,
+      week: 604_800_000, month: 2_592_000_000, year: 31_536_000_000,
+    };
+    return new Date(Date.now() - n * (ms[unit] || 0)).toISOString();
+  }
+  return '';
 }
 
 function parseJobFromOrganic(
@@ -173,6 +215,15 @@ function parseJobFromOrganic(
   );
   if (salaryMatch) salary = salaryMatch[0];
 
+  // postedAt: prefer Serper's own date, then snippet ("5 days ago"),
+  // then '' (unknown). NEVER fall back to now() — that would mark
+  // every stale job as "Posted today" and let it slip past the
+  // freshness filter in discovery.filterLowQuality.
+  const postedAt =
+    (result.date && String(result.date).trim()) ||
+    extractDateFromSnippet(result.snippet) ||
+    '';
+
   return {
     id: `serper-${Buffer.from(result.link).toString('base64').slice(0, 20)}`,
     title,
@@ -182,7 +233,7 @@ function parseJobFromOrganic(
     salary,
     url: result.link,
     source,
-    postedAt: result.date || new Date().toISOString(),
+    postedAt,
     remote: isRemote,
   };
 }
@@ -214,7 +265,8 @@ function parseGoogleJob(job: SerperJobResult): DiscoveredJob | null {
     salary: job.detected_extensions?.salary || null,
     url: applyUrl,
     source: `Google Jobs (${job.via || 'aggregated'})`,
-    postedAt: job.detected_extensions?.posted_at || new Date().toISOString(),
+    // Same rule as parseJobFromOrganic — '' when unknown, never now().
+    postedAt: (job.detected_extensions?.posted_at || '').trim(),
     remote: isRemote,
   };
 }
