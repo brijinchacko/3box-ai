@@ -92,8 +92,37 @@ async function serperSearch(
 }
 
 /**
- * Parse job from Google organic search result (site:linkedin, site:naukri)
+ * Parse job from Google organic search result (site:linkedin, site:naukri).
+ *
+ * LinkedIn search result titles follow a standard format:
+ *   "<Company> hiring <Role> in <Location> - LinkedIn"
+ * The previous parser only stripped the trailing "- LinkedIn" and shoved
+ * the entire "Company hiring Role in Location" string into the job title,
+ * leaving company unparsed (defaulted to "Unknown Company"). This helper
+ * detects and extracts the three fields.
  */
+function parseLinkedInTitle(rawTitle: string): { company: string; role: string; location: string } | null {
+  // Strip trailing "- LinkedIn" / "| LinkedIn" / "… - linkedin.com" first.
+  const stripped = rawTitle
+    .replace(/\s*[-–|]\s*linkedin(\.com)?\s*$/i, '')
+    .replace(/\s*[-–|]\s*$/, '')
+    .trim();
+
+  // Pattern: "<Company> hiring <Role> in <Location>"
+  // Use .+? (non-greedy) and require " in " before the last segment so the
+  // role can contain hyphens and the location can contain commas.
+  const m = stripped.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
+  if (!m) return null;
+
+  const company = m[1].trim();
+  const role = m[2].trim();
+  // Strip dangling ellipsis / trailing punctuation.
+  const location = m[3].replace(/[…\.]{2,}\s*$/, '').replace(/[,\s]+$/, '').trim();
+
+  if (!company || !role || role.length < 3) return null;
+  return { company, role, location };
+}
+
 function parseJobFromOrganic(
   result: SerperOrganicResult,
   source: string,
@@ -106,16 +135,33 @@ function parseJobFromOrganic(
   if (!title || title.length < 3) return null;
 
   let company = 'Unknown Company';
-  const companyMatch = result.snippet.match(
-    /(?:at|@|by)\s+([A-Z][A-Za-z\s&.]+?)(?:\s*[-–,.|]|\s+in\s)/,
-  );
-  if (companyMatch) company = companyMatch[1].trim();
-
   let location = 'India';
-  const locationMatch = result.snippet.match(
-    /(?:in|at|location[:\s])\s*([A-Z][a-z]+(?:\s*,\s*[A-Z][a-z]+)?)/,
-  );
-  if (locationMatch) location = locationMatch[1].trim();
+
+  // ── LinkedIn-specific extraction ──
+  // Try the structured "Company hiring Role in Location" pattern first.
+  // When it matches we get clean fields without "Unknown Company" leakage.
+  if (source === 'LinkedIn') {
+    const parsed = parseLinkedInTitle(result.title);
+    if (parsed) {
+      title = parsed.role;
+      company = parsed.company;
+      if (parsed.location) location = parsed.location;
+    }
+  }
+
+  // ── Generic snippet-based extraction (fallback) ──
+  if (company === 'Unknown Company') {
+    const companyMatch = result.snippet.match(
+      /(?:at|@|by)\s+([A-Z][A-Za-z\s&.]+?)(?:\s*[-–,.|]|\s+in\s)/,
+    );
+    if (companyMatch) company = companyMatch[1].trim();
+  }
+  if (location === 'India') {
+    const locationMatch = result.snippet.match(
+      /(?:in|at|location[:\s])\s*([A-Z][a-z]+(?:\s*,\s*[A-Z][a-z]+)?)/,
+    );
+    if (locationMatch) location = locationMatch[1].trim();
+  }
 
   const isRemote = /remote|work from home|wfh/i.test(
     result.title + ' ' + result.snippet,
