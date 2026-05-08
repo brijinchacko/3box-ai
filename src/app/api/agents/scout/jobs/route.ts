@@ -75,3 +75,44 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/agents/scout/jobs — Clear the user's pending Search Results.
+ *
+ * Marks all NEW / READY / FORGE_READY jobs as SKIPPED. Applied, emailed,
+ * queued, and otherwise-acted-on jobs are LEFT ALONE (those are history
+ * and the user might still want to track them). The action is scoped to
+ * the calling user and never touches other users' data.
+ *
+ * Optional query: ?status=NEW restricts to a single status.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get('status');
+
+    // Default: every "pending in the Search Results queue" status.
+    const pendingStatuses = ['NEW', 'READY', 'FORGE_READY'] as const;
+    const target = statusParam && (pendingStatuses as readonly string[]).includes(statusParam)
+      ? [statusParam]
+      : (pendingStatuses as readonly string[]);
+
+    const result = await prisma.scoutJob.updateMany({
+      where: {
+        userId: session.user.id,
+        status: { in: target as any },
+      },
+      data: { status: 'SKIPPED' },
+    });
+
+    return NextResponse.json({ success: true, cleared: result.count });
+  } catch (err) {
+    console.error('[Scout Jobs DELETE] Error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

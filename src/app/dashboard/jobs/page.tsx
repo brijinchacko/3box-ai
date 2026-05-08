@@ -33,6 +33,7 @@ import {
   FileCheck,
   RefreshCw,
   CheckCircle,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -710,6 +711,33 @@ function AutopilotJobSearch() {
     }
   }, [activeTab, hasSearched, scoutJobsLoaded, fetchScoutJobs]);
 
+  // Clear all pending Search Results (NEW/READY/FORGE_READY) — historical
+  // applied / emailed / queued jobs are preserved.
+  const [clearing, setClearing] = useState(false);
+  const handleClearResults = useCallback(async () => {
+    if (clearing) return;
+    if (!confirm('Clear all current Search Results? Already-applied jobs will stay; only the pending queue is cleared.')) {
+      return;
+    }
+    setClearing(true);
+    try {
+      const res = await fetch('/api/agents/scout/jobs', { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data?.error || 'Could not clear results. Try again in a moment.');
+        return;
+      }
+      setJobs([]);
+      setTotal(0);
+      setHasSearched(false);
+      setScoutJobsLoaded(false); // Allow re-fetch on next tab visit
+    } catch {
+      alert('Network error — please try again.');
+    } finally {
+      setClearing(false);
+    }
+  }, [clearing]);
+
   // Fetch saved search profiles
   const fetchProfiles = useCallback(async () => {
     try {
@@ -1000,7 +1028,23 @@ function AutopilotJobSearch() {
 
               {!loading && jobs.length > 0 && (
                 <>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{total} jobs found</p>
+                  <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{total} jobs found</p>
+                    <button
+                      type="button"
+                      onClick={handleClearResults}
+                      disabled={clearing}
+                      title="Clear pending Search Results (already-applied jobs are preserved)"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-500/40 hover:bg-red-50 dark:hover:bg-red-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {clearing ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      {clearing ? 'Clearing…' : 'Clear results'}
+                    </button>
+                  </div>
                   <div className="space-y-3">
                     {jobs.map((job) => (
                       <div
