@@ -20,9 +20,6 @@ export async function GET() {
       location: true,
       remote: true,
       workArrangement: true,
-      salaryMin: true,
-      salaryMax: true,
-      salaryCurrency: true,
       active: true,
       jobsFound: true,
       appliedCount: true,
@@ -74,9 +71,6 @@ export async function POST(req: Request) {
       location,
       remote = false,
       workArrangement,
-      salaryMin,
-      salaryMax,
-      salaryCurrency,
       experienceLevel,
       boards,
       includeKeywords,
@@ -87,19 +81,10 @@ export async function POST(req: Request) {
       autoSearch = true,
     } = body;
 
-    // Sanitize new optional fields.
+    // Sanitize work-arrangement field.
     const validArrangements = ['onsite', 'hybrid', 'remote'];
     const wa: string | null = typeof workArrangement === 'string' && validArrangements.includes(workArrangement)
       ? workArrangement
-      : null;
-    const sMin = typeof salaryMin === 'number' && salaryMin >= 0 && Number.isFinite(salaryMin)
-      ? Math.floor(salaryMin)
-      : null;
-    const sMax = typeof salaryMax === 'number' && salaryMax >= 0 && Number.isFinite(salaryMax)
-      ? Math.floor(salaryMax)
-      : null;
-    const sCur = typeof salaryCurrency === 'string' && salaryCurrency.trim().length > 0
-      ? salaryCurrency.trim().slice(0, 8).toUpperCase()
       : null;
     // Keep `remote` boolean in sync with workArrangement when provided so
     // legacy code (analytics, board hints) keeps working unchanged.
@@ -136,9 +121,6 @@ export async function POST(req: Request) {
         location: location?.trim() || null,
         remote: remoteFlag,
         workArrangement: wa,
-        salaryMin: sMin,
-        salaryMax: sMax,
-        salaryCurrency: sCur,
         experienceLevel: experienceLevel || null,
         boards: boards || null,
         includeKeywords: includeKeywords?.trim() || null,

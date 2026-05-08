@@ -32,9 +32,6 @@ interface EditProfileData {
   location?: string;
   remote?: boolean;
   workArrangement?: string | null;
-  salaryMin?: number | null;
-  salaryMax?: number | null;
-  salaryCurrency?: string | null;
   experienceLevel?: string;
   boards?: string;
   includeKeywords?: string;
@@ -117,14 +114,6 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
   // Keep the old `remote` flag in sync with workArrangement so existing
   // backend logic (analytics, board hints) keeps working.
   const remote = workArrangement === 'remote';
-  // Salary range — both optional. Stored as plain numbers in the user's
-  // currency; rendered with the region's currencySymbol when available.
-  const [salaryMin, setSalaryMin] = useState<string>(
-    editProfile?.salaryMin != null ? String(editProfile.salaryMin) : '',
-  );
-  const [salaryMax, setSalaryMax] = useState<string>(
-    editProfile?.salaryMax != null ? String(editProfile.salaryMax) : '',
-  );
   const [experienceLevel, setExperienceLevel] = useState(editProfile?.experienceLevel || '');
   const [includeKeywords, setIncludeKeywords] = useState(editProfile?.includeKeywords || '');
   const [excludeKeywords, setExcludeKeywords] = useState(editProfile?.excludeKeywords || '');
@@ -239,25 +228,11 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
     setSubmitting(true);
     setError(null);
 
-    // Normalize salary range: parse, drop empties, swap if min > max.
-    const minN = salaryMin ? parseInt(salaryMin, 10) : NaN;
-    const maxN = salaryMax ? parseInt(salaryMax, 10) : NaN;
-    const hasMin = !Number.isNaN(minN) && minN >= 0;
-    const hasMax = !Number.isNaN(maxN) && maxN >= 0;
-    let outMin = hasMin ? minN : undefined;
-    let outMax = hasMax ? maxN : undefined;
-    if (hasMin && hasMax && minN > maxN) {
-      outMin = maxN;
-      outMax = minN;
-    }
-
     const payload = {
       jobTitle: jobTitle.trim(),
       location: location.trim() || undefined,
       remote,
       workArrangement: workArrangement || undefined,
-      salaryMin: outMin,
-      salaryMax: outMax,
       experienceLevel: experienceLevel || undefined,
       includeKeywords: includeKeywords.trim() || undefined,
       excludeKeywords: excludeKeywords.trim() || undefined,
@@ -603,37 +578,6 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
                   </div>
                 </div>
 
-                {/* Salary range (optional) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Salary range <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(optional, annual)</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      value={salaryMin}
-                      onChange={(e) => setSalaryMin(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="Min e.g. 50000"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      value={salaryMax}
-                      onChange={(e) => setSalaryMax(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="Max e.g. 120000"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  {salaryMin && salaryMax && Number(salaryMin) > Number(salaryMax) && (
-                    <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                      Min should be less than max — we&apos;ll swap them on save.
-                    </p>
-                  )}
-                </div>
 
                 {/* Experience Level */}
                 <div>
@@ -763,15 +707,6 @@ export default function SearchProfileWizard({ onClose, onComplete, editProfile }
                       <p>
                         <span className="font-medium text-gray-800 dark:text-gray-200">Work type:</span>{' '}
                         {WORK_ARRANGEMENTS.find((w) => w.value === workArrangement)?.label || workArrangement}
-                      </p>
-                    )}
-                    {(salaryMin || salaryMax) && (
-                      <p>
-                        <span className="font-medium text-gray-800 dark:text-gray-200">Salary:</span>{' '}
-                        {salaryMin ? Number(salaryMin).toLocaleString() : '—'}
-                        {' to '}
-                        {salaryMax ? Number(salaryMax).toLocaleString() : '—'}
-                        <span className="text-gray-400"> /year</span>
                       </p>
                     )}
                     <p><span className="font-medium text-gray-800 dark:text-gray-200">Min match:</span> {matchTolerance}%</p>
