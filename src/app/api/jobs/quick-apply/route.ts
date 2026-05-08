@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { checkApplicationCap } from '@/lib/tokens/dailyCap';
 import { applyToJob, type JobForApplication, type ResumeData } from '@/lib/agents/archer';
+import { computeDedupeKey } from '@/lib/agents/scout';
 import { sendEmail } from '@/lib/email';
 
 /**
@@ -59,8 +60,10 @@ export async function POST(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // 3. Save to ScoutJob (so it appears on the board)
-    const dedupeKey = `${company.toLowerCase().replace(/[^a-z0-9]/g, '')}-${title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)}`;
+    // 3. Save to ScoutJob (so it appears on the board).
+    // Uses the centralized dedupe-key helper so quick-apply records
+    // collide correctly with Scout-discovered records of the same job.
+    const dedupeKey = computeDedupeKey(company, title, url, description || '');
     const scoutJob = await prisma.scoutJob.upsert({
       where: { userId_dedupeKey: { userId, dedupeKey } },
       create: {

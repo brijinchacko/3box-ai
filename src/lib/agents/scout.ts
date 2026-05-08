@@ -146,17 +146,60 @@ export async function runScout(config: ScoutConfig, ctx?: AgentContext): Promise
 // ── Deduplication helpers ──────────────────────────
 
 /**
- * Compute a deduplication key for a job.
- * Format: normalizedCompany::normalizedTitle::urlDomain
+ * Set of normalized company names that don't uniquely identify an
+ * employer ("Confidential" used by many separate companies, etc.).
+ * For these we DON'T merge across listings — we add a description /
+ * URL-path tiebreaker so genuinely different employers using the same
+ * placeholder name aren't collapsed into one row.
  */
-export function computeDedupeKey(company: string, title: string, url: string): string {
-  const normalizedCompany = company.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30);
-  const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
-  let domain = '';
+const PLACEHOLDER_COMPANIES = new Set([
+  '', 'na', 'confidential', 'confidental', 'unknown', 'unknowncompany',
+]);
+
+/**
+ * Compute a deduplication key for a job.
+ *
+ * Goal: the same posting must produce the same key regardless of which
+ * source/aggregator surfaced it. Previously the key included urlDomain,
+ * so a "Software Engineer at Acme" listing showing up on LinkedIn +
+ * Indeed + JSearch became three rows. This version drops domain.
+ *
+ *   Real company:     `${company}::${title}`           (cross-source merge)
+ *   Placeholder co:   `${company}::${title}::${tie}`   (tiebreaker = description fingerprint, fall back to URL path)
+ *
+ * Used by Scout, quick-apply, and the board-jobs API — all three call
+ * sites now use this helper so key formats can never drift apart.
+ */
+export function computeDedupeKey(
+  company: string,
+  title: string,
+  url: string,
+  description?: string,
+): string {
+  const c = (company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '').slice(0, 40) || 'na';
+  const t = (title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '').slice(0, 60);
+  const isPlaceholder = PLACEHOLDER_COMPANIES.has(c);
+
+  // Real company + non-empty title: merge identical postings across sources.
+  if (!isPlaceholder && t) {
+    return `${c}::${t}`;
+  }
+
+  // Placeholder company OR missing title: tiebreaker prevents merging
+  // distinct listings that share a generic company name.
+  // Prefer description fingerprint (stable across re-discoveries of the
+  // same posting); fall back to URL pathname (job IDs live there).
+  const dn = (description || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 60);
+  if (dn.length >= 30) {
+    return `${c}::${t}::${dn}`;
+  }
+  let path = '';
   try {
-    domain = new URL(url).hostname.replace('www.', '');
-  } catch {}
-  return `${normalizedCompany}::${normalizedTitle}::${domain}`;
+    path = new URL(url).pathname.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50);
+  } catch {
+    /* fall through */
+  }
+  return `${c}::${t}::p${path || 'na'}`;
 }
 
 /**
@@ -175,7 +218,7 @@ export async function persistScoutJobs(
     title: job.title,
     company: job.company,
     jobUrl: job.url,
-    dedupeKey: computeDedupeKey(job.company, job.title, job.url),
+    dedupeKey: computeDedupeKey(job.company, job.title, job.url, job.description),
     location: job.location || null,
     description: job.description || '',
     salary: job.salary || null,

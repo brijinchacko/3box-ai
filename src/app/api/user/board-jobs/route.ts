@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
+import { computeDedupeKey } from '@/lib/agents/scout';
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -91,16 +92,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'title, company, and jobUrl are required' }, { status: 400 });
     }
 
-    // Build dedupeKey: normalized(company)::normalized(title)::urlDomain
-    const normalizedCompany = company.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-    const normalizedTitle = title.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-    let urlDomain = '';
-    try {
-      urlDomain = new URL(jobUrl).hostname.replace('www.', '');
-    } catch {
-      urlDomain = 'unknown';
-    }
-    const dedupeKey = `${normalizedCompany}::${normalizedTitle}::${urlDomain}`;
+    // Build dedupeKey via the centralized helper so board-jobs entries
+    // collide with Scout-discovered + quick-apply records for the same job.
+    const dedupeKey = computeDedupeKey(company, title, jobUrl, description || '');
 
     // Upsert — if already exists, just update status
     const job = await prisma.scoutJob.upsert({
@@ -157,15 +151,7 @@ export async function PUT(req: Request) {
         batch.map(async (job) => {
           if (!job.title || !job.company || !job.url) return null;
 
-          const normalizedCompany = job.company.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-          const normalizedTitle = job.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-          let urlDomain = '';
-          try {
-            urlDomain = new URL(job.url).hostname.replace('www.', '');
-          } catch (_e) {
-            urlDomain = 'unknown';
-          }
-          const dedupeKey = `${normalizedCompany}::${normalizedTitle}::${urlDomain}`;
+          const dedupeKey = computeDedupeKey(job.company, job.title, job.url, job.description || '');
 
           return prisma.scoutJob.upsert({
             where: {
