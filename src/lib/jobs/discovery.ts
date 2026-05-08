@@ -51,11 +51,61 @@ export interface DiscoveryParams {
   excludeKeywords?: string[];
   /** Optional list of platforms to search. When omitted, all available platforms are used. */
   platforms?: string[];
+  /**
+   * Optional list of board IDs the user selected (e.g. ['linkedin', 'indeed']).
+   * When provided, results are filtered to ONLY include jobs whose URL host
+   * matches one of these boards. This means a "LinkedIn"-only user will get
+   * direct linkedin.com jobs even if those jobs were surfaced by JSearch or
+   * Google — and never get aggregator URLs like adzuna.in / jooble.org.
+   */
+  selectedBoards?: string[];
   userProfile: {
     targetRole: string;
     skills: string[];
     location: string;
   };
+}
+
+/**
+ * Map of board ID → URL host regex. A job is "from" a board if its URL
+ * matches the regex. Used to enforce the user's board selection at the
+ * URL level, regardless of which discovery source returned the result.
+ */
+const BOARD_HOST_PATTERNS: Record<string, RegExp> = {
+  linkedin: /\blinkedin\.com\b/i,
+  indeed: /\bindeed\.(com|co\.in)\b/i,
+  glassdoor: /\bglassdoor\.(com|co\.in)\b/i,
+  google: /\b(jobs\.google\.com|google\.com\/search)\b/i,
+  dice: /\bdice\.com\b/i,
+  naukri: /\bnaukri\.com\b/i,
+};
+
+/**
+ * Filter jobs by selected boards using URL host matching.
+ * Returns the input unchanged when no boards are specified.
+ */
+function applyBoardHostFilter(
+  jobs: DiscoveredJob[],
+  boards?: string[],
+): { kept: DiscoveredJob[]; rejected: number } {
+  if (!boards || boards.length === 0) return { kept: jobs, rejected: 0 };
+  const patterns = boards
+    .map((b) => BOARD_HOST_PATTERNS[b.toLowerCase().trim()])
+    .filter(Boolean);
+  if (patterns.length === 0) return { kept: jobs, rejected: 0 };
+  const kept: DiscoveredJob[] = [];
+  let rejected = 0;
+  for (const job of jobs) {
+    const url = (job.url || '').trim();
+    if (!url) {
+      rejected++;
+      continue;
+    }
+    const match = patterns.some((re) => re.test(url));
+    if (match) kept.push(job);
+    else rejected++;
+  }
+  return { kept, rejected };
 }
 
 // ── Platform Registry ──
@@ -415,6 +465,16 @@ export async function discoverJobs(params: DiscoveryParams): Promise<DiscoveredJ
   // 1. Deduplicate
   let processed = deduplicateJobs(allJobs);
   console.log(`[Discovery] After dedup: ${processed.length}`);
+
+  // 1b. Filter by user-selected boards (URL host match).
+  // This is the critical guard that ensures e.g. a "LinkedIn-only" user
+  // only sees direct linkedin.com URLs — not jobs aggregated by Adzuna,
+  // Jooble, etc. that happen to mention LinkedIn.
+  const boardFilter = applyBoardHostFilter(processed, params.selectedBoards);
+  if (boardFilter.rejected > 0) {
+    console.log(`[Discovery] After board filter (${(params.selectedBoards || []).join(',')}): ${boardFilter.kept.length} (rejected ${boardFilter.rejected})`);
+  }
+  processed = boardFilter.kept;
 
   // 2. Apply exclusions
   processed = applyExclusions(processed, excludeCompanies, excludeKeywords);

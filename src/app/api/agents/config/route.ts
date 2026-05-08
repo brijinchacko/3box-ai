@@ -144,6 +144,25 @@ export async function PUT(request: NextRequest) {
           try {
             if (scoutJustEnabled) {
               console.log(`[Config] Triggering immediate Scout run for ${session.user.id}`);
+              // Aggregate selected boards from active profiles so Scout only
+              // surfaces direct links to the user's chosen boards.
+              const activeProfiles = await prisma.searchProfile.findMany({
+                where: { userId: session.user.id, active: true },
+                select: { boards: true },
+              });
+              const boardSet = new Set<string>();
+              for (const p of activeProfiles) {
+                const list = Array.isArray(p.boards)
+                  ? p.boards
+                  : (typeof p.boards === 'string'
+                    ? (p.boards as string).split(',').map((b) => b.trim()).filter(Boolean)
+                    : []);
+                for (const b of list) {
+                  if (typeof b === 'string' && b.trim()) boardSet.add(b.trim().toLowerCase());
+                }
+              }
+              const selectedBoards = boardSet.size > 0 ? Array.from(boardSet) : undefined;
+
               await runIndependentScout(session.user.id, {
                 targetRoles: (config.targetRoles as string[]) || [],
                 targetLocations: (config.targetLocations as string[]) || [],
@@ -151,6 +170,7 @@ export async function PUT(request: NextRequest) {
                 minMatchScore: config.minMatchScore,
                 excludeCompanies: (config.excludeCompanies as string[]) || [],
                 excludeKeywords: (config.excludeKeywords as string[]) || [],
+                selectedBoards,
               });
             }
             if (archerJustEnabled) {

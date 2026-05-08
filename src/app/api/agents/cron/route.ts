@@ -155,6 +155,27 @@ export async function GET(request: NextRequest) {
       // Scout — all agents unlocked for all plans
       if (config.scoutEnabled && shouldRunAgent(config.scoutLastRunAt, config.scoutInterval, now)) {
         try {
+          // Aggregate the user's selected boards from all active SearchProfiles
+          // so Scout only returns jobs whose URL host matches a chosen board.
+          // (e.g. user picked LinkedIn → only direct linkedin.com jobs reach
+          // the dashboard, never aggregator URLs like adzuna.in / jooble.org.)
+          const activeProfiles = await prisma.searchProfile.findMany({
+            where: { userId: config.userId, active: true },
+            select: { boards: true },
+          });
+          const boardSet = new Set<string>();
+          for (const p of activeProfiles) {
+            const list = Array.isArray(p.boards)
+              ? p.boards
+              : (typeof p.boards === 'string'
+                ? (p.boards as string).split(',').map((b) => b.trim()).filter(Boolean)
+                : []);
+            for (const b of list) {
+              if (typeof b === 'string' && b.trim()) boardSet.add(b.trim().toLowerCase());
+            }
+          }
+          const selectedBoards = boardSet.size > 0 ? Array.from(boardSet) : undefined;
+
           const result = await runIndependentScout(config.userId, {
             targetRoles: (config.targetRoles as string[]) || [],
             targetLocations: (config.targetLocations as string[]) || [],
@@ -162,6 +183,7 @@ export async function GET(request: NextRequest) {
             minMatchScore: config.minMatchScore,
             excludeCompanies: (config.excludeCompanies as string[]) || [],
             excludeKeywords: (config.excludeKeywords as string[]) || [],
+            selectedBoards,
           });
           results.push({ userId: config.userId, agent: 'scout', status: 'completed', jobsNew: result.jobsNew });
         } catch (err: any) {

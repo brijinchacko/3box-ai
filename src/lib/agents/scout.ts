@@ -19,6 +19,12 @@ export interface ScoutConfig {
   limit?: number;
   /** Optional platform filter — only search these sources */
   platforms?: string[];
+  /**
+   * Optional list of board IDs the user explicitly selected
+   * (e.g. ['linkedin', 'indeed']). Discovery enforces a URL-host filter
+   * so only direct links to these boards are kept.
+   */
+  selectedBoards?: string[];
   /** Burst mode — skip credit checks, limit to 20 results, search all platforms */
   burstMode?: boolean;
 }
@@ -75,6 +81,7 @@ export async function runScout(config: ScoutConfig, ctx?: AgentContext): Promise
     excludeCompanies,
     excludeKeywords,
     platforms: config.platforms,
+    selectedBoards: config.selectedBoards,
     userProfile,
   });
 
@@ -216,6 +223,7 @@ export interface IndependentScoutConfig {
   excludeCompanies: string[];
   excludeKeywords: string[];
   platforms?: string[];
+  selectedBoards?: string[];
 }
 
 export interface IndependentScoutResult {
@@ -256,6 +264,7 @@ export async function runIndependentScout(
       excludeCompanies: config.excludeCompanies,
       excludeKeywords: config.excludeKeywords,
       platforms: config.platforms,
+      selectedBoards: config.selectedBoards,
       limit: 40,
     });
 
