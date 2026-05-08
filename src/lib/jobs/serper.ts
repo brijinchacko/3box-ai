@@ -242,7 +242,8 @@ export async function searchGoogleJobs(
 }
 
 /**
- * Search LinkedIn jobs via Google site: search
+ * Search LinkedIn jobs via Google site: search.
+ * Restricts to /jobs/view/ URLs — actual job postings, not search pages.
  */
 export async function searchLinkedInJobs(
   role: string,
@@ -250,18 +251,23 @@ export async function searchLinkedInJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `site:linkedin.com/jobs "${role}"${location ? ` ${location}` : ' India'}`;
+  // inurl:/jobs/view/ → only LinkedIn job-posting URLs (excludes the
+  // /jobs/search and /company/ pages that just list other people's jobs).
+  const query = `site:linkedin.com inurl:/jobs/view/ "${role}"${location ? ` ${location}` : ' India'}`;
   const data = await serperSearch(query, 'search', 10);
 
   if (!data.organic) return [];
 
   return data.organic
+    // Final URL guard — even if Google returns a non-job URL, drop it.
+    .filter((r) => /linkedin\.com\/jobs\/view\//i.test(r.link))
     .map((r) => parseJobFromOrganic(r, 'LinkedIn'))
     .filter((j): j is DiscoveredJob => j !== null);
 }
 
 /**
- * Search Naukri jobs via Google site: search
+ * Search Naukri jobs via Google site: search.
+ * Restricts to /job-listings-/ URLs — Naukri's job-posting URL format.
  */
 export async function searchNaukriJobs(
   role: string,
@@ -269,18 +275,23 @@ export async function searchNaukriJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `site:naukri.com "${role}"${location ? ` ${location}` : ''} jobs`;
+  // inurl:job-listings → only Naukri posting pages (excludes /jobs-in-x
+  // listicle pages and category landing pages).
+  const query = `site:naukri.com inurl:job-listings "${role}"${location ? ` ${location}` : ''}`;
   const data = await serperSearch(query, 'search', 10);
 
   if (!data.organic) return [];
 
   return data.organic
+    .filter((r) => /naukri\.com\/job-listings/i.test(r.link))
     .map((r) => parseJobFromOrganic(r, 'Naukri'))
     .filter((j): j is DiscoveredJob => j !== null);
 }
 
 /**
- * Search Indeed India jobs via Google site: search
+ * Search Indeed India jobs via Google site: search.
+ * Restricts to viewjob URLs — actual job postings, not /cmp/ reviews,
+ * /career/ salary pages, or /q-...-jobs.html search-result listings.
  */
 export async function searchIndeedJobs(
   role: string,
@@ -288,12 +299,16 @@ export async function searchIndeedJobs(
 ): Promise<DiscoveredJob[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
-  const query = `site:indeed.co.in "${role}"${location ? ` ${location}` : ''}`;
+  // inurl:viewjob → only Indeed job-posting URLs. This is the single
+  // most important fix for the "Indeed jobs are all expired/junk" bug:
+  // previously we'd index /cmp/<company>/reviews and salary pages.
+  const query = `site:indeed.co.in inurl:viewjob "${role}"${location ? ` ${location}` : ''}`;
   const data = await serperSearch(query, 'search', 10);
 
   if (!data.organic) return [];
 
   return data.organic
+    .filter((r) => /indeed\.(co\.in|com)\/(viewjob|rc\/clk)/i.test(r.link))
     .map((r) => parseJobFromOrganic(r, 'Indeed India'))
     .filter((j): j is DiscoveredJob => j !== null);
 }

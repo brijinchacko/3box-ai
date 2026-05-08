@@ -344,9 +344,108 @@ function applyExclusions(
 }
 
 /**
+ * Maximum age (in days) of a job posting before we consider it stale.
+ * Anything older is filtered out — saves users from applying to roles
+ * that have already been filled or pulled.
+ */
+const MAX_JOB_AGE_DAYS = 30;
+
+/**
+ * Best-effort parse of a postedAt string into a Date. Returns null on
+ * failure so the caller can decide what to do with a missing/unparseable
+ * date (currently: keep the job, since many sources don't supply one).
+ */
+function parsePostedAt(postedAt: string | null | undefined): Date | null {
+  if (!postedAt) return null;
+  const s = String(postedAt).trim();
+  // Relative-time strings ("2 days ago", "5 days ago", "today", "yesterday")
+  // surfaced by Google / SERP sources — convert to an approximate date.
+  const rel = s.toLowerCase();
+  const now = Date.now();
+  if (/^today$/i.test(rel)) return new Date(now);
+  if (/^yesterday$/i.test(rel)) return new Date(now - 86400_000);
+  const relMatch = rel.match(/^(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/);
+  if (relMatch) {
+    const n = parseInt(relMatch[1], 10);
+    const unit = relMatch[2];
+    const ms: Record<string, number> = {
+      minute: 60_000, hour: 3_600_000, day: 86_400_000,
+      week: 604_800_000, month: 2_592_000_000, year: 31_536_000_000,
+    };
+    return new Date(now - n * (ms[unit] || 0));
+  }
+  // Try ISO / Date.parse — handles "2026-05-08T...", "Mar 16, 2026", etc.
+  const ts = Date.parse(s);
+  if (!Number.isNaN(ts)) return new Date(ts);
+  return null;
+}
+
+/**
+ * Returns true if the job's URL points to a non-posting page (search
+ * results, company reviews, salary aggregator, etc.) rather than a real
+ * job listing. These pages don't represent jobs you can apply to.
+ */
+function isNonJobPageUrl(url: string): boolean {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  // Indeed: reviews, salary, career-explorer, generic search-results
+  if (/indeed\.(com|co\.in)/.test(u)) {
+    if (/\/cmp\/[^/]+\/reviews/.test(u)) return true;
+    if (/\/cmp\/[^/]+\/salaries/.test(u)) return true;
+    if (/\/career\/[^/]+\/salaries/.test(u)) return true;
+    if (/\/career\/[^/]+\/jobs\??/.test(u)) return true; // "<role>/jobs" listing page
+    if (/\/q-[^/]+-jobs/.test(u)) return true;          // "/q-team-leader-jobs.html"
+    if (/\/jobs\?q=|\/jobs\?l=/.test(u)) return true;   // search results
+  }
+  // LinkedIn: company directory / search pages
+  if (/linkedin\.com/.test(u)) {
+    if (/\/jobs\/search/.test(u)) return true;
+    if (/\/company\/[^/]+\/?(\?.*)?$/.test(u)) return true; // bare company page
+  }
+  // Glassdoor: reviews/salary pages (not job-listings)
+  if (/glassdoor\.(com|co\.in)/.test(u)) {
+    if (/\/Reviews\//.test(u)) return true;
+    if (/\/Salaries\//.test(u)) return true;
+    if (/\/Interview\//.test(u)) return true;
+  }
+  // Generic listing pages
+  if (/\/search\?|\/jobs\?q=/.test(u)) return true;
+  return false;
+}
+
+/**
+ * Returns true if the title looks like a non-job page: company-review,
+ * salary-aggregator, listicle, "best 10 jobs", aggregator landing, etc.
+ */
+function isNonJobTitle(titleLower: string): boolean {
+  // Reviews / interview pages
+  if (/employee\s+reviews?$/i.test(titleLower)) return true;
+  if (/\bworking\s+as\b.*\:.*review/i.test(titleLower)) return true;
+  // Salary lookup pages
+  if (/\bsalaries?\b.*how\s+much\s+does/i.test(titleLower)) return true;
+  if (/^\s*\w[\w\s,.&-]+\s+salary\s+in\s+/i.test(titleLower) && !/\b(executive|manager|engineer|developer|analyst|consultant|specialist|associate|coordinator|officer|lead)\b/i.test(titleLower)) {
+    // "Team leader salary in <City>" with no actual role qualifier — most
+    // likely a salary-info page rather than a posting.
+    return true;
+  }
+  // Aggregator listing pages: "X Jobs, Employment in Y", "X jobs in Y, Z"
+  if (/\bjobs?,\s*employment\s+in\b/i.test(titleLower)) return true;
+  if (/^\s*[a-z][\w\s&,-]+\s+jobs\s+in\s+[a-z][\w\s,]+$/i.test(titleLower) && !/\b(senior|junior|lead|head|chief|principal|staff)\b/i.test(titleLower)) {
+    // Plural "Jobs in <Location>" — usually a listings page, not a posting
+    return true;
+  }
+  // Listicles / SEO articles
+  if (/^\s*\d+\s+(best|top|latest|new|highest|lowest)\b/i.test(titleLower)) return true;
+  if (/^\s*top\s+\d+/i.test(titleLower)) return true;
+  return false;
+}
+
+/**
  * Filter low-quality jobs that waste application slots
  */
 function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
+  const now = Date.now();
+  const maxAgeMs = MAX_JOB_AGE_DAYS * 24 * 60 * 60 * 1000;
   return jobs.filter((job) => {
     // Must have a real title (not just "Job" or single word)
     if (!job.title || job.title.trim().split(/\s+/).length < 2) return false;
@@ -359,8 +458,19 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     // Must have some description
     if (!job.description || job.description.length < 20) return false;
 
-    // Filter out search/listing pages that slipped through (not actual job postings)
+    // ── Freshness: drop postings older than MAX_JOB_AGE_DAYS ──
+    // Jobs without a parseable date are kept (many sources don't return
+    // one) — we don't punish missing data, only confirmed-stale data.
+    const postedDate = parsePostedAt(job.postedAt);
+    if (postedDate && now - postedDate.getTime() > maxAgeMs) return false;
+
+    // ── Reject non-posting pages (reviews / salaries / search results) ──
+    if (isNonJobPageUrl(job.url || '')) return false;
+
     const titleLower = job.title.toLowerCase();
+    if (isNonJobTitle(titleLower)) return false;
+
+    // Filter out search/listing pages that slipped through (not actual job postings)
     if (/^\d+\s+.*job\s*(vacancies|openings|listings|results)/i.test(titleLower)) return false;
     if (/^\d+[,+]?\d*\+?\s+.*jobs?\s/i.test(titleLower)) return false;
     if (/job\s*vacancies\s*in\s/i.test(titleLower)) return false;
