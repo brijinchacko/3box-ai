@@ -868,6 +868,35 @@ export async function applyToJobsBatch(
   const routingStats = { ats_api: 0, extension_queue: 0, user_email: 0, cold_email: 0, portal_queue: 0 };
   const coverLetterStats = { priority: 0, standard: 0, quick: 0, cached: 0 };
 
+  // ── Wizard consent gate ──
+  // The Auto-Apply toggle on the user's SearchProfile is authoritative.
+  // If NONE of the user's active profiles has autoApply=true, refuse to
+  // submit any application — regardless of any AutoApplyConfig flag that
+  // might still be set elsewhere (smart-auto, legacy, etc.).
+  // Burst mode (free-burst marketing flow) is exempt — that's user-
+  // initiated and time-boxed.
+  if (!burstMode) {
+    const consenting = await prisma.searchProfile.count({
+      where: { userId, active: true, autoApply: true },
+    });
+    if (consenting === 0) {
+      console.warn(`[Archer] applyToJobsBatch ABORTED for ${userId}: no active SearchProfile has autoApply=true (wizard says off).`);
+      if (ctx) logActivity(ctx, 'archer', 'consent_blocked', 'Auto-Apply is OFF on all active profiles — aborting batch.');
+      return {
+        total: jobs.length,
+        applied: 0,
+        emailed: 0,
+        queued: 0,
+        skipped: jobs.length,
+        failed: 0,
+        results: [],
+        coverLetterStats,
+        routingStats,
+        durationMs: Date.now() - startTime,
+      };
+    }
+  }
+
   // ── Defensive filter: drop jobs whose role doesn't match an active
   //    SearchProfile. Same safety net as runIndependentArcher — protects
   //    callers (orchestrator, etc.) that don't filter upstream.
@@ -1267,6 +1296,28 @@ export async function runIndependentArcher(
   userId: string,
   config: IndependentArcherConfig,
 ): Promise<IndependentArcherResult> {
+  // ── Wizard consent gate ──
+  // Authoritative check: the user's SearchProfile Auto-Apply toggle
+  // wins over any cached AutoApplyConfig flag. If none of their active
+  // profiles consent, refuse before we create a run record.
+  const consenting = await prisma.searchProfile.count({
+    where: { userId, active: true, autoApply: true },
+  });
+  if (consenting === 0) {
+    console.warn(`[Archer] runIndependentArcher ABORTED for ${userId}: Auto-Apply is OFF on all active profiles.`);
+    // Return a no-op result; record a brief run row for visibility.
+    const run = await prisma.autoApplyRun.create({
+      data: {
+        userId,
+        status: 'completed',
+        agentType: 'archer',
+        completedAt: new Date(),
+        summary: 'Archer skipped: Auto-Apply is OFF on all active profiles',
+      },
+    });
+    return { runId: run.id, jobsApplied: 0, jobsSkipped: 0, creditsUsed: 0 };
+  }
+
   const run = await prisma.autoApplyRun.create({
     data: {
       userId,

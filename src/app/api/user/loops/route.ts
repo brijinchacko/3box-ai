@@ -250,6 +250,12 @@ async function syncAutoApplyConfig(userId: string) {
   const hasAutoSearch = activeProfiles.some(p => p.autoSearch);
   const hasAutoApply = activeProfiles.some(p => p.autoApply);
 
+  // Wizard's Auto-Apply toggle is the single source of truth: when no
+  // active profile has autoApply=true, force-disable the Smart-Auto
+  // path too. Otherwise a previously-enabled smart-auto setting would
+  // keep applying behind the user's back.
+  const smartAutoUpdate = hasAutoApply ? {} : { autoApplyEnabled: false };
+
   await prisma.autoApplyConfig.upsert({
     where: { userId },
     update: {
@@ -263,6 +269,7 @@ async function syncAutoApplyConfig(userId: string) {
       scoutEnabled: hasAutoSearch,
       scoutAutoMode: hasAutoSearch,
       archerEnabled: hasAutoApply,
+      ...smartAutoUpdate,
     },
     create: {
       userId,
@@ -277,6 +284,7 @@ async function syncAutoApplyConfig(userId: string) {
       scoutEnabled: hasAutoSearch,
       scoutAutoMode: hasAutoSearch,
       archerEnabled: hasAutoApply,
+      autoApplyEnabled: hasAutoApply,
     },
   });
 }

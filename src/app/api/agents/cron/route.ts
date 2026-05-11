@@ -204,8 +204,25 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // ── Defensive: wizard's Auto-Apply toggle is authoritative ──
+      // Before any Archer dispatch (per-agent or smart-auto), confirm
+      // the user has at least one active SearchProfile with autoApply
+      // explicitly enabled. If sync drift left stale flags on
+      // AutoApplyConfig, this is the last line of defense — the user's
+      // current wizard state always wins.
+      let userArcherAllowed = false;
+      if (config.archerEnabled || (isSmartAuto && !config.archerEnabled)) {
+        const consenting = await prisma.searchProfile.count({
+          where: { userId: config.userId, active: true, autoApply: true },
+        });
+        userArcherAllowed = consenting > 0;
+        if (!userArcherAllowed && (config.archerEnabled || isSmartAuto)) {
+          console.log(`[Cron] Archer SKIPPED for ${config.userId}: no active SearchProfile has autoApply=true (wizard says off).`);
+        }
+      }
+
       // Archer — check application cap before dispatching
-      if (config.archerEnabled && shouldRunAgent(config.archerLastRunAt, config.archerInterval, now)) {
+      if (config.archerEnabled && userArcherAllowed && shouldRunAgent(config.archerLastRunAt, config.archerInterval, now)) {
         const appCapCheck = await checkApplicationCap(config.userId);
         if (!appCapCheck.allowed) {
           console.log(`[Cron] Archer app cap for ${config.userId}: ${appCapCheck.used}/${appCapCheck.limit}`);
@@ -232,8 +249,9 @@ export async function GET(request: NextRequest) {
       }
 
       // ── Smart Auto-Apply Standalone Dispatch ──
-      // For users who have autoApplyEnabled but not per-agent archerEnabled
-      if (isSmartAuto && !config.archerEnabled && shouldRunAgent(config.archerLastRunAt, smartAutoIntervalHours, now)) {
+      // For users who have autoApplyEnabled but not per-agent archerEnabled.
+      // Also gated by the wizard's Auto-Apply (userArcherAllowed).
+      if (isSmartAuto && !config.archerEnabled && userArcherAllowed && shouldRunAgent(config.archerLastRunAt, smartAutoIntervalHours, now)) {
         const appCapCheck = await checkApplicationCap(config.userId);
         if (appCapCheck.allowed) {
           try {
