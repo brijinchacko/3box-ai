@@ -35,13 +35,48 @@ export async function GET() {
     },
   });
 
-  // Compute real applied count from ScoutJobs for accuracy
-  const appliedCount = await prisma.scoutJob.count({
-    where: { userId: session.user.id, status: { in: ['APPLIED', 'EMAILED'] } },
-  });
-  const jobsFound = await prisma.scoutJob.count({
+  // Compute applied count using the SAME logic the Applications board
+  // uses, so the two screens always agree:
+  //   1. fetch the user's ScoutJobs
+  //   2. dedupe by (company + title) — keep the highest-priority status
+  //   3. drop entries where "company" is just a job-portal name
+  //   4. count statuses APPLIED / EMAILED
+  // Without these steps, this endpoint over-counts duplicates (same
+  // job from multiple sources) and portal artefacts that the Board
+  // hides — producing a number the user sees nowhere else.
+  const allJobs = await prisma.scoutJob.findMany({
     where: { userId: session.user.id },
+    select: { company: true, title: true, status: true },
+    take: 2000,
   });
+
+  const STATUS_PRIORITY: Record<string, number> = {
+    'WITHDRAWN': 0, 'EXPIRED': 0, 'NEW': 1, 'SKIPPED': 1,
+    'SCORED': 2, 'SAVED': 3, 'READY': 4,
+    'FORGE_PENDING': 5, 'FORGE_READY': 6,
+    'QUEUED': 7, 'APPLYING': 8,
+    'APPLIED': 9, 'EMAILED': 10, 'SCREENED': 11, 'INTERVIEW': 12, 'OFFER': 13,
+  };
+  const PORTAL_NAMES = new Set([
+    'shine.com', 'whatjobs', 'whatjobs direct', 'jooble', 'indeed',
+    'linkedin', 'naukri', 'glassdoor', 'remoteok', 'adzuna', 'dice', 'monster',
+  ]);
+  const dedup = new Map<string, string>(); // key → highest-priority status
+  for (const j of allJobs) {
+    const compLower = (j.company || '').toLowerCase();
+    if (PORTAL_NAMES.has(compLower) || PORTAL_NAMES.has(compLower.replace(/\.com$/, ''))) continue;
+    const key = `${compLower.replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
+    const current = dedup.get(key);
+    if (!current || (STATUS_PRIORITY[j.status] || 0) > (STATUS_PRIORITY[current] || 0)) {
+      dedup.set(key, j.status);
+    }
+  }
+  let appliedCount = 0;
+  let jobsFound = 0;
+  for (const status of dedup.values()) {
+    jobsFound++;
+    if (status === 'APPLIED' || status === 'EMAILED') appliedCount++;
+  }
 
   // Enrich profiles with real counts (distribute across active profiles)
   const activeProfiles = profiles.filter(p => p.active);
