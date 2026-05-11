@@ -35,15 +35,18 @@ export async function GET() {
     },
   });
 
-  // Compute applied count using the SAME logic the Applications board
-  // uses, so the two screens always agree:
-  //   1. fetch the user's ScoutJobs
-  //   2. dedupe by (company + title) — keep the highest-priority status
-  //   3. drop entries where "company" is just a job-portal name
-  //   4. count statuses APPLIED / EMAILED
-  // Without these steps, this endpoint over-counts duplicates (same
-  // job from multiple sources) and portal artefacts that the Board
-  // hides — producing a number the user sees nowhere else.
+  // Compute per-profile applied/jobsFound counts.
+  //
+  // Approach: fetch ScoutJobs, run the same dedupe + portal-filter that
+  // the Applications board uses, then match each surviving job to the
+  // profile(s) whose role title appears as a substring of the job title.
+  // A new profile (just added, no matching jobs yet) correctly shows 0.
+  // A job that matches multiple profiles contributes to both — which is
+  // the honest answer.
+  //
+  // Previously we divided the global total equally across active
+  // profiles ("70 applied / 2 profiles = 35 each"), which made every
+  // brand-new profile claim a share of unrelated applications.
   const allJobs = await prisma.scoutJob.findMany({
     where: { userId: session.user.id },
     select: { company: true, title: true, status: true },
@@ -61,30 +64,41 @@ export async function GET() {
     'shine.com', 'whatjobs', 'whatjobs direct', 'jooble', 'indeed',
     'linkedin', 'naukri', 'glassdoor', 'remoteok', 'adzuna', 'dice', 'monster',
   ]);
-  const dedup = new Map<string, string>(); // key → highest-priority status
+
+  // Dedupe by (company+title) and keep the highest-priority status,
+  // mirroring the board endpoint. Result: array of {title, status}.
+  const dedup = new Map<string, { title: string; status: string }>();
   for (const j of allJobs) {
     const compLower = (j.company || '').toLowerCase();
     if (PORTAL_NAMES.has(compLower) || PORTAL_NAMES.has(compLower.replace(/\.com$/, ''))) continue;
     const key = `${compLower.replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
     const current = dedup.get(key);
-    if (!current || (STATUS_PRIORITY[j.status] || 0) > (STATUS_PRIORITY[current] || 0)) {
-      dedup.set(key, j.status);
+    if (!current || (STATUS_PRIORITY[j.status] || 0) > (STATUS_PRIORITY[current.status] || 0)) {
+      dedup.set(key, { title: j.title || '', status: j.status });
     }
   }
-  let appliedCount = 0;
-  let jobsFound = 0;
-  for (const status of dedup.values()) {
-    jobsFound++;
-    if (status === 'APPLIED' || status === 'EMAILED') appliedCount++;
-  }
+  const dedupedJobs = Array.from(dedup.values());
 
-  // Enrich profiles with real counts (distribute across active profiles)
-  const activeProfiles = profiles.filter(p => p.active);
-  const enrichedProfiles = profiles.map(p => ({
-    ...p,
-    appliedCount: p.active ? Math.round(appliedCount / Math.max(activeProfiles.length, 1)) : p.appliedCount,
-    jobsFound: p.active && p.jobsFound === 0 ? Math.round(jobsFound / Math.max(activeProfiles.length, 1)) : p.jobsFound,
-  }));
+  // Per-profile match: a job belongs to a profile if the profile's
+  // normalized jobTitle appears as a substring of the job's normalized
+  // title. Same matching logic Archer uses for the apply-time
+  // active-profile filter, so the counts agree with what gets applied to.
+  const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const enrichedProfiles = profiles.map((p) => {
+    const roleNorm = normalize(p.jobTitle);
+    if (!roleNorm || roleNorm.length < 2) {
+      return { ...p, appliedCount: 0, jobsFound: 0 };
+    }
+    let appliedCount = 0;
+    let jobsFound = 0;
+    for (const j of dedupedJobs) {
+      const titleNorm = normalize(j.title);
+      if (!titleNorm.includes(roleNorm)) continue;
+      jobsFound++;
+      if (j.status === 'APPLIED' || j.status === 'EMAILED') appliedCount++;
+    }
+    return { ...p, appliedCount, jobsFound };
+  });
 
   return NextResponse.json({ profiles: enrichedProfiles });
 }
