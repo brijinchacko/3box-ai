@@ -781,6 +781,10 @@ model ScoutJob {
   qualityScore     Float?
   scamScore        Float?
   status           ScoutJobStatus  @default(NEW)
+  // When the user clicks "Clear All" on the board, rows are stamped
+  // with archivedAt instead of being deleted. The board hides archived
+  // rows; the new Archive tab shows them. Never overwritten by Scout.
+  archivedAt       DateTime?
   scoutRunId       String?
   resumeVariantId  String?
   applicationId    String?

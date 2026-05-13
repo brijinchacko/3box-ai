@@ -12,6 +12,9 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const period = url.searchParams.get('period'); // day, week, month, all
+  // ?archived=true → return ONLY archived rows (Archive tab).
+  // Default → only LIVE rows (archivedAt is null).
+  const archived = url.searchParams.get('archived') === 'true';
 
   // Build date filter
   let dateFilter: Date | undefined;
@@ -27,6 +30,8 @@ export async function GET(req: Request) {
     where: {
       userId: session.user.id,
       ...(dateFilter ? { discoveredAt: { gte: dateFilter } } : {}),
+      // Live board hides archived rows; archive tab shows only those.
+      archivedAt: archived ? { not: null } : null,
     },
     select: {
       id: true,
@@ -38,9 +43,12 @@ export async function GET(req: Request) {
       jobUrl: true,
       discoveredAt: true,
       appliedAt: true,
+      archivedAt: true,
       status: true,
     },
-    orderBy: { discoveredAt: 'desc' },
+    orderBy: archived
+      ? { archivedAt: 'desc' }
+      : { discoveredAt: 'desc' },
     take: 500,
   });
 
@@ -217,5 +225,54 @@ export async function PATCH(req: Request) {
   } catch (err) {
     console.error('[board-jobs/PATCH]', err);
     return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/user/board-jobs — Clear the Application Pipeline.
+ *
+ * Stamps `archivedAt` on every non-archived ScoutJob for this user.
+ * Rows are NEVER deleted — they stay queryable via the Archive tab
+ * (?archived=true). Application history, applied dates, statuses are
+ * all preserved. Future Scout runs still dedupe by the same key, so
+ * a re-discovered job won't reappear on the live board if it's
+ * already archived (and that's fine — user explicitly cleared it).
+ *
+ * Optional ?id=<scoutJobId> archives a single row instead of all.
+ */
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const idParam = url.searchParams.get('id');
+
+    if (idParam) {
+      // Single-row archive
+      const existing = await prisma.scoutJob.findFirst({
+        where: { id: idParam, userId: session.user.id },
+      });
+      if (!existing) {
+        return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      }
+      await prisma.scoutJob.update({
+        where: { id: idParam },
+        data: { archivedAt: new Date() },
+      });
+      return NextResponse.json({ success: true, archived: 1 });
+    }
+
+    // Bulk archive: every still-live row for this user
+    const result = await prisma.scoutJob.updateMany({
+      where: { userId: session.user.id, archivedAt: null },
+      data: { archivedAt: new Date() },
+    });
+    return NextResponse.json({ success: true, archived: result.count });
+  } catch (err) {
+    console.error('[board-jobs/DELETE]', err);
+    return NextResponse.json({ error: 'Failed to clear board' }, { status: 500 });
   }
 }

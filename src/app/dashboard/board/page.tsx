@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight, Clock, X, XCircle, Zap, AlertTriangle, CheckCircle2, Send, Sparkles } from 'lucide-react';
+import { Loader2, ExternalLink, Search, Calendar, BarChart3, List, LayoutGrid, Filter, Radar, MapPin, Bookmark, Globe, ArrowRight, Clock, X, XCircle, Zap, AlertTriangle, CheckCircle2, Send, Sparkles, Archive, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/ui/LocationInput';
 import KanbanBoard from '@/components/dashboard/board/KanbanBoard';
@@ -18,6 +18,7 @@ interface BoardJob {
   jobUrl: string;
   discoveredAt: string;
   appliedAt: string | null;
+  archivedAt?: string | null;
   status: string;
 }
 
@@ -182,7 +183,14 @@ export default function BoardPage() {
   const [sourceFilter, setSourceFilter] = useState('all');
 
   // Live Search state
-  const [activeTab, setActiveTab] = useState<'board' | 'search'>('board');
+  const [activeTab, setActiveTab] = useState<'board' | 'search' | 'archive'>('board');
+
+  // Archive tab state — read-only view of rows the user has cleared.
+  // Loaded lazily on first visit so the My Board fetch isn't slowed.
+  const [archivedJobs, setArchivedJobs] = useState<BoardJob[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [archivedLoaded, setArchivedLoaded] = useState(false);
+  const [clearingBoard, setClearingBoard] = useState(false);
   const [liveQuery, setLiveQuery] = useState('');
   const [liveLocation, setLiveLocation] = useState('');
   const [liveJobs, setLiveJobs] = useState<LiveSearchJob[]>([]);
@@ -301,6 +309,52 @@ export default function BoardPage() {
   }, [period]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
+  // Lazy-fetch archived jobs the first time the Archive tab is opened.
+  const fetchArchived = useCallback(async (force = false) => {
+    if (archivedLoaded && !force) return;
+    setArchivedLoading(true);
+    try {
+      const res = await fetch('/api/user/board-jobs?archived=true');
+      if (res.ok) {
+        const data = await res.json();
+        setArchivedJobs(data.jobs || []);
+      }
+    } catch (_e) { /* ignore */ } finally {
+      setArchivedLoading(false);
+      setArchivedLoaded(true);
+    }
+  }, [archivedLoaded]);
+
+  useEffect(() => {
+    if (activeTab === 'archive') fetchArchived();
+  }, [activeTab, fetchArchived]);
+
+  // Clear All: archive every live row for this user. Asks for
+  // confirmation; preserves rows in the Archive tab.
+  const handleClearBoard = useCallback(async () => {
+    if (clearingBoard) return;
+    if (!confirm('Clear all jobs from the Application Pipeline? They will be moved to the Archive tab — nothing is permanently deleted, including applied jobs and their history.')) {
+      return;
+    }
+    setClearingBoard(true);
+    try {
+      const res = await fetch('/api/user/board-jobs', { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data?.error || 'Could not clear the board. Try again in a moment.');
+        return;
+      }
+      // Reload board (now empty) + reset archive cache so it re-fetches.
+      setJobs([]);
+      setStatusCounts({});
+      setArchivedLoaded(false);
+    } catch {
+      alert('Network error — please try again.');
+    } finally {
+      setClearingBoard(false);
+    }
+  }, [clearingBoard]);
   useEffect(() => {
     setSearchHistory(getSearchHistory());
     // Restore last search results so they're visible immediately
@@ -567,31 +621,59 @@ export default function BoardPage() {
         </div>
       </div>
 
-      {/* Tabs: My Board | Live Search */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 mb-6 w-fit">
-        <button
-          onClick={() => setActiveTab('board')}
-          className={cn(
-            'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
-            activeTab === 'board'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-          )}
-        >
-          <LayoutGrid className="w-4 h-4" /> My Board
-          {jobs.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">{jobs.length}</span>}
-        </button>
-        <button
-          onClick={() => setActiveTab('search')}
-          className={cn(
-            'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
-            activeTab === 'search'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-          )}
-        >
-          <Radar className="w-4 h-4" /> Live Search
-        </button>
+      {/* Tabs: My Board | Live Search | Archive */}
+      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 w-fit">
+          <button
+            onClick={() => setActiveTab('board')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
+              activeTab === 'board'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            <LayoutGrid className="w-4 h-4" /> My Board
+            {jobs.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">{jobs.length}</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('search')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
+              activeTab === 'search'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            <Radar className="w-4 h-4" /> Live Search
+          </button>
+          <button
+            onClick={() => setActiveTab('archive')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
+              activeTab === 'archive'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            <Archive className="w-4 h-4" /> Archive
+            {archivedJobs.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{archivedJobs.length}</span>}
+          </button>
+        </div>
+
+        {/* Clear-all button — visible only on My Board with content */}
+        {activeTab === 'board' && jobs.length > 0 && (
+          <button
+            type="button"
+            onClick={handleClearBoard}
+            disabled={clearingBoard}
+            title="Move all current pipeline jobs to Archive. Nothing is deleted; applied history stays."
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-500/40 hover:bg-red-50 dark:hover:bg-red-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {clearingBoard ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            {clearingBoard ? 'Clearing…' : 'Clear all'}
+          </button>
+        )}
       </div>
 
       {/* ═══ LIVE SEARCH TAB ═══ */}
@@ -1116,6 +1198,100 @@ export default function BoardPage() {
         </div>
       )}
       </>)}
+
+      {/* ═══ ARCHIVE TAB ═══ */}
+      {/* Read-only view of every row the user has cleared from the
+          pipeline. Application history (applied date, status, source,
+          original link) is fully preserved. */}
+      {activeTab === 'archive' && (
+        <div>
+          {archivedLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+            </div>
+          ) : archivedJobs.length === 0 ? (
+            <div className="text-center py-20">
+              <Archive className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-900 dark:text-white font-medium">No archived jobs yet</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 max-w-md mx-auto">
+                When you click &quot;Clear all&quot; on My Board, jobs are moved here for safekeeping.
+                Nothing is permanently deleted.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                {archivedJobs.length} archived job{archivedJobs.length === 1 ? '' : 's'} — read-only history
+              </p>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-800 text-left text-xs text-gray-500 dark:text-gray-400">
+                        <th className="px-4 py-3 font-medium">Position</th>
+                        <th className="px-4 py-3 font-medium">Company</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium">Applied</th>
+                        <th className="px-4 py-3 font-medium">Archived</th>
+                        <th className="px-4 py-3 font-medium">Source</th>
+                        <th className="px-4 py-3 font-medium">Link</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedJobs.map((job) => {
+                        const isApplied = ['APPLIED', 'EMAILED', 'INTERVIEW', 'OFFER', 'SCREENED'].includes(job.status);
+                        return (
+                          <tr key={job.id} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-gray-900 dark:text-white truncate max-w-[260px]" title={job.title}>{job.title}</p>
+                              {job.location && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[260px]">{job.location}</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-gray-700 dark:text-gray-300 truncate max-w-[180px]" title={job.company}>{job.company}</td>
+                            <td className="px-4 py-3">
+                              <span className={cn(
+                                'text-xs px-2 py-1 rounded-full',
+                                isApplied
+                                  ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
+                              )}>
+                                {job.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                              {job.appliedAt ? new Date(job.appliedAt).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                              {(job as any).archivedAt ? new Date((job as any).archivedAt).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]" title={job.source || ''}>{job.source || '—'}</td>
+                            <td className="px-4 py-3">
+                              {job.jobUrl ? (
+                                <a
+                                  href={job.jobUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                                  title="Open original posting"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              ) : (
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ═══ APPLICATION PREVIEW MODAL ═══ */}
       {showApplyPreview && previewJob && (
