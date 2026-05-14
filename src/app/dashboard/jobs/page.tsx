@@ -1264,12 +1264,79 @@ export default function JobsPage() {
 
   const isMax = userPlan === 'MAX';
 
-  // Load saved jobs: merge localStorage cache with DB source of truth
+  // Cross-section dedup for the search-results screen.
+  //
+  // We call /api/jobs/search AND /api/jobs/india in parallel, and the
+  // latter also returns a "related" suggestions list — three datasets
+  // that can independently surface the same posting (e.g. the same
+  // LinkedIn URL appears in Serper's discovery AND in our local
+  // CachedJob table). Without this, the same job renders 3+ times,
+  // which is the "Same job repeated" complaint.
+  //
+  // Strategy: jobs[] (Live Search) wins. indiaJobs[] drops anything
+  // whose URL OR normalized company+title already appears in jobs[].
+  // relatedJobs[] drops anything already present in either of the
+  // earlier two. Stable ordering inside each section is preserved.
+  const dedupedIndiaJobs = useMemo(() => {
+    const liveUrls = new Set(
+      jobs.map((j) => (j.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '')),
+    );
+    const liveKeys = new Set(
+      jobs.map((j) => `${(j.company || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`),
+    );
+    return indiaJobs.filter((j) => {
+      const u = (j.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+      if (u && liveUrls.has(u)) return false;
+      const k = `${(j.company || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
+      return !liveKeys.has(k);
+    });
+  }, [jobs, indiaJobs]);
+
+  const dedupedRelatedJobs = useMemo(() => {
+    const taken = new Set<string>();
+    const takenKeys = new Set<string>();
+    for (const j of jobs) {
+      const u = (j.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+      if (u) taken.add(u);
+      takenKeys.add(`${(j.company || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`);
+    }
+    for (const j of dedupedIndiaJobs) {
+      const u = (j.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+      if (u) taken.add(u);
+      takenKeys.add(`${(j.company || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`);
+    }
+    return relatedJobs.filter((j) => {
+      const u = (j.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+      if (u && taken.has(u)) return false;
+      const k = `${(j.company || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
+      return !takenKeys.has(k);
+    });
+  }, [jobs, dedupedIndiaJobs, relatedJobs]);
+
+  // Load saved jobs: merge localStorage cache with DB source of truth.
+  // Strip any localStorage rows whose `company` is a placeholder
+  // ("Unknown Company", "Confidential", etc.) so that legacy saves from
+  // before the discovery filters were tightened don't keep showing up on
+  // the board indefinitely.
   useEffect(() => {
+    const isPlaceholderCo = (c: string): boolean => {
+      const s = (c || '').trim().toLowerCase();
+      return ['', 'na', 'n/a', 'unknown', 'unknown company', 'unknownco',
+              'unknowncompany', 'confidential', 'confidental',
+              'not specified', 'not disclosed', 'company name',
+              'private', '-', '...'].includes(s);
+    };
     // 1. Immediate: load from localStorage cache for instant UI
     try {
       const stored = localStorage.getItem(SAVED_JOBS_KEY);
-      if (stored) setSavedJobs(JSON.parse(stored));
+      if (stored) {
+        const parsed: Job[] = JSON.parse(stored);
+        const cleaned = parsed.filter((j) => !isPlaceholderCo(j.company));
+        setSavedJobs(cleaned);
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(cleaned));
+        }
+      }
     } catch {}
 
     // 2. Fetch DB-backed saved jobs to restore state across sessions
@@ -1302,10 +1369,13 @@ export default function JobsPage() {
             };
           });
           setSavedJobDbIds(idMap);
-          // Merge: DB is source of truth, but keep localStorage entries that aren't in DB yet
+          // Merge: DB is source of truth, but keep localStorage entries
+          // that aren't in DB yet — minus anything with a placeholder
+          // company (those should never have been saved in the first
+          // place, but earlier code allowed it).
           setSavedJobs(prev => {
             const dbUrls = new Set(dbJobs.map(j => j.url));
-            const localOnly = prev.filter(j => !dbUrls.has(j.url));
+            const localOnly = prev.filter(j => !dbUrls.has(j.url) && !isPlaceholderCo(j.company));
             const merged = [...dbJobs, ...localOnly];
             localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(merged));
             return merged;
@@ -2246,16 +2316,17 @@ export default function JobsPage() {
             </p>
           )}
 
-          {/* India Cached Jobs */}
-          {!loading && indiaJobs.length > 0 && (
+          {/* India Cached Jobs — deduped against Live Search to avoid
+              the same posting rendering twice on one screen. */}
+          {!loading && dedupedIndiaJobs.length > 0 && (
             <div className="mt-8">
               <div className="flex items-center gap-2 mb-4">
                 <Radar className="w-4 h-4 text-cyan-400/60" />
                 <h3 className="text-sm font-semibold text-white/70">India Job Market</h3>
-                <span className="text-xs text-white/30">({indiaJobs.length} cached results)</span>
+                <span className="text-xs text-white/30">({dedupedIndiaJobs.length} cached results)</span>
               </div>
               <div className="space-y-4">
-                {indiaJobs.map((job, i) => (
+                {dedupedIndiaJobs.map((job, i) => (
                   <motion.div
                     key={`india-${job.id}`}
                     initial={{ opacity: 0, y: 10 }}
@@ -2311,15 +2382,17 @@ export default function JobsPage() {
             </div>
           )}
 
-          {/* You Might Also Like — Related Jobs */}
-          {!loading && relatedJobs.length > 0 && (
+          {/* You Might Also Like — deduped against Live Search + India
+              Job Market so we never resurface a row the user already
+              saw above. */}
+          {!loading && dedupedRelatedJobs.length > 0 && (
             <div className="mt-8">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-4 h-4 text-amber-400/60" />
                 <h3 className="text-sm font-semibold text-white/70">You might also like</h3>
               </div>
               <div className="space-y-3">
-                {relatedJobs.map((job, i) => (
+                {dedupedRelatedJobs.map((job, i) => (
                   <motion.div
                     key={`related-${job.id}`}
                     initial={{ opacity: 0, y: 8 }}

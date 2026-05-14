@@ -4,7 +4,7 @@
  * Used to search LinkedIn Jobs and Naukri directly via Google
  * Docs: https://serper.dev/
  */
-import { isValidEmployer, isNonJobDescription } from './filters';
+import { isValidEmployer, isNonJobDescription, isNonJobTitle } from './filters';
 
 interface SerperOrganicResult {
   title: string;
@@ -214,6 +214,15 @@ function parseJobFromOrganic(
     .trim();
 
   if (!title || title.length < 3) return null;
+
+  // Reject search-results / aggregator landing titles up front. Indeed
+  // /viewjob URLs sometimes serve pages whose <title> is
+  // "executive assistant,ea jobs in chennai, tamil nadu" — Indeed's
+  // SEO format for landing pages. Those slip past the URL whitelist
+  // (URL is /viewjob) but are not real postings. Defense in depth —
+  // even when a downstream filter catches this, rejecting at parse
+  // time keeps the bad row out of every consumer's pipeline.
+  if (isNonJobTitle(title)) return null;
 
   // Reject obvious LinkedIn alert / expired-job pages BEFORE we even
   // try to extract fields. Their snippets reliably contain "Get
