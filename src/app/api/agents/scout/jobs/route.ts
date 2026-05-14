@@ -36,60 +36,63 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    // Over-fetch a bit to compensate for client-side quality filtering,
-    // so the user still gets `limit` actionable rows back.
-    const fetchTake = Math.min(200, Math.max(limit * 2, limit + 30));
+    // Pull a large-but-bounded slice of the user's ScoutJobs so we can
+    // apply `shouldShowJob` IN-MEMORY before counting. Anything beyond
+    // 2000 is "history" the user effectively can't act on anyway, and
+    // counting it inflates the badge above what the list shows. 2000
+    // is plenty for any active user.
+    //
+    // The naive alternative — `prisma.scoutJob.count({ where })` — is
+    // what produced "Search Results 140 but only ~20 visible": the
+    // count includes placeholder-company / stale / non-job rows that
+    // `shouldShowJob` then hides, so the badge and the list disagree.
+    const ALL_TAKE = 2000;
+    const allRows = await prisma.scoutJob.findMany({
+      where,
+      orderBy: [{ matchScore: 'desc' }, { discoveredAt: 'desc' }],
+      take: ALL_TAKE,
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        location: true,
+        salary: true,
+        source: true,
+        remote: true,
+        matchScore: true,
+        atsScore: true,
+        qualityScore: true,
+        scamScore: true,
+        status: true,
+        jobUrl: true,
+        postedAt: true,
+        discoveredAt: true,
+        appliedAt: true,
+        resumeVariantId: true,
+        description: true,
+      },
+    });
 
-    const [rawJobs, total, statusCounts] = await Promise.all([
-      prisma.scoutJob.findMany({
-        where,
-        orderBy: [{ matchScore: 'desc' }, { discoveredAt: 'desc' }],
-        take: fetchTake,
-        skip: offset,
-        select: {
-          id: true,
-          title: true,
-          company: true,
-          location: true,
-          salary: true,
-          source: true,
-          remote: true,
-          matchScore: true,
-          atsScore: true,
-          qualityScore: true,
-          scamScore: true,
-          status: true,
-          jobUrl: true,
-          postedAt: true,
-          discoveredAt: true,
-          appliedAt: true,
-          resumeVariantId: true,
-          description: true,
-        },
-      }),
-      prisma.scoutJob.count({ where }),
-      prisma.scoutJob.groupBy({
-        by: ['status'],
-        where: { userId: session.user.id, archivedAt: null },
-        _count: true,
-      }),
-    ]);
-
-    // Single canonical filter — same rules used by /api/jobs/india and
-    // /api/user/board-jobs so the user can't see different garbage on
-    // different tabs.
-    const jobs = rawJobs.filter((j) => shouldShowJob({
+    // Apply the canonical filter ONCE; everything downstream — `jobs`,
+    // `total`, `statusCounts` — derives from the same set so the UI
+    // can't show inconsistent numbers.
+    const visibleAll = allRows.filter((j) => shouldShowJob({
       title: j.title,
       company: j.company,
       description: j.description,
       url: j.jobUrl,
       postedAt: j.postedAt,
-    })).slice(0, limit);
+    }));
 
-    // Format status counts as a simple object
+    const jobs = visibleAll.slice(offset, offset + limit);
+    const total = visibleAll.length;
+
+    // Status counts over the FILTERED set. Previously we used a SQL
+    // groupBy over the full table — that inflated counts like
+    // "Applied: 10" by including rows that the UI never renders.
     const counts: Record<string, number> = {};
-    for (const group of statusCounts) {
-      counts[group.status] = group._count;
+    for (const j of visibleAll) {
+      counts[j.status] = (counts[j.status] || 0) + 1;
     }
 
     return NextResponse.json({ jobs, total, statusCounts: counts });

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
+import { isValidEmployer, isNonJobTitle } from '@/lib/jobs/filters';
 
 /* GET /api/user/loops — List all search profiles */
 export async function GET() {
@@ -37,16 +38,16 @@ export async function GET() {
 
   // Compute per-profile applied/jobsFound counts.
   //
-  // Approach: fetch ScoutJobs, run the same dedupe + portal-filter that
-  // the Applications board uses, then match each surviving job to the
-  // profile(s) whose role title appears as a substring of the job title.
-  // A new profile (just added, no matching jobs yet) correctly shows 0.
-  // A job that matches multiple profiles contributes to both — which is
-  // the honest answer.
+  // Approach: fetch ScoutJobs, apply the SAME quality filter every other
+  // route uses (so legacy "Unknown Company" rows don't inflate the
+  // counts), then match each surviving job to the profile(s) whose role
+  // title appears as a substring of the job title.
   //
-  // Previously we divided the global total equally across active
-  // profiles ("70 applied / 2 profiles = 35 each"), which made every
-  // brand-new profile claim a share of unrelated applications.
+  // Previously we filtered out PORTAL_NAMES companies but NOT
+  // placeholders ("Unknown Company", "Confidential", etc.), so any
+  // legacy auto-applied row with status APPLIED/EMAILED kept inflating
+  // the per-profile "X applied" badge to numbers the user couldn't
+  // see in the board.
   const allJobs = await prisma.scoutJob.findMany({
     where: { userId: session.user.id },
     select: { company: true, title: true, status: true },
@@ -60,17 +61,20 @@ export async function GET() {
     'QUEUED': 7, 'APPLYING': 8,
     'APPLIED': 9, 'EMAILED': 10, 'SCREENED': 11, 'INTERVIEW': 12, 'OFFER': 13,
   };
-  const PORTAL_NAMES = new Set([
-    'shine.com', 'whatjobs', 'whatjobs direct', 'jooble', 'indeed',
-    'linkedin', 'naukri', 'glassdoor', 'remoteok', 'adzuna', 'dice', 'monster',
-  ]);
+
+  // Single source of truth for "is this a real job we'd render?".
+  // Description / URL / postedAt aren't selected (would balloon the
+  // query); isValidEmployer + isNonJobTitle catch the vast majority
+  // of legacy garbage with just two cheap fields.
+  const visible = allJobs.filter((j) =>
+    isValidEmployer(j.company) && !isNonJobTitle(j.title)
+  );
 
   // Dedupe by (company+title) and keep the highest-priority status,
   // mirroring the board endpoint. Result: array of {title, status}.
   const dedup = new Map<string, { title: string; status: string }>();
-  for (const j of allJobs) {
+  for (const j of visible) {
     const compLower = (j.company || '').toLowerCase();
-    if (PORTAL_NAMES.has(compLower) || PORTAL_NAMES.has(compLower.replace(/\.com$/, ''))) continue;
     const key = `${compLower.replace(/[^a-z0-9]/g, '').slice(0, 20)}-${(j.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
     const current = dedup.get(key);
     if (!current || (STATUS_PRIORITY[j.status] || 0) > (STATUS_PRIORITY[current.status] || 0)) {
@@ -79,10 +83,10 @@ export async function GET() {
   }
   const dedupedJobs = Array.from(dedup.values());
 
-  // Per-profile match: a job belongs to a profile if the profile's
+  // Per-profile match: a job belongs to a profile when the profile's
   // normalized jobTitle appears as a substring of the job's normalized
-  // title. Same matching logic Archer uses for the apply-time
-  // active-profile filter, so the counts agree with what gets applied to.
+  // title. Same logic Archer uses at apply time, so the counts here
+  // agree with what the auto-apply path actually targets.
   const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
   const enrichedProfiles = profiles.map((p) => {
     const roleNorm = normalize(p.jobTitle);
