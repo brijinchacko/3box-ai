@@ -269,14 +269,25 @@ function parseJobFromOrganic(
   );
   if (salaryMatch) salary = salaryMatch[0];
 
-  // postedAt: prefer Serper's own date, then snippet ("5 days ago"),
-  // then '' (unknown). NEVER fall back to now() — that would mark
-  // every stale job as "Posted today" and let it slip past the
-  // freshness filter.
-  const postedAt =
-    (result.date && String(result.date).trim()) ||
-    extractDateFromSnippet(result.snippet) ||
-    '';
+  // postedAt: ONLY trust a "Posted X ago" phrase extracted from the
+  // snippet text. Do NOT use Google's `result.date` field.
+  //
+  // Reason: for LinkedIn / Naukri / Indeed `/jobs/view/<id>` URLs,
+  // `result.date` is the page's RE-CRAWL date (when Google last
+  // re-indexed it), not the date the job was originally posted. The
+  // same listing gets re-indexed periodically as long as the URL stays
+  // alive, so a 4-month-old job that Google revisited 4 days ago shows
+  // `result.date = "4 days ago"` and we'd render "Posted 4d ago" on a
+  // stale listing. That's exactly the bug the screenshot in the issue
+  // is showing.
+  //
+  // Snippet-extracted dates are LinkedIn's / Naukri's / Indeed's own
+  // "Posted X months ago" text that those sites render on the page and
+  // Google indexes verbatim. That phrase reflects the real posting
+  // date. When the snippet doesn't include it, we leave postedAt empty
+  // — the UI honestly renders "Recently posted" rather than
+  // fabricating a freshness signal from re-crawl noise.
+  const postedAt = extractDateFromSnippet(result.snippet) || '';
 
   return {
     id: `serper-${Buffer.from(result.link).toString('base64').slice(0, 20)}`,
