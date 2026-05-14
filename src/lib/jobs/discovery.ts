@@ -26,6 +26,13 @@ import {
   type ScrapedJob,
 } from './google-scraper';
 import { calculateMatchScore } from './matcher';
+import {
+  isNonJobDescription,
+  isNonJobTitle as sharedIsNonJobTitle,
+  isNonJobUrl as sharedIsNonJobUrl,
+  isStalePosting,
+  isValidEmployer,
+} from './filters';
 
 export interface DiscoveredJob {
   id: string;
@@ -228,27 +235,36 @@ async function searchJSearch(role: string, location: string): Promise<Discovered
     }
     const data = await response.json();
 
-    return (data.data || []).map((job: any) => ({
-      id: job.job_id || `jsearch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      title: job.job_title || '',
-      company: job.employer_name || 'Unknown',
-      location: job.job_is_remote
-        ? 'Remote'
-        : [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ') ||
-          'Not specified',
-      description: (job.job_description || '').slice(0, 500),
-      salary:
-        job.job_min_salary && job.job_max_salary
-          ? `${job.job_min_salary} - ${job.job_max_salary}`
-          : null,
-      url: job.job_apply_link || '',
-      source: 'JSearch',
-      // Empty string (not now()) when JSearch doesn't supply a date —
-      // freshness filter in filterLowQuality treats unknown-date jobs
-      // conservatively rather than letting them claim to be "today".
-      postedAt: (job.job_posted_at_datetime_utc || '').trim(),
-      remote: job.job_is_remote || false,
-    }));
+    return (data.data || [])
+      .map((job: any): DiscoveredJob | null => {
+        const company = (job.employer_name || '').trim();
+        if (!isValidEmployer(company)) return null;
+
+        const description = (job.job_description || '').slice(0, 500);
+        if (isNonJobDescription(description)) return null;
+
+        return {
+          id: job.job_id || `jsearch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: job.job_title || '',
+          company,
+          location: job.job_is_remote
+            ? 'Remote'
+            : [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ') ||
+              'Not specified',
+          description,
+          salary:
+            job.job_min_salary && job.job_max_salary
+              ? `${job.job_min_salary} - ${job.job_max_salary}`
+              : null,
+          url: job.job_apply_link || '',
+          source: 'JSearch',
+          // Empty string (not now()) when JSearch doesn't supply a date —
+          // freshness filter treats unknown-date jobs conservatively.
+          postedAt: (job.job_posted_at_datetime_utc || '').trim(),
+          remote: job.job_is_remote || false,
+        };
+      })
+      .filter((j: DiscoveredJob | null): j is DiscoveredJob => j !== null);
   } catch {
     return [];
   }
@@ -272,23 +288,26 @@ function cleanLocationForSearch(location: string): string {
 }
 
 /**
- * Aggressive deduplication — same company + similar title = duplicate
+ * Aggressive deduplication — same company + similar title = duplicate.
+ * When two sources surface the same posting, keep the one with more
+ * data (longer description, salary, real company name).
  */
 function deduplicateJobs(jobs: DiscoveredJob[]): DiscoveredJob[] {
   const seen = new Map<string, DiscoveredJob>();
   const seenUrls = new Set<string>();
 
   for (const job of jobs) {
-    // Dedupe by URL first (strongest signal)
     const urlKey = (job.url || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
     if (urlKey && seenUrls.has(urlKey)) continue;
 
-    // Normalize: strip spaces, lowercase, first 30 chars of title
-    const companyKey = job.company
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .replace(/^unknown(company)?$/, '') // Treat "Unknown Company" as empty for dedup
-      .slice(0, 20);
+    // Treat all placeholder companies as empty for dedup so genuinely
+    // different employers using the same placeholder name aren't keyed
+    // identically — but identical postings re-surfaced under "Unknown"
+    // still collapse via the title portion.
+    const isPlaceholder = !isValidEmployer(job.company);
+    const companyKey = isPlaceholder
+      ? ''
+      : job.company.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
     const titleKey = job.title
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '')
@@ -299,14 +318,17 @@ function deduplicateJobs(jobs: DiscoveredJob[]): DiscoveredJob[] {
       seen.set(key, job);
       if (urlKey) seenUrls.add(urlKey);
     } else {
-      // Keep the one with more data (longer description, has salary, real company name)
       const existing = seen.get(key)!;
       const existingScore =
-        (existing.description?.length || 0) + (existing.salary ? 50 : 0) + (existing.url ? 20 : 0)
-        + (existing.company !== 'Unknown Company' ? 100 : 0);
+        (existing.description?.length || 0)
+        + (existing.salary ? 50 : 0)
+        + (existing.url ? 20 : 0)
+        + (isValidEmployer(existing.company) ? 100 : 0);
       const newScore =
-        (job.description?.length || 0) + (job.salary ? 50 : 0) + (job.url ? 20 : 0)
-        + (job.company !== 'Unknown Company' ? 100 : 0);
+        (job.description?.length || 0)
+        + (job.salary ? 50 : 0)
+        + (job.url ? 20 : 0)
+        + (isValidEmployer(job.company) ? 100 : 0);
       if (newScore > existingScore) {
         if (urlKey) seenUrls.add(urlKey);
         seen.set(key, job);
@@ -346,177 +368,44 @@ function applyExclusions(
   });
 }
 
-/**
- * Maximum age (in days) of a job posting before we consider it stale.
- * Most LinkedIn / Indeed postings stop accepting applications after
- * ~21 days, so we use that as the cutoff. Older postings often show
- * "No longer accepting applications" by the time the user clicks.
- */
-const MAX_JOB_AGE_DAYS = 21;
+// All quality predicates live in `./filters` — single source of truth
+// shared with the route layer. If you're adding a new rule, change
+// `./filters.ts`, not this file.
 
 /**
- * Best-effort parse of a postedAt string into a Date. Returns null on
- * failure so the caller can decide what to do with a missing/unparseable
- * date (currently: keep the job, since many sources don't supply one).
- */
-function parsePostedAt(postedAt: string | null | undefined): Date | null {
-  if (!postedAt) return null;
-  const s = String(postedAt).trim();
-  // Relative-time strings ("2 days ago", "5 days ago", "today", "yesterday")
-  // surfaced by Google / SERP sources — convert to an approximate date.
-  const rel = s.toLowerCase();
-  const now = Date.now();
-  if (/^today$/i.test(rel)) return new Date(now);
-  if (/^yesterday$/i.test(rel)) return new Date(now - 86400_000);
-  const relMatch = rel.match(/^(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/);
-  if (relMatch) {
-    const n = parseInt(relMatch[1], 10);
-    const unit = relMatch[2];
-    const ms: Record<string, number> = {
-      minute: 60_000, hour: 3_600_000, day: 86_400_000,
-      week: 604_800_000, month: 2_592_000_000, year: 31_536_000_000,
-    };
-    return new Date(now - n * (ms[unit] || 0));
-  }
-  // Try ISO / Date.parse — handles "2026-05-08T...", "Mar 16, 2026", etc.
-  const ts = Date.parse(s);
-  if (!Number.isNaN(ts)) return new Date(ts);
-  return null;
-}
-
-/**
- * Returns true if the job's URL points to a non-posting page (search
- * results, company reviews, salary aggregator, etc.) rather than a real
- * job listing. These pages don't represent jobs you can apply to.
- */
-function isNonJobPageUrl(url: string): boolean {
-  if (!url) return false;
-  const u = url.toLowerCase();
-  // Indeed: reviews, salary, career-explorer, generic search-results
-  if (/indeed\.(com|co\.in)/.test(u)) {
-    if (/\/cmp\/[^/]+\/reviews/.test(u)) return true;
-    if (/\/cmp\/[^/]+\/salaries/.test(u)) return true;
-    if (/\/career\/[^/]+\/salaries/.test(u)) return true;
-    if (/\/career\/[^/]+\/jobs\??/.test(u)) return true; // "<role>/jobs" listing page
-    if (/\/q-[^/]+-jobs/.test(u)) return true;          // "/q-team-leader-jobs.html"
-    if (/\/jobs\?q=|\/jobs\?l=/.test(u)) return true;   // search results
-  }
-  // LinkedIn: ONLY /jobs/view/<id> URLs are real postings. Anything else
-  // on linkedin.com (search pages, category pages like
-  // /jobs/full-stack-developer-jobs-gurugram, profile pages, company
-  // pages) is rejected. Whitelist beats blacklist for this site.
-  if (/linkedin\.com/.test(u)) {
-    if (/\/jobs\/view\//.test(u)) {
-      // real posting — keep
-    } else {
-      return true;
-    }
-  }
-  // Glassdoor: reviews/salary pages (not job-listings)
-  if (/glassdoor\.(com|co\.in)/.test(u)) {
-    if (/\/Reviews\//.test(u)) return true;
-    if (/\/Salaries\//.test(u)) return true;
-    if (/\/Interview\//.test(u)) return true;
-  }
-  // Generic listing pages
-  if (/\/search\?|\/jobs\?q=/.test(u)) return true;
-  return false;
-}
-
-/**
- * Returns true if the title looks like a non-job page: company-review,
- * salary-aggregator, listicle, "best 10 jobs", aggregator landing, etc.
- */
-function isNonJobTitle(titleLower: string): boolean {
-  // Reviews / interview pages
-  if (/employee\s+reviews?$/i.test(titleLower)) return true;
-  if (/\bworking\s+as\b.*\:.*review/i.test(titleLower)) return true;
-  // Salary lookup pages
-  if (/\bsalaries?\b.*how\s+much\s+does/i.test(titleLower)) return true;
-  if (/^\s*\w[\w\s,.&-]+\s+salary\s+in\s+/i.test(titleLower) && !/\b(executive|manager|engineer|developer|analyst|consultant|specialist|associate|coordinator|officer|lead)\b/i.test(titleLower)) {
-    // "Team leader salary in <City>" with no actual role qualifier — most
-    // likely a salary-info page rather than a posting.
-    return true;
-  }
-  // Aggregator listing pages: "X Jobs, Employment in Y", "X jobs in Y, Z"
-  if (/\bjobs?,\s*employment\s+in\b/i.test(titleLower)) return true;
-  if (/^\s*[a-z][\w\s&,-]+\s+jobs\s+in\s+[a-z][\w\s,]+$/i.test(titleLower) && !/\b(senior|junior|lead|head|chief|principal|staff)\b/i.test(titleLower)) {
-    // Plural "Jobs in <Location>" — usually a listings page, not a posting
-    return true;
-  }
-  // Listicles / SEO articles
-  if (/^\s*\d+\s+(best|top|latest|new|highest|lowest)\b/i.test(titleLower)) return true;
-  if (/^\s*top\s+\d+/i.test(titleLower)) return true;
-  return false;
-}
-
-/**
- * Filter low-quality jobs that waste application slots
+ * Filter low-quality jobs that waste application slots.
+ *
+ * All predicates delegate to `./filters` so the live discovery path,
+ * the persisted-board path, and the cached-India path apply the same
+ * rules. If you're adding a new rejection rule, add it there.
  */
 function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
-  const now = Date.now();
-  const maxAgeMs = MAX_JOB_AGE_DAYS * 24 * 60 * 60 * 1000;
   return jobs.filter((job) => {
-    // Must have a real title (not just "Job" or single word)
-    if (!job.title || job.title.trim().split(/\s+/).length < 2) return false;
+    // 1. Real employer required. Rejects "Unknown Company", "Confidential",
+    //    portal names ("LinkedIn"), and digit-only junk in one check.
+    //    Without this, cover letters can't be personalized and match
+    //    scoring is meaningless — pure noise.
+    if (!isValidEmployer(job.company)) return false;
 
-    // ── Bad-parse signal: title still contains "<X> hiring <Y>" ──
-    // LinkedIn search-result page titles look like
-    //   "Acme Corp hiring Senior Engineer in Bangalore - LinkedIn"
-    // If we see "<word(s)> hiring <word(s)>" in the stored title, the
-    // parser didn't manage to split it into title + company. The job's
-    // company is almost certainly "Unknown Company" in this state and
-    // the email path would render placeholders. Drop it.
-    if (/\s+hiring\s+/i.test(job.title)) return false;
+    // 2. Title must look like a real role. Catches the bad-parse signal
+    //    "<X> hiring <Y>" plus the aggregator/listicle/salary-page titles.
+    if (sharedIsNonJobTitle(job.title)) return false;
 
-    // ── Must have a real company name ──
-    // Previously we let "Unknown Company" rows through if the description
-    // was long enough. That produced the "Unknown Company · India" cards
-    // users complained about: no real employer name → cover letters can't
-    // be personalized, match scoring is meaningless, and the user can't
-    // tell who they'd actually be applying to. Reject outright.
-    if (!job.company) return false;
-    const companyLower = job.company.trim().toLowerCase();
-    if (
-      companyLower === 'unknown'
-      || companyLower === 'unknown company'
-      || companyLower === 'confidential'
-      || companyLower === 'na'
-      || companyLower === 'n/a'
-    ) return false;
+    // 3. Description-based check. Catches LinkedIn expired postings that
+    //    serve a "Get notified about new ___ jobs" alert page from the
+    //    same /jobs/view/<id> URL. The URL filter can't see this.
+    if (isNonJobDescription(job.description)) return false;
 
-    // Must have some description
+    // 4. Description sanity floor.
     if (!job.description || job.description.length < 20) return false;
 
-    // ── Freshness: drop postings older than MAX_JOB_AGE_DAYS ──
-    // Confirmed-stale jobs (parseable old date) are dropped immediately.
-    // (Placeholder companies are already rejected above, so the previous
-    // "date-unknown AND company-placeholder" combined gate is redundant
-    // and has been removed.)
-    const postedDate = parsePostedAt(job.postedAt);
-    if (postedDate && now - postedDate.getTime() > maxAgeMs) return false;
+    // 5. URL points to a real posting (not a /cmp/reviews / /Salaries /
+    //    /jobs/view/ alert page / -jobs-in- aggregator landing page).
+    if (sharedIsNonJobUrl(job.url)) return false;
 
-    // ── Reject non-posting pages (reviews / salaries / search results) ──
-    if (isNonJobPageUrl(job.url || '')) return false;
-
-    const titleLower = job.title.toLowerCase();
-    if (isNonJobTitle(titleLower)) return false;
-
-    // Filter out search/listing pages that slipped through (not actual job postings)
-    if (/^\d+\s+.*job\s*(vacancies|openings|listings|results)/i.test(titleLower)) return false;
-    if (/^\d+[,+]?\d*\+?\s+.*jobs?\s/i.test(titleLower)) return false;
-    if (/job\s*vacancies\s*in\s/i.test(titleLower)) return false;
-    // Catch aggregator titles: "X jobs in Y", "openings in Z for"
-    if (/\bjobs?\s+in\s+/i.test(titleLower) && /\d/.test(titleLower)) return false;
-    if (/\bopenings?\s+in\s+.*for\s/i.test(titleLower)) return false;
-    // Catch titles that are just search queries, not job postings
-    if (titleLower.includes(' - wellfound') || titleLower.includes(' - glassdoor') || titleLower.includes(' - indeed')) return false;
-    if (/^\d+\s+(best|top|latest|new)\s/i.test(titleLower)) return false;
-
-    // Filter listing page URLs (not actual job postings)
-    const urlLower = (job.url || '').toLowerCase();
-    if (urlLower.includes('naukri.com') && /-jobs-in-|-jobs$/.test(urlLower)) return false;
-    if (urlLower.includes('/search?') || urlLower.includes('/jobs?q=')) return false;
+    // 6. Freshness: drop postings older than the cutoff. Unknown dates
+    //    pass through — the UI shows "Recently posted" honestly.
+    if (isStalePosting(job.postedAt)) return false;
 
     return true;
   });

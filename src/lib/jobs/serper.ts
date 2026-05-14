@@ -4,6 +4,7 @@
  * Used to search LinkedIn Jobs and Naukri directly via Google
  * Docs: https://serper.dev/
  */
+import { isValidEmployer, isNonJobDescription } from './filters';
 
 interface SerperOrganicResult {
   title: string;
@@ -214,12 +215,18 @@ function parseJobFromOrganic(
 
   if (!title || title.length < 3) return null;
 
-  let company = 'Unknown Company';
+  // Reject obvious LinkedIn alert / expired-job pages BEFORE we even
+  // try to extract fields. Their snippets reliably contain "Get
+  // notified about new <role> jobs in <location>" — the URL might be
+  // /jobs/view/<id> (passes the URL whitelist) but the page no longer
+  // serves a real posting. This is the single biggest source of the
+  // "Unknown Company · India — Posted today" complaint.
+  if (isNonJobDescription(result.snippet)) return null;
+
+  let company = '';
   let location = 'India';
 
   // ── LinkedIn-specific extraction ──
-  // Try the structured "Company hiring Role in Location" pattern first.
-  // When it matches we get clean fields without "Unknown Company" leakage.
   if (source === 'LinkedIn') {
     const parsed = parseLinkedInTitle(result.title);
     if (parsed) {
@@ -229,13 +236,22 @@ function parseJobFromOrganic(
     }
   }
 
-  // ── Generic snippet-based extraction (fallback) ──
-  if (company === 'Unknown Company') {
+  // ── Generic snippet-based fallback when title parser didn't give us a
+  // company. Tighter than before: leading-cap-words only, max 5 words.
+  if (!company) {
     const companyMatch = result.snippet.match(
-      /(?:at|@|by)\s+([A-Z][A-Za-z\s&.]+?)(?:\s*[-–,.|]|\s+in\s)/,
+      /(?:at|@|by)\s+([A-Z][A-Za-z0-9&.\-' ]{1,60}?)(?:\s*[-–,.|]|\s+in\s)/,
     );
     if (companyMatch) company = companyMatch[1].trim();
   }
+
+  // ── Hard-fail when we still don't have a real employer name. We used
+  // to ship "Unknown Company" through and rely on a downstream filter
+  // to drop it; in practice that filter doesn't run on every consumer
+  // (legacy DB rows, /api/jobs/india, etc.) so junk leaks to the UI.
+  // Reject at the source so it never enters the pipeline.
+  if (!isValidEmployer(company)) return null;
+
   if (location === 'India') {
     const locationMatch = result.snippet.match(
       /(?:in|at|location[:\s])\s*([A-Z][a-z]+(?:\s*,\s*[A-Z][a-z]+)?)/,
@@ -256,7 +272,7 @@ function parseJobFromOrganic(
   // postedAt: prefer Serper's own date, then snippet ("5 days ago"),
   // then '' (unknown). NEVER fall back to now() — that would mark
   // every stale job as "Posted today" and let it slip past the
-  // freshness filter in discovery.filterLowQuality.
+  // freshness filter.
   const postedAt =
     (result.date && String(result.date).trim()) ||
     extractDateFromSnippet(result.snippet) ||
@@ -282,6 +298,11 @@ function parseJobFromOrganic(
 function parseGoogleJob(job: SerperJobResult): DiscoveredJob | null {
   if (!job.title) return null;
 
+  const company = (job.company_name || '').trim();
+  if (!isValidEmployer(company)) return null;
+
+  if (isNonJobDescription(job.description)) return null;
+
   const isRemote = /remote|work from home|wfh/i.test(
     `${job.title} ${job.location || ''} ${(job.extensions || []).join(' ')}`,
   );
@@ -297,7 +318,7 @@ function parseGoogleJob(job: SerperJobResult): DiscoveredJob | null {
   return {
     id: `serper-job-${job.job_id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title: job.title,
-    company: job.company_name || 'Unknown Company',
+    company,
     location: isRemote ? 'Remote' : job.location || 'India',
     description: (job.description || '').slice(0, 500),
     salary: job.detected_extensions?.salary || null,
@@ -349,8 +370,9 @@ export async function searchLinkedInJobs(
   if (!data.organic) return [];
 
   return data.organic
-    // Final URL guard — even if Google returns a non-job URL, drop it.
-    .filter((r) => /linkedin\.com\/jobs\/view\//i.test(r.link))
+    // Final URL guard — must be /jobs/view/<digits>. Real LinkedIn
+    // postings have a numeric job ID; subscribe/alert pages don't.
+    .filter((r) => /linkedin\.com\/jobs\/view\/\d+/i.test(r.link))
     .map((r) => parseJobFromOrganic(r, 'LinkedIn'))
     .filter((j): j is DiscoveredJob => j !== null);
 }

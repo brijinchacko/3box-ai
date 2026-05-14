@@ -15,6 +15,7 @@
  * remain the primary sources for reliability.
  */
 import * as cheerio from 'cheerio';
+import { isValidEmployer, isNonJobDescription, isNonJobUrl } from './filters';
 
 // ── Types ──
 
@@ -226,12 +227,21 @@ function parseOrganicResults(html: string, source: string): ScrapedJob[] {
     const snippet =
       $el.find('.VwiC3b, .lEBKkf, span.aCOpRe, div.IsZvec').first().text().trim() || '';
 
+    // Skip alert-subscription / expired pages whose snippet says
+    // "Get notified about new ___ jobs in ___" before doing any work.
+    if (isNonJobDescription(snippet)) return;
+
     // Extract company from snippet
-    let company = 'Unknown Company';
+    let company = '';
     const companyMatch = snippet.match(
-      /(?:at|@|by)\s+([A-Z][A-Za-z\s&.]+?)(?:\s*[-–,.|]|\s+in\s)/,
+      /(?:at|@|by)\s+([A-Z][A-Za-z0-9&.\-' ]{1,60}?)(?:\s*[-–,.|]|\s+in\s)/,
     );
     if (companyMatch) company = companyMatch[1].trim();
+
+    // Hard-fail without a real employer name. Used to default to
+    // "Unknown Company" and lean on the downstream filter — but legacy
+    // bad rows + bypass paths leaked anyway. Reject here.
+    if (!isValidEmployer(company)) return;
 
     // Extract location
     let location = 'India';
@@ -249,12 +259,12 @@ function parseOrganicResults(html: string, source: string): ScrapedJob[] {
     );
     if (salaryMatch) salary = salaryMatch[0];
 
-    // Skip search/listing pages (not individual job postings)
+    // Skip search/listing pages (not individual job postings).
+    // Shared filter is authoritative; the legacy helpers below catch
+    // a few Naukri/LinkedIn variants the shared rules don't yet cover.
+    if (isNonJobUrl(url)) return;
     if (isSearchResultPage(url, title)) return;
     if (url.includes('naukri.com') && isNaukriListingPage(url, title)) return;
-
-    // Skip if company is "Unknown" AND title looks like a listing page
-    if (company === 'Unknown Company' && /\d+.*jobs?|vacancies|openings/i.test(title)) return;
 
     jobs.push({
       id: generateId('gscrape'),
@@ -295,8 +305,13 @@ function parseGoogleJobsTab(html: string): ScrapedJob[] {
         const title = item.title || '';
         if (!title) continue;
 
-        const company =
-          item.hiringOrganization?.name || item.hiringOrganization || 'Unknown Company';
+        const rawCompany = item.hiringOrganization?.name || item.hiringOrganization || '';
+        const company = (typeof rawCompany === 'string' ? rawCompany : rawCompany?.name || '').trim();
+        if (!isValidEmployer(company)) continue;
+
+        const cleanDescription = (item.description || '').replace(/<[^>]*>/g, '').slice(0, 500);
+        if (isNonJobDescription(cleanDescription)) continue;
+
         const loc =
           item.jobLocation?.address?.addressLocality ||
           item.jobLocation?.address?.addressRegion ||
@@ -320,9 +335,9 @@ function parseGoogleJobsTab(html: string): ScrapedJob[] {
         jobs.push({
           id: generateId('gjobs'),
           title,
-          company: typeof company === 'string' ? company : company.name || 'Unknown Company',
+          company,
           location: isRemote ? 'Remote' : loc,
-          description: (item.description || '').replace(/<[^>]*>/g, '').slice(0, 500),
+          description: cleanDescription,
           salary,
           url: applyUrl || '',
           source: 'Google Jobs',
@@ -344,13 +359,16 @@ function parseGoogleJobsTab(html: string): ScrapedJob[] {
         $el.find('.BjJfJf, .PUpOsf, h2, .sH3zFd').first().text().trim() || '';
       if (!title || title.length < 3) return;
 
-      const company =
-        $el.find('.vNEEBe, .nJlQNd, .company').first().text().trim() || 'Unknown Company';
+      const company = $el.find('.vNEEBe, .nJlQNd, .company').first().text().trim();
+      if (!isValidEmployer(company)) return;
+
+      const description = $el.find('.HBvzbc, .YgLbBe, .description').first().text().trim().slice(0, 500);
+      if (isNonJobDescription(description)) return;
+
       const location =
         $el.find('.Qk80Jf, .location, .pwO9Dc').first().text().trim() || 'India';
       const isRemote = /remote|wfh/i.test(title + ' ' + location);
 
-      // Try to get job URL
       const url = $el.find('a[href]').first().attr('href') || '';
 
       jobs.push({
@@ -358,7 +376,7 @@ function parseGoogleJobsTab(html: string): ScrapedJob[] {
         title,
         company,
         location: isRemote ? 'Remote' : location,
-        description: $el.find('.HBvzbc, .YgLbBe, .description').first().text().trim().slice(0, 500),
+        description,
         salary: null,
         url: url.startsWith('http') ? url : '',
         source: 'Google Jobs',

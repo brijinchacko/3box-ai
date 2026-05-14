@@ -3,42 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { computeDedupeKey } from '@/lib/agents/scout';
-
-/**
- * Hard cap (in days) on how old a job's REAL posting date may be before
- * we hide it from the live board. Mirrors the freshness cutoff used in
- * lib/jobs/discovery.ts so insertion + read paths stay aligned. Stale
- * rows remain in the DB and are queryable via ?archived=true.
- */
-const STALE_JOB_CUTOFF_DAYS = 21;
-
-/**
- * Best-effort parse of the postedAt string we persist on ScoutJob. It can be
- * an ISO date, a relative phrase ("5 days ago", "yesterday"), or empty
- * when the source didn't supply one. Returns null on anything we can't
- * confidently date — caller treats null as "unknown" (NOT stale).
- */
-function parsePostedAtServer(postedAt: string | null | undefined): Date | null {
-  if (!postedAt) return null;
-  const s = String(postedAt).trim();
-  if (!s) return null;
-  const lower = s.toLowerCase();
-  const now = Date.now();
-  if (/^today$/.test(lower)) return new Date(now);
-  if (/^yesterday$/.test(lower)) return new Date(now - 86_400_000);
-  const m = lower.match(/^(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/);
-  if (m) {
-    const n = parseInt(m[1], 10);
-    const ms: Record<string, number> = {
-      minute: 60_000, hour: 3_600_000, day: 86_400_000,
-      week: 604_800_000, month: 2_592_000_000, year: 31_536_000_000,
-    };
-    return new Date(now - n * (ms[m[2]] || 0));
-  }
-  const ts = Date.parse(s);
-  if (!Number.isNaN(ts)) return new Date(ts);
-  return null;
-}
+import { isPlaceholderCompany, shouldShowJob } from '@/lib/jobs/filters';
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -74,6 +39,7 @@ export async function GET(req: Request) {
       title: true,
       company: true,
       location: true,
+      description: true,
       source: true,
       matchScore: true,
       jobUrl: true,
@@ -89,7 +55,9 @@ export async function GET(req: Request) {
     take: 500,
   });
 
-  // Deduplicate: keep the most advanced status for each company+title combo
+  // Deduplicate using the SAME key Scout writes with — previously this
+  // route used an ad-hoc inline key, which let near-duplicate rows
+  // slip through when Scout had merged them and this route had not.
   const jobMap = new Map<string, typeof jobs[0]>();
   const statusPriority: Record<string, number> = {
     'WITHDRAWN': 0, 'NEW': 1, 'SCORED': 2, 'SAVED': 3, 'READY': 4,
@@ -98,7 +66,7 @@ export async function GET(req: Request) {
     'SKIPPED': 1, 'EXPIRED': 0,
   };
   for (const job of jobs) {
-    const key = `${job.company.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}-${job.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30)}`;
+    const key = computeDedupeKey(job.company, job.title, job.jobUrl, job.description || '');
     const existing = jobMap.get(key);
     if (!existing || (statusPriority[job.status] || 0) > (statusPriority[existing.status] || 0)) {
       jobMap.set(key, job);
@@ -106,34 +74,23 @@ export async function GET(req: Request) {
   }
   const dedupedJobs = Array.from(jobMap.values());
 
-  // Filter out:
-  //   1. Job portal names appearing as companies (Indeed, LinkedIn, etc.)
-  //   2. "Unknown Company" / "Unknown" placeholders — these are unactionable
-  //      (no real employer name → no cover letters, no targeted matching).
-  //      Affects legacy DB rows from before the parsers were tightened.
-  //   3. Stale postings whose REAL posted date is older than the cutoff —
-  //      these stay in the DB (still in Archive) but never appear on the
-  //      live board. Skipped for the Archive tab itself.
-  const portalNames = ['shine.com', 'whatjobs', 'whatjobs direct', 'jooble', 'indeed', 'linkedin', 'naukri', 'glassdoor', 'remoteok', 'adzuna', 'dice', 'monster'];
-  const placeholderCompanies = new Set(['unknown', 'unknown company', 'confidential', 'na', 'n/a', '']);
-  const staleCutoffMs = STALE_JOB_CUTOFF_DAYS * 24 * 60 * 60 * 1000;
-  const nowMs = Date.now();
-  const cleanedJobs = dedupedJobs.filter(job => {
-    const companyRaw = (job.company || '').trim();
-    const companyLower = companyRaw.toLowerCase();
-    if (portalNames.some(p => companyLower === p || companyLower === `${p}.com`)) return false;
-    if (placeholderCompanies.has(companyLower)) return false;
-
-    // Stale-job hide (only on the live board; Archive tab is unaffected).
-    if (!archived) {
-      const postedDate = parsePostedAtServer(job.postedAt);
-      // Only hide when we're CONFIDENT the posting is stale. Unknown
-      // dates are kept (some sources just don't supply one) — the UI
-      // labels them "Recently posted" and renders neutral coloring.
-      if (postedDate && nowMs - postedDate.getTime() > staleCutoffMs) return false;
-    }
-    return true;
-  });
+  // Single canonical filter — same rules across every consumer. Hides:
+  //   - Placeholder / portal-name companies (Unknown, Indeed, etc.)
+  //   - Non-job URLs (review pages, /jobs/view/ alert subscribes, etc.)
+  //   - Non-job description signals ("Get notified about new ..." pages)
+  //   - Stale postings beyond the freshness cutoff (skipped for Archive)
+  const cleanedJobs = dedupedJobs.filter((job) =>
+    shouldShowJob(
+      {
+        title: job.title,
+        company: job.company,
+        description: job.description,
+        url: job.jobUrl,
+        postedAt: job.postedAt,
+      },
+      { allowStale: archived },
+    ),
+  );
 
   // Compute status summary for the graph
   const statusCounts: Record<string, number> = {};
@@ -157,6 +114,13 @@ export async function POST(req: Request) {
 
     if (!title || !company || !jobUrl) {
       return NextResponse.json({ error: 'title, company, and jobUrl are required' }, { status: 400 });
+    }
+
+    // Refuse to persist placeholder-company saves. The user's UI never
+    // shows them anyway (the GET filter hides them); allowing inserts
+    // just accumulates garbage rows that have to be hidden later.
+    if (isPlaceholderCompany(company)) {
+      return NextResponse.json({ error: 'Cannot save a job with no employer name' }, { status: 400 });
     }
 
     // Build dedupeKey via the centralized helper so board-jobs entries
@@ -220,10 +184,8 @@ export async function PUT(req: Request) {
     }
 
     // Skip placeholder-company rows at INSERT time so the DB doesn't keep
-    // accumulating "Unknown Company" garbage. Cross-checked with the
-    // GET-side filter — keeping the two in sync is what prevents new
-    // bad rows from leaking through after a re-discovery.
-    const placeholderCompanies = new Set(['unknown', 'unknown company', 'confidential', 'na', 'n/a']);
+    // accumulating "Unknown Company" garbage. Uses the same shared
+    // helper as the GET filter — they can't drift apart anymore.
 
     let saved = 0;
     // Process in parallel batches of 5 to avoid overwhelming the DB
@@ -232,7 +194,7 @@ export async function PUT(req: Request) {
       const results = await Promise.allSettled(
         batch.map(async (job) => {
           if (!job.title || !job.company || !job.url) return null;
-          if (placeholderCompanies.has(job.company.trim().toLowerCase())) return null;
+          if (isPlaceholderCompany(job.company)) return null;
 
           const dedupeKey = computeDedupeKey(job.company, job.title, job.url, job.description || '');
           const postedAtClean = typeof job.postedAt === 'string' && job.postedAt.trim() ? job.postedAt.trim() : null;

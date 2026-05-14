@@ -150,12 +150,17 @@ function jobAgeBadgeLabel(dateStr: string): string {
 
 function jobAgeBadgeColor(dateStr: string, mode: 'dark' | 'light' = 'dark'): string {
   const diffDays = safeDiffDays(dateStr);
+  // Unknown date → neutral. Previously rendered green, which made
+  // every dateless row look "fresh" and was the visual half of the
+  // "Posted today" complaint. Honest is better than reassuring.
   if (mode === 'light') {
-    if (diffDays < 0 || diffDays <= 7) return 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400';
+    if (diffDays < 0) return 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/40';
+    if (diffDays <= 7) return 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400';
     if (diffDays <= 14) return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400';
     return 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400';
   }
-  if (diffDays < 0 || diffDays <= 7) return 'bg-green-500/10 text-green-400';
+  if (diffDays < 0) return 'bg-white/5 text-white/40';
+  if (diffDays <= 7) return 'bg-green-500/10 text-green-400';
   if (diffDays <= 14) return 'bg-amber-500/10 text-amber-400';
   return 'bg-red-500/10 text-red-400';
 }
@@ -1519,7 +1524,13 @@ export default function JobsPage() {
           description: j.description || '',
           salary: j.salary,
           url: j.applyUrl,
-          postedAt: j.postedAt || j.fetchedAt || '',
+          // ONLY the real posted date. We used to fall back to fetchedAt,
+          // which is when 3box cached the job — that fabricated "Posted
+          // today" on every cached row because the scheduler refreshes
+          // fetchedAt on every cycle. Empty string is honest: the UI
+          // renders "Recently posted" with neutral coloring instead of
+          // lying about a date we don't actually have.
+          postedAt: j.postedAt || '',
           type: 'Full-time',
           remote: false,
           source: j.source,
@@ -1535,7 +1546,8 @@ export default function JobsPage() {
           description: j.description || '',
           salary: j.salary,
           url: j.applyUrl,
-          postedAt: j.postedAt || j.fetchedAt || '',
+          // Same rule as above — never fall back to fetchedAt.
+          postedAt: j.postedAt || '',
           type: 'Full-time',
           remote: false,
           source: j.source,

@@ -3,6 +3,7 @@
  * Free API — aggregates jobs from LinkedIn, Naukri, Indeed, and 60+ countries
  * Docs: https://jooble.org/api/about
  */
+import { isValidEmployer, isNonJobDescription } from './filters';
 
 interface JoobleJob {
   title: string;
@@ -70,26 +71,34 @@ export async function searchJooble(
 
     const data: JoobleResponse = await response.json();
 
-    const jobs: JoobleResult[] = (data.jobs || []).map((job) => {
-      const isRemote = /remote|work from home|wfh|hybrid/i.test(
-        `${job.title} ${job.location} ${job.snippet}`,
-      );
+    const jobs: JoobleResult[] = (data.jobs || [])
+      .map((job): JoobleResult | null => {
+        const company = (job.company || '').trim();
+        if (!isValidEmployer(company)) return null;
 
-      return {
-        id: `jooble-${job.id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: job.title || '',
-        company: job.company || 'Unknown Company',
-        location: isRemote ? 'Remote' : job.location || 'Not specified',
-        description: (job.snippet || '').slice(0, 500),
-        salary: job.salary || null,
-        url: job.link || '',
-        source: `Jooble (${job.source || 'aggregated'})`,
-        // '' when Jooble doesn't supply a date — freshness filter
-        // handles unknown dates conservatively.
-        postedAt: (job.updated || '').trim(),
-        remote: isRemote,
-      };
-    });
+        const description = (job.snippet || '').slice(0, 500);
+        if (isNonJobDescription(description)) return null;
+
+        const isRemote = /remote|work from home|wfh|hybrid/i.test(
+          `${job.title} ${job.location} ${job.snippet}`,
+        );
+
+        return {
+          id: `jooble-${job.id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: job.title || '',
+          company,
+          location: isRemote ? 'Remote' : job.location || 'Not specified',
+          description,
+          salary: job.salary || null,
+          url: job.link || '',
+          source: `Jooble (${job.source || 'aggregated'})`,
+          // '' when Jooble doesn't supply a date — freshness filter
+          // handles unknown dates conservatively.
+          postedAt: (job.updated || '').trim(),
+          remote: isRemote,
+        };
+      })
+      .filter((j): j is JoobleResult => j !== null);
 
     return { jobs, total: data.totalCount || 0 };
   } catch (err) {

@@ -2,6 +2,7 @@
  * Adzuna Job Search API Integration
  * Docs: https://developer.adzuna.com/docs/search
  */
+import { isValidEmployer, isNonJobDescription } from './filters';
 
 interface AdzunaJob {
   id: string;
@@ -49,7 +50,13 @@ function formatSalary(min?: number, max?: number): string | null {
   return null;
 }
 
-function transformAdzunaJob(job: AdzunaJob): TransformedJob {
+function transformAdzunaJob(job: AdzunaJob): TransformedJob | null {
+  const company = (job.company?.display_name || '').trim();
+  if (!isValidEmployer(company)) return null;
+
+  const description = job.description?.slice(0, 300) + (job.description?.length > 300 ? '...' : '');
+  if (isNonJobDescription(description)) return null;
+
   const isRemote = job.title.toLowerCase().includes('remote') ||
     job.location?.display_name?.toLowerCase().includes('remote') ||
     job.description?.toLowerCase().includes('fully remote');
@@ -57,10 +64,10 @@ function transformAdzunaJob(job: AdzunaJob): TransformedJob {
   return {
     id: `adzuna-${job.id}`,
     title: job.title,
-    company: job.company?.display_name || 'Unknown Company',
+    company,
     companyLogo: null,
     location: job.location?.display_name || 'Not specified',
-    description: job.description?.slice(0, 300) + (job.description?.length > 300 ? '...' : ''),
+    description,
     salary: formatSalary(job.salary_min, job.salary_max),
     url: job.redirect_url,
     postedAt: job.created,
@@ -112,7 +119,9 @@ export async function searchAdzuna(
   const data: AdzunaResponse = await response.json();
 
   return {
-    jobs: (data.results || []).map(transformAdzunaJob),
+    jobs: (data.results || [])
+      .map(transformAdzunaJob)
+      .filter((j): j is TransformedJob => j !== null),
     total: data.count || 0,
   };
 }

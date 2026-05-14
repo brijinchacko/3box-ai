@@ -2,39 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
-
-/**
- * Mirrors STALE_JOB_CUTOFF_DAYS in board-jobs/route.ts and
- * MAX_JOB_AGE_DAYS in lib/jobs/discovery.ts. These three knobs must
- * stay aligned — keeping them split (rather than centralized) is a
- * conscious choice so the API and the discovery layer can be tuned
- * independently without one cascading into the other unexpectedly.
- */
-const STALE_JOB_CUTOFF_DAYS = 21;
-
-const PLACEHOLDER_COMPANIES = new Set(['unknown', 'unknown company', 'confidential', 'na', 'n/a', '']);
-
-function parsePostedAtServer(postedAt: string | null | undefined): Date | null {
-  if (!postedAt) return null;
-  const s = String(postedAt).trim();
-  if (!s) return null;
-  const lower = s.toLowerCase();
-  const now = Date.now();
-  if (/^today$/.test(lower)) return new Date(now);
-  if (/^yesterday$/.test(lower)) return new Date(now - 86_400_000);
-  const m = lower.match(/^(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/);
-  if (m) {
-    const n = parseInt(m[1], 10);
-    const ms: Record<string, number> = {
-      minute: 60_000, hour: 3_600_000, day: 86_400_000,
-      week: 604_800_000, month: 2_592_000_000, year: 31_536_000_000,
-    };
-    return new Date(now - n * (ms[m[2]] || 0));
-  }
-  const ts = Date.parse(s);
-  if (!Number.isNaN(ts)) return new Date(ts);
-  return null;
-}
+import { shouldShowJob } from '@/lib/jobs/filters';
 
 /**
  * GET /api/agents/scout/jobs
@@ -45,12 +13,11 @@ function parsePostedAtServer(postedAt: string | null | undefined): Date | null {
  *   limit   — max results (default 50, max 100)
  *   offset  — pagination offset (default 0)
  *
- * Quality guarantees:
- *   - Hides rows whose `company` is a placeholder ("Unknown Company", etc.)
- *   - Hides rows whose `postedAt` is older than STALE_JOB_CUTOFF_DAYS
- *   Both protect against legacy bad data from earlier Scout runs.
- *   `archivedAt` rows are excluded so the Search Results queue only
- *   surfaces live, actionable jobs.
+ * Quality guarantees: everything goes through `shouldShowJob` from
+ * `@/lib/jobs/filters`, the single source of truth shared with the
+ * board, the live discovery path, and the India cache. Legacy bad
+ * rows from earlier Scout runs are hidden uniformly. Archived rows
+ * are excluded here — they appear only in the Archive tab.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -108,17 +75,16 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const staleCutoffMs = STALE_JOB_CUTOFF_DAYS * 24 * 60 * 60 * 1000;
-    const nowMs = Date.now();
-    const jobs = rawJobs.filter((j) => {
-      const company = (j.company || '').trim().toLowerCase();
-      if (PLACEHOLDER_COMPANIES.has(company)) return false;
-      const postedDate = parsePostedAtServer(j.postedAt);
-      // Hide only when we're CONFIDENT it's stale (parseable old date).
-      // Unknown dates pass through — UI labels them "Recently posted".
-      if (postedDate && nowMs - postedDate.getTime() > staleCutoffMs) return false;
-      return true;
-    }).slice(0, limit);
+    // Single canonical filter — same rules used by /api/jobs/india and
+    // /api/user/board-jobs so the user can't see different garbage on
+    // different tabs.
+    const jobs = rawJobs.filter((j) => shouldShowJob({
+      title: j.title,
+      company: j.company,
+      description: j.description,
+      url: j.jobUrl,
+      postedAt: j.postedAt,
+    })).slice(0, limit);
 
     // Format status counts as a simple object
     const counts: Record<string, number> = {};

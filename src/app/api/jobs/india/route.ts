@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { checkAndIncrementSearchLimit } from '@/lib/jobs/search-limit'
 import { PLAN_SEARCH_LIMITS } from '@/lib/jobs/constants'
 import { getRedisConnection } from '@/lib/queue/connection'
+import { shouldShowJob } from '@/lib/jobs/filters'
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -74,41 +75,74 @@ export async function GET(req: NextRequest) {
     ]
   }
 
-  const [jobs, total] = await prisma.$transaction([
+  // Over-fetch a bit so the post-filter still returns a useful page.
+  const fetchTake = Math.min(take * 3, 200)
+
+  const [rawJobs, total] = await prisma.$transaction([
     prisma.cachedJob.findMany({
       where,
       orderBy: [{ postedAt: 'desc' }, { fetchedAt: 'desc' }],
-      take,
+      take: fetchTake,
       skip,
       select: {
         id: true, title: true, company: true, location: true,
         salary: true, description: true, applyUrl: true,
-        source: true, skills: true, postedAt: true, fetchedAt: true,
+        source: true, skills: true, postedAt: true,
+        // fetchedAt deliberately NOT selected. It used to leak through
+        // to the UI as a postedAt fallback, which made every CachedJob
+        // row appear as "Posted today" because fetchedAt resets on
+        // every scheduler refresh.
       },
     }),
     prisma.cachedJob.count({ where }),
   ])
+
+  // Apply the shared quality filter so cached India rows match what
+  // the live discovery path would have shown. Drops placeholder
+  // companies, non-job URLs, expired-page snippets, etc.
+  const jobs = rawJobs
+    .filter((j) =>
+      shouldShowJob({
+        title: j.title,
+        company: j.company,
+        description: j.description,
+        url: j.applyUrl,
+        postedAt: j.postedAt,
+      }),
+    )
+    .slice(0, take)
 
   // If main query returns < 5 results, also fetch related jobs to pad suggestions
   let related: any[] = []
   if (jobs.length < 5 && q) {
     const words = q.split(' ').filter(w => w.length > 3)
     if (words.length > 0) {
-      related = await prisma.cachedJob.findMany({
+      const rawRelated = await prisma.cachedJob.findMany({
         where: {
           isActive:  true,
           expiresAt: { gt: new Date() },
           id:        { notIn: jobs.map(j => j.id) },
           OR: words.map(word => ({ title: { contains: word, mode: 'insensitive' as const } })),
         },
-        orderBy: { fetchedAt: 'desc' },
-        take: Math.min(20, take - jobs.length),
+        orderBy: [{ postedAt: 'desc' }, { fetchedAt: 'desc' }],
+        take: Math.min(40, (take - jobs.length) * 3),
         select: {
           id: true, title: true, company: true, location: true,
           salary: true, description: true, applyUrl: true,
-          source: true, skills: true, postedAt: true, fetchedAt: true,
+          source: true, skills: true, postedAt: true,
         },
       })
+      related = rawRelated
+        .filter((j) =>
+          shouldShowJob({
+            title: j.title,
+            company: j.company,
+            description: j.description,
+            url: j.applyUrl,
+            postedAt: j.postedAt,
+          }),
+        )
+        .slice(0, Math.min(20, take - jobs.length))
     }
   }
 
