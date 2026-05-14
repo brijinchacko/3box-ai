@@ -469,31 +469,32 @@ function filterLowQuality(jobs: DiscoveredJob[]): DiscoveredJob[] {
     // the email path would render placeholders. Drop it.
     if (/\s+hiring\s+/i.test(job.title)) return false;
 
-    // Must have a real company name (allow if it has a good description and URL)
-    if (!job.company || job.company === 'Unknown' || job.company === 'Unknown Company') {
-      if (!job.description || job.description.length < 100 || !job.url) return false;
-    }
+    // ── Must have a real company name ──
+    // Previously we let "Unknown Company" rows through if the description
+    // was long enough. That produced the "Unknown Company · India" cards
+    // users complained about: no real employer name → cover letters can't
+    // be personalized, match scoring is meaningless, and the user can't
+    // tell who they'd actually be applying to. Reject outright.
+    if (!job.company) return false;
+    const companyLower = job.company.trim().toLowerCase();
+    if (
+      companyLower === 'unknown'
+      || companyLower === 'unknown company'
+      || companyLower === 'confidential'
+      || companyLower === 'na'
+      || companyLower === 'n/a'
+    ) return false;
 
     // Must have some description
     if (!job.description || job.description.length < 20) return false;
 
     // ── Freshness: drop postings older than MAX_JOB_AGE_DAYS ──
     // Confirmed-stale jobs (parseable old date) are dropped immediately.
+    // (Placeholder companies are already rejected above, so the previous
+    // "date-unknown AND company-placeholder" combined gate is redundant
+    // and has been removed.)
     const postedDate = parsePostedAt(job.postedAt);
     if (postedDate && now - postedDate.getTime() > maxAgeMs) return false;
-
-    // ── Conservative: when the date is UNKNOWN AND the company is a
-    //    placeholder, drop. These are the records that produced the
-    //    "Posted today" lie for jobs that were actually closed months
-    //    ago — both the date and the company couldn't be extracted, so
-    //    we have low confidence the listing is real and current.
-    const dateUnknown = !postedDate;
-    const companyPlaceholder =
-      !job.company
-      || job.company === 'Unknown'
-      || job.company === 'Unknown Company'
-      || /^confidential$/i.test(job.company);
-    if (dateUnknown && companyPlaceholder) return false;
 
     // ── Reject non-posting pages (reviews / salaries / search results) ──
     if (isNonJobPageUrl(job.url || '')) return false;

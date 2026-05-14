@@ -103,35 +103,73 @@ async function serperSearch(
  */
 function parseLinkedInTitle(rawTitle: string): { company: string; role: string; location: string } | null {
   // Strip trailing "- LinkedIn" / "| LinkedIn" / "… - linkedin.com" /
-  // ellipsis / trailing punctuation.
+  // ellipsis / trailing punctuation. Also strips trailing region tags
+  // like "- LinkedIn India" and country names that LinkedIn appends.
   const stripped = rawTitle
-    .replace(/\s*[-–|]\s*linkedin(\.com)?\s*$/i, '')
+    .replace(/\s*[-–|]\s*linkedin(\.com)?(\s+[A-Z][a-z]+)?\s*$/i, '')
     .replace(/\s*[-–|]\s*$/, '')
     .replace(/[…]+\s*$/, '')
     .replace(/\.{2,}\s*$/, '')
     .trim();
 
-  // Full pattern: "<Company> hiring <Role> in <Location>"
-  // Non-greedy + required " in " keeps role/location segments correct.
-  const m = stripped.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
-  if (m) {
-    const company = m[1].trim();
-    const role = m[2].trim();
-    const location = m[3].replace(/[,\s]+$/, '').trim();
+  // Pattern 1: "<Company> hiring <Role> in <Location>" — most common
+  // search-result title format. Non-greedy + required " in " keeps the
+  // role/location boundary correct.
+  const m1 = stripped.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
+  if (m1) {
+    const company = m1[1].trim();
+    const role = m1[2].trim();
+    const location = m1[3].replace(/[,\s]+$/, '').trim();
     if (company && role && role.length >= 3) {
       return { company, role, location };
     }
   }
 
-  // Truncated form (Google cut off the location with "..."): just
-  // "<Company> hiring <Role>". Still extract company + role. Better
-  // than letting "Kochi Blue Tigers hiring Business Development Mana"
-  // become a job title with company "Unknown Company".
+  // Pattern 2: truncated "<Company> hiring <Role>" — Google cut off
+  // the location with "...". Still useful: company + role beats
+  // dropping the row entirely.
   const m2 = stripped.match(/^(.+?)\s+hiring\s+(.+)$/i);
   if (m2) {
     const company = m2[1].trim();
     const role = m2[2].trim();
     if (company && role && role.length >= 3) {
+      return { company, role, location: '' };
+    }
+  }
+
+  // Pattern 3: "<Role> at <Company> in <Location>" — alternate LinkedIn
+  // SEO format ("Senior Engineer at Acme Corp in Bangalore"). Order
+  // matters: this comes after the "hiring" patterns so we don't
+  // misparse "Acme hiring Senior Engineer at remote" by mistake.
+  const m3 = stripped.match(/^(.+?)\s+at\s+([A-Z][^,]+?)(?:\s+in\s+(.+))?$/);
+  if (m3) {
+    const role = m3[1].trim();
+    const company = m3[2].trim();
+    const location = (m3[3] || '').replace(/[,\s]+$/, '').trim();
+    // Guard against false positives where "<Role>" is actually the
+    // company ("Senior Engineer at Acme" is fine; "Acme Inc at Branch"
+    // is not). Heuristic: role should contain a known role keyword
+    // OR be 2+ words long.
+    if (
+      role && company && role.length >= 3 && company.length >= 2
+      && (/(engineer|developer|manager|analyst|designer|consultant|specialist|lead|director|officer|associate|coordinator|architect|executive|assistant|representative|writer|editor)/i.test(role)
+        || role.split(/\s+/).length >= 2)
+    ) {
+      return { company, role, location };
+    }
+  }
+
+  // Pattern 4: "<Company> - <Role>" — Naukri-on-LinkedIn cross-post
+  // pattern where employer brand is leading. Conservative: only when
+  // the right side looks like a role.
+  const m4 = stripped.match(/^([A-Z][^-–|]+?)\s+[-–]\s+(.+)$/);
+  if (m4) {
+    const company = m4[1].trim();
+    const role = m4[2].trim();
+    if (
+      company.length >= 2 && role.length >= 3
+      && /(engineer|developer|manager|analyst|designer|consultant|specialist|lead|director|officer|associate|coordinator|architect|executive|assistant|representative)/i.test(role)
+    ) {
       return { company, role, location: '' };
     }
   }

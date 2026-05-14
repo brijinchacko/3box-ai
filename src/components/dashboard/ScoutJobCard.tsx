@@ -61,7 +61,11 @@ function jobAgeBadgeLabel(dateStr: string): string {
 
 function jobAgeBadgeColor(dateStr: string): string {
   const diffDays = safeDiffDays(dateStr);
-  if (diffDays < 0 || diffDays <= 7) return 'bg-green-500/10 text-green-400';
+  // Unknown date → neutral. Previously green, which made every
+  // saved-without-date job look "fresh today" and caused the
+  // "Posted today" complaint about week-old listings.
+  if (diffDays < 0) return 'bg-white/5 text-white/40';
+  if (diffDays <= 7) return 'bg-green-500/10 text-green-400';
   if (diffDays <= 14) return 'bg-amber-500/10 text-amber-400';
   return 'bg-red-500/10 text-red-400';
 }

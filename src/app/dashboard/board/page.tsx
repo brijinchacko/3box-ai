@@ -33,6 +33,9 @@ interface LiveSearchJob {
   source: string;
   matchScore: number;
   remote: boolean;
+  // Original employer-posted date (ISO or relative phrase). May be ''
+  // when the source didn't supply one — never fabricated.
+  postedAt?: string;
 }
 
 interface SearchHistoryItem {
@@ -412,6 +415,10 @@ export default function BoardPage() {
                 source: j.source,
                 matchScore: j.matchScore,
                 description: j.description,
+                // Persist the real posted date — without it, the board
+                // would render every saved row as "Posted today" once
+                // re-fetched.
+                postedAt: j.postedAt,
               })),
             }),
           })
@@ -459,6 +466,7 @@ export default function BoardPage() {
           source: job.source,
           matchScore: job.matchScore,
           description: job.description,
+          postedAt: job.postedAt,
           status: 'SAVED',
         }),
       });

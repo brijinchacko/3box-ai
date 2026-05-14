@@ -688,7 +688,11 @@ function AutopilotJobSearch() {
             description: j.description || '',
             salary: j.salary || null,
             url: j.jobUrl || '',
-            postedAt: j.discoveredAt || new Date().toISOString(),
+            // Use the REAL posted date when known. Empty string when
+            // unknown — the card UI renders that as "Recently posted"
+            // with neutral coloring instead of lying with "today".
+            // discoveredAt = when Scout found it, NOT when employer posted.
+            postedAt: j.postedAt || '',
             type: '',
             remote: j.remote || false,
             matchScore: j.matchScore,
@@ -1283,7 +1287,9 @@ export default function JobsPage() {
               description: '',
               salary: null,
               url: j.jobUrl,
-              postedAt: j.discoveredAt || '',
+              // Real posted date when known. discoveredAt is "when added
+              // to my board" — not the same thing as "when employer posted".
+              postedAt: j.postedAt || '',
               type: '',
               remote: false,
               matchScore: j.matchScore,
@@ -1408,6 +1414,7 @@ export default function JobsPage() {
             source: job.source || 'Job Search',
             matchScore: job.matchScore,
             description: job.description,
+            postedAt: job.postedAt,
             status: 'SAVED',
           }),
         })
@@ -1560,6 +1567,10 @@ export default function JobsPage() {
               source: j.source || 'Live Search',
               matchScore: j.matchScore,
               description: j.description,
+              // Pass the REAL posted date through so the saved row
+              // remembers it; otherwise we lose the only signal that
+              // distinguishes "posted today" from "posted last month".
+              postedAt: j.postedAt,
             })),
           }),
         }).catch(() => {}); // Silent — don't block search UX
