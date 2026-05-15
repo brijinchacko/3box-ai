@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
-import { isValidEmployer, isNonJobTitle } from '@/lib/jobs/filters';
+import { shouldShowJob } from '@/lib/jobs/filters';
 
 /* GET /api/user/loops — List all search profiles */
 export async function GET() {
@@ -38,19 +38,28 @@ export async function GET() {
 
   // Compute per-profile applied/jobsFound counts.
   //
-  // Approach: fetch ScoutJobs, apply the SAME quality filter every other
-  // route uses (so legacy "Unknown Company" rows don't inflate the
-  // counts), then match each surviving job to the profile(s) whose role
-  // title appears as a substring of the job title.
+  // Goal: the per-profile "X jobs found / Y applied" badges have to
+  // agree with what Search Results, the board, and Archer actually see.
+  // To guarantee that, we apply the EXACT same gate every other
+  // job-surfacing route uses:
+  //   - archivedAt: null  (scout/jobs hides archived rows; we must too)
+  //   - shouldShowJob     (full quality filter: employer + title + URL +
+  //                        description + freshness)
   //
-  // Previously we filtered out PORTAL_NAMES companies but NOT
-  // placeholders ("Unknown Company", "Confidential", etc.), so any
-  // legacy auto-applied row with status APPLIED/EMAILED kept inflating
-  // the per-profile "X applied" badge to numbers the user couldn't
-  // see in the board.
+  // Previously this route used a weaker subset (placeholder-company
+  // check only), and didn't exclude archived rows — so the badge
+  // counted historical / hidden / archived jobs and reported numbers
+  // like "7 jobs found, 6 applied" while Search Results showed 3.
   const allJobs = await prisma.scoutJob.findMany({
-    where: { userId: session.user.id },
-    select: { company: true, title: true, status: true },
+    where: { userId: session.user.id, archivedAt: null },
+    select: {
+      company: true,
+      title: true,
+      status: true,
+      description: true,
+      jobUrl: true,
+      postedAt: true,
+    },
     take: 2000,
   });
 
@@ -62,16 +71,16 @@ export async function GET() {
     'APPLIED': 9, 'EMAILED': 10, 'SCREENED': 11, 'INTERVIEW': 12, 'OFFER': 13,
   };
 
-  // Single source of truth for "is this a real job we'd render?".
-  // Description / URL / postedAt aren't selected (would balloon the
-  // query); isValidEmployer + isNonJobTitle catch the vast majority
-  // of legacy garbage with just two cheap fields.
-  const visible = allJobs.filter((j) =>
-    isValidEmployer(j.company) && !isNonJobTitle(j.title)
-  );
+  const visible = allJobs.filter((j) => shouldShowJob({
+    title: j.title,
+    company: j.company,
+    description: j.description,
+    url: j.jobUrl,
+    postedAt: j.postedAt,
+  }));
 
   // Dedupe by (company+title) and keep the highest-priority status,
-  // mirroring the board endpoint. Result: array of {title, status}.
+  // mirroring the board endpoint.
   const dedup = new Map<string, { title: string; status: string }>();
   for (const j of visible) {
     const compLower = (j.company || '').toLowerCase();
